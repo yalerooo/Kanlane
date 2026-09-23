@@ -1,0 +1,2821 @@
+<title>Tablero de Tareas</title>
+<style>
+  :root{
+    --bg:#F6F2E9;
+    --surface:#FFFFFF;
+    --surface-2:#EFE8D8;
+    --ink:#232A24;
+    --ink-soft:#656B5E;
+    --line:#DDD3B8;
+    --accent:#2C6E68;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#DCEAE4;
+    --st-pend:#6B6355;
+    --st-pend-bg:#EAE3D2;
+    --st-proc:#2C6E68;
+    --st-proc-bg:#DCEAE4;
+    --st-wait:#A96A22;
+    --st-wait-bg:#F3E1C6;
+    --st-done:#3E7D45;
+    --st-done-bg:#DEEBDD;
+    --danger:#A6432F;
+    --shadow: 0 1px 2px rgba(35,42,36,0.06), 0 6px 16px -8px rgba(35,42,36,0.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181C18;
+      --surface:#20251F;
+      --surface-2:#262B24;
+      --ink:#EDEAE0;
+      --ink-soft:#A3A99B;
+      --line:#363C32;
+      --accent:#5FA79C;
+      --accent-ink:#0E1512;
+      --accent-soft:#243330;
+      --st-pend:#B9B09B;
+      --st-pend-bg:#2E2C24;
+      --st-proc:#5FA79C;
+      --st-proc-bg:#1F332F;
+      --st-wait:#E0A85B;
+      --st-wait-bg:#3A2C18;
+      --st-done:#7FC488;
+      --st-done-bg:#1F3324;
+      --danger:#E38066;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -8px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181C18;
+    --surface:#20251F;
+    --surface-2:#262B24;
+    --ink:#EDEAE0;
+    --ink-soft:#A3A99B;
+    --line:#363C32;
+    --accent:#5FA79C;
+    --accent-ink:#0E1512;
+    --accent-soft:#243330;
+    --st-pend:#B9B09B;
+    --st-pend-bg:#2E2C24;
+    --st-proc:#5FA79C;
+    --st-proc-bg:#1F332F;
+    --st-wait:#E0A85B;
+    --st-wait-bg:#3A2C18;
+    --st-done:#7FC488;
+    --st-done-bg:#1F3324;
+    --danger:#E38066;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -8px rgba(0,0,0,0.5);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Public Sans', 'Inter', system-ui, sans-serif;
+    padding-inline:20px;
+    padding-block:24px;
+    min-height:100%;
+  }
+  h1,h2,h3,.font-display{
+    font-family:'Fraunces', Georgia, serif;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  header.top .titles h1{
+    font-size:clamp(24px,3vw,32px);
+    font-weight:600;
+    margin:0 0 4px;
+    text-wrap:balance;
+    letter-spacing:-0.01em;
+  }
+  header.top .titles p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:14px;
+    max-width:56ch;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:700;
+    margin:0 0 6px;
+  }
+
+  .btn{
+    font-family:inherit;
+    font-size:14px;
+    font-weight:600;
+    border-radius:8px;
+    padding:10px 16px;
+    border:1px solid transparent;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    text-align:center;
+    transition:transform .08s ease, background .15s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn-ghost:hover{background:var(--surface-2);}
+  .btn-danger{background:transparent;color:var(--danger);border-color:var(--line);}
+  .btn-danger:hover{background:var(--surface-2);}
+
+  .tabs{
+    display:flex;
+    gap:4px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:18px;
+  }
+  .tab{
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:transparent;
+    border:none;
+    border-bottom:2px solid transparent;
+    padding:9px 4px;
+    margin-right:18px;
+    cursor:pointer;
+  }
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  .hint{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 12px;
+    margin:0 0 16px;
+  }
+  .hint strong{color:var(--st-wait);}
+
+  .contacts-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:12px;
+  }
+  .contact-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:13px 14px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+  }
+  .contact-card:hover{border-color:var(--accent);}
+  .contact-card .cat{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:5px;
+  }
+  .contact-card h3{
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .contact-card .line{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 3px;
+    word-break:break-word;
+  }
+  .contact-card .notes{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:7px;
+    white-space:pre-wrap;
+    line-height:1.4;
+    display:-webkit-box;
+    -webkit-line-clamp:4;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .lock-screen{
+    display:flex;
+    justify-content:center;
+    padding:40px 12px;
+  }
+  .lock-card{
+    width:min(360px, 100%);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 22px 24px;
+    box-shadow:var(--shadow);
+  }
+  .lock-card h2{font-size:18px;margin:0 0 8px;}
+  .lock-desc{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 16px;}
+  .lock-error{
+    font-size:12.5px;
+    color:var(--danger);
+    margin:0 0 10px;
+  }
+  .lock-forgot{
+    text-align:center;
+    margin:14px 0 0;
+  }
+  .lock-forgot a{
+    font-size:12.5px;
+    color:var(--accent);
+    text-decoration:none;
+  }
+  .lock-forgot a:hover{text-decoration:underline;}
+  #recoverForm{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);}
+  #recoverForm textarea{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    width:100%;
+    resize:vertical;
+  }
+
+  .recovery-key-box{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:14px;
+    letter-spacing:0.02em;
+    text-align:center;
+    word-break:break-all;
+    background:var(--bg);
+    border:1px dashed var(--line);
+    border-radius:8px;
+    padding:14px;
+    margin:4px 0 14px;
+  }
+  .recovery-actions{
+    display:flex;
+    gap:8px;
+  }
+  .recovery-actions .btn{flex:1;}
+  .recovery-confirm{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:16px;
+    cursor:pointer;
+  }
+  .recovery-confirm input{margin-top:2px;}
+
+  .vault-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:13px 14px;
+    box-shadow:var(--shadow);
+  }
+  .vault-card .cat{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:5px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+  }
+  .type-badge{
+    font-size:10px;
+    font-weight:700;
+    padding:1px 7px;
+    border-radius:999px;
+    background:var(--accent-soft);
+    color:var(--accent);
+    text-transform:none;
+    letter-spacing:0;
+  }
+  .vault-card h3{
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .vault-card .line{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 3px;
+    word-break:break-word;
+  }
+  .pass-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-top:8px;
+  }
+  .pass-value{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:12.5px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:4px 8px;
+    flex:1;
+    overflow-x:auto;
+    white-space:pre;
+  }
+  .icon-btn{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:12px;
+    padding:5px 8px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .icon-btn:hover{border-color:var(--accent);}
+  .vault-card .notes{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:8px;
+    white-space:pre-wrap;
+    line-height:1.4;
+  }
+  .vault-card .edit-row{
+    margin-top:10px;
+    display:flex;
+    justify-content:flex-end;
+  }
+
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  .toolbar input[type="search"],
+  .toolbar select{
+    font-family:inherit;
+    font-size:13px;
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+  }
+  .toolbar input[type="search"]{min-width:200px;flex:1 1 200px;}
+  .summary{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+  }
+  .summary .pill{
+    font-size:12px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+    align-items:start;
+  }
+  @media (max-width:900px){
+    .board{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:560px){
+    .board{grid-template-columns:1fr;}
+  }
+
+  .col{
+    background:var(--surface-2);
+    border-radius:14px;
+    padding:12px;
+    min-height:80px;
+    transition:background .12s ease, outline-color .12s ease;
+    outline:2px dashed transparent;
+    outline-offset:-2px;
+  }
+  .col.drag-over{
+    background:var(--accent-soft);
+    outline-color:var(--accent);
+  }
+  .col-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:2px 4px 10px;
+  }
+  .col-head .name{
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .count{
+    font-size:11px;
+    font-weight:700;
+    background:var(--surface);
+    color:var(--ink-soft);
+    padding:2px 7px;
+    border-radius:999px;
+    font-variant-numeric:tabular-nums;
+  }
+  .cards{display:flex;flex-direction:column;gap:8px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 12px 10px;
+    box-shadow:var(--shadow);
+    cursor:pointer;
+  }
+  .card:hover{border-color:var(--accent);}
+  .card{cursor:grab;}
+  .card.dragging{opacity:0.45;cursor:grabbing;}
+  .card .cat{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:5px;
+  }
+  .card h3{
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    margin:0 0 5px;
+    line-height:1.3;
+  }
+  .card p{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+    line-height:1.45;
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .card .meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .card .contact{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+
+  .icon{
+    display:inline-flex;
+    vertical-align:-3px;
+    margin-right:5px;
+    flex:none;
+    color:var(--ink-soft);
+  }
+  .icon svg{display:block;}
+  .btn .icon{vertical-align:-2px;color:currentColor;}
+
+  .empty-col{
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:center;
+    padding:18px 6px;
+    border:1px dashed var(--line);
+    border-radius:8px;
+  }
+
+  .state-msg{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13px;
+    padding:60px 20px;
+  }
+
+  dialog{
+    border:none;
+    border-radius:16px;
+    padding:0;
+    background:var(--surface);
+    color:var(--ink);
+    box-shadow:var(--shadow);
+    width:min(480px, calc(100vw - 32px));
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  dialog::backdrop{background:rgba(20,22,18,0.45);}
+  .dlg-inner{padding:20px 22px 22px;}
+  .dlg-inner h2{font-size:19px;margin:0 0 14px;}
+  .field{margin-bottom:12px;display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .field input,.field select,.field textarea{
+    font-family:inherit;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    resize:vertical;
+  }
+  .field textarea{min-height:64px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .dlg-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:16px;
+    gap:8px;
+  }
+  .dlg-actions .right{display:flex;gap:8px;}
+
+  .new-client-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .new-client-row input{
+    flex:1;
+    font-family:inherit;
+    font-size:14px;
+    padding:9px 10px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+  }
+  .new-client-inline{
+    display:flex;
+    gap:6px;
+    margin-top:6px;
+  }
+  .new-client-inline input{
+    flex:1;
+    font-family:inherit;
+    font-size:13px;
+    padding:7px 9px;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+  }
+
+  .client-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:13px 14px;
+    box-shadow:var(--shadow);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .client-card h3{
+    font-family:inherit;
+    font-size:14.5px;
+    font-weight:700;
+    margin:0;
+  }
+  .client-card .meta{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .client-card-actions{
+    display:flex;
+    gap:6px;
+    flex:none;
+  }
+  .client-card-editing{
+    grid-column:1 / -1;
+  }
+  .client-edit-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+    width:100%;
+  }
+  .data-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .client-edit-row input{
+    flex:1;
+    font-family:inherit;
+    font-size:14px;
+    padding:7px 9px;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+  }
+
+  .notes-list{
+    max-height:220px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .note-item{
+    background:var(--surface-2);
+    border-radius:8px;
+    padding:8px 10px;
+  }
+  .note-item .note-date{
+    font-size:10.5px;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .note-item .note-text{
+    font-size:12.5px;
+    white-space:pre-wrap;
+    line-height:1.4;
+  }
+  .note-item img{
+    display:block;
+    max-width:160px;
+    max-height:120px;
+    border-radius:6px;
+    margin-top:6px;
+    cursor:zoom-in;
+    object-fit:cover;
+  }
+  .note-item .note-del{
+    float:right;
+    font-size:11px;
+    color:var(--ink-soft);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:0;
+  }
+  .note-item .note-del:hover{color:var(--danger);}
+
+  .note-add-box{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px;
+    background:var(--bg);
+  }
+  .note-add-box textarea{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-family:inherit;
+    font-size:13px;
+    color:var(--ink);
+    resize:vertical;
+    padding:2px;
+  }
+  .note-image-preview{
+    position:relative;
+    margin:6px 0;
+    display:inline-block;
+  }
+  .note-image-preview img{
+    max-width:120px;
+    max-height:90px;
+    border-radius:6px;
+    display:block;
+  }
+  .note-add-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:6px;
+  }
+  .quick-links{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+
+  .lightbox{
+    position:fixed;
+    inset:0;
+    background:rgba(10,12,10,0.82);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+    cursor:zoom-out;
+    padding:24px;
+  }
+  .lightbox img{
+    max-width:100%;
+    max-height:100%;
+    border-radius:8px;
+  }
+
+  [hidden]{display:none!important;}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <div class="titles">
+      <p class="eyebrow">Gestión de proyectos</p>
+      <h1>Tablero de tareas</h1>
+      <p>Tareas y contactos de todos los clientes y proyectos en marcha. Arrastra una tarjeta para cambiar su estado, o añade una nueva.</p>
+    </div>
+    <button class="btn btn-primary" id="btnNew">+ Nueva tarea</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="tabTasks" data-view="tasks" type="button">Tareas</button>
+    <button class="tab" id="tabContacts" data-view="contacts" type="button">Contactos y notas</button>
+    <button class="tab" id="tabVault" data-view="vault" type="button">Contraseñas</button>
+    <button class="tab" id="tabClients" data-view="clients" type="button">Clientes</button>
+    <button class="tab" id="tabData" data-view="data" type="button">Copia de seguridad</button>
+  </div>
+
+  <section id="viewTasks">
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
+      <select id="filterCliente"><option value="">Todos los clientes</option></select>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <div style="height:14px"></div>
+
+    <div id="boardWrap">
+      <div class="state-msg" id="stateMsg">Cargando tareas…</div>
+      <div class="board" id="board" hidden></div>
+    </div>
+  </section>
+
+  <section id="viewContacts" hidden>
+    <div class="toolbar">
+      <input type="search" id="searchContacts" placeholder="Buscar por cliente, nombre o email…">
+      <button class="btn btn-primary" id="btnNewContact" type="button">+ Nuevo contacto</button>
+    </div>
+    <p class="hint">Datos útiles por cliente: nombres, emails, teléfonos, enlaces de portales… <strong>No guardes contraseñas aquí</strong> — usa la pestaña «Contraseñas», donde sí se cifran.</p>
+    <div id="contactsWrap">
+      <div class="state-msg" id="stateMsgContacts">Cargando contactos…</div>
+      <div class="contacts-grid" id="contactsGrid" hidden></div>
+    </div>
+  </section>
+
+  <section id="viewVault" hidden>
+    <div id="vaultLockScreen" class="lock-screen">
+      <div class="lock-card">
+        <h2 id="lockTitle">Desbloquear contraseñas</h2>
+        <p id="lockDesc" class="lock-desc">Introduce tu contraseña maestra. Se usa solo en tu navegador para cifrar y descifrar — nunca se guarda ni se envía a ningún sitio.</p>
+        <form id="unlockForm">
+          <div class="field">
+            <label for="masterPass">Contraseña maestra</label>
+            <input id="masterPass" type="password" autocomplete="off" required>
+          </div>
+          <div class="field" id="masterPass2Wrap" hidden>
+            <label for="masterPass2">Repite la contraseña maestra</label>
+            <input id="masterPass2" type="password" autocomplete="off">
+          </div>
+          <p class="lock-error" id="lockError" hidden></p>
+          <button type="submit" class="btn btn-primary" id="btnUnlock" style="width:100%">Desbloquear</button>
+        </form>
+        <p class="lock-forgot" id="forgotLinkWrap" hidden><a href="#" id="linkForgot">¿Has olvidado tu contraseña maestra?</a></p>
+
+        <form id="recoverForm" hidden>
+          <p class="lock-desc">Pega la clave de recuperación de tu archivo .txt y elige una contraseña maestra nueva.</p>
+          <div class="field">
+            <label for="recoveryInput">Clave de recuperación</label>
+            <textarea id="recoveryInput" rows="2" placeholder="XXXX-XXXX-XXXX-…"></textarea>
+          </div>
+          <div class="field">
+            <label for="newPass1">Nueva contraseña maestra</label>
+            <input id="newPass1" type="password" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="newPass2">Repite la nueva contraseña maestra</label>
+            <input id="newPass2" type="password" autocomplete="off" required>
+          </div>
+          <p class="lock-error" id="recoverError" hidden></p>
+          <button type="submit" class="btn btn-primary" id="btnRecover" style="width:100%">Restablecer con la clave</button>
+          <p class="lock-forgot"><a href="#" id="linkCancelRecover">Volver</a></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="recoveryReveal" class="lock-screen" hidden>
+      <div class="lock-card" style="width:min(480px,100%)">
+        <h2>Guarda tu clave de recuperación</h2>
+        <p class="lock-desc">Es la única forma de recuperar el acceso si olvidas tu contraseña maestra. Guárdala en un lugar seguro — no la compartas ni la subas a ningún sitio. Quien la tenga, junto con acceso a este tablero, podría leer las contraseñas guardadas.</p>
+        <div class="recovery-key-box" id="recoveryKeyBox"></div>
+        <div class="recovery-actions">
+          <button type="button" class="btn btn-ghost" id="btnCopyRecovery">Copiar</button>
+          <button type="button" class="btn btn-ghost" id="btnDownloadRecovery">Descargar .txt</button>
+        </div>
+        <label class="recovery-confirm">
+          <input type="checkbox" id="recoveryConfirmChk">
+          Ya he guardado esta clave en un lugar seguro
+        </label>
+        <button type="button" class="btn btn-primary" id="btnRecoveryContinue" style="width:100%;margin-top:10px" disabled>Continuar</button>
+      </div>
+    </div>
+
+    <div id="vaultContent" hidden>
+      <div class="toolbar">
+        <input type="search" id="searchVault" placeholder="Buscar por cliente, correo, web o IP…">
+        <select id="filterTipo">
+          <option value="">Todos los tipos</option>
+          <option value="correo">Correo / Web</option>
+          <option value="servidor">Servidor</option>
+        </select>
+        <select id="filterClienteVault"><option value="">Todos los clientes</option></select>
+        <button class="btn btn-primary" id="btnNewVault" type="button">+ Nueva credencial</button>
+        <button class="btn btn-ghost" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear</button>
+      </div>
+      <p class="hint">Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</p>
+      <div id="vaultWrap">
+        <div class="state-msg" id="stateMsgVault">Sin credenciales guardadas todavía.</div>
+        <div class="contacts-grid" id="vaultGrid" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="viewClients" hidden>
+    <p class="hint">Los clientes que crees aquí aparecen para elegir en tareas, contactos y contraseñas. <strong>Eliminar un cliente borra también todas sus tareas</strong> — sus contactos y contraseñas guardados no se tocan.</p>
+    <form id="formNewClient" class="new-client-row">
+      <input id="newClientName" maxlength="60" placeholder="Nombre del cliente nuevo" required>
+      <button type="submit" class="btn btn-primary">+ Añadir cliente</button>
+    </form>
+    <div id="clientsWrap">
+      <div class="state-msg" id="stateMsgClients">Cargando clientes…</div>
+      <div class="contacts-grid" id="clientsGrid" hidden></div>
+    </div>
+  </section>
+
+  <section id="viewData" hidden>
+    <p class="hint">Exporta una copia de seguridad completa (tareas con sus notas, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo. <strong>Importar añade a lo que ya tienes — no borra ni reemplaza nada.</strong></p>
+    <div class="data-actions">
+      <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
+      <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
+      <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+    </div>
+    <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
+    <p class="lock-error" id="dataError" hidden></p>
+    <p class="hint" id="dataStatus" hidden></p>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form class="dlg-inner" id="form" method="dialog">
+    <h2 id="dlgTitle">Nueva tarea</h2>
+    <input type="hidden" id="taskId">
+    <div class="field">
+      <label for="fTitle">Título</label>
+      <input id="fTitle" required maxlength="140" placeholder="p. ej. Activar Shibboleth">
+    </div>
+    <div class="field">
+      <label for="fDesc">Descripción / notas</label>
+      <textarea id="fDesc" maxlength="600" placeholder="Detalles, próximos pasos…"></textarea>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="fCliente">Cliente / proyecto</label>
+        <select id="fCliente"></select>
+        <div class="new-client-inline" id="fClienteNewWrap" hidden>
+          <input id="fClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fEstado">Estado</label>
+        <select id="fEstado">
+          <option value="pendiente">Pendiente</option>
+          <option value="proceso">En proceso</option>
+          <option value="espera">Esperando al cliente</option>
+          <option value="completada">Completada</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="fContacto">Contacto (opcional)</label>
+        <input id="fContacto" maxlength="80" placeholder="Nombre / email">
+      </div>
+      <div class="field">
+        <label for="fFecha">Fecha límite (opcional)</label>
+        <input id="fFecha" type="date">
+      </div>
+    </div>
+    <div class="field" id="taskNotesSection" hidden>
+      <label>Notas</label>
+      <div class="notes-list" id="taskNotesList"></div>
+      <div class="note-add-box">
+        <textarea id="noteText" rows="2" placeholder="Añade una nota…"></textarea>
+        <div id="noteImagePreviewWrap" class="note-image-preview" hidden>
+          <img id="noteImagePreview" alt="">
+          <button type="button" class="icon-btn" id="btnRemoveNoteImage">Quitar imagen</button>
+        </div>
+        <div class="note-add-actions">
+          <input type="file" id="noteImageInput" accept="image/*" hidden>
+          <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar imagen</button>
+          <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
+        </div>
+        <p class="lock-error" id="noteError" hidden></p>
+      </div>
+      <div class="quick-links">
+        <button type="button" class="btn btn-ghost" id="btnQuickContact">+ Contacto de este cliente</button>
+        <button type="button" class="btn btn-ghost" id="btnQuickVault">+ Contraseña de este cliente</button>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSave">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
+
+<dialog id="dlgContact">
+  <form class="dlg-inner" id="formContact" method="dialog">
+    <h2 id="dlgContactTitle">Nuevo contacto</h2>
+    <input type="hidden" id="cId">
+    <div class="row2">
+      <div class="field">
+        <label for="cCliente">Cliente / proyecto</label>
+        <select id="cCliente" required></select>
+        <div class="new-client-inline" id="cClienteNewWrap" hidden>
+          <input id="cClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="cClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cNombre">Nombre</label>
+        <input id="cNombre" maxlength="80" placeholder="Persona de contacto">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="cEmail">Email</label>
+        <input id="cEmail" type="email" maxlength="120" placeholder="nombre@cliente.com">
+      </div>
+      <div class="field">
+        <label for="cTelefono">Teléfono</label>
+        <input id="cTelefono" maxlength="40" placeholder="+34…">
+      </div>
+    </div>
+    <div class="field">
+      <label for="cNotas">Notas / enlaces útiles</label>
+      <textarea id="cNotas" maxlength="800" placeholder="Portales, usuarios, referencias internas, URLs… (nunca contraseñas)"></textarea>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteContact" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelContact">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveContact">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgVault">
+  <form class="dlg-inner" id="formVault" method="dialog">
+    <h2 id="dlgVaultTitle">Nueva credencial</h2>
+    <input type="hidden" id="vId">
+    <div class="field">
+      <label for="vTipo">Tipo</label>
+      <select id="vTipo">
+        <option value="correo">Correo / Web</option>
+        <option value="servidor">Servidor</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="vCliente">Cliente</label>
+        <select id="vCliente" required></select>
+        <div class="new-client-inline" id="vClienteNewWrap" hidden>
+          <input id="vClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="vClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="vLabel">Etiqueta (opcional)</label>
+        <input id="vLabel" maxlength="60" placeholder="p. ej. Cuenta admin">
+      </div>
+    </div>
+    <div class="row2" id="camposCorreo">
+      <div class="field">
+        <label for="vCorreo">Correo</label>
+        <input id="vCorreo" type="email" maxlength="120" placeholder="usuario@cliente.com">
+      </div>
+      <div class="field">
+        <label for="vWeb">Web</label>
+        <input id="vWeb" maxlength="160" placeholder="https://…">
+      </div>
+    </div>
+    <div class="row2" id="camposServidor" hidden>
+      <div class="field">
+        <label for="vIp">IP / host del servidor</label>
+        <input id="vIp" maxlength="120" placeholder="p. ej. 192.168.1.10">
+      </div>
+      <div class="field">
+        <label for="vUsuario">Usuario (opcional)</label>
+        <input id="vUsuario" maxlength="80" placeholder="root, admin…">
+      </div>
+    </div>
+    <div class="field">
+      <label for="vPass">Contraseña</label>
+      <input id="vPass" type="password" autocomplete="new-password" maxlength="300" placeholder="Introduce la contraseña">
+    </div>
+    <div class="field">
+      <label for="vNotas">Notas (se cifran junto a la contraseña)</label>
+      <textarea id="vNotas" maxlength="500" placeholder="Detalles, puerto, VPN necesaria…"></textarea>
+    </div>
+    <p class="lock-error" id="vaultFormError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteVault" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelVault">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveVault">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  var STATUS = [
+    {key:'pendiente', label:'Pendiente', dot:'var(--st-pend)', bg:'var(--st-pend-bg)', fg:'var(--st-pend)'},
+    {key:'proceso', label:'En proceso', dot:'var(--st-proc)', bg:'var(--st-proc-bg)', fg:'var(--st-proc)'},
+    {key:'espera', label:'Esperando al cliente', dot:'var(--st-wait)', bg:'var(--st-wait-bg)', fg:'var(--st-wait)'},
+    {key:'completada', label:'Completada', dot:'var(--st-done)', bg:'var(--st-done-bg)', fg:'var(--st-done)'}
+  ];
+  var statusByKey = {};
+  STATUS.forEach(function(s){ statusByKey[s.key] = s; });
+
+  var ICONS = {
+    mail: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+    server: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="1"/><rect x="2" y="15" width="20" height="6" rx="1"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>',
+    link: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    user: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+  };
+  function iconSpan(name){ return '<span class="icon" aria-hidden="true">'+ICONS[name]+'</span>'; }
+
+  var boardEl = document.getElementById('board');
+  var stateMsg = document.getElementById('stateMsg');
+  var summaryEl = document.getElementById('summary');
+  var searchEl = document.getElementById('search');
+  var filterClienteEl = document.getElementById('filterCliente');
+  var dlg = document.getElementById('dlg');
+  var form = document.getElementById('form');
+  var btnNew = document.getElementById('btnNew');
+  var btnCancel = document.getElementById('btnCancel');
+  var btnDelete = document.getElementById('btnDelete');
+
+  var allTasks = [];
+  var db = null;
+  var col = null;
+  var canWrite = false;
+
+  var tabTasks = document.getElementById('tabTasks');
+  var tabContacts = document.getElementById('tabContacts');
+  var viewTasksEl = document.getElementById('viewTasks');
+  var viewContactsEl = document.getElementById('viewContacts');
+  var contactsGrid = document.getElementById('contactsGrid');
+  var stateMsgContacts = document.getElementById('stateMsgContacts');
+  var searchContacts = document.getElementById('searchContacts');
+  var btnNewContact = document.getElementById('btnNewContact');
+  var dlgContact = document.getElementById('dlgContact');
+  var formContact = document.getElementById('formContact');
+  var btnCancelContact = document.getElementById('btnCancelContact');
+  var btnDeleteContact = document.getElementById('btnDeleteContact');
+
+  var allContacts = [];
+  var contactsCol = null;
+
+  var tabVault = document.getElementById('tabVault');
+  var viewVaultEl = document.getElementById('viewVault');
+  var vaultLockScreen = document.getElementById('vaultLockScreen');
+  var vaultContentEl = document.getElementById('vaultContent');
+  var lockTitle = document.getElementById('lockTitle');
+  var lockDesc = document.getElementById('lockDesc');
+  var lockError = document.getElementById('lockError');
+  var unlockForm = document.getElementById('unlockForm');
+  var masterPassEl = document.getElementById('masterPass');
+  var masterPass2Wrap = document.getElementById('masterPass2Wrap');
+  var masterPass2El = document.getElementById('masterPass2');
+  var btnUnlock = document.getElementById('btnUnlock');
+  var btnLock = document.getElementById('btnLock');
+  var forgotLinkWrap = document.getElementById('forgotLinkWrap');
+  var linkForgot = document.getElementById('linkForgot');
+  var recoverForm = document.getElementById('recoverForm');
+  var recoveryInput = document.getElementById('recoveryInput');
+  var newPass1El = document.getElementById('newPass1');
+  var newPass2El = document.getElementById('newPass2');
+  var recoverError = document.getElementById('recoverError');
+  var btnRecover = document.getElementById('btnRecover');
+  var linkCancelRecover = document.getElementById('linkCancelRecover');
+  var recoveryRevealEl = document.getElementById('recoveryReveal');
+  var recoveryKeyBox = document.getElementById('recoveryKeyBox');
+  var btnCopyRecovery = document.getElementById('btnCopyRecovery');
+  var btnDownloadRecovery = document.getElementById('btnDownloadRecovery');
+  var recoveryConfirmChk = document.getElementById('recoveryConfirmChk');
+  var btnRecoveryContinue = document.getElementById('btnRecoveryContinue');
+  var searchVault = document.getElementById('searchVault');
+  var filterTipoEl = document.getElementById('filterTipo');
+  var filterClienteVaultEl = document.getElementById('filterClienteVault');
+  var btnNewVault = document.getElementById('btnNewVault');
+  var vaultGrid = document.getElementById('vaultGrid');
+  var stateMsgVault = document.getElementById('stateMsgVault');
+  var dlgVault = document.getElementById('dlgVault');
+  var formVault = document.getElementById('formVault');
+  var btnCancelVault = document.getElementById('btnCancelVault');
+  var btnDeleteVault = document.getElementById('btnDeleteVault');
+  var vaultFormError = document.getElementById('vaultFormError');
+  var vTipoEl = document.getElementById('vTipo');
+  var camposCorreo = document.getElementById('camposCorreo');
+  var camposServidor = document.getElementById('camposServidor');
+
+  var tabClients = document.getElementById('tabClients');
+  var viewClientsEl = document.getElementById('viewClients');
+  var formNewClient = document.getElementById('formNewClient');
+  var newClientNameEl = document.getElementById('newClientName');
+  var clientsGrid = document.getElementById('clientsGrid');
+  var stateMsgClients = document.getElementById('stateMsgClients');
+
+  var allClients = [];
+  var clientsCol = null;
+  var clientPendingDeleteId = null;
+  var clientPendingDeleteTimeout = null;
+  var clientEditingId = null;
+
+  var tabData = document.getElementById('tabData');
+  var viewDataEl = document.getElementById('viewData');
+  var btnExportData = document.getElementById('btnExportData');
+  var importFileInput = document.getElementById('importFileInput');
+  var dataError = document.getElementById('dataError');
+  var dataStatus = document.getElementById('dataStatus');
+
+  var taskNotesSection = document.getElementById('taskNotesSection');
+  var taskNotesList = document.getElementById('taskNotesList');
+  var noteText = document.getElementById('noteText');
+  var noteImageInput = document.getElementById('noteImageInput');
+  var btnAttachImage = document.getElementById('btnAttachImage');
+  var noteImagePreviewWrap = document.getElementById('noteImagePreviewWrap');
+  var noteImagePreview = document.getElementById('noteImagePreview');
+  var btnRemoveNoteImage = document.getElementById('btnRemoveNoteImage');
+  var btnAddNote = document.getElementById('btnAddNote');
+  var noteError = document.getElementById('noteError');
+  var btnQuickContact = document.getElementById('btnQuickContact');
+  var btnQuickVault = document.getElementById('btnQuickVault');
+  var lightboxEl = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightboxImg');
+
+  var currentTaskId = null;
+  var notesCol = null;
+  var notesUnsub = null;
+  var pendingNoteImageFile = null;
+  var pendingVaultCliente = null;
+
+  var allVault = [];
+  var vaultCol = null;
+  var vaultKey = null;
+  var vaultUnlocked = false;
+  var vaultMetaState = null;
+  var vaultAwaitingRecoveryConfirm = false;
+  var currentRecoveryKeyText = '';
+  var revealed = {};
+  var revealedVisible = {};
+  var cryptoAvailable = !!(window.crypto && window.crypto.subtle);
+
+  tabTasks.addEventListener('click', function(){ switchTab('tasks'); });
+  tabContacts.addEventListener('click', function(){ switchTab('contacts'); });
+  tabVault.addEventListener('click', function(){ switchTab('vault'); });
+  tabClients.addEventListener('click', function(){ switchTab('clients'); });
+  tabData.addEventListener('click', function(){ switchTab('data'); });
+
+  function switchTab(view){
+    var isTasks = view === 'tasks';
+    var isContacts = view === 'contacts';
+    var isVault = view === 'vault';
+    var isClients = view === 'clients';
+    var isData = view === 'data';
+    tabTasks.classList.toggle('active', isTasks);
+    tabContacts.classList.toggle('active', isContacts);
+    tabVault.classList.toggle('active', isVault);
+    tabClients.classList.toggle('active', isClients);
+    tabData.classList.toggle('active', isData);
+    viewTasksEl.hidden = !isTasks;
+    viewContactsEl.hidden = !isContacts;
+    viewVaultEl.hidden = !isVault;
+    viewClientsEl.hidden = !isClients;
+    viewDataEl.hidden = !isData;
+    btnNew.hidden = !isTasks;
+    if(isClients){ renderClients(); }
+    if(isVault){
+      if(vaultAwaitingRecoveryConfirm){
+        vaultLockScreen.hidden = true;
+        vaultContentEl.hidden = true;
+        recoveryRevealEl.hidden = false;
+      } else if(vaultUnlocked){
+        recoveryRevealEl.hidden = true;
+        vaultLockScreen.hidden = true;
+        vaultContentEl.hidden = false;
+        renderVault();
+      } else {
+        recoveryRevealEl.hidden = true;
+        vaultLockScreen.hidden = false;
+        vaultContentEl.hidden = true;
+        if(!cryptoAvailable){
+          lockTitle.textContent = 'Cifrado no disponible';
+          lockDesc.textContent = 'Este navegador no admite cifrado (Web Crypto). Prueba con una versión reciente de Chrome, Edge o Safari.';
+          unlockForm.hidden = true;
+          forgotLinkWrap.hidden = true;
+        } else {
+          ensureVaultMetaChecked();
+        }
+      }
+    }
+  }
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function fmtDate(iso){
+    if(!iso) return '';
+    var d = new Date(iso + 'T00:00:00');
+    if(isNaN(d)) return '';
+    return d.toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+  }
+
+  function getClientNames(){
+    return allClients.map(function(c){ return c.nombre; }).filter(Boolean).sort();
+  }
+
+  function populateClienteFilterSelect(selectEl){
+    var current = selectEl.value;
+    var names = getClientNames();
+    selectEl.innerHTML = '<option value="">Todos los clientes</option>' +
+      names.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+    selectEl.value = names.indexOf(current) !== -1 ? current : '';
+  }
+
+  function populateClienteFormSelect(selectEl, desiredValue){
+    var pending = selectEl.getAttribute('data-pending-select');
+    var val = pending !== null ? pending : (desiredValue !== undefined ? desiredValue : selectEl.value);
+    var names = getClientNames();
+    var opts = names.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; });
+    if(val && names.indexOf(val) === -1){
+      opts.unshift('<option value="'+esc(val)+'">'+esc(val)+'</option>');
+    }
+    opts.push('<option value="__new__">+ Añadir cliente nuevo…</option>');
+    selectEl.innerHTML = opts.join('');
+    selectEl.value = val || '';
+    if(pending !== null) selectEl.removeAttribute('data-pending-select');
+  }
+
+  function refreshAllClienteUI(){
+    populateClienteFilterSelect(filterClienteEl);
+    populateClienteFilterSelect(filterClienteVaultEl);
+    populateClienteFormSelect(document.getElementById('fCliente'));
+    populateClienteFormSelect(document.getElementById('cCliente'));
+    populateClienteFormSelect(document.getElementById('vCliente'));
+  }
+
+  function wireClienteSelect(selectEl, newWrapEl, newInputEl, newBtnEl){
+    selectEl.addEventListener('change', function(){
+      if(selectEl.value === '__new__'){
+        newWrapEl.hidden = false;
+        newInputEl.value = '';
+        newInputEl.focus();
+      } else {
+        newWrapEl.hidden = true;
+      }
+    });
+    newBtnEl.addEventListener('click', function(){
+      var name = newInputEl.value.trim();
+      if(!name || !clientsCol) return;
+      newBtnEl.disabled = true;
+      selectEl.setAttribute('data-pending-select', name);
+      clientsCol.add({nombre:name, createdAt:Date.now()}).then(function(){
+        newWrapEl.hidden = true;
+        newInputEl.value = '';
+      }).catch(function(){
+        selectEl.removeAttribute('data-pending-select');
+      }).finally(function(){ newBtnEl.disabled = false; });
+    });
+  }
+
+  function renderClients(){
+    var items = allClients.slice().sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
+    if(!items.length){
+      clientsGrid.hidden = true;
+      stateMsgClients.hidden = false;
+      stateMsgClients.textContent = 'Sin clientes todavía. Añade el primero arriba.';
+      return;
+    }
+    stateMsgClients.hidden = true;
+    clientsGrid.hidden = false;
+    clientsGrid.innerHTML = items.map(function(c){
+      if(clientEditingId === c.id){
+        return '<div class="client-card client-card-editing" data-id="'+esc(c.id)+'">' +
+          '<div class="client-edit-row">' +
+            '<input type="text" class="client-edit-input" data-edit-input="'+esc(c.id)+'" value="'+esc(c.nombre)+'" maxlength="60">' +
+            '<button type="button" class="btn btn-primary" data-action="save-client" data-id="'+esc(c.id)+'">Guardar</button>' +
+            '<button type="button" class="btn btn-ghost" data-action="cancel-client" data-id="'+esc(c.id)+'">Cancelar</button>' +
+          '</div></div>';
+      }
+      var count = allTasks.filter(function(t){ return t.cliente === c.nombre; }).length;
+      var pending = clientPendingDeleteId === c.id;
+      return '<div class="client-card" data-id="'+esc(c.id)+'">' +
+        '<div><h3>'+esc(c.nombre)+'</h3><div class="meta">'+count+' tarea'+(count===1?'':'s')+'</div></div>' +
+        '<div class="client-card-actions">' +
+        '<button type="button" class="icon-btn" data-action="edit-client" data-id="'+esc(c.id)+'">Editar</button>' +
+        '<button type="button" class="btn '+(pending?'btn-danger':'btn-ghost')+'" data-action="delete" data-id="'+esc(c.id)+'">'+(pending?'¿Seguro? Eliminar':'Eliminar')+'</button>' +
+        '</div></div>';
+    }).join('');
+    if(clientEditingId){
+      var inputEl = clientsGrid.querySelector('[data-edit-input="'+clientEditingId+'"]');
+      if(inputEl){ inputEl.focus(); inputEl.select(); }
+    }
+  }
+
+  clientsGrid.addEventListener('keydown', function(ev){
+    if(ev.key === 'Enter' && ev.target && ev.target.hasAttribute('data-edit-input')){
+      ev.preventDefault();
+      saveClientRename(ev.target.getAttribute('data-edit-input'), ev.target.value);
+    }
+    if(ev.key === 'Escape' && ev.target && ev.target.hasAttribute('data-edit-input')){
+      clientEditingId = null;
+      renderClients();
+    }
+  });
+
+  function saveClientRename(id, newNameRaw){
+    var newName = (newNameRaw || '').trim();
+    var client = allClients.find(function(x){ return x.id === id; });
+    if(!client || !clientsCol) return;
+    if(!newName || newName === client.nombre){
+      clientEditingId = null;
+      renderClients();
+      return;
+    }
+    var oldName = client.nombre;
+    clientsCol.doc(id).update({nombre:newName}).then(function(){
+      if(!col) return;
+      return col.where('cliente', '==', oldName).get().then(function(snap){
+        return Promise.all(snap.docs.map(function(d){ return col.doc(d.id).update({cliente:newName}); }));
+      });
+    }).then(function(){
+      clientEditingId = null;
+      renderClients();
+    }).catch(function(){
+      stateMsgClients.hidden = false;
+      stateMsgClients.textContent = 'No se pudo renombrar el cliente. Inténtalo de nuevo.';
+      clientEditingId = null;
+      renderClients();
+    });
+  }
+
+  clientsGrid.addEventListener('click', function(ev){
+    var editBtn = ev.target.closest ? ev.target.closest('button[data-action="edit-client"]') : null;
+    if(editBtn){
+      clientEditingId = editBtn.getAttribute('data-id');
+      renderClients();
+      return;
+    }
+    var cancelBtn = ev.target.closest ? ev.target.closest('button[data-action="cancel-client"]') : null;
+    if(cancelBtn){
+      clientEditingId = null;
+      renderClients();
+      return;
+    }
+    var saveBtn = ev.target.closest ? ev.target.closest('button[data-action="save-client"]') : null;
+    if(saveBtn){
+      var id = saveBtn.getAttribute('data-id');
+      var inputEl = clientsGrid.querySelector('[data-edit-input="'+id+'"]');
+      saveClientRename(id, inputEl ? inputEl.value : '');
+      return;
+    }
+    var btn = ev.target.closest ? ev.target.closest('button[data-action="delete"]') : null;
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    if(clientPendingDeleteId !== id){
+      clientPendingDeleteId = id;
+      if(clientPendingDeleteTimeout) clearTimeout(clientPendingDeleteTimeout);
+      clientPendingDeleteTimeout = setTimeout(function(){ clientPendingDeleteId = null; renderClients(); }, 4000);
+      renderClients();
+      return;
+    }
+    if(clientPendingDeleteTimeout) clearTimeout(clientPendingDeleteTimeout);
+    clientPendingDeleteId = null;
+    var client = allClients.find(function(x){ return x.id === id; });
+    if(!client || !clientsCol || !col) return;
+    btn.disabled = true;
+    btn.textContent = 'Eliminando…';
+    col.where('cliente', '==', client.nombre).get().then(function(snap){
+      return Promise.all(snap.docs.map(function(d){ return col.doc(d.id).delete(); }));
+    }).then(function(){
+      return clientsCol.doc(id).delete();
+    }).then(function(){
+      renderClients();
+    }).catch(function(){
+      stateMsgClients.hidden = false;
+      stateMsgClients.textContent = 'No se pudo eliminar el cliente. Inténtalo de nuevo.';
+      renderClients();
+    });
+  });
+
+  formNewClient.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var name = newClientNameEl.value.trim();
+    if(!name || !clientsCol) return;
+    clientsCol.add({nombre:name, createdAt:Date.now()}).then(function(){
+      formNewClient.reset();
+    }).catch(function(){});
+  });
+
+  function render(){
+    var q = (searchEl.value || '').trim().toLowerCase();
+    var clienteFilter = filterClienteEl.value;
+
+    var filtered = allTasks.filter(function(t){
+      if(clienteFilter && (t.cliente || 'Sin cliente') !== clienteFilter) return false;
+      if(q){
+        var hay = ((t.title||'') + ' ' + (t.desc||'') + ' ' + (t.cliente||'') + ' ' + (t.contacto||'')).toLowerCase();
+        if(hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    summaryEl.innerHTML = STATUS.map(function(s){
+      var n = filtered.filter(function(t){ return t.status === s.key; }).length;
+      return '<span class="pill" style="background:'+s.bg+';color:'+s.fg+'">'+s.label+' · '+n+'</span>';
+    }).join('');
+
+    boardEl.innerHTML = STATUS.map(function(s){
+      var items = filtered.filter(function(t){ return t.status === s.key; })
+        .sort(function(a,b){ return (a.createdAt||0) - (b.createdAt||0); });
+      var cardsHtml = items.length
+        ? items.map(cardHtml).join('')
+        : '<div class="empty-col">Sin tareas — suelta aquí una tarjeta</div>';
+      return '<div class="col" data-status="'+s.key+'">' +
+        '<div class="col-head"><span class="name"><span class="dot" style="background:'+s.dot+'"></span>'+s.label+'</span>' +
+        '<span class="count">'+items.length+'</span></div>' +
+        '<div class="cards">'+cardsHtml+'</div></div>';
+    }).join('');
+
+    Array.prototype.forEach.call(boardEl.querySelectorAll('.card'), function(el){
+      el.addEventListener('click', function(){
+        if(el.getAttribute('data-dragged') === '1'){
+          el.removeAttribute('data-dragged');
+          return;
+        }
+        openEdit(el.getAttribute('data-id'));
+      });
+    });
+  }
+
+  function moveTask(id, newStatus){
+    var t = allTasks.find(function(x){ return x.id === id; });
+    if(!t || t.status === newStatus || !col) return;
+    t.status = newStatus;
+    render();
+    col.doc(id).update({status:newStatus, updatedAt: Date.now()}).catch(function(){});
+  }
+
+  var dragOverCol = null;
+
+  boardEl.addEventListener('dragstart', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.card') : null;
+    if(!card) return;
+    card.classList.add('dragging');
+    card.setAttribute('data-dragged', '1');
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+  });
+
+  boardEl.addEventListener('dragend', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.card') : null;
+    if(card) card.classList.remove('dragging');
+    if(dragOverCol){ dragOverCol.classList.remove('drag-over'); dragOverCol = null; }
+  });
+
+  boardEl.addEventListener('dragover', function(ev){
+    var colEl = ev.target.closest ? ev.target.closest('.col') : null;
+    if(!colEl) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    if(dragOverCol !== colEl){
+      if(dragOverCol) dragOverCol.classList.remove('drag-over');
+      colEl.classList.add('drag-over');
+      dragOverCol = colEl;
+    }
+  });
+
+  boardEl.addEventListener('dragleave', function(ev){
+    var colEl = ev.target.closest ? ev.target.closest('.col') : null;
+    if(!colEl || colEl !== dragOverCol) return;
+    if(colEl.contains(ev.relatedTarget)) return;
+    colEl.classList.remove('drag-over');
+    dragOverCol = null;
+  });
+
+  boardEl.addEventListener('drop', function(ev){
+    var colEl = ev.target.closest ? ev.target.closest('.col') : null;
+    if(!colEl) return;
+    ev.preventDefault();
+    colEl.classList.remove('drag-over');
+    dragOverCol = null;
+    var id = ev.dataTransfer.getData('text/plain');
+    var newStatus = colEl.getAttribute('data-status');
+    if(id && newStatus) moveTask(id, newStatus);
+  });
+
+  function cardHtml(t){
+    var due = t.dueDate ? '<span>· vence '+esc(fmtDate(t.dueDate))+'</span>' : '';
+    var contact = t.contacto ? '<span class="contact">'+esc(t.contacto)+'</span>' : '<span></span>';
+    return '<div class="card" draggable="true" data-id="'+esc(t.id)+'">' +
+      (t.cliente ? '<div class="cat">'+esc(t.cliente)+'</div>' : '') +
+      '<h3>'+esc(t.title)+'</h3>' +
+      (t.desc ? '<p>'+esc(t.desc)+'</p>' : '') +
+      '<div class="meta">'+contact+due+'</div>' +
+      '</div>';
+  }
+
+  function renderContacts(){
+    var q = (searchContacts.value || '').trim().toLowerCase();
+    var filtered = allContacts.filter(function(c){
+      if(!q) return true;
+      var hay = ((c.cliente||'') + ' ' + (c.nombre||'') + ' ' + (c.email||'') + ' ' + (c.telefono||'') + ' ' + (c.notas||'')).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    }).sort(function(a,b){
+      var ca = (a.cliente||'').localeCompare(b.cliente||'');
+      if(ca !== 0) return ca;
+      return (a.nombre||'').localeCompare(b.nombre||'');
+    });
+
+    if(!filtered.length){
+      contactsGrid.hidden = true;
+      stateMsgContacts.hidden = false;
+      stateMsgContacts.textContent = allContacts.length ? 'Sin resultados para esa búsqueda.' : 'Aún no hay contactos guardados. Añade el primero.';
+      return;
+    }
+    stateMsgContacts.hidden = true;
+    contactsGrid.hidden = false;
+    contactsGrid.innerHTML = filtered.map(contactCardHtml).join('');
+    Array.prototype.forEach.call(contactsGrid.querySelectorAll('.contact-card'), function(el){
+      el.addEventListener('click', function(){ openEditContact(el.getAttribute('data-id')); });
+    });
+  }
+
+  function contactCardHtml(c){
+    var email = c.email ? '<p class="line">'+iconSpan('mail')+esc(c.email)+'</p>' : '';
+    var tel = c.telefono ? '<p class="line">'+iconSpan('phone')+esc(c.telefono)+'</p>' : '';
+    var notas = c.notas ? '<div class="notes">'+esc(c.notas)+'</div>' : '';
+    return '<div class="contact-card" data-id="'+esc(c.id)+'">' +
+      (c.cliente ? '<div class="cat">'+esc(c.cliente)+'</div>' : '') +
+      '<h3>'+esc(c.nombre || 'Sin nombre')+'</h3>' +
+      email + tel + notas +
+      '</div>';
+  }
+
+  function openNewContact(presetCliente){
+    formContact.reset();
+    document.getElementById('cId').value = '';
+    document.getElementById('dlgContactTitle').textContent = 'Nuevo contacto';
+    document.getElementById('cClienteNewWrap').hidden = true;
+    var deflt = presetCliente || (allContacts.length ? allContacts[allContacts.length-1].cliente : '');
+    populateClienteFormSelect(document.getElementById('cCliente'), deflt);
+    btnDeleteContact.hidden = true;
+    dlgContact.showModal();
+  }
+
+  function openEditContact(id){
+    var c = allContacts.find(function(x){ return x.id === id; });
+    if(!c) return;
+    document.getElementById('cId').value = c.id;
+    document.getElementById('dlgContactTitle').textContent = 'Editar contacto';
+    document.getElementById('cClienteNewWrap').hidden = true;
+    populateClienteFormSelect(document.getElementById('cCliente'), c.cliente || '');
+    document.getElementById('cNombre').value = c.nombre || '';
+    document.getElementById('cEmail').value = c.email || '';
+    document.getElementById('cTelefono').value = c.telefono || '';
+    document.getElementById('cNotas').value = c.notas || '';
+    btnDeleteContact.hidden = false;
+    dlgContact.showModal();
+  }
+
+  btnNewContact.addEventListener('click', function(){ openNewContact(); });
+  btnCancelContact.addEventListener('click', function(){ dlgContact.close(); });
+  searchContacts.addEventListener('input', renderContacts);
+  wireClienteSelect(document.getElementById('cCliente'), document.getElementById('cClienteNewWrap'), document.getElementById('cClienteNewInput'), document.getElementById('cClienteNewBtn'));
+
+  formContact.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    if(!contactsCol){ dlgContact.close(); return; }
+    var id = document.getElementById('cId').value;
+    var clienteVal = document.getElementById('cCliente').value;
+    if(!clienteVal || clienteVal === '__new__'){ return; }
+    var body = {
+      cliente: clienteVal,
+      nombre: document.getElementById('cNombre').value.trim(),
+      email: document.getElementById('cEmail').value.trim(),
+      telefono: document.getElementById('cTelefono').value.trim(),
+      notas: document.getElementById('cNotas').value.trim(),
+      updatedAt: Date.now()
+    };
+    var p;
+    if(id){
+      p = contactsCol.doc(id).update(body);
+    } else {
+      body.createdAt = Date.now();
+      p = contactsCol.add(body);
+    }
+    p.then(function(){ dlgContact.close(); }).catch(function(){ dlgContact.close(); });
+  });
+
+  btnDeleteContact.addEventListener('click', function(){
+    var id = document.getElementById('cId').value;
+    if(!id || !contactsCol) return;
+    contactsCol.doc(id).delete().then(function(){ dlgContact.close(); }).catch(function(){ dlgContact.close(); });
+  });
+
+  function fmtDateTime(ts){
+    if(!ts) return '';
+    var d = new Date(ts);
+    if(isNaN(d)) return '';
+    return d.toLocaleDateString('es-ES', {day:'2-digit', month:'short'}) + ' ' + d.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function stopTaskNotes(){
+    if(notesUnsub){ notesUnsub(); notesUnsub = null; }
+    notesCol = null;
+    currentTaskId = null;
+  }
+
+  function resetNoteForm(){
+    noteText.value = '';
+    noteError.hidden = true;
+    pendingNoteImageFile = null;
+    noteImageInput.value = '';
+    noteImagePreviewWrap.hidden = true;
+    noteImagePreview.src = '';
+  }
+
+  function noteHtml(d){
+    var n = d.data() || {};
+    var img = n.imageAssetId ? '<img src="/_blob/'+esc(n.imageAssetId)+'" data-full="/_blob/'+esc(n.imageAssetId)+'" alt="">' : '';
+    return '<div class="note-item" data-id="'+esc(d.id)+'">' +
+      '<button type="button" class="note-del" data-action="delnote" data-id="'+esc(d.id)+'">Eliminar</button>' +
+      '<div class="note-date">'+esc(fmtDateTime(n.createdAt))+'</div>' +
+      (n.text ? '<div class="note-text">'+esc(n.text)+'</div>' : '') +
+      img +
+      '</div>';
+  }
+
+  function renderTaskNotes(docs){
+    taskNotesList.innerHTML = docs.length
+      ? docs.map(noteHtml).join('')
+      : '<p class="line" style="opacity:.65">Sin notas todavía.</p>';
+  }
+
+  taskNotesList.addEventListener('click', function(ev){
+    var img = ev.target.closest ? ev.target.closest('img[data-full]') : null;
+    if(img){ openLightbox(img.getAttribute('data-full')); return; }
+    var delBtn = ev.target.closest ? ev.target.closest('button[data-action="delnote"]') : null;
+    if(delBtn && notesCol){ notesCol.doc(delBtn.getAttribute('data-id')).delete().catch(function(){}); }
+  });
+
+  function openLightbox(url){
+    lightboxImg.src = url;
+    lightboxEl.hidden = false;
+  }
+  lightboxEl.addEventListener('click', function(){
+    lightboxEl.hidden = true;
+    lightboxImg.src = '';
+  });
+
+  btnAttachImage.addEventListener('click', function(){ noteImageInput.click(); });
+  noteImageInput.addEventListener('change', function(){
+    var file = noteImageInput.files && noteImageInput.files[0];
+    if(!file) return;
+    pendingNoteImageFile = file;
+    var reader = new FileReader();
+    reader.onload = function(){
+      noteImagePreview.src = reader.result;
+      noteImagePreviewWrap.hidden = false;
+    };
+    reader.readAsDataURL(file);
+  });
+  btnRemoveNoteImage.addEventListener('click', function(){
+    pendingNoteImageFile = null;
+    noteImageInput.value = '';
+    noteImagePreviewWrap.hidden = true;
+    noteImagePreview.src = '';
+  });
+
+  btnAddNote.addEventListener('click', function(){
+    noteError.hidden = true;
+    var text = noteText.value.trim();
+    if(!text && !pendingNoteImageFile){
+      noteError.textContent = 'Escribe algo o adjunta una imagen.';
+      noteError.hidden = false;
+      return;
+    }
+    if(!notesCol) return;
+    btnAddNote.disabled = true;
+    btnAddNote.textContent = 'Añadiendo…';
+
+    function finishAdd(imageAssetId){
+      return notesCol.add({text:text, imageAssetId:imageAssetId||'', createdAt:Date.now()});
+    }
+
+    var p;
+    if(pendingNoteImageFile && window.claude && window.claude.use){
+      p = window.claude.use('assets').then(function(assets){
+        if(!assets) return finishAdd('');
+        return assets.upload(pendingNoteImageFile).then(function(res){ return finishAdd(res.id); }).catch(function(){ return finishAdd(''); });
+      });
+    } else {
+      p = finishAdd('');
+    }
+    p.then(function(){
+      resetNoteForm();
+    }).catch(function(){
+      noteError.textContent = 'No se pudo añadir la nota.';
+      noteError.hidden = false;
+    }).finally(function(){
+      btnAddNote.disabled = false;
+      btnAddNote.textContent = 'Añadir nota';
+    });
+  });
+
+  btnQuickContact.addEventListener('click', function(){
+    var cliente = document.getElementById('fCliente').value;
+    if(cliente === '__new__') cliente = '';
+    stopTaskNotes();
+    dlg.close();
+    switchTab('contacts');
+    openNewContact(cliente);
+  });
+
+  btnQuickVault.addEventListener('click', function(){
+    var cliente = document.getElementById('fCliente').value;
+    if(cliente === '__new__') cliente = '';
+    stopTaskNotes();
+    dlg.close();
+    switchTab('vault');
+    if(vaultUnlocked){ openNewVault(cliente); }
+    else { pendingVaultCliente = cliente; }
+  });
+
+  function openNew(){
+    form.reset();
+    stopTaskNotes();
+    resetNoteForm();
+    document.getElementById('taskId').value = '';
+    document.getElementById('dlgTitle').textContent = 'Nueva tarea';
+    document.getElementById('fClienteNewWrap').hidden = true;
+    document.getElementById('fEstado').value = 'pendiente';
+    var deflt = allTasks.length && allTasks[0].cliente ? allTasks[0].cliente : '';
+    populateClienteFormSelect(document.getElementById('fCliente'), deflt);
+    taskNotesSection.hidden = true;
+    btnDelete.hidden = true;
+    dlg.showModal();
+  }
+
+  function openEdit(id){
+    var t = allTasks.find(function(x){ return x.id === id; });
+    if(!t) return;
+    stopTaskNotes();
+    resetNoteForm();
+    document.getElementById('taskId').value = t.id;
+    document.getElementById('dlgTitle').textContent = 'Editar tarea';
+    document.getElementById('fTitle').value = t.title || '';
+    document.getElementById('fDesc').value = t.desc || '';
+    document.getElementById('fClienteNewWrap').hidden = true;
+    document.getElementById('fEstado').value = t.status || 'pendiente';
+    document.getElementById('fContacto').value = t.contacto || '';
+    document.getElementById('fFecha').value = t.dueDate || '';
+    btnDelete.hidden = false;
+    taskNotesSection.hidden = false;
+    taskNotesList.innerHTML = 'Cargando notas…';
+
+    try{
+      populateClienteFormSelect(document.getElementById('fCliente'), t.cliente || '');
+    }catch(e){}
+
+    dlg.showModal();
+
+    try{
+      currentTaskId = t.id;
+      notesCol = col.doc(t.id).collection('notes');
+      notesUnsub = notesCol.orderBy('createdAt', 'asc').onSnapshot(function(snap){
+        renderTaskNotes(snap.docs);
+      }, function(){
+        taskNotesList.innerHTML = '<p class="line" style="opacity:.65">No se pudieron cargar las notas.</p>';
+      });
+    }catch(e){
+      taskNotesList.innerHTML = '<p class="line" style="opacity:.65">No se pudieron cargar las notas.</p>';
+    }
+  }
+
+  btnNew.addEventListener('click', openNew);
+  btnCancel.addEventListener('click', function(){ stopTaskNotes(); dlg.close(); });
+  searchEl.addEventListener('input', render);
+  filterClienteEl.addEventListener('change', render);
+  wireClienteSelect(document.getElementById('fCliente'), document.getElementById('fClienteNewWrap'), document.getElementById('fClienteNewInput'), document.getElementById('fClienteNewBtn'));
+
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    if(!col){ stopTaskNotes(); dlg.close(); return; }
+    var id = document.getElementById('taskId').value;
+    var clienteVal = document.getElementById('fCliente').value;
+    if(!clienteVal || clienteVal === '__new__') return;
+    var body = {
+      title: document.getElementById('fTitle').value.trim(),
+      desc: document.getElementById('fDesc').value.trim(),
+      cliente: clienteVal,
+      status: document.getElementById('fEstado').value,
+      contacto: document.getElementById('fContacto').value.trim(),
+      dueDate: document.getElementById('fFecha').value || '',
+      updatedAt: Date.now()
+    };
+    if(!body.title){ return; }
+    var p;
+    if(id){
+      p = col.doc(id).update(body);
+    } else {
+      body.createdAt = Date.now();
+      p = col.add(body);
+    }
+    p.then(function(){ stopTaskNotes(); dlg.close(); }).catch(function(){ stopTaskNotes(); dlg.close(); });
+  });
+
+  btnDelete.addEventListener('click', function(){
+    var id = document.getElementById('taskId').value;
+    if(!id || !col) return;
+    col.doc(id).delete().then(function(){ stopTaskNotes(); dlg.close(); }).catch(function(){ stopTaskNotes(); dlg.close(); });
+  });
+
+  function b64encode(bytes){
+    var arr = new Uint8Array(bytes);
+    var bin = '';
+    for(var i=0;i<arr.length;i++){ bin += String.fromCharCode(arr[i]); }
+    return btoa(bin);
+  }
+  function b64decode(str){
+    var bin = atob(str);
+    var arr = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++){ arr[i] = bin.charCodeAt(i); }
+    return arr;
+  }
+
+  var B32_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  function base32Encode(bytes){
+    var bits = 0, value = 0, output = '';
+    for(var i=0;i<bytes.length;i++){
+      value = (value << 8) | bytes[i];
+      bits += 8;
+      while(bits >= 5){
+        output += B32_ALPHABET[(value >>> (bits - 5)) & 31];
+        bits -= 5;
+      }
+    }
+    if(bits > 0){ output += B32_ALPHABET[(value << (5 - bits)) & 31]; }
+    return output;
+  }
+  function base32Decode(str){
+    var clean = String(str||'').toUpperCase().replace(/[^0-9A-Z]/g,'').replace(/O/g,'0').replace(/[IL]/g,'1');
+    var bits = 0, value = 0, out = [];
+    for(var i=0;i<clean.length;i++){
+      var idx = B32_ALPHABET.indexOf(clean[i]);
+      if(idx === -1) continue;
+      value = (value << 5) | idx;
+      bits += 5;
+      if(bits >= 8){
+        out.push((value >>> (bits - 8)) & 255);
+        bits -= 8;
+      }
+    }
+    return new Uint8Array(out);
+  }
+  function formatRecoveryKey(bytes){
+    var s = base32Encode(bytes);
+    var groups = s.match(/.{1,4}/g) || [];
+    return groups.join('-');
+  }
+
+  function deriveKey(password, saltBytes){
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveKey']).then(function(baseKey){
+      return crypto.subtle.deriveKey(
+        {name:'PBKDF2', salt:saltBytes, iterations:300000, hash:'SHA-256'},
+        baseKey,
+        {name:'AES-GCM', length:256},
+        false,
+        ['encrypt','decrypt']
+      );
+    });
+  }
+  function importAesKeyRaw(bytes){
+    return crypto.subtle.importKey('raw', bytes, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
+  }
+  function encryptJSON(key, obj){
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var enc = new TextEncoder();
+    var data = enc.encode(JSON.stringify(obj));
+    return crypto.subtle.encrypt({name:'AES-GCM', iv:iv}, key, data).then(function(buf){
+      return {iv:b64encode(iv), cipher:b64encode(new Uint8Array(buf))};
+    });
+  }
+  function decryptJSON(key, ivB64, cipherB64){
+    var iv = b64decode(ivB64);
+    var cipherBytes = b64decode(cipherB64);
+    return crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, cipherBytes).then(function(buf){
+      var dec = new TextDecoder();
+      return JSON.parse(dec.decode(buf));
+    });
+  }
+  function decryptEntry(entry){
+    return decryptJSON(vaultKey, entry.iv, entry.cipher);
+  }
+
+  function showLockError(msg){
+    lockError.textContent = msg;
+    lockError.hidden = false;
+  }
+  function unlockBtnLabel(){
+    if(vaultMetaState === 'none') return 'Crear y desbloquear';
+    if(vaultMetaState === 'legacy') return 'Desbloquear y actualizar';
+    return 'Desbloquear';
+  }
+  function resetUnlockBtn(){
+    btnUnlock.disabled = false;
+    btnUnlock.textContent = unlockBtnLabel();
+  }
+  function updateLockScreenMode(){
+    recoverForm.hidden = true;
+    unlockForm.hidden = false;
+    if(vaultMetaState === 'none'){
+      lockTitle.textContent = 'Crea tu contraseña maestra';
+      lockDesc.textContent = 'Es la primera vez que entras aquí. Elige una contraseña maestra segura: cifrará todas las contraseñas de este tablero. Al terminar te daremos una clave de recuperación — guárdala bien, es la única forma de recuperar el acceso si olvidas la contraseña.';
+      masterPass2Wrap.hidden = false;
+      forgotLinkWrap.hidden = true;
+    } else if(vaultMetaState === 'legacy'){
+      lockTitle.textContent = 'Desbloquear contraseñas';
+      lockDesc.textContent = 'Introduce tu contraseña maestra actual. Al entrar se activará automáticamente tu clave de recuperación (este tablero aún no tenía una).';
+      masterPass2Wrap.hidden = true;
+      forgotLinkWrap.hidden = true;
+    } else {
+      lockTitle.textContent = 'Desbloquear contraseñas';
+      lockDesc.textContent = 'Introduce tu contraseña maestra. Se usa solo en tu navegador para cifrar y descifrar — nunca se guarda ni se envía a ningún sitio.';
+      masterPass2Wrap.hidden = true;
+      forgotLinkWrap.hidden = false;
+    }
+    resetUnlockBtn();
+  }
+  function ensureVaultMetaChecked(){
+    if(vaultMetaState !== null){ updateLockScreenMode(); return; }
+    if(!db){ showLockError('No hay conexión con el almacenamiento.'); return; }
+    db.doc('vault_meta/check').get().then(function(snap){
+      if(!snap.exists){ vaultMetaState = 'none'; }
+      else {
+        var data = snap.data() || {};
+        vaultMetaState = data.saltPassword ? 'current' : 'legacy';
+      }
+      updateLockScreenMode();
+    }).catch(function(){
+      vaultMetaState = 'none';
+      updateLockScreenMode();
+    });
+  }
+
+  function presentRecoveryKey(formattedKey, isReset){
+    currentRecoveryKeyText = formattedKey;
+    recoveryKeyBox.textContent = formattedKey;
+    var titleEl = recoveryRevealEl.querySelector('h2');
+    if(titleEl) titleEl.textContent = isReset ? 'Nueva clave de recuperación' : 'Guarda tu clave de recuperación';
+    var descEl = recoveryRevealEl.querySelector('.lock-desc');
+    if(descEl && isReset){ descEl.textContent = 'Tu contraseña se ha restablecido. La clave de recuperación anterior ya no sirve — guarda esta nueva en un lugar seguro.'; }
+    recoveryConfirmChk.checked = false;
+    btnRecoveryContinue.disabled = true;
+    lockError.hidden = true;
+    masterPassEl.value = '';
+    masterPass2El.value = '';
+    vaultAwaitingRecoveryConfirm = true;
+    vaultLockScreen.hidden = true;
+    vaultContentEl.hidden = true;
+    recoveryRevealEl.hidden = false;
+  }
+
+  function buildRecoveryFileText(key){
+    return 'CLAVE DE RECUPERACION - Tablero de Tareas\n' +
+      'Generada: ' + new Date().toLocaleString('es-ES') + '\n\n' +
+      'Esta clave permite restablecer la contrasena maestra del gestor de\n' +
+      'contrasenas de este tablero si la olvidas. Guardala en un lugar\n' +
+      'seguro (no la compartas ni la subas a ningun sitio). Quien la tenga,\n' +
+      'junto con acceso a este tablero, podria leer las contrasenas guardadas.\n\n' +
+      'Clave:\n' + key + '\n\n' +
+      'Como usarla: en el tablero, pestana "Contrasenas" -> "Has olvidado\n' +
+      'tu contrasena maestra" -> pega esta clave y crea una contrasena nueva.\n' +
+      'Al hacerlo se genera una nueva clave de recuperacion y esta queda invalidada.\n';
+  }
+
+  recoveryConfirmChk.addEventListener('change', function(){
+    btnRecoveryContinue.disabled = !recoveryConfirmChk.checked;
+  });
+
+  btnRecoveryContinue.addEventListener('click', function(){
+    vaultAwaitingRecoveryConfirm = false;
+    recoveryRevealEl.hidden = true;
+    vaultContentEl.hidden = false;
+    renderVault();
+    maybeOpenPendingVault();
+  });
+
+  btnCopyRecovery.addEventListener('click', function(){
+    if(!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(currentRecoveryKeyText).then(function(){
+      var old = btnCopyRecovery.textContent;
+      btnCopyRecovery.textContent = 'Copiado';
+      setTimeout(function(){ btnCopyRecovery.textContent = old; }, 1200);
+    }).catch(function(){});
+  });
+
+  btnDownloadRecovery.addEventListener('click', function(){
+    if(!window.claude || !window.claude.use) return;
+    window.claude.use('downloads').then(function(dl){
+      if(!dl) return;
+      return dl.save({filename:'vault-clave-recuperacion.txt', data:buildRecoveryFileText(currentRecoveryKeyText)});
+    }).then(function(){
+      var old = btnDownloadRecovery.textContent;
+      btnDownloadRecovery.textContent = 'Descargado';
+      setTimeout(function(){ btnDownloadRecovery.textContent = old; }, 1200);
+    }).catch(function(){});
+  });
+
+  function maybeOpenPendingVault(){
+    if(pendingVaultCliente){
+      var c = pendingVaultCliente;
+      pendingVaultCliente = null;
+      openNewVault(c);
+    }
+  }
+
+  function onVaultUnlocked(){
+    vaultUnlocked = true;
+    lockError.hidden = true;
+    masterPassEl.value = '';
+    masterPass2El.value = '';
+    vaultLockScreen.hidden = true;
+    vaultContentEl.hidden = false;
+    renderVault();
+    maybeOpenPendingVault();
+  }
+
+  unlockForm.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    lockError.hidden = true;
+    var pass = masterPassEl.value;
+    if(!pass || !db) return;
+    btnUnlock.disabled = true;
+    btnUnlock.textContent = 'Comprobando…';
+
+    if(vaultMetaState === 'none'){
+      var pass2 = masterPass2El.value;
+      if(pass !== pass2){ showLockError('Las dos contraseñas no coinciden.'); resetUnlockBtn(); return; }
+      if(pass.length < 6){ showLockError('Usa al menos 6 caracteres.'); resetUnlockBtn(); return; }
+
+      var dek = crypto.getRandomValues(new Uint8Array(32));
+      var recoveryBytes = crypto.getRandomValues(new Uint8Array(32));
+      var saltPassword = crypto.getRandomValues(new Uint8Array(16));
+
+      Promise.all([deriveKey(pass, saltPassword), importAesKeyRaw(recoveryBytes)]).then(function(keys){
+        var kekPassword = keys[0], kekRecovery = keys[1];
+        return Promise.all([
+          encryptJSON(kekPassword, {dek:b64encode(dek)}),
+          encryptJSON(kekRecovery, {dek:b64encode(dek)})
+        ]).then(function(wraps){
+          return db.doc('vault_meta/check').set({
+            saltPassword: b64encode(saltPassword),
+            ivPassword: wraps[0].iv, cipherPassword: wraps[0].cipher,
+            ivRecovery: wraps[1].iv, cipherRecovery: wraps[1].cipher,
+            createdAt: Date.now(), updatedAt: Date.now()
+          });
+        });
+      }).then(function(){
+        return importAesKeyRaw(dek);
+      }).then(function(key){
+        vaultKey = key;
+        vaultMetaState = 'current';
+        vaultUnlocked = true;
+        presentRecoveryKey(formatRecoveryKey(recoveryBytes), false);
+      }).catch(function(){
+        showLockError('No se pudo crear la contraseña maestra. Inténtalo de nuevo.');
+      }).finally(resetUnlockBtn);
+
+    } else if(vaultMetaState === 'legacy'){
+      db.doc('vault_meta/check').get().then(function(snap){
+        var data = snap.data() || {};
+        var oldSalt = b64decode(data.salt);
+        return deriveKey(pass, oldSalt).then(function(oldKey){
+          return decryptJSON(oldKey, data.iv, data.cipher).then(function(obj){
+            if(!obj || obj.check !== 'OK') throw new Error('bad-pass');
+            return oldKey;
+          });
+        }).then(function(oldKey){
+          return vaultCol.get().then(function(vsnap){
+            var newDekBytes = crypto.getRandomValues(new Uint8Array(32));
+            return importAesKeyRaw(newDekBytes).then(function(newKey){
+              return Promise.all(vsnap.docs.map(function(d){
+                var edata = d.data() || {};
+                return decryptJSON(oldKey, edata.iv, edata.cipher).then(function(plain){
+                  return encryptJSON(newKey, {password:plain.password||'', notas:plain.notas||''});
+                }).then(function(enc){
+                  return vaultCol.doc(d.id).update({iv:enc.iv, cipher:enc.cipher, updatedAt:Date.now()});
+                });
+              })).then(function(){
+                var saltPassword = crypto.getRandomValues(new Uint8Array(16));
+                var recoveryBytes = crypto.getRandomValues(new Uint8Array(32));
+                return Promise.all([deriveKey(pass, saltPassword), importAesKeyRaw(recoveryBytes)]).then(function(keys){
+                  return Promise.all([
+                    encryptJSON(keys[0], {dek:b64encode(newDekBytes)}),
+                    encryptJSON(keys[1], {dek:b64encode(newDekBytes)})
+                  ]).then(function(wraps){
+                    return db.doc('vault_meta/check').set({
+                      saltPassword: b64encode(saltPassword),
+                      ivPassword: wraps[0].iv, cipherPassword: wraps[0].cipher,
+                      ivRecovery: wraps[1].iv, cipherRecovery: wraps[1].cipher,
+                      createdAt: data.createdAt || Date.now(), updatedAt: Date.now()
+                    }).then(function(){
+                      vaultKey = newKey;
+                      vaultMetaState = 'current';
+                      vaultUnlocked = true;
+                      revealed = {}; revealedVisible = {};
+                      presentRecoveryKey(formatRecoveryKey(recoveryBytes), false);
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      }).catch(function(){
+        showLockError('Contraseña maestra incorrecta.');
+      }).finally(resetUnlockBtn);
+
+    } else {
+      db.doc('vault_meta/check').get().then(function(snap){
+        if(!snap.exists){ vaultMetaState = 'none'; updateLockScreenMode(); throw new Error('no-check'); }
+        var data = snap.data();
+        var salt = b64decode(data.saltPassword);
+        return deriveKey(pass, salt).then(function(key){
+          return decryptJSON(key, data.ivPassword, data.cipherPassword).then(function(obj){
+            if(!obj || !obj.dek) throw new Error('bad-pass');
+            return importAesKeyRaw(b64decode(obj.dek));
+          });
+        });
+      }).then(function(key){
+        vaultKey = key;
+        onVaultUnlocked();
+      }).catch(function(err){
+        if(!err || err.message !== 'no-check'){ showLockError('Contraseña maestra incorrecta.'); }
+      }).finally(resetUnlockBtn);
+    }
+  });
+
+  linkForgot.addEventListener('click', function(ev){
+    ev.preventDefault();
+    recoverError.hidden = true;
+    recoveryInput.value = '';
+    newPass1El.value = '';
+    newPass2El.value = '';
+    unlockForm.hidden = true;
+    forgotLinkWrap.hidden = true;
+    recoverForm.hidden = false;
+  });
+
+  linkCancelRecover.addEventListener('click', function(ev){
+    ev.preventDefault();
+    recoverForm.hidden = true;
+    unlockForm.hidden = false;
+    forgotLinkWrap.hidden = false;
+  });
+
+  recoverForm.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    recoverError.hidden = true;
+    if(!db){ recoverError.textContent = 'No hay conexión con el almacenamiento.'; recoverError.hidden = false; return; }
+    var keyBytes = base32Decode(recoveryInput.value);
+    if(keyBytes.length !== 32){
+      recoverError.textContent = 'Clave de recuperación no válida. Revisa que la has copiado completa.';
+      recoverError.hidden = false;
+      return;
+    }
+    var newPass = newPass1El.value;
+    var newPass2 = newPass2El.value;
+    if(newPass !== newPass2){
+      recoverError.textContent = 'Las dos contraseñas nuevas no coinciden.';
+      recoverError.hidden = false;
+      return;
+    }
+    if(newPass.length < 6){
+      recoverError.textContent = 'Usa al menos 6 caracteres.';
+      recoverError.hidden = false;
+      return;
+    }
+    btnRecover.disabled = true;
+    btnRecover.textContent = 'Restableciendo…';
+
+    importAesKeyRaw(keyBytes).then(function(kekRecoveryInput){
+      return db.doc('vault_meta/check').get().then(function(snap){
+        if(!snap.exists || !snap.data().ivRecovery){
+          throw new Error('no-recovery');
+        }
+        var data = snap.data();
+        return decryptJSON(kekRecoveryInput, data.ivRecovery, data.cipherRecovery).then(function(obj){
+          if(!obj || !obj.dek) throw new Error('bad-key');
+          var dekBytes = b64decode(obj.dek);
+          var saltPassword = crypto.getRandomValues(new Uint8Array(16));
+          var newRecoveryBytes = crypto.getRandomValues(new Uint8Array(32));
+          return Promise.all([deriveKey(newPass, saltPassword), importAesKeyRaw(newRecoveryBytes), importAesKeyRaw(dekBytes)]).then(function(keys){
+            var kekPassword = keys[0], kekRecoveryNew = keys[1], newVaultKey = keys[2];
+            return Promise.all([
+              encryptJSON(kekPassword, {dek:obj.dek}),
+              encryptJSON(kekRecoveryNew, {dek:obj.dek})
+            ]).then(function(wraps){
+              return db.doc('vault_meta/check').set({
+                saltPassword: b64encode(saltPassword),
+                ivPassword: wraps[0].iv, cipherPassword: wraps[0].cipher,
+                ivRecovery: wraps[1].iv, cipherRecovery: wraps[1].cipher,
+                createdAt: data.createdAt || Date.now(), updatedAt: Date.now()
+              }).then(function(){
+                vaultKey = newVaultKey;
+                vaultMetaState = 'current';
+                vaultUnlocked = true;
+                revealed = {}; revealedVisible = {};
+                recoverForm.hidden = true;
+                presentRecoveryKey(formatRecoveryKey(newRecoveryBytes), true);
+              });
+            });
+          });
+        });
+      });
+    }).catch(function(err){
+      if(err && err.message === 'no-recovery'){
+        recoverError.textContent = 'Este tablero todavía no tiene una clave de recuperación generada.';
+      } else {
+        recoverError.textContent = 'La clave de recuperación no es correcta.';
+      }
+      recoverError.hidden = false;
+    }).finally(function(){
+      btnRecover.disabled = false;
+      btnRecover.textContent = 'Restablecer con la clave';
+    });
+  });
+
+  btnLock.addEventListener('click', function(){
+    vaultKey = null;
+    vaultUnlocked = false;
+    vaultAwaitingRecoveryConfirm = false;
+    revealed = {};
+    revealedVisible = {};
+    masterPassEl.value = '';
+    masterPass2El.value = '';
+    recoveryRevealEl.hidden = true;
+    vaultLockScreen.hidden = false;
+    vaultContentEl.hidden = true;
+    updateLockScreenMode();
+  });
+
+  function renderVault(){
+    if(!vaultUnlocked) return;
+    var q = (searchVault.value || '').trim().toLowerCase();
+    var tipoFilter = filterTipoEl.value;
+    var clienteFilter = filterClienteVaultEl.value;
+
+    var filtered = allVault.filter(function(v){
+      if(tipoFilter && v.tipo !== tipoFilter) return false;
+      if(clienteFilter && (v.cliente || 'Sin cliente') !== clienteFilter) return false;
+      if(q){
+        var hay = ((v.cliente||'') + ' ' + (v.label||'') + ' ' + (v.correo||'') + ' ' + (v.web||'') + ' ' + (v.ip||'') + ' ' + (v.usuario||'')).toLowerCase();
+        if(hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function(a,b){
+      var ca = (a.cliente||'').localeCompare(b.cliente||'');
+      if(ca !== 0) return ca;
+      return (a.label||a.correo||a.ip||'').localeCompare(b.label||b.correo||b.ip||'');
+    });
+
+    if(!filtered.length){
+      vaultGrid.hidden = true;
+      stateMsgVault.hidden = false;
+      stateMsgVault.textContent = allVault.length ? 'Sin resultados para esa búsqueda.' : 'Sin credenciales guardadas todavía. Añade la primera.';
+      return;
+    }
+    stateMsgVault.hidden = true;
+    vaultGrid.hidden = false;
+    vaultGrid.innerHTML = filtered.map(vaultCardHtml).join('');
+  }
+
+  function vaultCardHtml(v){
+    var isCorreo = v.tipo === 'correo';
+    var title = v.label || (isCorreo ? v.correo : v.ip) || 'Sin título';
+    var line1 = isCorreo
+      ? (v.correo ? '<p class="line">'+iconSpan('mail')+esc(v.correo)+'</p>' : '')
+      : (v.ip ? '<p class="line">'+iconSpan('server')+esc(v.ip)+'</p>' : '');
+    var line2 = isCorreo
+      ? (v.web ? '<p class="line">'+iconSpan('link')+esc(v.web)+'</p>' : '')
+      : (v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '');
+    var isVisible = !!revealedVisible[v.id];
+    var data = revealed[v.id];
+    var passText = isVisible && data ? data.password : '••••••••';
+    var notesHtml = isVisible && data && data.notas ? '<div class="notes">'+esc(data.notas)+'</div>' : '';
+    return '<div class="vault-card" data-id="'+esc(v.id)+'">' +
+      '<div class="cat"><span>'+esc(v.cliente||'')+'</span><span class="type-badge">'+(isCorreo?'Correo / Web':'Servidor')+'</span></div>' +
+      '<h3>'+esc(title)+'</h3>' +
+      line1 + line2 +
+      '<div class="pass-row"><span class="pass-value">'+esc(passText)+'</span>' +
+      '<button type="button" class="icon-btn" data-action="toggle" data-id="'+esc(v.id)+'">'+(isVisible?'Ocultar':'Mostrar')+'</button>' +
+      '<button type="button" class="icon-btn" data-action="copy" data-id="'+esc(v.id)+'">Copiar</button></div>' +
+      notesHtml +
+      '<div class="edit-row"><button type="button" class="icon-btn" data-action="edit" data-id="'+esc(v.id)+'">Editar</button></div>' +
+      '</div>';
+  }
+
+  vaultGrid.addEventListener('click', function(ev){
+    var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    var action = btn.getAttribute('data-action');
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(!entry) return;
+    if(action === 'edit'){ openEditVault(id); return; }
+    if(action === 'toggle'){
+      if(revealed[id]){
+        revealedVisible[id] = !revealedVisible[id];
+        renderVault();
+      } else {
+        decryptEntry(entry).then(function(data){
+          revealed[id] = data;
+          revealedVisible[id] = true;
+          renderVault();
+        }).catch(function(){
+          stateMsgVault.hidden = false;
+          stateMsgVault.textContent = 'No se pudo descifrar esta credencial.';
+        });
+      }
+      return;
+    }
+    if(action === 'copy'){
+      var doCopy = function(data){
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(data.password || '').then(function(){
+            var old = btn.textContent;
+            btn.textContent = 'Copiado';
+            setTimeout(function(){ btn.textContent = old; }, 1200);
+          }).catch(function(){});
+        }
+      };
+      if(revealed[id]) doCopy(revealed[id]);
+      else decryptEntry(entry).then(function(data){ revealed[id] = data; doCopy(data); }).catch(function(){});
+    }
+  });
+
+  function toggleVaultFields(){
+    var isCorreo = vTipoEl.value === 'correo';
+    camposCorreo.hidden = !isCorreo;
+    camposServidor.hidden = isCorreo;
+  }
+  vTipoEl.addEventListener('change', toggleVaultFields);
+
+  function openNewVault(presetCliente){
+    formVault.reset();
+    document.getElementById('vId').value = '';
+    document.getElementById('dlgVaultTitle').textContent = 'Nueva credencial';
+    vaultFormError.hidden = true;
+    document.getElementById('vClienteNewWrap').hidden = true;
+    vTipoEl.value = 'correo';
+    toggleVaultFields();
+    var deflt = presetCliente || (allVault.length ? allVault[allVault.length-1].cliente : '');
+    populateClienteFormSelect(document.getElementById('vCliente'), deflt);
+    btnDeleteVault.hidden = true;
+    dlgVault.showModal();
+  }
+
+  function fillVaultForm(entry, data){
+    document.getElementById('vId').value = entry.id;
+    document.getElementById('dlgVaultTitle').textContent = 'Editar credencial';
+    vaultFormError.hidden = true;
+    document.getElementById('vClienteNewWrap').hidden = true;
+    populateClienteFormSelect(document.getElementById('vCliente'), entry.cliente || '');
+    document.getElementById('vLabel').value = entry.label || '';
+    vTipoEl.value = entry.tipo || 'correo';
+    toggleVaultFields();
+    document.getElementById('vCorreo').value = entry.correo || '';
+    document.getElementById('vWeb').value = entry.web || '';
+    document.getElementById('vIp').value = entry.ip || '';
+    document.getElementById('vUsuario').value = entry.usuario || '';
+    document.getElementById('vPass').value = data.password || '';
+    document.getElementById('vNotas').value = data.notas || '';
+    btnDeleteVault.hidden = false;
+    dlgVault.showModal();
+  }
+
+  function openEditVault(id){
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(!entry) return;
+    if(revealed[id]){
+      fillVaultForm(entry, revealed[id]);
+      return;
+    }
+    decryptEntry(entry).then(function(data){
+      revealed[id] = data;
+      fillVaultForm(entry, data);
+    }).catch(function(){
+      fillVaultForm(entry, {password:'', notas:''});
+      vaultFormError.textContent = 'No se pudo descifrar el valor anterior; revisa lo que guardas antes de guardar.';
+      vaultFormError.hidden = false;
+    });
+  }
+
+  btnNewVault.addEventListener('click', function(){ openNewVault(); });
+  btnCancelVault.addEventListener('click', function(){ dlgVault.close(); });
+  searchVault.addEventListener('input', renderVault);
+  filterTipoEl.addEventListener('change', renderVault);
+  filterClienteVaultEl.addEventListener('change', renderVault);
+  wireClienteSelect(document.getElementById('vCliente'), document.getElementById('vClienteNewWrap'), document.getElementById('vClienteNewInput'), document.getElementById('vClienteNewBtn'));
+
+  formVault.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    vaultFormError.hidden = true;
+    if(!vaultCol || !vaultKey){
+      vaultFormError.textContent = 'El vault no está desbloqueado.';
+      vaultFormError.hidden = false;
+      return;
+    }
+    var id = document.getElementById('vId').value;
+    var tipo = vTipoEl.value;
+    var cliente = document.getElementById('vCliente').value;
+    if(!cliente || cliente === '__new__') return;
+    var passVal = document.getElementById('vPass').value;
+    if(!id && !passVal){
+      vaultFormError.textContent = 'La contraseña es obligatoria.';
+      vaultFormError.hidden = false;
+      return;
+    }
+    var notasVal = document.getElementById('vNotas').value;
+    var existing = id ? allVault.find(function(x){ return x.id === id; }) : null;
+
+    var meta = {
+      tipo: tipo,
+      cliente: cliente,
+      label: document.getElementById('vLabel').value.trim(),
+      correo: tipo === 'correo' ? document.getElementById('vCorreo').value.trim() : '',
+      web: tipo === 'correo' ? document.getElementById('vWeb').value.trim() : '',
+      ip: tipo === 'servidor' ? document.getElementById('vIp').value.trim() : '',
+      usuario: tipo === 'servidor' ? document.getElementById('vUsuario').value.trim() : '',
+      createdAt: existing ? existing.createdAt : Date.now(),
+      updatedAt: Date.now()
+    };
+
+    encryptJSON(vaultKey, {password:passVal, notas:notasVal}).then(function(enc){
+      meta.iv = enc.iv;
+      meta.cipher = enc.cipher;
+      var p = id ? vaultCol.doc(id).set(meta) : vaultCol.add(meta);
+      return p;
+    }).then(function(){
+      if(id){ delete revealed[id]; delete revealedVisible[id]; }
+      dlgVault.close();
+    }).catch(function(){
+      vaultFormError.textContent = 'No se pudo cifrar y guardar. Inténtalo de nuevo.';
+      vaultFormError.hidden = false;
+    });
+  });
+
+  btnDeleteVault.addEventListener('click', function(){
+    var id = document.getElementById('vId').value;
+    if(!id || !vaultCol) return;
+    vaultCol.doc(id).delete().then(function(){
+      delete revealed[id];
+      delete revealedVisible[id];
+      dlgVault.close();
+    }).catch(function(){ dlgVault.close(); });
+  });
+
+  function showDataError(msg){
+    dataStatus.hidden = true;
+    dataError.textContent = msg;
+    dataError.hidden = false;
+  }
+  function showDataStatus(msg){
+    dataError.hidden = true;
+    dataStatus.textContent = msg;
+    dataStatus.hidden = false;
+  }
+
+  btnExportData.addEventListener('click', function(){
+    if(!col || !contactsCol || !vaultCol || !clientsCol || !db){
+      showDataError('El tablero todavía se está cargando, prueba de nuevo en unos segundos.');
+      return;
+    }
+    var originalText = btnExportData.textContent;
+    btnExportData.disabled = true;
+    btnExportData.textContent = 'Preparando…';
+
+    Promise.all(allTasks.map(function(t){
+      return col.doc(t.id).collection('notes').get().then(function(snap){
+        var notes = snap.docs.map(function(d){
+          var n = d.data() || {};
+          n.id = d.id;
+          return n;
+        });
+        var copy = {};
+        Object.keys(t).forEach(function(k){ copy[k] = t[k]; });
+        copy.notes = notes;
+        return copy;
+      });
+    })).then(function(tasksWithNotes){
+      return db.doc('vault_meta/check').get().then(function(metaSnap){
+        var exportObj = {
+          exportedAt: new Date().toISOString(),
+          formatVersion: 1,
+          clients: allClients,
+          tasks: tasksWithNotes,
+          contacts: allContacts,
+          vault: {
+            meta: metaSnap.exists ? metaSnap.data() : null,
+            entries: allVault
+          }
+        };
+        var json = JSON.stringify(exportObj, null, 2);
+        var filename = 'tablero-backup-' + new Date().toISOString().slice(0,10) + '.json';
+        if(!window.claude || !window.claude.use) throw new Error('no-claude');
+        return window.claude.use('downloads').then(function(dl){
+          if(!dl) throw new Error('no-downloads');
+          return dl.save({filename:filename, data:json});
+        }).then(function(){
+          showDataStatus('Copia descargada: ' + tasksWithNotes.length + ' tareas, ' + allContacts.length + ' contactos, ' + allVault.length + ' contraseñas, ' + allClients.length + ' clientes.');
+        });
+      });
+    }).catch(function(){
+      showDataError('No se pudo generar o descargar la copia de seguridad.');
+    }).finally(function(){
+      btnExportData.disabled = false;
+      btnExportData.textContent = originalText;
+    });
+  });
+
+  function importAllData(data){
+    if(!data || typeof data !== 'object'){
+      showDataError('El archivo no tiene el formato esperado.');
+      importFileInput.value = '';
+      return;
+    }
+    if(!clientsCol || !col || !contactsCol || !vaultCol || !db){
+      showDataError('El tablero todavía se está cargando, prueba de nuevo en unos segundos.');
+      importFileInput.value = '';
+      return;
+    }
+
+    var counts = {clients:0, tasks:0, notes:0, contacts:0, vault:0};
+    var existingClientNames = {};
+    allClients.forEach(function(c){ existingClientNames[c.nombre] = true; });
+    var vaultOutcome = 'none';
+
+    var clientPromises = (Array.isArray(data.clients) ? data.clients : []).map(function(c){
+      if(!c || !c.nombre || existingClientNames[c.nombre]) return Promise.resolve();
+      existingClientNames[c.nombre] = true;
+      counts.clients++;
+      return clientsCol.add({nombre: c.nombre, createdAt: c.createdAt || Date.now()});
+    });
+
+    var taskPromises = (Array.isArray(data.tasks) ? data.tasks : []).map(function(t){
+      if(!t || !t.title) return Promise.resolve();
+      var notes = Array.isArray(t.notes) ? t.notes : [];
+      var body = {
+        title: t.title || '',
+        desc: t.desc || '',
+        cliente: t.cliente || '',
+        status: t.status || 'pendiente',
+        contacto: t.contacto || '',
+        dueDate: t.dueDate || '',
+        createdAt: t.createdAt || Date.now(),
+        updatedAt: Date.now()
+      };
+      counts.tasks++;
+      return col.add(body).then(function(ref){
+        return Promise.all(notes.map(function(n){
+          if(!n) return Promise.resolve();
+          counts.notes++;
+          return ref.collection('notes').add({
+            text: n.text || '',
+            imageAssetId: n.imageAssetId || '',
+            createdAt: n.createdAt || Date.now()
+          });
+        }));
+      });
+    });
+
+    var contactPromises = (Array.isArray(data.contacts) ? data.contacts : []).map(function(c){
+      if(!c || !c.cliente) return Promise.resolve();
+      counts.contacts++;
+      return contactsCol.add({
+        cliente: c.cliente || '',
+        nombre: c.nombre || '',
+        email: c.email || '',
+        telefono: c.telefono || '',
+        notas: c.notas || '',
+        createdAt: c.createdAt || Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    Promise.all(clientPromises.concat(taskPromises, contactPromises)).then(function(){
+      return db.doc('vault_meta/check').get();
+    }).then(function(metaSnap){
+      var vaultData = data.vault || {};
+      var entries = Array.isArray(vaultData.entries) ? vaultData.entries : [];
+      if(!entries.length){ vaultOutcome = 'none'; return; }
+      if(metaSnap.exists){ vaultOutcome = 'skipped'; return; }
+      if(!vaultData.meta){ vaultOutcome = 'skipped'; return; }
+      vaultOutcome = 'imported';
+      return db.doc('vault_meta/check').set(vaultData.meta).then(function(){
+        return Promise.all(entries.map(function(v){
+          if(!v || !v.cliente || !v.iv || !v.cipher) return Promise.resolve();
+          counts.vault++;
+          return vaultCol.add({
+            tipo: v.tipo || 'correo',
+            cliente: v.cliente || '',
+            label: v.label || '',
+            correo: v.correo || '',
+            web: v.web || '',
+            ip: v.ip || '',
+            usuario: v.usuario || '',
+            iv: v.iv,
+            cipher: v.cipher,
+            createdAt: v.createdAt || Date.now(),
+            updatedAt: Date.now()
+          });
+        }));
+      });
+    }).then(function(){
+      var msg = 'Importado: ' + counts.clients + ' clientes, ' + counts.tasks + ' tareas (' + counts.notes + ' notas), ' + counts.contacts + ' contactos, ' + counts.vault + ' contraseñas.';
+      if(vaultOutcome === 'skipped'){
+        msg += ' Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.';
+      }
+      showDataStatus(msg);
+      importFileInput.value = '';
+    }).catch(function(){
+      showDataError('Hubo un problema importando el archivo — puede que solo se haya importado una parte.');
+      importFileInput.value = '';
+    });
+  }
+
+  importFileInput.addEventListener('change', function(){
+    var file = importFileInput.files && importFileInput.files[0];
+    if(!file) return;
+    dataError.hidden = true;
+    dataStatus.hidden = true;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var parsed;
+      try{
+        parsed = JSON.parse(reader.result);
+      }catch(e){
+        showDataError('El archivo no es un JSON válido.');
+        importFileInput.value = '';
+        return;
+      }
+      importAllData(parsed);
+    };
+    reader.onerror = function(){
+      showDataError('No se pudo leer el archivo.');
+      importFileInput.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  function start(){
+    if(!window.claude || !window.claude.use){
+      stateMsg.textContent = 'Esta vista no admite el tablero interactivo.';
+      return;
+    }
+    window.claude.use('db').then(function(ns){
+      db = ns;
+      if(!db){
+        stateMsg.textContent = 'No se pudo conectar al almacenamiento de tareas en esta vista.';
+        return;
+      }
+      clientsCol = db.collection('clients');
+      clientsCol.onSnapshot(function(snap){
+        allClients = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        refreshAllClienteUI();
+        renderClients();
+      }, function(){});
+
+      col = db.collection('tasks');
+      col.onSnapshot(function(snap){
+        allTasks = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        stateMsg.hidden = true;
+        boardEl.hidden = false;
+        render();
+        renderClients();
+      }, function(err){
+        stateMsg.hidden = false;
+        boardEl.hidden = true;
+        stateMsg.textContent = 'No se pudieron cargar las tareas (' + (err && err.code || 'error') + ').';
+      });
+
+      contactsCol = db.collection('contacts');
+      contactsCol.onSnapshot(function(snap){
+        allContacts = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        renderContacts();
+      }, function(err){
+        stateMsgContacts.hidden = false;
+        contactsGrid.hidden = true;
+        stateMsgContacts.textContent = 'No se pudieron cargar los contactos (' + (err && err.code || 'error') + ').';
+      });
+
+      vaultCol = db.collection('vault');
+      vaultCol.onSnapshot(function(snap){
+        allVault = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        if(vaultUnlocked) renderVault();
+      }, function(err){
+        if(vaultUnlocked){
+          stateMsgVault.hidden = false;
+          vaultGrid.hidden = true;
+          stateMsgVault.textContent = 'No se pudieron cargar las credenciales (' + (err && err.code || 'error') + ').';
+        }
+      });
+    }).catch(function(){
+      stateMsg.textContent = 'No se pudo conectar al almacenamiento de tareas.';
+    });
+  }
+
+  if(window.claude && window.claude.hot && window.claude.hot.ready){
+    window.claude.hot.ready(start);
+  } else {
+    start();
+  }
+})();
+</script>

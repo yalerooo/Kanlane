@@ -547,14 +547,31 @@
   .field input,.field select,.field textarea{
     font-family:inherit;
     font-size:14px;
-    padding:9px 10px;
-    border-radius:8px;
+    line-height:1.5;
+    padding:10px 12px;
+    border-radius:9px;
     border:1px solid var(--line);
     background:var(--bg);
     color:var(--ink);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.12);
+    transition: border-color .15s ease, box-shadow .15s ease;
     resize:vertical;
   }
-  .field textarea{min-height:64px;}
+  .field input::placeholder,.field textarea::placeholder{ color:var(--ink-soft); opacity:0.75; }
+  .field input:hover,.field select:hover,.field textarea:hover{ border-color:var(--accent); }
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.12), 0 0 0 3px var(--accent-soft);
+  }
+  .field textarea{
+    min-height:76px;
+    line-height:1.55;
+  }
+  .field textarea::-webkit-scrollbar{ width:9px; }
+  .field textarea::-webkit-scrollbar-track{ background:transparent; }
+  .field textarea::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; border:2px solid transparent; background-clip:padding-box; }
+  .field textarea::-webkit-scrollbar-thumb:hover{ background:var(--ink-soft); background-clip:padding-box; }
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .dlg-actions{
     display:flex;

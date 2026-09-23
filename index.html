@@ -880,6 +880,7 @@
           <option value="">Todos los tipos</option>
           <option value="correo">Correo / Web</option>
           <option value="servidor">Servidor</option>
+          <option value="rdp">RDP</option>
         </select>
         <select id="filterClienteVault"><option value="">Todos los clientes</option></select>
         <button class="btn btn-primary" id="btnNewVault" type="button">+ Nueva credencial</button>
@@ -1043,6 +1044,7 @@
       <select id="vTipo">
         <option value="correo">Correo / Web</option>
         <option value="servidor">Servidor</option>
+        <option value="rdp">RDP (escritorio remoto)</option>
       </select>
     </div>
     <div class="row2">
@@ -1077,6 +1079,28 @@
       <div class="field">
         <label for="vUsuario">Usuario (opcional)</label>
         <input id="vUsuario" maxlength="80" placeholder="root, admin…">
+      </div>
+    </div>
+    <div id="camposRdp" hidden>
+      <div class="row2">
+        <div class="field">
+          <label for="vRdpHost">IP / host</label>
+          <input id="vRdpHost" maxlength="120" placeholder="p. ej. 192.168.1.20">
+        </div>
+        <div class="field">
+          <label for="vRdpPuerto">Puerto (opcional)</label>
+          <input id="vRdpPuerto" maxlength="10" placeholder="3389">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="vRdpUsuario">Usuario</label>
+          <input id="vRdpUsuario" maxlength="80" placeholder="usuario">
+        </div>
+        <div class="field">
+          <label for="vRdpDominio">Dominio (opcional)</label>
+          <input id="vRdpDominio" maxlength="80" placeholder="p. ej. OFICINA">
+        </div>
       </div>
     </div>
     <div class="field">
@@ -1365,7 +1389,8 @@ if(!window.claude){
     phone: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
     server: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="6" rx="1"/><rect x="2" y="15" width="20" height="6" rx="1"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>',
     link: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-    user: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    user: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    monitor: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
   };
   function iconSpan(name){ return '<span class="icon" aria-hidden="true">'+ICONS[name]+'</span>'; }
 
@@ -1443,6 +1468,7 @@ if(!window.claude){
   var vTipoEl = document.getElementById('vTipo');
   var camposCorreo = document.getElementById('camposCorreo');
   var camposServidor = document.getElementById('camposServidor');
+  var camposRdp = document.getElementById('camposRdp');
 
   var tabClients = document.getElementById('tabClients');
   var viewClientsEl = document.getElementById('viewClients');
@@ -2649,21 +2675,30 @@ if(!window.claude){
     vaultGrid.innerHTML = filtered.map(vaultCardHtml).join('');
   }
 
+  var VAULT_TYPE_LABELS = {correo:'Correo / Web', servidor:'Servidor', rdp:'RDP'};
+
   function vaultCardHtml(v){
-    var isCorreo = v.tipo === 'correo';
-    var title = v.label || (isCorreo ? v.correo : v.ip) || 'Sin título';
-    var line1 = isCorreo
-      ? (v.correo ? '<p class="line">'+iconSpan('mail')+esc(v.correo)+'</p>' : '')
-      : (v.ip ? '<p class="line">'+iconSpan('server')+esc(v.ip)+'</p>' : '');
-    var line2 = isCorreo
-      ? (v.web ? '<p class="line">'+iconSpan('link')+esc(v.web)+'</p>' : '')
-      : (v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '');
+    var tipo = v.tipo || 'correo';
+    var title = v.label || (tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+    var line1, line2;
+    if(tipo === 'correo'){
+      line1 = v.correo ? '<p class="line">'+iconSpan('mail')+esc(v.correo)+'</p>' : '';
+      line2 = v.web ? '<p class="line">'+iconSpan('link')+esc(v.web)+'</p>' : '';
+    } else if(tipo === 'rdp'){
+      var hostText = v.ip ? (v.puerto ? v.ip + ':' + v.puerto : v.ip) : '';
+      var userText = v.dominio ? v.dominio + '\\' + (v.usuario||'') : v.usuario;
+      line1 = hostText ? '<p class="line">'+iconSpan('monitor')+esc(hostText)+'</p>' : '';
+      line2 = userText ? '<p class="line">'+iconSpan('user')+esc(userText)+'</p>' : '';
+    } else {
+      line1 = v.ip ? '<p class="line">'+iconSpan('server')+esc(v.ip)+'</p>' : '';
+      line2 = v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '';
+    }
     var isVisible = !!revealedVisible[v.id];
     var data = revealed[v.id];
     var passText = isVisible && data ? data.password : '••••••••';
     var notesHtml = isVisible && data && data.notas ? '<div class="notes">'+esc(data.notas)+'</div>' : '';
     return '<div class="vault-card" data-id="'+esc(v.id)+'">' +
-      '<div class="cat"><span>'+esc(v.cliente||'')+'</span><span class="type-badge">'+(isCorreo?'Correo / Web':'Servidor')+'</span></div>' +
+      '<div class="cat"><span>'+esc(v.cliente||'')+'</span><span class="type-badge">'+(VAULT_TYPE_LABELS[tipo]||tipo)+'</span></div>' +
       '<h3>'+esc(title)+'</h3>' +
       line1 + line2 +
       '<div class="pass-row"><span class="pass-value">'+esc(passText)+'</span>' +
@@ -2714,9 +2749,10 @@ if(!window.claude){
   });
 
   function toggleVaultFields(){
-    var isCorreo = vTipoEl.value === 'correo';
-    camposCorreo.hidden = !isCorreo;
-    camposServidor.hidden = isCorreo;
+    var tipo = vTipoEl.value;
+    camposCorreo.hidden = tipo !== 'correo';
+    camposServidor.hidden = tipo !== 'servidor';
+    camposRdp.hidden = tipo !== 'rdp';
   }
   vTipoEl.addEventListener('change', toggleVaultFields);
 
@@ -2747,6 +2783,10 @@ if(!window.claude){
     document.getElementById('vWeb').value = entry.web || '';
     document.getElementById('vIp').value = entry.ip || '';
     document.getElementById('vUsuario').value = entry.usuario || '';
+    document.getElementById('vRdpHost').value = entry.ip || '';
+    document.getElementById('vRdpPuerto').value = entry.puerto || '';
+    document.getElementById('vRdpUsuario').value = entry.usuario || '';
+    document.getElementById('vRdpDominio').value = entry.dominio || '';
     document.getElementById('vPass').value = data.password || '';
     document.getElementById('vNotas').value = data.notas || '';
     btnDeleteVault.hidden = false;
@@ -2804,8 +2844,10 @@ if(!window.claude){
       label: document.getElementById('vLabel').value.trim(),
       correo: tipo === 'correo' ? document.getElementById('vCorreo').value.trim() : '',
       web: tipo === 'correo' ? document.getElementById('vWeb').value.trim() : '',
-      ip: tipo === 'servidor' ? document.getElementById('vIp').value.trim() : '',
-      usuario: tipo === 'servidor' ? document.getElementById('vUsuario').value.trim() : '',
+      ip: tipo === 'servidor' ? document.getElementById('vIp').value.trim() : (tipo === 'rdp' ? document.getElementById('vRdpHost').value.trim() : ''),
+      usuario: tipo === 'servidor' ? document.getElementById('vUsuario').value.trim() : (tipo === 'rdp' ? document.getElementById('vRdpUsuario').value.trim() : ''),
+      puerto: tipo === 'rdp' ? document.getElementById('vRdpPuerto').value.trim() : '',
+      dominio: tipo === 'rdp' ? document.getElementById('vRdpDominio').value.trim() : '',
       createdAt: existing ? existing.createdAt : Date.now(),
       updatedAt: Date.now()
     };

@@ -750,6 +750,61 @@
     margin-top:12px;
   }
 
+  .linked-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .linked-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    background:var(--surface-2);
+    border-radius:8px;
+    padding:7px 10px;
+  }
+  .linked-row .linked-main{
+    min-width:0;
+    flex:1;
+  }
+  .linked-row .linked-title{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .linked-row .linked-meta{
+    font-size:11px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .linked-row .linked-actions{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex:none;
+  }
+  .linked-row .linked-pass{
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    max-width:110px;
+    overflow-x:auto;
+    white-space:pre;
+  }
+  .linked-empty{
+    font-size:12px;
+    color:var(--ink-soft);
+    opacity:.75;
+    margin-bottom:8px;
+  }
+
   .lightbox{
     position:fixed;
     inset:0;
@@ -976,10 +1031,20 @@
         </div>
         <p class="lock-error" id="noteError" hidden></p>
       </div>
-      <div class="quick-links">
-        <button type="button" class="btn btn-ghost" id="btnQuickContact">+ Contacto de este cliente</button>
-        <button type="button" class="btn btn-ghost" id="btnQuickVault">+ Contraseña de este cliente</button>
-      </div>
+    </div>
+    <div class="field" id="taskLinksSection" hidden>
+      <label>Contactos vinculados</label>
+      <div class="linked-list" id="linkedContactsList"></div>
+      <select id="linkContactPicker">
+        <option value="">+ Vincular contacto existente…</option>
+      </select>
+    </div>
+    <div class="field" id="taskLinksSection2" hidden>
+      <label>Contraseñas vinculadas</label>
+      <div class="linked-list" id="linkedVaultList"></div>
+      <select id="linkVaultPicker">
+        <option value="">+ Vincular contraseña existente…</option>
+      </select>
     </div>
     <div class="dlg-actions">
       <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
@@ -1500,16 +1565,23 @@ if(!window.claude){
   var btnRemoveNoteImage = document.getElementById('btnRemoveNoteImage');
   var btnAddNote = document.getElementById('btnAddNote');
   var noteError = document.getElementById('noteError');
-  var btnQuickContact = document.getElementById('btnQuickContact');
-  var btnQuickVault = document.getElementById('btnQuickVault');
+  var taskLinksSection = document.getElementById('taskLinksSection');
+  var taskLinksSection2 = document.getElementById('taskLinksSection2');
+  var linkedContactsList = document.getElementById('linkedContactsList');
+  var linkContactPicker = document.getElementById('linkContactPicker');
+  var linkedVaultList = document.getElementById('linkedVaultList');
+  var linkVaultPicker = document.getElementById('linkVaultPicker');
   var lightboxEl = document.getElementById('lightbox');
   var lightboxImg = document.getElementById('lightboxImg');
 
   var currentTaskId = null;
+  var currentTaskLinkedContacts = [];
+  var currentTaskLinkedVault = [];
   var notesCol = null;
   var notesUnsub = null;
   var pendingNoteImageFile = null;
   var pendingVaultCliente = null;
+  var pendingReturnTaskId = null;
 
   var allVault = [];
   var vaultCol = null;
@@ -1992,6 +2064,8 @@ if(!window.claude){
     if(notesUnsub){ notesUnsub(); notesUnsub = null; }
     notesCol = null;
     currentTaskId = null;
+    currentTaskLinkedContacts = [];
+    currentTaskLinkedVault = [];
   }
 
   function resetNoteForm(){
@@ -2105,23 +2179,162 @@ if(!window.claude){
     });
   });
 
-  btnQuickContact.addEventListener('click', function(){
-    var cliente = document.getElementById('fCliente').value;
-    if(cliente === '__new__') cliente = '';
-    stopTaskNotes();
-    dlg.close();
-    switchTab('contacts');
-    openNewContact(cliente);
+  function persistTaskLinks(){
+    if(!currentTaskId || !col) return;
+    col.doc(currentTaskId).update({
+      linkedContacts: currentTaskLinkedContacts,
+      linkedVault: currentTaskLinkedVault
+    }).catch(function(){});
+  }
+
+  function populateLinkContactPicker(){
+    var linkedSet = {};
+    currentTaskLinkedContacts.forEach(function(id){ linkedSet[id] = true; });
+    var available = allContacts.filter(function(c){ return !linkedSet[c.id]; })
+      .slice().sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); });
+    linkContactPicker.innerHTML = '<option value="">+ Vincular contacto existente…</option>' +
+      available.map(function(c){
+        var label = (c.nombre || 'Sin nombre') + ' — ' + (c.cliente || 'Sin cliente');
+        return '<option value="'+esc(c.id)+'">'+esc(label)+'</option>';
+      }).join('');
+  }
+
+  function renderLinkedContacts(){
+    if(!currentTaskLinkedContacts.length){
+      linkedContactsList.innerHTML = '<p class="linked-empty">Sin contactos vinculados.</p>';
+    } else {
+      linkedContactsList.innerHTML = currentTaskLinkedContacts.map(function(id){
+        var c = allContacts.find(function(x){ return x.id === id; });
+        if(!c) return '';
+        return '<div class="linked-row" data-id="'+esc(id)+'">' +
+          '<div class="linked-main"><div class="linked-title">'+esc(c.nombre || 'Sin nombre')+'</div>' +
+          '<div class="linked-meta">'+esc(c.email || c.cliente || '')+'</div></div>' +
+          '<div class="linked-actions">' +
+          '<button type="button" class="icon-btn" data-action="open-contact" data-id="'+esc(id)+'">Abrir</button>' +
+          '<button type="button" class="icon-btn" data-action="unlink-contact" data-id="'+esc(id)+'">Quitar</button>' +
+          '</div></div>';
+      }).join('');
+    }
+    populateLinkContactPicker();
+  }
+
+  linkContactPicker.addEventListener('change', function(){
+    var id = linkContactPicker.value;
+    if(!id || !currentTaskId) return;
+    currentTaskLinkedContacts = currentTaskLinkedContacts.concat([id]);
+    linkContactPicker.value = '';
+    renderLinkedContacts();
+    persistTaskLinks();
   });
 
-  btnQuickVault.addEventListener('click', function(){
-    var cliente = document.getElementById('fCliente').value;
-    if(cliente === '__new__') cliente = '';
-    stopTaskNotes();
-    dlg.close();
-    switchTab('vault');
-    if(vaultUnlocked){ openNewVault(cliente); }
-    else { pendingVaultCliente = cliente; }
+  linkedContactsList.addEventListener('click', function(ev){
+    var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    var action = btn.getAttribute('data-action');
+    if(action === 'unlink-contact'){
+      currentTaskLinkedContacts = currentTaskLinkedContacts.filter(function(x){ return x !== id; });
+      renderLinkedContacts();
+      persistTaskLinks();
+    } else if(action === 'open-contact'){
+      stopTaskNotes();
+      dlg.close();
+      switchTab('contacts');
+      openEditContact(id);
+    }
+  });
+
+  function populateLinkVaultPicker(){
+    var linkedSet = {};
+    currentTaskLinkedVault.forEach(function(id){ linkedSet[id] = true; });
+    var available = allVault.filter(function(v){ return !linkedSet[v.id]; })
+      .slice().sort(function(a,b){ return (a.cliente||'').localeCompare(b.cliente||''); });
+    linkVaultPicker.innerHTML = '<option value="">+ Vincular contraseña existente…</option>' +
+      available.map(function(v){
+        var name = v.label || (v.tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+        var label = name + ' — ' + (VAULT_TYPE_LABELS[v.tipo]||v.tipo) + ' — ' + (v.cliente || 'Sin cliente');
+        return '<option value="'+esc(v.id)+'">'+esc(label)+'</option>';
+      }).join('');
+  }
+
+  function renderLinkedVault(){
+    if(!currentTaskLinkedVault.length){
+      linkedVaultList.innerHTML = '<p class="linked-empty">Sin contraseñas vinculadas.</p>';
+    } else {
+      linkedVaultList.innerHTML = currentTaskLinkedVault.map(function(id){
+        var v = allVault.find(function(x){ return x.id === id; });
+        if(!v) return '';
+        var title = v.label || (v.tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+        var isVisible = !!revealedVisible[id];
+        var data = revealed[id];
+        var passText = isVisible && data ? data.password : '••••••••';
+        var actionBtn = vaultUnlocked
+          ? '<button type="button" class="icon-btn" data-action="toggle-linked-vault" data-id="'+esc(id)+'">'+(isVisible?'Ocultar':'Mostrar')+'</button>'
+          : '<button type="button" class="icon-btn" data-action="goto-vault" data-id="'+esc(id)+'">Desbloquear</button>';
+        var copyBtn = vaultUnlocked
+          ? '<button type="button" class="icon-btn" data-action="copy-linked-vault" data-id="'+esc(id)+'">Copiar</button>'
+          : '';
+        return '<div class="linked-row" data-id="'+esc(id)+'">' +
+          '<div class="linked-main"><div class="linked-title">'+esc(title)+'</div>' +
+          '<div class="linked-meta">'+esc(VAULT_TYPE_LABELS[v.tipo]||v.tipo)+' · '+esc(v.cliente||'')+'</div></div>' +
+          '<div class="linked-actions">' +
+          '<span class="linked-pass">'+esc(passText)+'</span>' +
+          actionBtn + copyBtn +
+          '<button type="button" class="icon-btn" data-action="unlink-vault" data-id="'+esc(id)+'">Quitar</button>' +
+          '</div></div>';
+      }).join('');
+    }
+    populateLinkVaultPicker();
+  }
+
+  linkVaultPicker.addEventListener('change', function(){
+    var id = linkVaultPicker.value;
+    if(!id || !currentTaskId) return;
+    currentTaskLinkedVault = currentTaskLinkedVault.concat([id]);
+    linkVaultPicker.value = '';
+    renderLinkedVault();
+    persistTaskLinks();
+  });
+
+  linkedVaultList.addEventListener('click', function(ev){
+    var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
+    if(!btn) return;
+    var id = btn.getAttribute('data-id');
+    var action = btn.getAttribute('data-action');
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(action === 'unlink-vault'){
+      currentTaskLinkedVault = currentTaskLinkedVault.filter(function(x){ return x !== id; });
+      renderLinkedVault();
+      persistTaskLinks();
+    } else if(action === 'toggle-linked-vault' && entry){
+      if(revealed[id]){
+        revealedVisible[id] = !revealedVisible[id];
+        renderLinkedVault();
+      } else {
+        decryptEntry(entry).then(function(data){
+          revealed[id] = data;
+          revealedVisible[id] = true;
+          renderLinkedVault();
+        }).catch(function(){});
+      }
+    } else if(action === 'copy-linked-vault' && entry){
+      var doCopy = function(data){
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(data.password || '').then(function(){
+            var old = btn.textContent;
+            btn.textContent = 'Copiado';
+            setTimeout(function(){ btn.textContent = old; }, 1200);
+          }).catch(function(){});
+        }
+      };
+      if(revealed[id]) doCopy(revealed[id]);
+      else decryptEntry(entry).then(function(data){ revealed[id] = data; doCopy(data); }).catch(function(){});
+    } else if(action === 'goto-vault'){
+      pendingReturnTaskId = currentTaskId;
+      stopTaskNotes();
+      dlg.close();
+      switchTab('vault');
+    }
   });
 
   function openNew(){
@@ -2135,6 +2348,8 @@ if(!window.claude){
     var deflt = allTasks.length && allTasks[0].cliente ? allTasks[0].cliente : '';
     populateClienteFormSelect(document.getElementById('fCliente'), deflt);
     taskNotesSection.hidden = true;
+    taskLinksSection.hidden = true;
+    taskLinksSection2.hidden = true;
     btnDelete.hidden = true;
     dlg.showModal();
   }
@@ -2155,6 +2370,12 @@ if(!window.claude){
     btnDelete.hidden = false;
     taskNotesSection.hidden = false;
     taskNotesList.innerHTML = 'Cargando notas…';
+    taskLinksSection.hidden = false;
+    taskLinksSection2.hidden = false;
+    currentTaskLinkedContacts = Array.isArray(t.linkedContacts) ? t.linkedContacts.slice() : [];
+    currentTaskLinkedVault = Array.isArray(t.linkedVault) ? t.linkedVault.slice() : [];
+    renderLinkedContacts();
+    renderLinkedVault();
 
     try{
       populateClienteFormSelect(document.getElementById('fCliente'), t.cliente || '');
@@ -2387,6 +2608,7 @@ if(!window.claude){
     vaultContentEl.hidden = false;
     renderVault();
     maybeOpenPendingVault();
+    maybeReturnToTask();
   });
 
   btnCopyRecovery.addEventListener('click', function(){
@@ -2418,6 +2640,15 @@ if(!window.claude){
     }
   }
 
+  function maybeReturnToTask(){
+    if(pendingReturnTaskId){
+      var id = pendingReturnTaskId;
+      pendingReturnTaskId = null;
+      switchTab('tasks');
+      openEdit(id);
+    }
+  }
+
   function onVaultUnlocked(){
     vaultUnlocked = true;
     lockError.hidden = true;
@@ -2427,6 +2658,7 @@ if(!window.claude){
     vaultContentEl.hidden = false;
     renderVault();
     maybeOpenPendingVault();
+    maybeReturnToTask();
   }
 
   unlockForm.addEventListener('submit', function(ev){

@@ -9,15 +9,18 @@ https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5
 
 - `index.html` — todo el código fuente del tablero (HTML + CSS + JS en un único archivo).
 - `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
+- `iniciar-tablero.bat` — doble clic y ya está (ver abajo).
 
 ## Cómo lanzarlo en local
 
 `index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).
 
-Dos formas de abrirlo:
+**La forma más rápida:** doble clic en **`iniciar-tablero.bat`**. Abre una ventana de consola con el servidor local corriendo (no la cierres mientras uses el tablero) y te abre el navegador en `http://localhost:5500` automáticamente. Para cerrar el tablero, cierra esa ventana de consola.
 
-- **Doble clic en `index.html`** — en Chrome/Edge suele funcionar tal cual (IndexedDB y el cifrado funcionan igual sobre `file://`).
-- **Servido por un servidor local** (más fiable, recomendado): con Python, que ya tienes instalado:
+Otras formas:
+
+- **Doble clic en `index.html`** — en Chrome/Edge suele funcionar tal cual (IndexedDB y el cifrado funcionan igual sobre `file://`), pero es menos fiable que servirlo.
+- **A mano**, con Python (ya lo tienes instalado):
   ```bash
   cd Tablero
   python -m http.server 5500

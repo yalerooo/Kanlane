@@ -10,16 +10,21 @@ https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5
 - `index.html` — todo el código fuente del tablero (HTML + CSS + JS en un único archivo).
 - `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
 
-## Importante: por qué abrir `index.html` en el navegador no funciona igual
+## Cómo lanzarlo en local
 
-Este tablero guarda y sincroniza los datos usando capacidades propias de los "Artifacts" de Claude (`window.claude.use('db')`, `'assets'`, `'downloads'`). Esas capacidades **solo existen dentro de claude.ai** — si abres `index.html` directamente en un navegador, o lo subes a GitHub Pages, verás el diseño pero:
+`index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).
 
-- No cargará ninguna tarea, contacto, cliente ni contraseña.
-- No podrás guardar nada nuevo.
+Dos formas de abrirlo:
 
-Es decir: `index.html` es el **código fuente** (útil para revisarlo, versionarlo con git o seguir su evolución), no una web independiente que puedas desplegar en otro sitio tal cual. El único lugar donde funciona de verdad es el enlace de arriba.
+- **Doble clic en `index.html`** — en Chrome/Edge suele funcionar tal cual (IndexedDB y el cifrado funcionan igual sobre `file://`).
+- **Servido por un servidor local** (más fiable, recomendado): con Python, que ya tienes instalado:
+  ```bash
+  cd Tablero
+  python -m http.server 5500
+  ```
+  y abre `http://localhost:5500` en el navegador.
 
-Si en algún momento quieres una versión que funcione fuera de Claude, habría que reescribir la parte de almacenamiento (por ejemplo con Firebase, Supabase o un backend propio) — dímelo si llega ese caso y lo planteamos.
+Los datos de esta copia local y los de la versión en vivo (claude.ai) son **independientes** — usa la pestaña "Copia de seguridad" de cada una para exportar/importar y mantenerlas igualadas si lo necesitas.
 
 ## Restaurar los datos
 

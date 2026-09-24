@@ -327,6 +327,46 @@
     text-transform:none;
     letter-spacing:0;
   }
+  .view-rows{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    margin-bottom:16px;
+  }
+  .view-row{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    font-size:13.5px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:9px;
+  }
+  .view-row .view-label{
+    flex:none;
+    width:110px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:var(--ink-soft);
+  }
+  .view-row .view-value{
+    color:var(--ink);
+    word-break:break-word;
+  }
+  .view-notas{
+    font-size:13px;
+    line-height:1.5;
+    color:var(--ink);
+    white-space:pre-wrap;
+    background:var(--surface-2);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  #dlgVaultView .pass-value{
+    -webkit-user-select:text;
+    user-select:text;
+  }
   .vault-card h3{
     font-family:inherit;
     font-size:14.5px;
@@ -1215,6 +1255,33 @@
   </form>
 </dialog>
 
+<dialog id="dlgVaultView">
+  <div class="dlg-inner">
+    <div class="cat"><span id="vvCliente"></span><span class="type-badge" id="vvTipo"></span></div>
+    <h2 id="vvTitle"></h2>
+    <div class="view-rows" id="vvFields"></div>
+    <div class="field">
+      <label>Contraseña</label>
+      <div class="pass-row">
+        <span class="pass-value" id="vvPassValue">••••••••</span>
+        <button type="button" class="icon-btn" id="btnVvToggle">Mostrar</button>
+        <button type="button" class="icon-btn" id="btnVvCopy">Copiar</button>
+      </div>
+    </div>
+    <div class="field" id="vvNotasWrap" hidden>
+      <label>Notas</label>
+      <div class="view-notas" id="vvNotas"></div>
+    </div>
+    <div class="dlg-actions">
+      <div></div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnVvClose">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnVvEdit">Editar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <script>
 /* Funciona sin conexión a Claude: si no existe window.claude (abierto como archivo local
    o servido fuera de claude.ai), se instala aquí un almacén equivalente basado en
@@ -1564,6 +1631,19 @@ if(!window.claude){
   var camposServidor = document.getElementById('camposServidor');
   var camposRdp = document.getElementById('camposRdp');
   var camposVpn = document.getElementById('camposVpn');
+
+  var dlgVaultView = document.getElementById('dlgVaultView');
+  var vvCliente = document.getElementById('vvCliente');
+  var vvTipo = document.getElementById('vvTipo');
+  var vvTitle = document.getElementById('vvTitle');
+  var vvFields = document.getElementById('vvFields');
+  var vvPassValue = document.getElementById('vvPassValue');
+  var btnVvToggle = document.getElementById('btnVvToggle');
+  var btnVvCopy = document.getElementById('btnVvCopy');
+  var vvNotasWrap = document.getElementById('vvNotasWrap');
+  var vvNotas = document.getElementById('vvNotas');
+  var btnVvClose = document.getElementById('btnVvClose');
+  var btnVvEdit = document.getElementById('btnVvEdit');
 
   var tabClients = document.getElementById('tabClients');
   var viewClientsEl = document.getElementById('viewClients');
@@ -2966,6 +3046,31 @@ if(!window.claude){
     return v.label || fallback || 'Sin título';
   }
 
+  function viewRow(label, value){
+    if(!value) return '';
+    return '<div class="view-row"><span class="view-label">'+esc(label)+'</span><span class="view-value">'+esc(value)+'</span></div>';
+  }
+
+  function vaultFieldRowsHtml(v){
+    var tipo = v.tipo || 'correo';
+    if(tipo === 'correo'){
+      return viewRow('Correo', v.correo) + viewRow('Web', v.web);
+    }
+    if(tipo === 'usuario'){
+      return viewRow('Usuario', v.usuario) + viewRow('Web', v.web);
+    }
+    if(tipo === 'servidor'){
+      return viewRow('IP / host', v.ip) + viewRow('Usuario', v.usuario);
+    }
+    if(tipo === 'rdp'){
+      return viewRow('IP / host', v.ip) + viewRow('Puerto', v.puerto) + viewRow('Usuario', v.usuario) + viewRow('Dominio', v.dominio);
+    }
+    if(tipo === 'vpn'){
+      return viewRow('Usuario', v.usuario);
+    }
+    return '';
+  }
+
   function vaultCardHtml(v){
     var tipo = v.tipo || 'correo';
     var title = vaultTitleFor(v);
@@ -3003,16 +3108,84 @@ if(!window.claude){
       '</div>';
   }
 
+  function renderViewPass(entry){
+    var id = entry.id;
+    var isVisible = !!revealedVisible[id];
+    var data = revealed[id];
+    vvPassValue.textContent = isVisible && data ? data.password : '••••••••';
+    btnVvToggle.textContent = isVisible ? 'Ocultar' : 'Mostrar';
+    if(isVisible && data && data.notas){
+      vvNotasWrap.hidden = false;
+      vvNotas.textContent = data.notas;
+    } else {
+      vvNotasWrap.hidden = true;
+      vvNotas.textContent = '';
+    }
+  }
+
+  function openViewVault(id){
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(!entry) return;
+    dlgVaultView.setAttribute('data-id', id);
+    vvCliente.textContent = entry.cliente || '';
+    vvTipo.textContent = VAULT_TYPE_LABELS[entry.tipo] || entry.tipo;
+    vvTitle.textContent = vaultTitleFor(entry);
+    vvFields.innerHTML = vaultFieldRowsHtml(entry);
+    renderViewPass(entry);
+    dlgVaultView.showModal();
+  }
+
+  btnVvToggle.addEventListener('click', function(){
+    var id = dlgVaultView.getAttribute('data-id');
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(!entry) return;
+    if(revealed[id]){
+      revealedVisible[id] = !revealedVisible[id];
+      renderViewPass(entry);
+    } else {
+      decryptEntry(entry).then(function(data){
+        revealed[id] = data;
+        revealedVisible[id] = true;
+        renderViewPass(entry);
+      }).catch(function(){});
+    }
+  });
+
+  btnVvCopy.addEventListener('click', function(){
+    var id = dlgVaultView.getAttribute('data-id');
+    var entry = allVault.find(function(x){ return x.id === id; });
+    if(!entry) return;
+    var doCopy = function(data){
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(data.password || '').then(function(){
+          var old = btnVvCopy.textContent;
+          btnVvCopy.textContent = 'Copiado';
+          setTimeout(function(){ btnVvCopy.textContent = old; }, 1200);
+        }).catch(function(){});
+      }
+    };
+    if(revealed[id]) doCopy(revealed[id]);
+    else decryptEntry(entry).then(function(data){ revealed[id] = data; doCopy(data); }).catch(function(){});
+  });
+
+  btnVvClose.addEventListener('click', function(){ dlgVaultView.close(); });
+  btnVvEdit.addEventListener('click', function(){
+    var id = dlgVaultView.getAttribute('data-id');
+    dlgVaultView.close();
+    if(id) openEditVault(id);
+  });
+
   vaultGrid.addEventListener('click', function(ev){
     var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
     if(!btn){
+      if(ev.target.closest && ev.target.closest('.pass-row')) return;
       var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
       if(!card) return;
       if(card.getAttribute('data-dragged') === '1'){
         card.removeAttribute('data-dragged');
         return;
       }
-      openEditVault(card.getAttribute('data-id'));
+      openViewVault(card.getAttribute('data-id'));
       return;
     }
     var id = btn.getAttribute('data-id');

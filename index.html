@@ -294,6 +294,16 @@
     border-radius:10px;
     padding:13px 14px;
     box-shadow:var(--shadow);
+    cursor:pointer;
+    transition:background .12s ease, outline-color .12s ease;
+    outline:2px dashed transparent;
+    outline-offset:-2px;
+  }
+  .vault-card:hover{border-color:var(--accent);}
+  .vault-card.dragging{opacity:0.45;cursor:grabbing;}
+  .vault-card.drag-over{
+    background:var(--accent-soft);
+    outline-color:var(--accent);
   }
   .vault-card .cat{
     font-size:10.5px;
@@ -934,8 +944,10 @@
         <select id="filterTipo">
           <option value="">Todos los tipos</option>
           <option value="correo">Correo / Web</option>
+          <option value="usuario">Usuario / Web</option>
           <option value="servidor">Servidor</option>
           <option value="rdp">RDP</option>
+          <option value="vpn">VPN</option>
         </select>
         <select id="filterClienteVault"><option value="">Todos los clientes</option></select>
         <button class="btn btn-primary" id="btnNewVault" type="button">+ Nueva credencial</button>
@@ -1108,8 +1120,10 @@
       <label for="vTipo">Tipo</label>
       <select id="vTipo">
         <option value="correo">Correo / Web</option>
+        <option value="usuario">Usuario / Web</option>
         <option value="servidor">Servidor</option>
         <option value="rdp">RDP (escritorio remoto)</option>
+        <option value="vpn">VPN</option>
       </select>
     </div>
     <div class="row2">
@@ -1134,6 +1148,16 @@
       <div class="field">
         <label for="vWeb">Web</label>
         <input id="vWeb" maxlength="160" placeholder="https://…">
+      </div>
+    </div>
+    <div class="row2" id="camposUsuario" hidden>
+      <div class="field">
+        <label for="vUserUsuario">Usuario</label>
+        <input id="vUserUsuario" maxlength="80" placeholder="nombre de usuario">
+      </div>
+      <div class="field">
+        <label for="vUserWeb">Web (opcional)</label>
+        <input id="vUserWeb" maxlength="160" placeholder="https://…">
       </div>
     </div>
     <div class="row2" id="camposServidor" hidden>
@@ -1167,6 +1191,10 @@
           <input id="vRdpDominio" maxlength="80" placeholder="p. ej. OFICINA">
         </div>
       </div>
+    </div>
+    <div class="field" id="camposVpn" hidden>
+      <label for="vVpnUsuario">Usuario</label>
+      <input id="vVpnUsuario" maxlength="80" placeholder="nombre de usuario">
     </div>
     <div class="field">
       <label for="vPass">Contraseña</label>
@@ -1532,8 +1560,10 @@ if(!window.claude){
   var vaultFormError = document.getElementById('vaultFormError');
   var vTipoEl = document.getElementById('vTipo');
   var camposCorreo = document.getElementById('camposCorreo');
+  var camposUsuario = document.getElementById('camposUsuario');
   var camposServidor = document.getElementById('camposServidor');
   var camposRdp = document.getElementById('camposRdp');
+  var camposVpn = document.getElementById('camposVpn');
 
   var tabClients = document.getElementById('tabClients');
   var viewClientsEl = document.getElementById('viewClients');
@@ -2251,7 +2281,7 @@ if(!window.claude){
       .slice().sort(function(a,b){ return (a.cliente||'').localeCompare(b.cliente||''); });
     linkVaultPicker.innerHTML = '<option value="">+ Vincular contraseña existente…</option>' +
       available.map(function(v){
-        var name = v.label || (v.tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+        var name = vaultTitleFor(v);
         var label = name + ' — ' + (VAULT_TYPE_LABELS[v.tipo]||v.tipo) + ' — ' + (v.cliente || 'Sin cliente');
         return '<option value="'+esc(v.id)+'">'+esc(label)+'</option>';
       }).join('');
@@ -2264,7 +2294,7 @@ if(!window.claude){
       linkedVaultList.innerHTML = currentTaskLinkedVault.map(function(id){
         var v = allVault.find(function(x){ return x.id === id; });
         if(!v) return '';
-        var title = v.label || (v.tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+        var title = vaultTitleFor(v);
         var isVisible = !!revealedVisible[id];
         var data = revealed[id];
         var passText = isVisible && data ? data.password : '••••••••';
@@ -2876,13 +2906,16 @@ if(!window.claude){
     updateLockScreenMode();
   });
 
-  function renderVault(){
-    if(!vaultUnlocked) return;
+  function vaultOrderOf(v){
+    return v.order != null ? v.order : (v.createdAt || 0);
+  }
+
+  function getFilteredSortedVault(){
     var q = (searchVault.value || '').trim().toLowerCase();
     var tipoFilter = filterTipoEl.value;
     var clienteFilter = filterClienteVaultEl.value;
 
-    var filtered = allVault.filter(function(v){
+    return allVault.filter(function(v){
       if(tipoFilter && v.tipo !== tipoFilter) return false;
       if(clienteFilter && (v.cliente || 'Sin cliente') !== clienteFilter) return false;
       if(q){
@@ -2890,11 +2923,12 @@ if(!window.claude){
         if(hay.indexOf(q) === -1) return false;
       }
       return true;
-    }).sort(function(a,b){
-      var ca = (a.cliente||'').localeCompare(b.cliente||'');
-      if(ca !== 0) return ca;
-      return (a.label||a.correo||a.ip||'').localeCompare(b.label||b.correo||b.ip||'');
-    });
+    }).sort(function(a,b){ return vaultOrderOf(a) - vaultOrderOf(b); });
+  }
+
+  function renderVault(){
+    if(!vaultUnlocked) return;
+    var filtered = getFilteredSortedVault();
 
     if(!filtered.length){
       vaultGrid.hidden = true;
@@ -2907,20 +2941,49 @@ if(!window.claude){
     vaultGrid.innerHTML = filtered.map(vaultCardHtml).join('');
   }
 
-  var VAULT_TYPE_LABELS = {correo:'Correo / Web', servidor:'Servidor', rdp:'RDP'};
+  function reorderVault(draggedId, targetId){
+    if(!vaultCol || draggedId === targetId) return;
+    var list = getFilteredSortedVault();
+    var fromIdx = list.findIndex(function(v){ return v.id === draggedId; });
+    var toIdx = list.findIndex(function(v){ return v.id === targetId; });
+    if(fromIdx === -1 || toIdx === -1) return;
+    var moved = list.splice(fromIdx, 1)[0];
+    list.splice(toIdx, 0, moved);
+    var updates = list.map(function(v, i){ return {id:v.id, order:(i+1)*10}; });
+    updates.forEach(function(u){
+      var e = allVault.find(function(x){ return x.id === u.id; });
+      if(e) e.order = u.order;
+    });
+    renderVault();
+    Promise.all(updates.map(function(u){ return vaultCol.doc(u.id).update({order:u.order}); })).catch(function(){});
+  }
+
+  var VAULT_TYPE_LABELS = {correo:'Correo / Web', usuario:'Usuario / Web', servidor:'Servidor', rdp:'RDP', vpn:'VPN'};
+
+  function vaultTitleFor(v){
+    var tipo = v.tipo || 'correo';
+    var fallback = tipo === 'correo' ? v.correo : (tipo === 'servidor' || tipo === 'rdp') ? v.ip : v.usuario;
+    return v.label || fallback || 'Sin título';
+  }
 
   function vaultCardHtml(v){
     var tipo = v.tipo || 'correo';
-    var title = v.label || (tipo === 'correo' ? v.correo : v.ip) || 'Sin título';
+    var title = vaultTitleFor(v);
     var line1, line2;
     if(tipo === 'correo'){
       line1 = v.correo ? '<p class="line">'+iconSpan('mail')+esc(v.correo)+'</p>' : '';
+      line2 = v.web ? '<p class="line">'+iconSpan('link')+esc(v.web)+'</p>' : '';
+    } else if(tipo === 'usuario'){
+      line1 = v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '';
       line2 = v.web ? '<p class="line">'+iconSpan('link')+esc(v.web)+'</p>' : '';
     } else if(tipo === 'rdp'){
       var hostText = v.ip ? (v.puerto ? v.ip + ':' + v.puerto : v.ip) : '';
       var userText = v.dominio ? v.dominio + '\\' + (v.usuario||'') : v.usuario;
       line1 = hostText ? '<p class="line">'+iconSpan('monitor')+esc(hostText)+'</p>' : '';
       line2 = userText ? '<p class="line">'+iconSpan('user')+esc(userText)+'</p>' : '';
+    } else if(tipo === 'vpn'){
+      line1 = v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '';
+      line2 = '';
     } else {
       line1 = v.ip ? '<p class="line">'+iconSpan('server')+esc(v.ip)+'</p>' : '';
       line2 = v.usuario ? '<p class="line">'+iconSpan('user')+esc(v.usuario)+'</p>' : '';
@@ -2929,7 +2992,7 @@ if(!window.claude){
     var data = revealed[v.id];
     var passText = isVisible && data ? data.password : '••••••••';
     var notesHtml = isVisible && data && data.notas ? '<div class="notes">'+esc(data.notas)+'</div>' : '';
-    return '<div class="vault-card" data-id="'+esc(v.id)+'">' +
+    return '<div class="vault-card" draggable="true" data-id="'+esc(v.id)+'">' +
       '<div class="cat"><span>'+esc(v.cliente||'')+'</span><span class="type-badge">'+(VAULT_TYPE_LABELS[tipo]||tipo)+'</span></div>' +
       '<h3>'+esc(title)+'</h3>' +
       line1 + line2 +
@@ -2937,13 +3000,21 @@ if(!window.claude){
       '<button type="button" class="icon-btn" data-action="toggle" data-id="'+esc(v.id)+'">'+(isVisible?'Ocultar':'Mostrar')+'</button>' +
       '<button type="button" class="icon-btn" data-action="copy" data-id="'+esc(v.id)+'">Copiar</button></div>' +
       notesHtml +
-      '<div class="edit-row"><button type="button" class="icon-btn" data-action="edit" data-id="'+esc(v.id)+'">Editar</button></div>' +
       '</div>';
   }
 
   vaultGrid.addEventListener('click', function(ev){
     var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
-    if(!btn) return;
+    if(!btn){
+      var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+      if(!card) return;
+      if(card.getAttribute('data-dragged') === '1'){
+        card.removeAttribute('data-dragged');
+        return;
+      }
+      openEditVault(card.getAttribute('data-id'));
+      return;
+    }
     var id = btn.getAttribute('data-id');
     var action = btn.getAttribute('data-action');
     var entry = allVault.find(function(x){ return x.id === id; });
@@ -2980,11 +3051,61 @@ if(!window.claude){
     }
   });
 
+  var vaultDragOverCard = null;
+
+  vaultGrid.addEventListener('dragstart', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+    if(!card) return;
+    card.classList.add('dragging');
+    card.setAttribute('data-dragged', '1');
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', card.getAttribute('data-id'));
+  });
+
+  vaultGrid.addEventListener('dragend', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+    if(card) card.classList.remove('dragging');
+    if(vaultDragOverCard){ vaultDragOverCard.classList.remove('drag-over'); vaultDragOverCard = null; }
+  });
+
+  vaultGrid.addEventListener('dragover', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+    if(!card) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    if(vaultDragOverCard !== card){
+      if(vaultDragOverCard) vaultDragOverCard.classList.remove('drag-over');
+      card.classList.add('drag-over');
+      vaultDragOverCard = card;
+    }
+  });
+
+  vaultGrid.addEventListener('dragleave', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+    if(!card || card !== vaultDragOverCard) return;
+    if(card.contains(ev.relatedTarget)) return;
+    card.classList.remove('drag-over');
+    vaultDragOverCard = null;
+  });
+
+  vaultGrid.addEventListener('drop', function(ev){
+    var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
+    if(!card) return;
+    ev.preventDefault();
+    card.classList.remove('drag-over');
+    vaultDragOverCard = null;
+    var draggedId = ev.dataTransfer.getData('text/plain');
+    var targetId = card.getAttribute('data-id');
+    if(draggedId && targetId) reorderVault(draggedId, targetId);
+  });
+
   function toggleVaultFields(){
     var tipo = vTipoEl.value;
     camposCorreo.hidden = tipo !== 'correo';
+    camposUsuario.hidden = tipo !== 'usuario';
     camposServidor.hidden = tipo !== 'servidor';
     camposRdp.hidden = tipo !== 'rdp';
+    camposVpn.hidden = tipo !== 'vpn';
   }
   vTipoEl.addEventListener('change', toggleVaultFields);
 
@@ -3013,12 +3134,15 @@ if(!window.claude){
     toggleVaultFields();
     document.getElementById('vCorreo').value = entry.correo || '';
     document.getElementById('vWeb').value = entry.web || '';
+    document.getElementById('vUserUsuario').value = entry.usuario || '';
+    document.getElementById('vUserWeb').value = entry.web || '';
     document.getElementById('vIp').value = entry.ip || '';
     document.getElementById('vUsuario').value = entry.usuario || '';
     document.getElementById('vRdpHost').value = entry.ip || '';
     document.getElementById('vRdpPuerto').value = entry.puerto || '';
     document.getElementById('vRdpUsuario').value = entry.usuario || '';
     document.getElementById('vRdpDominio').value = entry.dominio || '';
+    document.getElementById('vVpnUsuario').value = entry.usuario || '';
     document.getElementById('vPass').value = data.password || '';
     document.getElementById('vNotas').value = data.notas || '';
     btnDeleteVault.hidden = false;
@@ -3074,15 +3198,28 @@ if(!window.claude){
       tipo: tipo,
       cliente: cliente,
       label: document.getElementById('vLabel').value.trim(),
-      correo: tipo === 'correo' ? document.getElementById('vCorreo').value.trim() : '',
-      web: tipo === 'correo' ? document.getElementById('vWeb').value.trim() : '',
-      ip: tipo === 'servidor' ? document.getElementById('vIp').value.trim() : (tipo === 'rdp' ? document.getElementById('vRdpHost').value.trim() : ''),
-      usuario: tipo === 'servidor' ? document.getElementById('vUsuario').value.trim() : (tipo === 'rdp' ? document.getElementById('vRdpUsuario').value.trim() : ''),
-      puerto: tipo === 'rdp' ? document.getElementById('vRdpPuerto').value.trim() : '',
-      dominio: tipo === 'rdp' ? document.getElementById('vRdpDominio').value.trim() : '',
+      correo: '', web: '', ip: '', usuario: '', puerto: '', dominio: '',
+      order: existing ? vaultOrderOf(existing) : Date.now(),
       createdAt: existing ? existing.createdAt : Date.now(),
       updatedAt: Date.now()
     };
+    if(tipo === 'correo'){
+      meta.correo = document.getElementById('vCorreo').value.trim();
+      meta.web = document.getElementById('vWeb').value.trim();
+    } else if(tipo === 'usuario'){
+      meta.usuario = document.getElementById('vUserUsuario').value.trim();
+      meta.web = document.getElementById('vUserWeb').value.trim();
+    } else if(tipo === 'servidor'){
+      meta.ip = document.getElementById('vIp').value.trim();
+      meta.usuario = document.getElementById('vUsuario').value.trim();
+    } else if(tipo === 'rdp'){
+      meta.ip = document.getElementById('vRdpHost').value.trim();
+      meta.puerto = document.getElementById('vRdpPuerto').value.trim();
+      meta.usuario = document.getElementById('vRdpUsuario').value.trim();
+      meta.dominio = document.getElementById('vRdpDominio').value.trim();
+    } else if(tipo === 'vpn'){
+      meta.usuario = document.getElementById('vVpnUsuario').value.trim();
+    }
 
     encryptJSON(vaultKey, {password:passVal, notas:notasVal}).then(function(enc){
       meta.iv = enc.iv;

@@ -1,0 +1,52 @@
+/* ---------- Campos ---------- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+select,
+textarea{
+  font-family:inherit;
+  font-size:13.5px;
+  line-height:1.4;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  padding:8px 11px;
+  box-shadow:var(--shadow-sm);
+  transition:border-color .12s ease, box-shadow .12s ease;
+  min-width:0;
+}
+input::placeholder,textarea::placeholder{color:var(--ink-faint);}
+input:not([type="checkbox"]):not([type="radio"]):hover,select:hover,textarea:hover{border-color:var(--ink-faint);}
+input:not([type="checkbox"]):not([type="radio"]):focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+select{
+  appearance:none;
+  -webkit-appearance:none;
+  padding-right:32px;
+  background-image:var(--chevron);
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:14px;
+  cursor:pointer;
+}
+textarea{resize:none;line-height:1.55;}
+input[type="search"]{
+  padding-left:34px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B929D' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:11px center;
+  background-size:15px;
+}
+input[type="date"],input[type="time"]{font-variant-numeric:tabular-nums;}
+input[type="checkbox"]{accent-color:var(--accent);width:15px;height:15px;}
+textarea::-webkit-scrollbar{width:9px;}
+textarea::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
+
+.field{margin-bottom:14px;display:flex;flex-direction:column;gap:6px;}
+.field > label{font-size:12.5px;font-weight:600;color:var(--ink);}
+.field textarea{min-height:84px;}
+.field-hint{font-size:12px;color:var(--meet);margin:0;min-height:1em;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media (max-width:520px){ .row2{grid-template-columns:1fr;gap:0;} }

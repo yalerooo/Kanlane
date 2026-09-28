@@ -1,0 +1,22 @@
+/* ---------- Base ---------- */
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:14px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+}
+h1,h2,h3{font-family:inherit;color:var(--ink);letter-spacing:-0.015em;}
+a{color:var(--accent);}
+::selection{background:var(--accent-solid);color:var(--accent-ink);}
+svg{flex:none;}
+[hidden]{display:none!important;}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;}
+}

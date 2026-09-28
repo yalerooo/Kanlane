@@ -1,5 +1,6 @@
 /* Contactos de clientes. */
 (function(){
+  const toast = Workhub.views.toast;
   class ContactsController {
     constructor(app, view){
       this.app = app;
@@ -39,12 +40,24 @@
     save(id, values){
       if(!this.contacts.isReady()){ this.view.close(); return; }
       if(!values.cliente) return;
-      this.contacts.save(id, values).then(() => this.view.close(), () => this.view.close());
+      this.contacts.save(id, values).then(() => {
+        toast.success(id ? 'Contacto actualizado' : 'Contacto añadido');
+        this.view.close();
+      }, () => {
+        toast.error('No se pudo guardar el contacto');
+        this.view.close();
+      });
     }
 
     remove(id){
       if(!id || !this.contacts.isReady()) return;
-      this.contacts.remove(id).then(() => this.view.close(), () => this.view.close());
+      this.contacts.remove(id).then(() => {
+        toast.success('Contacto eliminado');
+        this.view.close();
+      }, () => {
+        toast.error('No se pudo eliminar el contacto');
+        this.view.close();
+      });
     }
   }
 

@@ -1,5 +1,6 @@
 /* Gestión de clientes. */
 (function(){
+  const toast = Workhub.views.toast;
   const DELETE_CONFIRM_MS = 4000;
 
   class ClientsController {
@@ -20,7 +21,10 @@
 
       this.view.bindCreate((name) => {
         const p = this.app.createClient(name);
-        if(p) p.catch(() => this.view.restoreNewName(name));
+        if(p) p.then(() => toast.success('Cliente «' + name + '» añadido')).catch(() => {
+          toast.error('No se pudo añadir el cliente');
+          this.view.restoreNewName(name);
+        });
         else this.view.restoreNewName(name);
       });
 
@@ -59,6 +63,7 @@
         return;
       }
       this.clients.rename(id, newName, this.tasks, this.meetings).then(() => {
+        toast.success('Cliente renombrado');
         this.editingId = null;
         this.render();
       }).catch(() => {
@@ -84,7 +89,11 @@
       this.pendingDeleteId = null;
       if(!this.clients.find(id) || !this.clients.isReady() || !this.tasks.isReady()) return;
       this.view.setDeleting(btn);
-      this.clients.removeWithTasks(id, this.tasks).then(() => this.render()).catch(() => {
+      const name = this.clients.find(id).nombre;
+      this.clients.removeWithTasks(id, this.tasks).then(() => {
+        toast.success('Cliente «' + name + '» eliminado');
+        this.render();
+      }).catch(() => {
         this.view.showError('No se pudo eliminar el cliente. Inténtalo de nuevo.');
         this.render();
       });

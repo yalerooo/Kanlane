@@ -129,11 +129,15 @@
     }
 
     render(tasks){
-      const overdueCount = tasks.filter((t) => TaskModel.dueState(t) === 'overdue').length;
-      this.summary.innerHTML = TaskModel.STATUS.map((s) => {
-        const n = tasks.filter((t) => t.status === s.key).length;
-        return '<span class="stat" style="--st:' + s.fg + ';--st-bg:' + s.bg + '"><span class="dot" style="background:' + s.dot + '"></span>' + s.label + '<b>' + n + '</b></span>';
-      }).join('') + (overdueCount ? '<span class="stat is-danger"><span class="dot" style="background:var(--danger)"></span>Vencidas<b>' + overdueCount + '</b></span>' : '');
+      /* Resumen compacto de lo que se está viendo (respeta búsqueda y filtro). */
+      const open = tasks.filter((t) => t.status !== 'completada');
+      const overdue = tasks.filter((t) => TaskModel.dueState(t) === 'overdue').length;
+      const today = tasks.filter((t) => TaskModel.dueState(t) === 'today').length;
+      this.summary.innerHTML =
+        '<span class="stat"><b>' + open.length + '</b>' + (open.length === 1 ? 'abierta' : 'abiertas') + '</span>' +
+        (today ? '<span class="stat is-warn"><span class="dot" style="background:var(--st-wait)"></span><b>' + today + '</b>para hoy</span>' : '') +
+        (overdue ? '<span class="stat is-danger"><span class="dot" style="background:var(--danger)"></span><b>' + overdue + '</b>' + (overdue === 1 ? 'vencida' : 'vencidas') + '</span>' : '') +
+        (tasks.length - open.length ? '<span class="stat"><b>' + (tasks.length - open.length) + '</b>' + (tasks.length - open.length === 1 ? 'completada' : 'completadas') + '</span>' : '');
 
       /* Conserva el scroll de cada columna al volver a pintar. */
       const scrolls = {};

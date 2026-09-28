@@ -2,6 +2,7 @@
 (function(){
   const {todayYmd, parseYmd} = Workhub.utils.dates;
   const MeetingModel = Workhub.models.MeetingModel;
+  const toast = Workhub.views.toast;
 
   class CalendarController {
     constructor(app, view){
@@ -132,6 +133,7 @@
         return;
       }
       this.meetings.save(id, result.body).then(() => {
+        toast.success(id ? 'Reunión actualizada' : 'Reunión programada');
         this.view.closeMeeting();
         this.selectDate(result.body.date);
       }).catch(() => this.view.showMeetingError('No se pudo guardar la reunión. Inténtalo de nuevo.'));
@@ -139,7 +141,13 @@
 
     removeMeeting(id){
       if(!id || !this.meetings.isReady()) return;
-      this.meetings.remove(id).then(() => this.view.closeMeeting(), () => this.view.closeMeeting());
+      this.meetings.remove(id).then(() => {
+        toast.success('Reunión eliminada');
+        this.view.closeMeeting();
+      }, () => {
+        toast.error('No se pudo eliminar la reunión');
+        this.view.closeMeeting();
+      });
     }
   }
 

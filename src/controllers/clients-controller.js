@@ -19,7 +19,8 @@
 
       this.view.bindCreate((name) => {
         const p = this.app.createClient(name);
-        if(p) p.then(() => this.view.resetNewForm()).catch(() => {});
+        if(p) p.catch(() => this.view.restoreNewName(name));
+        else this.view.restoreNewName(name);
       });
 
       this.view.bindActions({
@@ -34,7 +35,7 @@
       this.view.render(this.clients.sortedByName(), {
         editingId: this.editingId,
         pendingDeleteId: this.pendingDeleteId,
-        taskCount: (name) => this.tasks.countByClient(name)
+        taskStats: (name) => this.tasks.statsByClient(name)
       });
     }
 

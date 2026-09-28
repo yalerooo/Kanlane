@@ -74,6 +74,7 @@
           status: t.status || 'pendiente',
           contacto: t.contacto || '',
           dueDate: t.dueDate || '',
+          order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()
         }).then((ref) => {

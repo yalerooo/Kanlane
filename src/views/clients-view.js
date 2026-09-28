@@ -1,6 +1,8 @@
 /* Clientes: alta, renombrado en línea y borrado con confirmación en dos pasos. */
 (function(){
-  const {esc, closest} = Workhub.utils.html;
+  const {esc, closest, hueFor, initials} = Workhub.utils.html;
+  const EDIT_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  const TRASH_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
   const $ = (id) => document.getElementById(id);
 
   class ClientsView {
@@ -15,7 +17,11 @@
       this.formNew.addEventListener('submit', (ev) => {
         ev.preventDefault();
         const name = this.newName.value.trim();
-        if(name) handler(name);
+        if(!name) return;
+        /* Se vacía ya, no al terminar de guardar: así no se pierde lo que
+           se empiece a escribir mientras tanto. */
+        this.newName.value = '';
+        handler(name);
       });
     }
 
@@ -48,7 +54,10 @@
       return input ? input.value : '';
     }
 
-    resetNewForm(){ this.formNew.reset(); }
+    /* Si no se pudo guardar, devuelve el nombre al campo (si sigue vacío). */
+    restoreNewName(name){
+      if(!this.newName.value) this.newName.value = name;
+    }
 
     showError(msg){
       this.stateMsg.hidden = false;
@@ -60,7 +69,7 @@
       btn.textContent = 'Eliminando…';
     }
 
-    /* state: {editingId, pendingDeleteId, taskCount(name)} */
+    /* state: {editingId, pendingDeleteId, taskStats(name) → {total, open}} */
     render(clients, state){
       if(!clients.length){
         this.grid.hidden = true;
@@ -79,13 +88,19 @@
               '<button type="button" class="btn btn-ghost" data-action="cancel-client" data-id="' + esc(c.id) + '">Cancelar</button>' +
             '</div></div>';
         }
-        const count = state.taskCount(c.nombre);
+        const stats = state.taskStats(c.nombre);
         const pending = state.pendingDeleteId === c.id;
-        return '<div class="client-card" data-id="' + esc(c.id) + '">' +
-          '<div><h3>' + esc(c.nombre) + '</h3><div class="meta">' + count + ' tarea' + (count === 1 ? '' : 's') + '</div></div>' +
+        const meta = stats.total
+          ? stats.total + ' tarea' + (stats.total === 1 ? '' : 's') + (stats.open ? ' · ' + stats.open + ' abierta' + (stats.open === 1 ? '' : 's') : ' · todas completadas')
+          : 'Sin tareas';
+        return '<div class="client-card' + (pending ? ' is-pending-delete' : '') + '" data-id="' + esc(c.id) + '">' +
+          '<span class="avatar is-square" style="--h:' + hueFor(c.nombre) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
+          '<div class="client-main"><h3>' + esc(c.nombre) + '</h3><div class="meta">' + meta + '</div></div>' +
           '<div class="client-card-actions">' +
-          '<button type="button" class="icon-btn" data-action="edit-client" data-id="' + esc(c.id) + '">Editar</button>' +
-          '<button type="button" class="btn ' + (pending ? 'btn-danger' : 'btn-ghost') + '" data-action="delete" data-id="' + esc(c.id) + '">' + (pending ? '¿Seguro? Eliminar' : 'Eliminar') + '</button>' +
+          (pending
+            ? '<button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="' + esc(c.id) + '">¿Seguro? Eliminar</button>'
+            : '<button type="button" class="icon-only" data-action="edit-client" data-id="' + esc(c.id) + '" aria-label="Editar ' + esc(c.nombre) + '" title="Editar">' + EDIT_ICON + '</button>' +
+              '<button type="button" class="icon-only is-danger" data-action="delete" data-id="' + esc(c.id) + '" aria-label="Eliminar ' + esc(c.nombre) + '" title="Eliminar">' + TRASH_ICON + '</button>') +
           '</div></div>';
       }).join('');
       if(state.editingId){

@@ -7,7 +7,7 @@
 .cal-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-bottom:12px;}
 .cal-legend span{display:inline-flex;align-items:center;gap:6px;}
 .cal-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
-.cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start;}
+.cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start;}
 @media (max-width:1100px){ .cal-layout{grid-template-columns:1fr;} }
 .cal-weekdays,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}
 .cal-weekdays span{font-size:11.5px;font-weight:500;color:var(--ink-faint);padding:0 8px 6px;}
@@ -106,18 +106,30 @@
 .cal-day-label{font-size:12px;font-weight:600;color:var(--ink-soft);margin:16px 0 8px;}
 .cal-empty{font-size:13px;color:var(--ink-faint);margin:6px 0 0;}
 .agenda-item{
-  display:flex;
+  --bar:var(--st-pend);
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
   align-items:center;
-  gap:10px;
-  padding:9px 10px;
-  border-radius:9px;
-  background:var(--surface-2);
+  gap:2px 10px;
+  padding:9px 10px 10px 14px;
+  border-radius:var(--r-md);
+  background:var(--surface);
   border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);
   margin-bottom:6px;
   cursor:pointer;
-  transition:border-color .12s ease;
+  overflow:hidden;
+  transition:border-color .12s ease, box-shadow .12s ease;
 }
-.agenda-item:hover{border-color:var(--line-strong);}
+.agenda-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--bar);}
+.agenda-item.is-meeting{--bar:var(--meet);}
+.agenda-item.is-overdue{--bar:var(--danger);}
+.agenda-item.is-done{--bar:var(--st-done);}
+.agenda-item > .agenda-time{grid-column:1;grid-row:1;}
+.agenda-item > a{grid-column:2;grid-row:1 / span 2;align-self:center;}
+.agenda-item > .agenda-main{grid-column:1;grid-row:2;}
+.agenda-item:hover{border-color:var(--line-strong);box-shadow:var(--shadow);}
 .agenda-time{
   flex:none;
   min-width:52px;
@@ -133,6 +145,6 @@
 .agenda-item.is-meeting .agenda-time{color:var(--meet);}
 .agenda-item.is-overdue .agenda-time{color:var(--danger);}
 .agenda-main{flex:1;min-width:0;}
-.agenda-title{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.agenda-title{font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere;}
 .agenda-item.is-done .agenda-title{text-decoration:line-through;opacity:0.6;}
 .agenda-meta{font-size:11.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

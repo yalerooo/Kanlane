@@ -59,7 +59,9 @@
         if(!c || !c.nombre || existingClientNames[c.nombre]) return Promise.resolve();
         existingClientNames[c.nombre] = true;
         counts.clients++;
-        return m.clients.add({nombre:c.nombre, createdAt:c.createdAt || Date.now()});
+        const client = {nombre:c.nombre, createdAt:c.createdAt || Date.now()};
+        if(typeof c.color === 'number' && isFinite(c.color)) client.color = c.color;
+        return m.clients.add(client);
       });
 
       const taskPromises = list(data.tasks).map((t) => {

@@ -40,6 +40,7 @@ src/
 Detalles de interfaz:
 
 - **Tablero**: ocupa el alto de la ventana y cada columna tiene scroll propio. Al arrastrar una tarea, las columnas y la página se desplazan solas al acercarte a un borde, y una línea marca la posición exacta donde caerá; el orden dentro de cada columna se guarda (campo `order`). El botón **+** de cada columna crea una tarea con ese estado.
+- **Colores de cliente**: en Clientes, el botón de paleta (o el avatar) permite elegir el color de cada cliente; se usa en etiquetas, avatares y desplegables. "Auto" vuelve al color derivado del nombre. Se guarda en el campo `color` (tono HSL) del cliente.
 - **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.
 
 Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Workhub`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.

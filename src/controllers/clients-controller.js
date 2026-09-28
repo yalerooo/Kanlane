@@ -13,6 +13,7 @@
       this.editingId = null;
       this.pendingDeleteId = null;
       this.pendingDeleteTimer = null;
+      this.colorOpenId = null;
 
       this.clients.on('change', () => this.render());
       this.tasks.on('change', () => this.render());
@@ -27,7 +28,14 @@
         edit: (id) => { this.editingId = id; this.render(); },
         cancel: () => { this.editingId = null; this.render(); },
         save: (id, name) => this.rename(id, name),
-        remove: (id, btn) => this.remove(id, btn)
+        remove: (id, btn) => this.remove(id, btn),
+        toggleColor: (id) => {
+          this.colorOpenId = this.colorOpenId === id ? null : id;
+          this.render();
+        },
+        color: (id, hue) => {
+          if(this.clients.isReady()) this.clients.setColor(id, hue).catch(() => {});
+        }
       });
     }
 
@@ -35,6 +43,8 @@
       this.view.render(this.clients.sortedByName(), {
         editingId: this.editingId,
         pendingDeleteId: this.pendingDeleteId,
+        colorOpenId: this.colorOpenId,
+        colors: Workhub.models.ClientModel.COLORS,
         taskStats: (name) => this.tasks.statsByClient(name)
       });
     }

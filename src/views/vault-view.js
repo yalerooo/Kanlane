@@ -1,7 +1,8 @@
 /* Contraseñas: pantalla de bloqueo, recuperación, rejilla de credenciales,
    ficha de solo lectura y formulario de edición. */
 (function(){
-  const {esc, iconSpan, closest, hueFor} = Workhub.utils.html;
+  const {esc, iconSpan, closest} = Workhub.utils.html;
+  const clientColors = Workhub.views.clientColors;
   const {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const VaultModel = Workhub.models.VaultModel;
   const $ = (id) => document.getElementById(id);
@@ -466,7 +467,7 @@
     const data = vault.revealed[v.id];
     const notesHtml = visible && data && data.notas ? '<div class="notes">' + esc(data.notas) + '</div>' : '';
     return '<div class="vault-card" draggable="true" data-id="' + esc(v.id) + '">' +
-      '<div class="cat">' + (v.cliente ? '<span class="client-chip" style="--h:' + hueFor(v.cliente) + '">' + esc(v.cliente) + '</span>' : '<span></span>') + '<span class="type-badge">' + esc(VaultModel.typeLabel(tipo)) + '</span></div>' +
+      '<div class="cat">' + (v.cliente ? clientColors.chip(v.cliente) : '<span></span>') + '<span class="type-badge">' + esc(VaultModel.typeLabel(tipo)) + '</span></div>' +
       '<h3>' + esc(VaultModel.titleFor(v)) + '</h3>' +
       lines +
       '<div class="pass-row"><span class="pass-value">' + esc(vault.passwordText(v.id)) + '</span>' +

@@ -4389,6 +4389,8 @@ if(!window.claude){
     var taskPromises = (Array.isArray(data.tasks) ? data.tasks : []).map(function(t){
       if(!t || !t.title) return Promise.resolve();
       var notes = Array.isArray(t.notes) ? t.notes : [];
+      // linkedContacts/linkedVault no se importan: guardan ids de documentos
+      // que cambian al importar (add() crea ids nuevos), así que quedarían rotos.
       var body = {
         title: t.title || '',
         desc: t.desc || '',
@@ -4456,7 +4458,7 @@ if(!window.claude){
         return Promise.all(entries.map(function(v){
           if(!v || !v.cliente || !v.iv || !v.cipher) return Promise.resolve();
           counts.vault++;
-          return vaultCol.add({
+          var entry = {
             tipo: v.tipo || 'correo',
             cliente: v.cliente || '',
             label: v.label || '',
@@ -4464,11 +4466,16 @@ if(!window.claude){
             web: v.web || '',
             ip: v.ip || '',
             usuario: v.usuario || '',
+            puerto: v.puerto || '',
+            dominio: v.dominio || '',
             iv: v.iv,
             cipher: v.cipher,
             createdAt: v.createdAt || Date.now(),
             updatedAt: Date.now()
-          });
+          };
+          // Sin 'order' numérico, vaultOrderOf() cae en createdAt.
+          if(typeof v.order === 'number' && isFinite(v.order)) entry.order = v.order;
+          return vaultCol.add(entry);
         }));
       });
     }).then(function(){

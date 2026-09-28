@@ -7,15 +7,41 @@ https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5
 
 ## Qué hay en esta carpeta
 
-- `index.html` — todo el código fuente del tablero (HTML + CSS + JS en un único archivo).
+- `index.html` — la página: estructura HTML de la app y carga de estilos y scripts.
+- `assets/css/` — estilos, separados en tokens de diseño, base, layout, componentes y vistas.
+- `src/` — el código JavaScript, organizado en MVC (ver abajo).
 - `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
-- `iniciar-tablero.bat` — doble clic y ya está (ver abajo).
+- `start-workhub.bat` — doble clic y ya está (ver abajo).
+
+## Arquitectura (MVC)
+
+```
+assets/css/
+  tokens.css, base.css, layout.css    variables de color/tema, reset y estructura general
+  components/                         botones, campos, barras, tarjetas, diálogos
+  views/                              estilos propios de tablero, calendario, contraseñas y ajustes
+src/
+  core/         namespace global, emisor de eventos y almacén local (IndexedDB) sin Claude
+  utils/        HTML/iconos, fechas, URLs y ayudas de interfaz (copiar, arrastrar y soltar)
+  services/     acceso a la plataforma (db, imágenes, descargas), cifrado y preferencias
+  models/       datos y reglas de negocio: tareas, clientes, contactos, reuniones,
+                contraseñas (cifrado y recuperación), ajustes y copia de seguridad
+  views/        solo DOM: pintan el estado y avisan de las acciones del usuario
+  controllers/  conectan vistas y modelos; AppController arranca todo y navega entre secciones
+  main.js       punto de entrada
+```
+
+- **Modelos**: cada colección (`tasks`, `clients`, `contacts`, `meetings`, `vault`) extiende `CollectionModel`, que la mantiene sincronizada en memoria y emite `change` cuando llegan datos nuevos. No tocan el DOM.
+- **Vistas**: reciben datos y los pintan; exponen métodos `bind…(handler)` para que el controlador reaccione a clics, formularios y arrastres. No guardan nada.
+- **Controladores**: escuchan a los modelos, deciden qué pintar y ejecutan las acciones (guardar, borrar, desbloquear…).
+
+Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Workhub`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.
 
 ## Cómo lanzarlo en local
 
 `index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).
 
-**La forma más rápida:** doble clic en **`iniciar-tablero.bat`**. Abre una ventana de consola con el servidor local corriendo (no la cierres mientras uses el tablero) y te abre el navegador en `http://localhost:5500` automáticamente. Para cerrar el tablero, cierra esa ventana de consola.
+**La forma más rápida:** doble clic en **`start-workhub.bat`**. Abre una ventana de consola con el servidor local corriendo (no la cierres mientras uses el tablero) y te abre el navegador en `http://localhost:5500` automáticamente. Para cerrar el tablero, cierra esa ventana de consola.
 
 Otras formas:
 

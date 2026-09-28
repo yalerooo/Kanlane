@@ -151,12 +151,12 @@
       };
     }
 
-    openNew(clientNames, defaultCliente){
+    openNew(clientNames, defaultCliente, status){
       this.form.reset();
       this.resetNoteForm();
       this.fields.id.value = '';
       this.title.textContent = 'Nueva tarea';
-      this.fields.estado.value = 'pendiente';
+      this.fields.estado.value = status || 'pendiente';
       this.cliente.reset(clientNames, defaultCliente);
       this.notesSection.hidden = true;
       this.linksSection.hidden = true;

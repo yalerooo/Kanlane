@@ -22,11 +22,13 @@ assets/css/
   views/                              estilos propios de tablero, calendario, contraseñas y ajustes
 src/
   core/         namespace global, emisor de eventos y almacén local (IndexedDB) sin Claude
-  utils/        HTML/iconos, fechas, URLs y ayudas de interfaz (copiar, arrastrar y soltar)
+  utils/        HTML/iconos, fechas, URLs, ayudas de interfaz (copiar, arrastrar y soltar)
+                y desplazamiento automático al arrastrar
   services/     acceso a la plataforma (db, imágenes, descargas), cifrado y preferencias
   models/       datos y reglas de negocio: tareas, clientes, contactos, reuniones,
                 contraseñas (cifrado y recuperación), ajustes y copia de seguridad
   views/        solo DOM: pintan el estado y avisan de las acciones del usuario
+                (incluye dropdown.js, el desplegable propio que sustituye a los <select>)
   controllers/  conectan vistas y modelos; AppController arranca todo y navega entre secciones
   main.js       punto de entrada
 ```
@@ -34,6 +36,11 @@ src/
 - **Modelos**: cada colección (`tasks`, `clients`, `contacts`, `meetings`, `vault`) extiende `CollectionModel`, que la mantiene sincronizada en memoria y emite `change` cuando llegan datos nuevos. No tocan el DOM.
 - **Vistas**: reciben datos y los pintan; exponen métodos `bind…(handler)` para que el controlador reaccione a clics, formularios y arrastres. No guardan nada.
 - **Controladores**: escuchan a los modelos, deciden qué pintar y ejecutan las acciones (guardar, borrar, desbloquear…).
+
+Detalles de interfaz:
+
+- **Tablero**: ocupa el alto de la ventana y cada columna tiene scroll propio. Al arrastrar una tarea, las columnas y la página se desplazan solas al acercarte a un borde, y una línea marca la posición exacta donde caerá; el orden dentro de cada columna se guarda (campo `order`). El botón **+** de cada columna crea una tarea con ese estado.
+- **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.
 
 Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Workhub`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.
 

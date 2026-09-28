@@ -34,7 +34,8 @@
       this.board.bindNew(() => this.openNew());
       this.board.bindFilters(() => this.render());
       this.board.bindOpen((id) => this.openEdit(id));
-      this.board.bindMove((id, status) => this.tasks.move(id, status));
+      this.board.bindQuickAdd((status) => this.openNew(status));
+      this.board.bindMove((id, status, beforeId) => this.tasks.move(id, status, beforeId));
 
       this.dialog.cliente.bindCreate((name) => app.createClient(name));
       this.dialog.bindSubmit((id, values) => this.save(id, values));
@@ -58,11 +59,11 @@
 
     /* ---------- Diálogo ---------- */
 
-    openNew(){
+    openNew(status){
       this.releaseTask();
       const items = this.tasks.items;
       const deflt = items.length && items[0].cliente ? items[0].cliente : '';
-      this.dialog.openNew(this.app.clientNames(), deflt);
+      this.dialog.openNew(this.app.clientNames(), deflt, status);
     }
 
     /* Nueva tarea con fecha (y cliente) ya elegidos, desde el calendario. */

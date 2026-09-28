@@ -23,30 +23,45 @@
      - itemSelector: elementos arrastrables (llevan data-id)
      - targetSelector: elementos sobre los que se puede soltar
      - getPayload(item): texto que viaja en dataTransfer
-     - onDrop(payload, target) */
+     - onDrop(payload, target, ev)
+     - onOver(ev, target) y onEnd(): opcionales, para pintar dónde caerá.
+     Mientras se arrastra, la página y las listas se desplazan solas al
+     acercarse a sus bordes (ver utils/autoscroll.js). */
   function bindDragAndDrop(container, opts){
+    const {closest} = Workhub.utils.html;
+    const autoscroll = Workhub.utils.autoscroll;
     let over = null;
 
+    function clearOver(){
+      if(over){ over.classList.remove('drag-over'); over = null; }
+      if(opts.onEnd) opts.onEnd();
+    }
+
     container.addEventListener('dragstart', (ev) => {
-      const item = Workhub.utils.html.closest(ev.target, opts.itemSelector);
+      const item = closest(ev.target, opts.itemSelector);
       if(!item) return;
-      item.classList.add('dragging');
       item.setAttribute('data-dragged', '1');
       ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('text/plain', opts.getPayload(item));
+      /* La clase se añade después para que la imagen fantasma salga opaca. */
+      requestAnimationFrame(() => item.classList.add('dragging'));
+      document.body.classList.add('is-dragging');
+      autoscroll.start();
     });
 
     container.addEventListener('dragend', (ev) => {
-      const item = Workhub.utils.html.closest(ev.target, opts.itemSelector);
+      const item = closest(ev.target, opts.itemSelector);
       if(item){
         item.classList.remove('dragging');
         setTimeout(() => { item.removeAttribute('data-dragged'); }, 0);
       }
-      if(over){ over.classList.remove('drag-over'); over = null; }
+      document.body.classList.remove('is-dragging');
+      autoscroll.stop();
+      clearOver();
     });
 
     container.addEventListener('dragover', (ev) => {
-      const target = Workhub.utils.html.closest(ev.target, opts.targetSelector);
+      const target = closest(ev.target, opts.targetSelector);
       if(!target) return;
       ev.preventDefault();
       ev.dataTransfer.dropEffect = 'move';
@@ -55,22 +70,22 @@
         target.classList.add('drag-over');
         over = target;
       }
+      if(opts.onOver) opts.onOver(ev, target);
     });
 
     container.addEventListener('dragleave', (ev) => {
-      const target = Workhub.utils.html.closest(ev.target, opts.targetSelector);
+      const target = closest(ev.target, opts.targetSelector);
       if(!target || target !== over || target.contains(ev.relatedTarget)) return;
-      target.classList.remove('drag-over');
-      over = null;
+      clearOver();
     });
 
     container.addEventListener('drop', (ev) => {
-      const target = Workhub.utils.html.closest(ev.target, opts.targetSelector);
+      const target = closest(ev.target, opts.targetSelector);
       if(!target) return;
       ev.preventDefault();
-      target.classList.remove('drag-over');
-      over = null;
-      opts.onDrop(ev.dataTransfer.getData('text/plain') || '', target);
+      const payload = ev.dataTransfer.getData('text/plain') || '';
+      opts.onDrop(payload, target, ev);
+      clearOver();
     });
   }
 

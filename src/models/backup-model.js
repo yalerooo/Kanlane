@@ -64,6 +64,8 @@
 
       const taskPromises = list(data.tasks).map((t) => {
         if(!t || !t.title) return Promise.resolve();
+        /* linkedContacts/linkedVault no se importan: guardan ids de documentos
+           que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
         counts.tasks++;
         return m.tasks.add({
           title: t.title || '',
@@ -131,7 +133,7 @@
           return Promise.all(entries.map((v) => {
             if(!v || !v.cliente || !v.iv || !v.cipher) return Promise.resolve();
             counts.vault++;
-            return m.vault.add({
+            const entry = {
               tipo: v.tipo || 'correo',
               cliente: v.cliente || '',
               label: v.label || '',
@@ -139,11 +141,16 @@
               web: v.web || '',
               ip: v.ip || '',
               usuario: v.usuario || '',
+              puerto: v.puerto || '',
+              dominio: v.dominio || '',
               iv: v.iv,
               cipher: v.cipher,
               createdAt: v.createdAt || Date.now(),
               updatedAt: Date.now()
-            });
+            };
+            /* Sin 'order' numérico, VaultModel.orderOf() cae en createdAt. */
+            if(typeof v.order === 'number' && isFinite(v.order)) entry.order = v.order;
+            return m.vault.add(entry);
           }));
         });
       }).then(() => ({counts:counts, vaultOutcome:vaultOutcome}));

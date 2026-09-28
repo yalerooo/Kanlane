@@ -1,0 +1,103 @@
+/* ---------- Rejillas de tarjetas ---------- */
+.contacts-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:12px;
+}
+.contact-card,
+.vault-card,
+.client-card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:var(--shadow-sm);
+  transition:border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.contact-card,.vault-card{cursor:pointer;}
+.contact-card:hover,.vault-card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);}
+.contact-card h3,.vault-card h3{font-size:14.5px;font-weight:600;margin:0 0 8px;letter-spacing:-0.01em;}
+.line{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin:0 0 4px;
+  word-break:break-word;
+  display:flex;
+  align-items:center;
+  gap:2px;
+}
+.notes{
+  font-size:12.5px;
+  color:var(--ink-soft);
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--line);
+  white-space:pre-wrap;
+  line-height:1.5;
+  display:-webkit-box;
+  -webkit-line-clamp:4;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.icon{display:inline-flex;margin-right:6px;color:var(--ink-faint);}
+.icon svg{display:block;}
+.btn .icon{margin-right:0;color:currentColor;}
+
+.vault-card.dragging{opacity:0.45;cursor:grabbing;}
+.vault-card.drag-over{background:var(--accent-soft);border-color:var(--accent);}
+.vault-card .cat,
+dialog .dlg-inner > .cat{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+dialog .dlg-inner > .cat{margin-bottom:10px;}
+.type-badge{
+  flex:none;
+  font-size:11px;
+  font-weight:600;
+  padding:2px 8px;
+  border-radius:6px;
+  background:var(--surface-2);
+  color:var(--ink-soft);
+  border:1px solid var(--line);
+}
+.meet-badge{background:var(--meet-bg);color:var(--meet);border-color:transparent;}
+.pass-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:12px;
+}
+.pass-value{
+  flex:1;
+  min-width:0;
+  font-family:var(--mono);
+  font-size:12.5px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:5px 9px;
+  overflow-x:auto;
+  white-space:pre;
+  -webkit-user-select:text;
+  user-select:text;
+}
+
+.client-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.client-card h3{font-size:14.5px;font-weight:600;margin:0;}
+.client-card .meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+.client-card-actions{display:flex;gap:6px;flex:none;}
+.client-card-editing{grid-column:1 / -1;}
+.client-edit-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;}
+.client-edit-row input{flex:1 1 200px;}
+.new-client-row{display:flex;gap:8px;margin-bottom:16px;}
+.new-client-row input{flex:1;}
+.new-client-inline{display:flex;gap:6px;margin-top:6px;}
+.new-client-inline input{flex:1;}

@@ -1,0 +1,74 @@
+/* ---------- Ajustes ---------- */
+.settings-card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:var(--shadow-sm);
+  max-width:860px;
+}
+.settings-row{
+  display:grid;
+  grid-template-columns:minmax(0,260px) minmax(0,1fr);
+  gap:24px;
+  padding:20px 22px;
+  border-bottom:1px solid var(--line);
+}
+.settings-row:last-child{border-bottom:none;}
+@media (max-width:720px){ .settings-row{grid-template-columns:1fr;gap:12px;} }
+.settings-row h3{font-size:14px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;}
+.settings-row p{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.5;}
+.swatches{display:flex;flex-wrap:wrap;gap:8px 10px;}
+.swatch{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  width:62px;
+  padding:0;
+  border:none;
+  background:none;
+  cursor:pointer;
+  font-family:inherit;
+  font-size:12px;
+  font-weight:500;
+  color:var(--ink-soft);
+  border-radius:10px;
+}
+.swatch-dot{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:var(--sw);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08);
+  display:grid;
+  place-items:center;
+  color:var(--sw-ink);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.swatch:hover .swatch-dot{transform:scale(1.06);}
+.swatch[aria-checked="true"]{color:var(--ink);font-weight:600;}
+.swatch[aria-checked="true"] .swatch-dot{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--sw);}
+.swatch .check{opacity:0;}
+.swatch[aria-checked="true"] .check{opacity:1;}
+.segmented{
+  display:inline-flex;
+  padding:3px;
+  gap:2px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:9px;
+}
+.segmented button{
+  font-family:inherit;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-soft);
+  background:transparent;
+  border:none;
+  border-radius:7px;
+  padding:6px 14px;
+  cursor:pointer;
+}
+.segmented button:hover{color:var(--ink);}
+.segmented button[aria-checked="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow);}
+.storage-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);}

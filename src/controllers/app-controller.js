@@ -36,6 +36,11 @@
         vault: new C.VaultController(this, new V.VaultView()),
         backup: new C.BackupController(this, new V.BackupView())
       };
+      this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
+
+      /* Contadores de la barra lateral. */
+      const m = this.models;
+      [m.tasks, m.contacts, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
 
       this.shell.bindTabClick((view) => this.navigate(view));
       this.shell.setStorageMode(platform.isLocal());
@@ -50,6 +55,23 @@
     createClient(name){
       if(!this.models.clients.isReady()) return false;
       return this.models.clients.create(name);
+    }
+
+    updateCounts(){
+      const m = this.models;
+      const TaskModel = M.TaskModel;
+      const today = Workhub.utils.dates.todayYmd();
+      const open = m.tasks.items.filter((t) => t.status !== 'completada');
+      const overdue = open.some((t) => TaskModel.dueState(t) === 'overdue');
+      const todayCount = m.meetings.items.filter((x) => x.date === today).length +
+        open.filter((t) => t.dueDate === today).length;
+      this.shell.setCounts({
+        tasks: open.length,
+        calendar: todayCount,
+        contacts: m.contacts.items.length,
+        vault: m.vault.items.length,
+        clients: m.clients.items.length
+      }, {tasks: overdue});
     }
 
     navigate(view){

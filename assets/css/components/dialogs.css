@@ -1,7 +1,7 @@
 /* ---------- Diálogos ---------- */
 dialog{
-  border:1px solid var(--line);
-  border-radius:14px;
+  border:none;
+  border-radius:var(--r-xl);
   padding:0;
   background:var(--surface);
   color:var(--ink);
@@ -10,21 +10,23 @@ dialog{
   max-height:calc(100vh - 48px);
   overflow-y:auto;
 }
-dialog::backdrop{background:rgba(12,14,18,0.45);backdrop-filter:blur(3px);}
-dialog[open]{animation:dlg-in .18s cubic-bezier(.2,.8,.2,1);}
-dialog[open]::backdrop{animation:fade-in .18s ease;}
-@keyframes dlg-in{from{opacity:0;transform:translateY(8px) scale(.985);}to{opacity:1;transform:none;}}
+dialog::backdrop{background:rgba(10,10,12,0.4);}
+dialog[open]{animation:dlg-in .16s cubic-bezier(.2,.8,.2,1);}
+dialog[open]::backdrop{animation:fade-in .16s ease;}
+@keyframes dlg-in{from{opacity:0;transform:translateY(6px) scale(.99);}to{opacity:1;transform:none;}}
 @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
 #dlg{width:min(600px, calc(100vw - 32px));}
-.dlg-inner{position:relative;}
+
+.dlg-inner{position:relative;padding:20px 22px 18px;}
+.dlg-inner > h2{font-size:16px;font-weight:600;margin:0 0 18px;letter-spacing:-0.015em;padding-right:40px;}
 .dlg-close{
   position:absolute;
-  top:16px;
-  right:16px;
+  top:14px;
+  right:14px;
   display:grid;
   place-items:center;
-  width:32px;
-  height:32px;
+  width:30px;
+  height:30px;
   border:none;
   border-radius:var(--r-md);
   background:transparent;
@@ -32,40 +34,36 @@ dialog[open]::backdrop{animation:fade-in .18s ease;}
   cursor:pointer;
   transition:background .12s ease, color .12s ease;
 }
-.dlg-close:hover{background:var(--surface-2);color:var(--ink);}
-.dlg-close:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
-.dlg-inner > h2{padding-right:40px;}
-.dlg-inner{padding:22px 24px 20px;}
-.dlg-inner > h2{font-size:18px;font-weight:650;margin:0 0 18px;letter-spacing:-0.02em;}
+.dlg-close:hover{background:var(--hover);color:var(--ink);}
 .dlg-actions{
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:8px;
-  margin:20px -24px -20px;
-  padding:14px 24px;
+  margin:20px -22px -18px;
+  padding:12px 22px;
   border-top:1px solid var(--line);
-  background:var(--surface-2);
-  border-radius:0 0 13px 13px;
+  background:var(--surface);
+  border-radius:0 0 var(--r-xl) var(--r-xl);
   /* Guardar/Cancelar siempre a la vista aunque el diálogo tenga scroll. */
   position:sticky;
   bottom:0;
   z-index:3;
 }
-.dlg-actions .right{display:flex;gap:8px;}
+.dlg-actions .right{display:flex;gap:8px;margin-left:auto;}
 .lock-error{font-size:12.5px;color:var(--danger);margin:0 0 10px;}
 
-.view-rows{display:flex;flex-direction:column;margin-bottom:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.view-rows{display:flex;flex-direction:column;margin-bottom:16px;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
 .view-row{
   display:flex;
   align-items:baseline;
   gap:12px;
   font-size:13.5px;
-  padding:10px 14px;
+  padding:9px 12px;
   border-bottom:1px solid var(--line);
 }
 .view-row:last-child{border-bottom:none;}
-.view-row .view-label{flex:none;width:96px;font-size:12.5px;font-weight:500;color:var(--ink-soft);}
+.view-row .view-label{flex:none;width:96px;font-size:12.5px;color:var(--ink-faint);}
 .view-row .view-value{color:var(--ink);word-break:break-word;-webkit-user-select:text;user-select:text;}
 .view-rows:empty{display:none;}
 .view-notas{
@@ -74,45 +72,44 @@ dialog[open]::backdrop{animation:fade-in .18s ease;}
   color:var(--ink);
   white-space:pre-wrap;
   background:var(--surface-2);
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:11px 14px;
+  border-radius:var(--r-lg);
+  padding:10px 12px;
 }
 .mv-when{font-size:13.5px;color:var(--ink-soft);margin:-10px 0 18px;}
 .mv-link{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;}
 .mv-url{flex-basis:100%;font-size:12px;color:var(--ink-faint);margin:2px 0 0;word-break:break-all;-webkit-user-select:text;user-select:text;}
+dialog .dlg-inner > .cat{padding-right:40px;margin-bottom:10px;}
 
-/* Notas de tareas */
-.notes-list{max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
-.note-item{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;}
-.note-date{font-size:11.5px;color:var(--ink-faint);margin-bottom:3px;font-variant-numeric:tabular-nums;}
+/* Notas de tareas (formulario) */
+.notes-list{max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.note-item{background:var(--surface-2);border-radius:var(--r-lg);padding:8px 12px;}
+.note-date{font-size:11.5px;color:var(--ink-faint);margin-bottom:2px;font-variant-numeric:tabular-nums;}
 .note-text{font-size:13px;white-space:pre-wrap;line-height:1.5;}
-.note-item img{display:block;max-width:180px;max-height:130px;border-radius:7px;margin-top:8px;cursor:zoom-in;object-fit:cover;border:1px solid var(--line);}
+.note-item img{display:block;max-width:180px;max-height:130px;border-radius:var(--r-md);margin-top:8px;cursor:zoom-in;object-fit:cover;border:1px solid var(--line);}
 .note-del{float:right;font-family:inherit;font-size:11.5px;color:var(--ink-faint);background:none;border:none;cursor:pointer;padding:0;}
 .note-del:hover{color:var(--danger);}
-.note-add-box{border:1px solid var(--line-strong);border-radius:10px;padding:8px;background:var(--surface);box-shadow:var(--shadow-sm);}
-.note-add-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
-.note-add-box textarea{width:100%;border:none;box-shadow:none;background:transparent;padding:4px;min-height:52px;}
+.note-add-box{border:1px solid var(--line-strong);border-radius:var(--r-lg);padding:6px;background:var(--surface);box-shadow:var(--shadow-sm);}
+.note-add-box:focus-within{border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
+.note-add-box textarea{width:100%;border:none;box-shadow:none;background:transparent;padding:4px 6px;min-height:52px;}
 .note-add-box textarea:focus{box-shadow:none;}
 .note-image-preview{position:relative;margin:6px 0;display:inline-flex;align-items:center;gap:8px;}
-.note-image-preview img{max-width:120px;max-height:90px;border-radius:7px;display:block;}
-.note-add-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+.note-image-preview img{max-width:120px;max-height:90px;border-radius:var(--r-md);display:block;}
+.note-add-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:4px;}
 
-/* Vínculos de tareas */
+/* Vínculos de tareas (formulario) */
 .linked-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
 .linked-row{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  background:var(--surface-2);
   border:1px solid var(--line);
-  border-radius:9px;
-  padding:8px 10px;
+  border-radius:var(--r-lg);
+  padding:7px 10px;
 }
 .linked-main{min-width:0;flex:1;}
-.linked-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.linked-meta{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.linked-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.linked-meta{font-size:12px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .linked-actions{display:flex;align-items:center;gap:6px;flex:none;}
 .linked-pass{font-family:var(--mono);font-size:12px;color:var(--ink-soft);max-width:120px;overflow-x:auto;white-space:pre;-webkit-user-select:text;user-select:text;}
 .linked-empty{font-size:12.5px;color:var(--ink-faint);margin:0 0 8px;}
@@ -120,7 +117,7 @@ dialog[open]::backdrop{animation:fade-in .18s ease;}
 .lightbox{
   position:fixed;
   inset:0;
-  background:rgba(8,10,12,0.85);
+  background:rgba(8,8,10,0.88);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -128,6 +125,4 @@ dialog[open]::backdrop{animation:fade-in .18s ease;}
   cursor:zoom-out;
   padding:24px;
 }
-.lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:var(--shadow-lg);}
-
-dialog .dlg-inner > .cat{padding-right:40px;}
+.lightbox img{max-width:100%;max-height:100%;border-radius:var(--r-lg);box-shadow:var(--shadow-lg);}

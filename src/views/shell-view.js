@@ -92,6 +92,17 @@
       });
     }
 
+    /* counts: {tasks, calendar, contacts, vault, clients}; alerts: vistas a resaltar. */
+    setCounts(counts, alerts){
+      Object.keys(counts).forEach((view) => {
+        const el = document.getElementById('count' + view.charAt(0).toUpperCase() + view.slice(1));
+        if(!el) return;
+        const n = counts[view];
+        el.textContent = n ? String(n) : '';
+        el.classList.toggle('is-alert', !!(alerts && alerts[view]));
+      });
+    }
+
     setStorageMode(isLocal){
       this.storageLabel.textContent = isLocal ? 'Modo local' : 'Sincronizado';
     }

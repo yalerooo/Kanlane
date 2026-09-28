@@ -2,7 +2,8 @@
    Cada columna tiene scroll propio y el tablero ocupa el alto de la ventana,
    así una tarea se puede arrastrar a cualquier posición de cualquier columna. */
 (function(){
-  const {esc, closest, iconSpan, hueFor, PLUS_ICON} = Workhub.utils.html;
+  const {esc, closest, iconSpan, PLUS_ICON} = Workhub.utils.html;
+  const clientColors = Workhub.views.clientColors;
   const {fmtDate} = Workhub.utils.dates;
   const {bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const TaskModel = Workhub.models.TaskModel;
@@ -175,7 +176,7 @@
       due
     ].join('');
     return '<article class="card" draggable="true" tabindex="0" data-id="' + esc(t.id) + '">' +
-      (t.cliente ? '<span class="client-chip" style="--h:' + hueFor(t.cliente) + '">' + esc(t.cliente) + '</span>' : '') +
+      (t.cliente ? clientColors.chip(t.cliente) : '') +
       '<h3>' + esc(t.title) + '</h3>' +
       (t.desc ? '<p>' + esc(t.desc) + '</p>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +

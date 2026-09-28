@@ -1,6 +1,7 @@
 /* Contactos: rejilla de tarjetas y diálogo de edición. */
 (function(){
   const {esc, iconSpan, closest, hueFor, initials} = Workhub.utils.html;
+  const clientColors = Workhub.views.clientColors;
   const $ = (id) => document.getElementById(id);
 
   class ContactsView {
@@ -116,7 +117,7 @@
       '<div class="card-head">' +
         '<span class="avatar" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
         '<div class="card-head-text"><h3>' + esc(name) + '</h3>' +
-        (c.cliente ? '<span class="client-chip" style="--h:' + hueFor(c.cliente) + '">' + esc(c.cliente) + '</span>' : '') +
+        (c.cliente ? clientColors.chip(c.cliente) : '') +
         '</div>' +
       '</div>' +
       email + tel + notas +

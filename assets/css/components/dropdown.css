@@ -33,6 +33,7 @@
 .dd-chevron{flex:none;color:var(--ink-faint);transition:transform .16s ease, color .12s ease;}
 .dd.is-open .dd-chevron{transform:rotate(180deg);color:var(--accent);}
 .dd-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.dd-dot.is-client{width:10px;height:10px;border-radius:3px;background:hsl(var(--h) 62% 52%);}
 
 .dd-menu{
   position:fixed;

@@ -22,6 +22,9 @@
     --st-done:#3E7D45;
     --st-done-bg:#DEEBDD;
     --danger:#A6432F;
+    --danger-bg:#F5DCD5;
+    --meet:#35609E;
+    --meet-bg:#DDE6F3;
     --shadow: 0 1px 2px rgba(35,42,36,0.06), 0 6px 16px -8px rgba(35,42,36,0.18);
     color-scheme: light;
   }
@@ -45,6 +48,9 @@
       --st-done:#7FC488;
       --st-done-bg:#1F3324;
       --danger:#E38066;
+      --danger-bg:#3A221C;
+      --meet:#8DB0E3;
+      --meet-bg:#1E2A3A;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -8px rgba(0,0,0,0.5);
       color-scheme: dark;
     }
@@ -68,6 +74,9 @@
     --st-done:#7FC488;
     --st-done-bg:#1F3324;
     --danger:#E38066;
+    --danger-bg:#3A221C;
+    --meet:#8DB0E3;
+    --meet-bg:#1E2A3A;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -8px rgba(0,0,0,0.5);
     color-scheme: dark;
   }
@@ -138,13 +147,19 @@
   .btn-ghost:hover{background:var(--surface-2);}
   .btn-danger{background:transparent;color:var(--danger);border-color:var(--line);}
   .btn-danger:hover{background:var(--surface-2);}
+  .btn-sm{font-size:12.5px;padding:6px 11px;border-radius:7px;}
+  a.btn{text-decoration:none;}
+  .btn:focus-visible,.tab:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
   .tabs{
     display:flex;
     gap:4px;
     border-bottom:1px solid var(--line);
     margin-bottom:18px;
+    overflow-x:auto;
+    scrollbar-width:none;
   }
+  .tabs::-webkit-scrollbar{display:none;}
   .tab{
     font-family:inherit;
     font-size:13.5px;
@@ -156,6 +171,8 @@
     padding:9px 4px;
     margin-right:18px;
     cursor:pointer;
+    white-space:nowrap;
+    flex:none;
   }
   .tab:hover{color:var(--ink);}
   .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
@@ -305,7 +322,8 @@
     background:var(--accent-soft);
     outline-color:var(--accent);
   }
-  .vault-card .cat{
+  .vault-card .cat,
+  dialog .dlg-inner > .cat{
     font-size:10.5px;
     font-weight:700;
     letter-spacing:0.03em;
@@ -367,6 +385,244 @@
     -webkit-user-select:text;
     user-select:text;
   }
+  dialog .dlg-inner > .cat{margin-bottom:8px;}
+  dialog .dlg-inner > .cat + h2{margin-top:0;}
+
+  .due-badge{
+    font-size:10.5px;
+    font-weight:700;
+    padding:1px 7px;
+    border-radius:999px;
+    background:var(--surface-2);
+    color:var(--ink-soft);
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .due-badge.is-today{background:var(--st-wait-bg);color:var(--st-wait);}
+  .due-badge.is-overdue{background:var(--danger-bg);color:var(--danger);}
+
+  /* Calendario */
+  .cal-toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .cal-nav{display:flex;align-items:center;gap:6px;}
+  .cal-month{
+    font-size:22px;
+    font-weight:600;
+    margin:0 6px;
+    min-width:190px;
+    text-align:center;
+    letter-spacing:-0.01em;
+  }
+  .cal-arrow{
+    width:34px;
+    height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    border-radius:8px;
+  }
+  .cal-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .cal-actions select{
+    font-family:inherit;
+    font-size:13px;
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    color:var(--ink);
+  }
+  .cal-legend{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-bottom:12px;
+  }
+  .cal-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .cal-legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .cal-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 300px;
+    gap:16px;
+    align-items:start;
+  }
+  @media (max-width:900px){
+    .cal-layout{grid-template-columns:1fr;}
+  }
+  .cal-weekdays,
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+  }
+  .cal-weekdays span{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    padding:0 8px 6px;
+  }
+  .cal-grid{
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .cal-cell{
+    background:var(--surface);
+    min-height:96px;
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    cursor:pointer;
+    min-width:0;
+    transition:background .12s ease;
+  }
+  .cal-cell:hover{background:var(--surface-2);}
+  .cal-cell:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .cal-cell.is-other{background:var(--bg);}
+  .cal-cell.is-other .cal-num{opacity:0.45;}
+  .cal-cell.is-selected{box-shadow:inset 0 0 0 2px var(--accent);}
+  .cal-cell.drag-over{background:var(--accent-soft);}
+  .cal-num{
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink);
+    width:24px;
+    height:24px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    font-variant-numeric:tabular-nums;
+    flex:none;
+  }
+  .cal-cell.is-today .cal-num{background:var(--accent);color:var(--accent-ink);}
+  .cal-items{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .cal-chip{
+    display:block;
+    font-size:11px;
+    line-height:1.35;
+    font-weight:600;
+    padding:2px 6px;
+    border-radius:5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    background:var(--cb, var(--surface-2));
+    color:var(--c, var(--ink));
+    cursor:grab;
+  }
+  .cal-chip:hover{filter:brightness(0.97);}
+  .cal-chip.is-meeting{background:var(--meet-bg);color:var(--meet);}
+  .cal-chip.is-meeting b{font-weight:700;font-variant-numeric:tabular-nums;}
+  .cal-chip.is-overdue{background:var(--danger-bg);color:var(--danger);}
+  .cal-chip.is-done{text-decoration:line-through;opacity:0.6;}
+  .cal-chip.dragging{opacity:0.4;}
+  .cal-more{font-size:10.5px;font-weight:700;color:var(--ink-soft);padding-left:4px;}
+  .cal-dots{display:none;gap:3px;flex-wrap:wrap;padding-left:2px;}
+  .cal-dot{width:6px;height:6px;border-radius:50%;display:block;background:var(--st-pend);}
+  .cal-dot.is-meeting{background:var(--meet);}
+  .cal-dot.is-overdue{background:var(--danger);}
+  @media (max-width:640px){
+    .cal-cell{min-height:52px;padding:4px;align-items:center;}
+    .cal-items{display:none;}
+    .cal-dots{display:flex;justify-content:center;}
+    .cal-month{font-size:18px;min-width:0;}
+    .cal-weekdays span{padding:0 0 6px;text-align:center;}
+  }
+
+  .cal-day{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+    box-shadow:var(--shadow);
+  }
+  .cal-day h3{font-size:18px;margin:0 0 12px;text-wrap:balance;}
+  .cal-day .eyebrow{margin-bottom:2px;}
+  .cal-day-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .cal-day-label{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:14px 0 8px;
+  }
+  .cal-empty{font-size:13px;color:var(--ink-soft);margin:6px 0 0;}
+  .agenda-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:9px;
+    background:var(--surface-2);
+    margin-bottom:6px;
+    cursor:pointer;
+  }
+  .agenda-item:hover{box-shadow:inset 0 0 0 1px var(--accent);}
+  .agenda-time{
+    flex:none;
+    width:88px;
+    white-space:nowrap;
+    font-size:11.5px;
+    font-weight:700;
+    color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .agenda-item.is-meeting .agenda-time{color:var(--meet);}
+  .agenda-item.is-overdue .agenda-time{color:var(--danger);}
+  .agenda-main{flex:1;min-width:0;}
+  .agenda-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .agenda-item.is-done .agenda-title{text-decoration:line-through;opacity:0.6;}
+  .agenda-meta{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .meet-badge{background:var(--meet-bg);color:var(--meet);}
+  .mv-when{font-size:14px;color:var(--ink-soft);margin:-6px 0 16px;}
+  .mv-link{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:16px;
+  }
+  .mv-url{
+    flex-basis:100%;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin:2px 0 0;
+    word-break:break-all;
+    -webkit-user-select:text;
+    user-select:text;
+  }
+  .field-hint{font-size:11.5px;color:var(--meet);margin:0;min-height:1em;}
   .vault-card h3{
     font-family:inherit;
     font-size:14.5px;
@@ -881,13 +1137,14 @@
     <div class="titles">
       <p class="eyebrow">Gestión de proyectos</p>
       <h1>Tablero de tareas</h1>
-      <p>Tareas y contactos de todos los clientes y proyectos en marcha. Arrastra una tarjeta para cambiar su estado, o añade una nueva.</p>
+      <p>Tareas, reuniones, contactos y contraseñas de todos los clientes y proyectos en marcha. Arrastra una tarjeta para cambiar su estado, o añade una nueva.</p>
     </div>
     <button class="btn btn-primary" id="btnNew">+ Nueva tarea</button>
   </header>
 
   <div class="tabs">
     <button class="tab active" id="tabTasks" data-view="tasks" type="button">Tareas</button>
+    <button class="tab" id="tabCalendar" data-view="calendar" type="button">Calendario</button>
     <button class="tab" id="tabContacts" data-view="contacts" type="button">Contactos y notas</button>
     <button class="tab" id="tabVault" data-view="vault" type="button">Contraseñas</button>
     <button class="tab" id="tabClients" data-view="clients" type="button">Clientes</button>
@@ -906,6 +1163,34 @@
     <div id="boardWrap">
       <div class="state-msg" id="stateMsg">Cargando tareas…</div>
       <div class="board" id="board" hidden></div>
+    </div>
+  </section>
+
+  <section id="viewCalendar" hidden>
+    <div class="cal-toolbar">
+      <div class="cal-nav">
+        <button type="button" class="icon-btn cal-arrow" id="calPrev" aria-label="Mes anterior"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h2 class="cal-month" id="calMonthLabel"></h2>
+        <button type="button" class="icon-btn cal-arrow" id="calNext" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="cal-actions">
+        <select id="calFilterCliente" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+        <button type="button" class="btn btn-ghost" id="calToday">Hoy</button>
+        <button type="button" class="btn btn-primary" id="calNewMeeting">+ Nueva reunión</button>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span><i style="background:var(--meet-bg);box-shadow:inset 0 0 0 1px var(--meet)"></i>Reunión</span>
+      <span><i style="background:var(--st-pend-bg);box-shadow:inset 0 0 0 1px var(--st-pend)"></i>Tarea que vence ese día</span>
+      <span><i style="background:var(--danger-bg);box-shadow:inset 0 0 0 1px var(--danger)"></i>Tarea vencida</span>
+      <span>Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
+    </div>
+    <div class="cal-layout">
+      <div>
+        <div class="cal-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <aside class="cal-day" id="calDay" aria-live="polite"></aside>
     </div>
   </section>
 
@@ -1014,7 +1299,7 @@
   </section>
 
   <section id="viewData" hidden>
-    <p class="hint">Exporta una copia de seguridad completa (tareas con sus notas, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo. <strong>Importar añade a lo que ya tienes — no borra ni reemplaza nada.</strong></p>
+    <p class="hint">Exporta una copia de seguridad completa (tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo. <strong>Importar añade a lo que ya tienes — no borra ni reemplaza nada.</strong></p>
     <div class="data-actions">
       <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
       <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
@@ -1253,6 +1538,82 @@
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlgMeeting">
+  <form class="dlg-inner" id="formMeeting" method="dialog">
+    <h2 id="dlgMeetingTitle">Nueva reunión</h2>
+    <input type="hidden" id="mId">
+    <div class="field">
+      <label for="mTitle">Título</label>
+      <input id="mTitle" required maxlength="140" placeholder="p. ej. Seguimiento semanal con Finba">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="mCliente">Cliente (opcional)</label>
+        <select id="mCliente" data-allow-empty="1"></select>
+        <div class="new-client-inline" id="mClienteNewWrap" hidden>
+          <input id="mClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="mClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="mDate">Fecha</label>
+        <input id="mDate" type="date" required>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="mStart">Hora de inicio</label>
+        <input id="mStart" type="time">
+      </div>
+      <div class="field">
+        <label for="mEnd">Hora de fin (opcional)</label>
+        <input id="mEnd" type="time">
+      </div>
+    </div>
+    <div class="field">
+      <label for="mLink">Enlace de la reunión (opcional)</label>
+      <input id="mLink" maxlength="600" inputmode="url" placeholder="Pega el enlace de Meet, Teams, Zoom…">
+      <p class="field-hint" id="mLinkHint"></p>
+    </div>
+    <div class="field">
+      <label for="mNotas">Notas (opcional)</label>
+      <textarea id="mNotas" maxlength="1500" placeholder="Orden del día, asistentes, acuerdos…"></textarea>
+    </div>
+    <p class="lock-error" id="meetingFormError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteMeeting" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelMeeting">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgMeetingView">
+  <div class="dlg-inner">
+    <div class="cat"><span id="mvCliente"></span><span class="type-badge meet-badge" id="mvPlatform"></span></div>
+    <h2 id="mvTitle"></h2>
+    <p class="mv-when" id="mvWhen"></p>
+    <div class="mv-link" id="mvLinkWrap" hidden>
+      <a class="btn btn-primary" id="mvJoin" target="_blank" rel="noopener noreferrer">Unirse a la reunión</a>
+      <button type="button" class="btn btn-ghost" id="mvCopyLink">Copiar enlace</button>
+      <p class="mv-url" id="mvUrl"></p>
+    </div>
+    <div class="field" id="mvNotasWrap" hidden>
+      <label>Notas</label>
+      <div class="view-notas" id="mvNotas"></div>
+    </div>
+    <div class="dlg-actions">
+      <div></div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnMvClose">Cerrar</button>
+        <button type="button" class="btn btn-ghost" id="btnMvEdit">Editar</button>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="dlgVaultView">
@@ -1586,6 +1947,50 @@ if(!window.claude){
   var allContacts = [];
   var contactsCol = null;
 
+  var tabCalendar = document.getElementById('tabCalendar');
+  var viewCalendarEl = document.getElementById('viewCalendar');
+  var calGrid = document.getElementById('calGrid');
+  var calDay = document.getElementById('calDay');
+  var calMonthLabel = document.getElementById('calMonthLabel');
+  var calPrev = document.getElementById('calPrev');
+  var calNext = document.getElementById('calNext');
+  var calToday = document.getElementById('calToday');
+  var calNewMeeting = document.getElementById('calNewMeeting');
+  var calFilterClienteEl = document.getElementById('calFilterCliente');
+
+  var dlgMeeting = document.getElementById('dlgMeeting');
+  var formMeeting = document.getElementById('formMeeting');
+  var dlgMeetingTitle = document.getElementById('dlgMeetingTitle');
+  var mIdEl = document.getElementById('mId');
+  var mTitleEl = document.getElementById('mTitle');
+  var mClienteEl = document.getElementById('mCliente');
+  var mDateEl = document.getElementById('mDate');
+  var mStartEl = document.getElementById('mStart');
+  var mEndEl = document.getElementById('mEnd');
+  var mLinkEl = document.getElementById('mLink');
+  var mLinkHint = document.getElementById('mLinkHint');
+  var mNotasEl = document.getElementById('mNotas');
+  var meetingFormError = document.getElementById('meetingFormError');
+  var btnDeleteMeeting = document.getElementById('btnDeleteMeeting');
+  var btnCancelMeeting = document.getElementById('btnCancelMeeting');
+
+  var dlgMeetingView = document.getElementById('dlgMeetingView');
+  var mvCliente = document.getElementById('mvCliente');
+  var mvPlatform = document.getElementById('mvPlatform');
+  var mvTitle = document.getElementById('mvTitle');
+  var mvWhen = document.getElementById('mvWhen');
+  var mvLinkWrap = document.getElementById('mvLinkWrap');
+  var mvJoin = document.getElementById('mvJoin');
+  var mvCopyLink = document.getElementById('mvCopyLink');
+  var mvUrl = document.getElementById('mvUrl');
+  var mvNotasWrap = document.getElementById('mvNotasWrap');
+  var mvNotas = document.getElementById('mvNotas');
+  var btnMvClose = document.getElementById('btnMvClose');
+  var btnMvEdit = document.getElementById('btnMvEdit');
+
+  var allMeetings = [];
+  var meetingsCol = null;
+
   var tabVault = document.getElementById('tabVault');
   var viewVaultEl = document.getElementById('viewVault');
   var vaultLockScreen = document.getElementById('vaultLockScreen');
@@ -1705,28 +2110,36 @@ if(!window.claude){
   var cryptoAvailable = !!(window.crypto && window.crypto.subtle);
 
   tabTasks.addEventListener('click', function(){ switchTab('tasks'); });
+  tabCalendar.addEventListener('click', function(){ switchTab('calendar'); });
   tabContacts.addEventListener('click', function(){ switchTab('contacts'); });
   tabVault.addEventListener('click', function(){ switchTab('vault'); });
   tabClients.addEventListener('click', function(){ switchTab('clients'); });
   tabData.addEventListener('click', function(){ switchTab('data'); });
 
+  var TAB_KEYS = ['tasks','calendar','contacts','vault','clients','data'];
+
   function switchTab(view){
     var isTasks = view === 'tasks';
+    var isCalendar = view === 'calendar';
     var isContacts = view === 'contacts';
     var isVault = view === 'vault';
     var isClients = view === 'clients';
     var isData = view === 'data';
     tabTasks.classList.toggle('active', isTasks);
+    tabCalendar.classList.toggle('active', isCalendar);
     tabContacts.classList.toggle('active', isContacts);
     tabVault.classList.toggle('active', isVault);
     tabClients.classList.toggle('active', isClients);
     tabData.classList.toggle('active', isData);
     viewTasksEl.hidden = !isTasks;
+    viewCalendarEl.hidden = !isCalendar;
     viewContactsEl.hidden = !isContacts;
     viewVaultEl.hidden = !isVault;
     viewClientsEl.hidden = !isClients;
     viewDataEl.hidden = !isData;
     btnNew.hidden = !isTasks;
+    try{ localStorage.setItem('tablero_tab', view); }catch(e){}
+    if(isCalendar){ renderCalendar(); }
     if(isClients){ renderClients(); }
     if(isVault){
       if(vaultAwaitingRecoveryConfirm){
@@ -1767,6 +2180,21 @@ if(!window.claude){
     return d.toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
   }
 
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function ymd(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayYmd(){ return ymd(new Date()); }
+  function parseYmd(s){ var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function capitalize(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+  function dueState(t){
+    if(!t.dueDate) return '';
+    if(t.status === 'completada') return 'done';
+    var today = todayYmd();
+    if(t.dueDate < today) return 'overdue';
+    if(t.dueDate === today) return 'today';
+    return 'future';
+  }
+
   function getClientNames(){
     return allClients.map(function(c){ return c.nombre; }).filter(Boolean).sort();
   }
@@ -1783,14 +2211,16 @@ if(!window.claude){
     var pending = selectEl.getAttribute('data-pending-select');
     var val = pending !== null ? pending : (desiredValue !== undefined ? desiredValue : selectEl.value);
     var names = getClientNames();
+    var allowEmpty = selectEl.getAttribute('data-allow-empty') === '1';
     var opts = names.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; });
     if(val && names.indexOf(val) === -1){
       opts.unshift('<option value="'+esc(val)+'">'+esc(val)+'</option>');
     }
+    if(allowEmpty) opts.unshift('<option value="">Sin cliente</option>');
     opts.push('<option value="__new__">+ Añadir cliente nuevo…</option>');
     selectEl.innerHTML = opts.join('');
     selectEl.value = val || '';
-    if(selectEl.selectedIndex === -1 && names.length){
+    if(selectEl.selectedIndex === -1 && names.length && !allowEmpty){
       selectEl.value = names[0];
     }
     if(pending !== null) selectEl.removeAttribute('data-pending-select');
@@ -1799,9 +2229,12 @@ if(!window.claude){
   function refreshAllClienteUI(){
     populateClienteFilterSelect(filterClienteEl);
     populateClienteFilterSelect(filterClienteVaultEl);
+    populateClienteFilterSelect(calFilterClienteEl);
     populateClienteFormSelect(document.getElementById('fCliente'));
     populateClienteFormSelect(document.getElementById('cCliente'));
     populateClienteFormSelect(document.getElementById('vCliente'));
+    populateClienteFormSelect(mClienteEl);
+    renderCalendar();
   }
 
   function wireClienteSelect(selectEl, newWrapEl, newInputEl, newBtnEl){
@@ -1889,6 +2322,11 @@ if(!window.claude){
         return Promise.all(snap.docs.map(function(d){ return col.doc(d.id).update({cliente:newName}); }));
       });
     }).then(function(){
+      if(!meetingsCol) return;
+      return meetingsCol.where('cliente', '==', oldName).get().then(function(snap){
+        return Promise.all(snap.docs.map(function(d){ return meetingsCol.doc(d.id).update({cliente:newName}); }));
+      });
+    }).then(function(){
       clientEditingId = null;
       renderClients();
     }).catch(function(){
@@ -1970,10 +2408,11 @@ if(!window.claude){
       return true;
     });
 
+    var overdueCount = filtered.filter(function(t){ return dueState(t) === 'overdue'; }).length;
     summaryEl.innerHTML = STATUS.map(function(s){
       var n = filtered.filter(function(t){ return t.status === s.key; }).length;
       return '<span class="pill" style="background:'+s.bg+';color:'+s.fg+'">'+s.label+' · '+n+'</span>';
-    }).join('');
+    }).join('') + (overdueCount ? '<span class="pill" style="background:var(--danger-bg);color:var(--danger)">Vencidas · '+overdueCount+'</span>' : '');
 
     boardEl.innerHTML = STATUS.map(function(s){
       var items = filtered.filter(function(t){ return t.status === s.key; })
@@ -2019,7 +2458,10 @@ if(!window.claude){
 
   boardEl.addEventListener('dragend', function(ev){
     var card = ev.target.closest ? ev.target.closest('.card') : null;
-    if(card) card.classList.remove('dragging');
+    if(card){
+      card.classList.remove('dragging');
+      setTimeout(function(){ card.removeAttribute('data-dragged'); }, 0);
+    }
     if(dragOverCol){ dragOverCol.classList.remove('drag-over'); dragOverCol = null; }
   });
 
@@ -2055,7 +2497,13 @@ if(!window.claude){
   });
 
   function cardHtml(t){
-    var due = t.dueDate ? '<span>· vence '+esc(fmtDate(t.dueDate))+'</span>' : '';
+    var due = '';
+    if(t.dueDate){
+      var ds = dueState(t);
+      var dueCls = ds === 'overdue' ? 'due-badge is-overdue' : (ds === 'today' ? 'due-badge is-today' : 'due-badge');
+      var dueTxt = ds === 'overdue' ? 'Vencida · ' + fmtDate(t.dueDate) : (ds === 'today' ? 'Vence hoy' : 'Vence ' + fmtDate(t.dueDate));
+      due = '<span class="'+dueCls+'">'+esc(dueTxt)+'</span>';
+    }
     var contact = t.contacto ? '<span class="contact">'+esc(t.contacto)+'</span>' : '<span></span>';
     return '<div class="card" draggable="true" data-id="'+esc(t.id)+'">' +
       (t.cliente ? '<div class="cat">'+esc(t.cliente)+'</div>' : '') +
@@ -3237,7 +3685,10 @@ if(!window.claude){
 
   vaultGrid.addEventListener('dragend', function(ev){
     var card = ev.target.closest ? ev.target.closest('.vault-card') : null;
-    if(card) card.classList.remove('dragging');
+    if(card){
+      card.classList.remove('dragging');
+      setTimeout(function(){ card.removeAttribute('data-dragged'); }, 0);
+    }
     if(vaultDragOverCard){ vaultDragOverCard.classList.remove('drag-over'); vaultDragOverCard = null; }
   });
 
@@ -3418,6 +3869,446 @@ if(!window.claude){
     }).catch(function(){ dlgVault.close(); });
   });
 
+  /* ---------- Calendario y reuniones ---------- */
+
+  var calYear = new Date().getFullYear();
+  var calMonth = new Date().getMonth();
+  var calSelected = todayYmd();
+
+  var PLATFORM_RULES = [
+    {re:/(^|\.)meet\.google\.com$/, name:'Google Meet'},
+    {re:/(^|\.)teams\.(microsoft|live)\.com$/, name:'Microsoft Teams'},
+    {re:/(^|\.)zoom\.(us|com)$/, name:'Zoom'},
+    {re:/(^|\.)webex\.com$/, name:'Webex'},
+    {re:/(^|\.)whereby\.com$/, name:'Whereby'},
+    {re:/(^|\.)meet\.jit\.si$/, name:'Jitsi'}
+  ];
+
+  function normalizeUrl(s){
+    s = String(s || '').trim();
+    if(!s) return '';
+    if(!/^[a-z][a-z0-9+.\-]*:/i.test(s)) s = 'https://' + s;
+    return s;
+  }
+  function safeUrl(s){
+    var n = normalizeUrl(s);
+    if(!n) return '';
+    try{
+      var u = new URL(n);
+      if(u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+    }catch(e){}
+    return '';
+  }
+  function platformOf(link){
+    var url = safeUrl(link);
+    if(!url) return '';
+    var host = '';
+    try{ host = new URL(url).hostname.toLowerCase(); }catch(e){}
+    for(var i = 0; i < PLATFORM_RULES.length; i++){
+      if(PLATFORM_RULES[i].re.test(host)) return PLATFORM_RULES[i].name;
+    }
+    return 'Videollamada';
+  }
+  function meetingTimeText(m, sep){
+    if(!m.start) return 'Sin hora';
+    return m.end ? m.start + (sep || '–') + m.end : m.start;
+  }
+  function byStart(a, b){ return (a.start || '99:99').localeCompare(b.start || '99:99'); }
+
+  function calendarBuckets(){
+    var filter = calFilterClienteEl.value;
+    var map = {};
+    function bucket(k){ return map[k] || (map[k] = {tasks:[], meetings:[]}); }
+    allTasks.forEach(function(t){
+      if(!t.dueDate) return;
+      if(filter && t.cliente !== filter) return;
+      bucket(t.dueDate).tasks.push(t);
+    });
+    allMeetings.forEach(function(m){
+      if(!m.date) return;
+      if(filter && m.cliente !== filter) return;
+      bucket(m.date).meetings.push(m);
+    });
+    Object.keys(map).forEach(function(k){
+      map[k].meetings.sort(byStart);
+      map[k].tasks.sort(function(a, b){ return (a.createdAt || 0) - (b.createdAt || 0); });
+    });
+    return map;
+  }
+
+  function taskChipHtml(t){
+    var s = statusByKey[t.status] || STATUS[0];
+    var ds = dueState(t);
+    var cls = 'cal-chip is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '');
+    return '<span class="'+cls+'" draggable="true" data-kind="task" data-id="'+esc(t.id)+'" style="--c:'+s.fg+';--cb:'+s.bg+'" title="'+esc(t.title)+'">'+esc(t.title)+'</span>';
+  }
+  function meetingChipHtml(m){
+    return '<span class="cal-chip is-meeting" draggable="true" data-kind="meeting" data-id="'+esc(m.id)+'" title="'+esc(meetingTimeText(m)+' · '+m.title)+'">' +
+      (m.start ? '<b>'+esc(m.start)+'</b> ' : '') + esc(m.title) + '</span>';
+  }
+
+  function renderCalendar(){
+    if(viewCalendarEl.hidden) return;
+    var first = new Date(calYear, calMonth, 1);
+    calMonthLabel.textContent = capitalize(first.toLocaleDateString('es-ES', {month:'long', year:'numeric'}));
+    var offset = (first.getDay() + 6) % 7;
+    var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    var totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+    var map = calendarBuckets();
+    var today = todayYmd();
+    var html = '';
+    for(var i = 0; i < totalCells; i++){
+      var d = new Date(calYear, calMonth, 1 - offset + i);
+      var key = ymd(d);
+      var b = map[key] || {tasks:[], meetings:[]};
+      var chips = b.meetings.map(meetingChipHtml).concat(b.tasks.map(taskChipHtml));
+      var extra = chips.length > 3 ? '<span class="cal-more">+' + (chips.length - 3) + ' más</span>' : '';
+      var dots = b.meetings.slice(0, 3).map(function(){ return '<i class="cal-dot is-meeting"></i>'; })
+        .concat(b.tasks.slice(0, 3).map(function(t){
+          return '<i class="cal-dot'+(dueState(t) === 'overdue' ? ' is-overdue' : '')+'"></i>';
+        })).join('');
+      var cls = 'cal-cell' +
+        (d.getMonth() !== calMonth ? ' is-other' : '') +
+        (key === today ? ' is-today' : '') +
+        (key === calSelected ? ' is-selected' : '');
+      var count = b.meetings.length + b.tasks.length;
+      var aria = capitalize(d.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})) +
+        (count ? ', ' + count + (count === 1 ? ' elemento' : ' elementos') : '');
+      html += '<div class="'+cls+'" data-date="'+key+'" role="button" tabindex="0" aria-label="'+esc(aria)+'">' +
+        '<span class="cal-num">'+d.getDate()+'</span>' +
+        '<div class="cal-items">'+chips.slice(0, 3).join('')+extra+'</div>' +
+        '<div class="cal-dots">'+dots+'</div>' +
+        '</div>';
+    }
+    calGrid.innerHTML = html;
+    renderCalendarDay(map);
+  }
+
+  function agendaMeetingHtml(m){
+    var url = safeUrl(m.link);
+    var meta = [platformOf(m.link), m.cliente].filter(Boolean).join(' · ');
+    return '<div class="agenda-item is-meeting" data-kind="meeting" data-id="'+esc(m.id)+'">' +
+      '<div class="agenda-time">'+esc(meetingTimeText(m))+'</div>' +
+      '<div class="agenda-main"><div class="agenda-title">'+esc(m.title)+'</div>' +
+      (meta ? '<div class="agenda-meta">'+esc(meta)+'</div>' : '') + '</div>' +
+      (url ? '<a class="btn btn-primary btn-sm" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" data-join="1">Unirse</a>' : '') +
+      '</div>';
+  }
+  function agendaTaskHtml(t){
+    var s = statusByKey[t.status] || STATUS[0];
+    var ds = dueState(t);
+    var label = ds === 'overdue' ? 'Vencida' : (ds === 'done' ? 'Hecha' : 'Vence');
+    var meta = [s.label, t.cliente].filter(Boolean).join(' · ');
+    return '<div class="agenda-item is-task'+(ds === 'overdue' ? ' is-overdue' : '')+(ds === 'done' ? ' is-done' : '')+'" data-kind="task" data-id="'+esc(t.id)+'">' +
+      '<div class="agenda-time"><span class="dot" style="background:'+(ds === 'overdue' ? 'var(--danger)' : s.dot)+'"></span>'+label+'</div>' +
+      '<div class="agenda-main"><div class="agenda-title">'+esc(t.title)+'</div>' +
+      '<div class="agenda-meta">'+esc(meta)+'</div></div>' +
+      '</div>';
+  }
+
+  function renderCalendarDay(map){
+    var d = parseYmd(calSelected);
+    var b = (map || calendarBuckets())[calSelected] || {tasks:[], meetings:[]};
+    var isToday = calSelected === todayYmd();
+    var heading = capitalize(d.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'}));
+    var html = '<p class="eyebrow">'+(isToday ? 'Hoy' : 'Día seleccionado')+'</p>' +
+      '<h3>'+esc(heading)+'</h3>' +
+      '<div class="cal-day-actions">' +
+        '<button type="button" class="btn btn-primary btn-sm" data-action="new-meeting">+ Reunión</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="new-task">+ Tarea con esta fecha</button>' +
+      '</div>';
+    if(!b.meetings.length && !b.tasks.length){
+      html += '<p class="cal-empty">Nada programado este día.</p>';
+    }
+    if(b.meetings.length){
+      html += '<p class="cal-day-label">Reuniones</p>' + b.meetings.map(agendaMeetingHtml).join('');
+    }
+    if(b.tasks.length){
+      html += '<p class="cal-day-label">Tareas que vencen</p>' + b.tasks.map(agendaTaskHtml).join('');
+    }
+    calDay.innerHTML = html;
+  }
+
+  function selectCalDate(key, scroll){
+    calSelected = key;
+    var d = parseYmd(key);
+    if(d.getFullYear() !== calYear || d.getMonth() !== calMonth){
+      calYear = d.getFullYear();
+      calMonth = d.getMonth();
+      renderCalendar();
+    } else {
+      Array.prototype.forEach.call(calGrid.querySelectorAll('.cal-cell.is-selected'), function(c){ c.classList.remove('is-selected'); });
+      var cell = calGrid.querySelector('.cal-cell[data-date="'+key+'"]');
+      if(cell) cell.classList.add('is-selected');
+      renderCalendarDay();
+    }
+    if(scroll && window.matchMedia && window.matchMedia('(max-width: 900px)').matches){
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      calDay.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'start'});
+    }
+  }
+
+  calPrev.addEventListener('click', function(){
+    calMonth--;
+    if(calMonth < 0){ calMonth = 11; calYear--; }
+    renderCalendar();
+  });
+  calNext.addEventListener('click', function(){
+    calMonth++;
+    if(calMonth > 11){ calMonth = 0; calYear++; }
+    renderCalendar();
+  });
+  calToday.addEventListener('click', function(){ selectCalDate(todayYmd()); renderCalendar(); });
+  calNewMeeting.addEventListener('click', function(){ openNewMeeting(calSelected); });
+  calFilterClienteEl.addEventListener('change', renderCalendar);
+
+  calGrid.addEventListener('click', function(ev){
+    var chip = ev.target.closest ? ev.target.closest('.cal-chip') : null;
+    if(chip){
+      if(chip.getAttribute('data-dragged') === '1'){ chip.removeAttribute('data-dragged'); return; }
+      var id = chip.getAttribute('data-id');
+      if(chip.getAttribute('data-kind') === 'task') openEdit(id);
+      else openViewMeeting(id);
+      return;
+    }
+    var cell = ev.target.closest ? ev.target.closest('.cal-cell') : null;
+    if(cell) selectCalDate(cell.getAttribute('data-date'), true);
+  });
+  calGrid.addEventListener('dblclick', function(ev){
+    if(ev.target.closest && ev.target.closest('.cal-chip')) return;
+    var cell = ev.target.closest ? ev.target.closest('.cal-cell') : null;
+    if(cell) openNewMeeting(cell.getAttribute('data-date'));
+  });
+  calGrid.addEventListener('keydown', function(ev){
+    var cell = ev.target;
+    if(!cell.classList || !cell.classList.contains('cal-cell')) return;
+    if(ev.key === 'Enter' || ev.key === ' '){
+      ev.preventDefault();
+      selectCalDate(cell.getAttribute('data-date'), true);
+    }
+  });
+
+  calDay.addEventListener('click', function(ev){
+    if(ev.target.closest && ev.target.closest('a[data-join]')) return;
+    var btn = ev.target.closest ? ev.target.closest('button[data-action]') : null;
+    if(btn){
+      var action = btn.getAttribute('data-action');
+      if(action === 'new-meeting') openNewMeeting(calSelected);
+      if(action === 'new-task'){
+        openNew();
+        document.getElementById('fFecha').value = calSelected;
+        var f = calFilterClienteEl.value;
+        if(f) populateClienteFormSelect(document.getElementById('fCliente'), f);
+      }
+      return;
+    }
+    var item = ev.target.closest ? ev.target.closest('.agenda-item') : null;
+    if(!item) return;
+    var id = item.getAttribute('data-id');
+    if(item.getAttribute('data-kind') === 'task') openEdit(id);
+    else openViewMeeting(id);
+  });
+
+  var calDragOverCell = null;
+  calGrid.addEventListener('dragstart', function(ev){
+    var chip = ev.target.closest ? ev.target.closest('.cal-chip') : null;
+    if(!chip) return;
+    chip.classList.add('dragging');
+    chip.setAttribute('data-dragged', '1');
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', chip.getAttribute('data-kind') + ':' + chip.getAttribute('data-id'));
+  });
+  calGrid.addEventListener('dragend', function(ev){
+    var chip = ev.target.closest ? ev.target.closest('.cal-chip') : null;
+    if(chip){
+      chip.classList.remove('dragging');
+      setTimeout(function(){ chip.removeAttribute('data-dragged'); }, 0);
+    }
+    if(calDragOverCell){ calDragOverCell.classList.remove('drag-over'); calDragOverCell = null; }
+  });
+  calGrid.addEventListener('dragover', function(ev){
+    var cell = ev.target.closest ? ev.target.closest('.cal-cell') : null;
+    if(!cell) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    if(calDragOverCell !== cell){
+      if(calDragOverCell) calDragOverCell.classList.remove('drag-over');
+      cell.classList.add('drag-over');
+      calDragOverCell = cell;
+    }
+  });
+  calGrid.addEventListener('dragleave', function(ev){
+    var cell = ev.target.closest ? ev.target.closest('.cal-cell') : null;
+    if(!cell || cell !== calDragOverCell || cell.contains(ev.relatedTarget)) return;
+    cell.classList.remove('drag-over');
+    calDragOverCell = null;
+  });
+  calGrid.addEventListener('drop', function(ev){
+    var cell = ev.target.closest ? ev.target.closest('.cal-cell') : null;
+    if(!cell) return;
+    ev.preventDefault();
+    cell.classList.remove('drag-over');
+    calDragOverCell = null;
+    var payload = ev.dataTransfer.getData('text/plain') || '';
+    var sep = payload.indexOf(':');
+    if(sep < 0) return;
+    moveCalItem(payload.slice(0, sep), payload.slice(sep + 1), cell.getAttribute('data-date'));
+  });
+
+  function moveCalItem(kind, id, newDate){
+    if(!newDate) return;
+    if(kind === 'task'){
+      var t = allTasks.find(function(x){ return x.id === id; });
+      if(!t || t.dueDate === newDate || !col) return;
+      t.dueDate = newDate;
+      render();
+      renderCalendar();
+      col.doc(id).update({dueDate:newDate, updatedAt:Date.now()}).catch(function(){});
+    } else if(kind === 'meeting'){
+      var m = allMeetings.find(function(x){ return x.id === id; });
+      if(!m || m.date === newDate || !meetingsCol) return;
+      m.date = newDate;
+      renderCalendar();
+      meetingsCol.doc(id).update({date:newDate, updatedAt:Date.now()}).catch(function(){});
+    }
+  }
+
+  function updateLinkHint(){
+    var raw = mLinkEl.value.trim();
+    if(!raw){ mLinkHint.textContent = ''; return; }
+    var p = platformOf(raw);
+    mLinkHint.textContent = p ? p + ' detectado' : 'Este enlace no parece válido';
+  }
+  mLinkEl.addEventListener('input', updateLinkHint);
+
+  function openNewMeeting(date){
+    formMeeting.reset();
+    mIdEl.value = '';
+    dlgMeetingTitle.textContent = 'Nueva reunión';
+    meetingFormError.hidden = true;
+    document.getElementById('mClienteNewWrap').hidden = true;
+    populateClienteFormSelect(mClienteEl, calFilterClienteEl.value || '');
+    mDateEl.value = date || calSelected || todayYmd();
+    updateLinkHint();
+    btnDeleteMeeting.hidden = true;
+    dlgMeeting.showModal();
+  }
+
+  function openEditMeeting(id){
+    var m = allMeetings.find(function(x){ return x.id === id; });
+    if(!m) return;
+    formMeeting.reset();
+    mIdEl.value = m.id;
+    dlgMeetingTitle.textContent = 'Editar reunión';
+    meetingFormError.hidden = true;
+    document.getElementById('mClienteNewWrap').hidden = true;
+    mTitleEl.value = m.title || '';
+    populateClienteFormSelect(mClienteEl, m.cliente || '');
+    mDateEl.value = m.date || '';
+    mStartEl.value = m.start || '';
+    mEndEl.value = m.end || '';
+    mLinkEl.value = m.link || '';
+    mNotasEl.value = m.notas || '';
+    updateLinkHint();
+    btnDeleteMeeting.hidden = false;
+    dlgMeeting.showModal();
+  }
+
+  function openViewMeeting(id){
+    var m = allMeetings.find(function(x){ return x.id === id; });
+    if(!m) return;
+    dlgMeetingView.setAttribute('data-id', id);
+    mvCliente.textContent = m.cliente || 'Sin cliente';
+    mvPlatform.textContent = platformOf(m.link) || 'Reunión';
+    mvTitle.textContent = m.title || 'Reunión';
+    var day = m.date ? capitalize(parseYmd(m.date).toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long', year:'numeric'})) : '';
+    mvWhen.textContent = [day, meetingTimeText(m, ' – ')].filter(Boolean).join(' · ');
+    var url = safeUrl(m.link);
+    if(url){
+      mvLinkWrap.hidden = false;
+      mvJoin.href = url;
+      mvUrl.textContent = url;
+    } else {
+      mvLinkWrap.hidden = true;
+      mvJoin.removeAttribute('href');
+      mvUrl.textContent = '';
+    }
+    if(m.notas){
+      mvNotasWrap.hidden = false;
+      mvNotas.textContent = m.notas;
+    } else {
+      mvNotasWrap.hidden = true;
+      mvNotas.textContent = '';
+    }
+    dlgMeetingView.showModal();
+  }
+
+  mvCopyLink.addEventListener('click', function(){
+    var url = mvUrl.textContent;
+    if(!url || !navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(url).then(function(){
+      var old = mvCopyLink.textContent;
+      mvCopyLink.textContent = 'Copiado';
+      setTimeout(function(){ mvCopyLink.textContent = old; }, 1200);
+    }).catch(function(){});
+  });
+  btnMvClose.addEventListener('click', function(){ dlgMeetingView.close(); });
+  btnMvEdit.addEventListener('click', function(){
+    var id = dlgMeetingView.getAttribute('data-id');
+    dlgMeetingView.close();
+    if(id) openEditMeeting(id);
+  });
+
+  btnCancelMeeting.addEventListener('click', function(){ dlgMeeting.close(); });
+  wireClienteSelect(mClienteEl, document.getElementById('mClienteNewWrap'), document.getElementById('mClienteNewInput'), document.getElementById('mClienteNewBtn'));
+
+  function showMeetingError(msg){
+    meetingFormError.textContent = msg;
+    meetingFormError.hidden = false;
+  }
+
+  formMeeting.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    meetingFormError.hidden = true;
+    if(!meetingsCol){ dlgMeeting.close(); return; }
+    var cliente = mClienteEl.value;
+    if(cliente === '__new__'){ showMeetingError('Crea el cliente nuevo o elige uno de la lista.'); return; }
+    var title = mTitleEl.value.trim();
+    var date = mDateEl.value;
+    if(!title || !date) return;
+    var start = mStartEl.value || '';
+    var end = mEndEl.value || '';
+    if(start && end && end <= start){ showMeetingError('La hora de fin tiene que ser posterior a la de inicio.'); return; }
+    if(end && !start){ showMeetingError('Pon también la hora de inicio.'); return; }
+    var rawLink = mLinkEl.value.trim();
+    var link = rawLink ? safeUrl(rawLink) : '';
+    if(rawLink && !link){ showMeetingError('El enlace no es válido. Pega la dirección completa de la reunión.'); return; }
+    var id = mIdEl.value;
+    var existing = id ? allMeetings.find(function(x){ return x.id === id; }) : null;
+    var body = {
+      title: title,
+      cliente: cliente || '',
+      date: date,
+      start: start,
+      end: end,
+      link: link,
+      notas: mNotasEl.value.trim(),
+      createdAt: existing ? (existing.createdAt || Date.now()) : Date.now(),
+      updatedAt: Date.now()
+    };
+    var p = id ? meetingsCol.doc(id).set(body) : meetingsCol.add(body);
+    p.then(function(){
+      dlgMeeting.close();
+      selectCalDate(date);
+    }).catch(function(){ showMeetingError('No se pudo guardar la reunión. Inténtalo de nuevo.'); });
+  });
+
+  btnDeleteMeeting.addEventListener('click', function(){
+    var id = mIdEl.value;
+    if(!id || !meetingsCol) return;
+    meetingsCol.doc(id).delete().then(function(){ dlgMeeting.close(); }).catch(function(){ dlgMeeting.close(); });
+  });
+
   function showDataError(msg){
     dataStatus.hidden = true;
     dataError.textContent = msg;
@@ -3430,7 +4321,7 @@ if(!window.claude){
   }
 
   btnExportData.addEventListener('click', function(){
-    if(!col || !contactsCol || !vaultCol || !clientsCol || !db){
+    if(!col || !contactsCol || !vaultCol || !clientsCol || !meetingsCol || !db){
       showDataError('El tablero todavía se está cargando, prueba de nuevo en unos segundos.');
       return;
     }
@@ -3457,6 +4348,7 @@ if(!window.claude){
           formatVersion: 1,
           clients: allClients,
           tasks: tasksWithNotes,
+          meetings: allMeetings,
           contacts: allContacts,
           vault: {
             meta: metaSnap.exists ? metaSnap.data() : null,
@@ -3470,7 +4362,7 @@ if(!window.claude){
           if(!dl) throw new Error('no-downloads');
           return dl.save({filename:filename, data:json});
         }).then(function(){
-          showDataStatus('Copia descargada: ' + tasksWithNotes.length + ' tareas, ' + allContacts.length + ' contactos, ' + allVault.length + ' contraseñas, ' + allClients.length + ' clientes.');
+          showDataStatus('Copia descargada: ' + tasksWithNotes.length + ' tareas, ' + allMeetings.length + ' reuniones, ' + allContacts.length + ' contactos, ' + allVault.length + ' contraseñas, ' + allClients.length + ' clientes.');
         });
       });
     }).catch(function(){
@@ -3487,13 +4379,13 @@ if(!window.claude){
       importFileInput.value = '';
       return;
     }
-    if(!clientsCol || !col || !contactsCol || !vaultCol || !db){
+    if(!clientsCol || !col || !contactsCol || !vaultCol || !meetingsCol || !db){
       showDataError('El tablero todavía se está cargando, prueba de nuevo en unos segundos.');
       importFileInput.value = '';
       return;
     }
 
-    var counts = {clients:0, tasks:0, notes:0, contacts:0, vault:0};
+    var counts = {clients:0, tasks:0, notes:0, meetings:0, contacts:0, vault:0};
     var existingClientNames = {};
     allClients.forEach(function(c){ existingClientNames[c.nombre] = true; });
     var vaultOutcome = 'none';
@@ -3546,7 +4438,23 @@ if(!window.claude){
       });
     });
 
-    Promise.all(clientPromises.concat(taskPromises, contactPromises)).then(function(){
+    var meetingPromises = (Array.isArray(data.meetings) ? data.meetings : []).map(function(m){
+      if(!m || !m.title || !m.date) return Promise.resolve();
+      counts.meetings++;
+      return meetingsCol.add({
+        title: String(m.title),
+        cliente: m.cliente || '',
+        date: String(m.date),
+        start: m.start || '',
+        end: m.end || '',
+        link: safeUrl(m.link),
+        notas: m.notas || '',
+        createdAt: m.createdAt || Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises)).then(function(){
       return db.doc('vault_meta/check').get();
     }).then(function(metaSnap){
       var vaultData = data.vault || {};
@@ -3575,7 +4483,7 @@ if(!window.claude){
         }));
       });
     }).then(function(){
-      var msg = 'Importado: ' + counts.clients + ' clientes, ' + counts.tasks + ' tareas (' + counts.notes + ' notas), ' + counts.contacts + ' contactos, ' + counts.vault + ' contraseñas.';
+      var msg = 'Importado: ' + counts.clients + ' clientes, ' + counts.tasks + ' tareas (' + counts.notes + ' notas), ' + counts.meetings + ' reuniones, ' + counts.contacts + ' contactos, ' + counts.vault + ' contraseñas.';
       if(vaultOutcome === 'skipped'){
         msg += ' Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.';
       }
@@ -3644,6 +4552,7 @@ if(!window.claude){
         boardEl.hidden = false;
         render();
         renderClients();
+        renderCalendar();
       }, function(err){
         stateMsg.hidden = false;
         boardEl.hidden = true;
@@ -3679,6 +4588,20 @@ if(!window.claude){
           stateMsgVault.textContent = 'No se pudieron cargar las credenciales (' + (err && err.code || 'error') + ').';
         }
       });
+
+      meetingsCol = db.collection('meetings');
+      meetingsCol.onSnapshot(function(snap){
+        allMeetings = snap.docs.map(function(d){
+          var data = d.data() || {};
+          data.id = d.id;
+          return data;
+        });
+        renderCalendar();
+      }, function(){});
+
+      var savedTab = null;
+      try{ savedTab = localStorage.getItem('tablero_tab'); }catch(e){}
+      if(savedTab && savedTab !== 'tasks' && TAB_KEYS.indexOf(savedTab) !== -1) switchTab(savedTab);
     }).catch(function(){
       stateMsg.textContent = 'No se pudo conectar al almacenamiento de tareas.';
     });

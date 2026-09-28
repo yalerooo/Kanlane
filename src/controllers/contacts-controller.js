@@ -10,7 +10,10 @@
       this.contacts.on('error', (err) => {
         this.view.showError('No se pudieron cargar los contactos (' + (err && err.code || 'error') + ').');
       });
-      app.models.clients.on('change', () => this.view.cliente.populate(app.clientNames()));
+      app.models.clients.on('change', () => {
+        this.view.cliente.populate(app.clientNames());
+        this.render();
+      });
 
       this.view.bindNew(() => this.openNew());
       this.view.bindSearch(() => this.render());

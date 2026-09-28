@@ -21,6 +21,7 @@
       };
       this.models.backup = new M.BackupModel(this.models);
 
+      V.clientColors.setResolver((name) => this.models.clients.hueOf(name));
       this.shell = new V.ShellView();
       V.Dropdown.enhanceAll(document);
       this.shell.addDialogCloseButtons();

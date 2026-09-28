@@ -74,6 +74,24 @@
       }
     }
 
+    /* Botón × en cada diálogo: equivale a su botón Cancelar/Cerrar (data-dismiss),
+       para que el controlador haga la misma limpieza. */
+    addDialogCloseButtons(){
+      document.querySelectorAll('dialog').forEach((dlg) => {
+        const dismiss = dlg.querySelector('[data-dismiss]');
+        const inner = dlg.querySelector('.dlg-inner');
+        if(!dismiss || !inner) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dlg-close';
+        btn.setAttribute('aria-label', 'Cerrar');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+        btn.addEventListener('click', () => dismiss.click());
+        /* Al final para que el foco inicial siga yendo al primer campo. */
+        inner.appendChild(btn);
+      });
+    }
+
     setStorageMode(isLocal){
       this.storageLabel.textContent = isLocal ? 'Modo local' : 'Sincronizado';
     }

@@ -1,6 +1,6 @@
 /* Contactos: rejilla de tarjetas y diálogo de edición. */
 (function(){
-  const {esc, iconSpan, closest} = Workhub.utils.html;
+  const {esc, iconSpan, closest, hueFor, initials} = Workhub.utils.html;
   const $ = (id) => document.getElementById(id);
 
   class ContactsView {
@@ -35,6 +35,10 @@
       this.grid.addEventListener('click', (ev) => {
         const card = closest(ev.target, '.contact-card');
         if(card) handler(card.getAttribute('data-id'));
+      });
+      this.grid.addEventListener('keydown', (ev) => {
+        const card = closest(ev.target, '.contact-card');
+        if(card && ev.key === 'Enter') handler(card.getAttribute('data-id'));
       });
     }
 
@@ -107,9 +111,14 @@
     const email = c.email ? '<p class="line">' + iconSpan('mail') + esc(c.email) + '</p>' : '';
     const tel = c.telefono ? '<p class="line">' + iconSpan('phone') + esc(c.telefono) + '</p>' : '';
     const notas = c.notas ? '<div class="notes">' + esc(c.notas) + '</div>' : '';
-    return '<div class="contact-card" data-id="' + esc(c.id) + '">' +
-      (c.cliente ? '<div class="cat">' + esc(c.cliente) + '</div>' : '') +
-      '<h3>' + esc(c.nombre || 'Sin nombre') + '</h3>' +
+    const name = c.nombre || 'Sin nombre';
+    return '<div class="contact-card" data-id="' + esc(c.id) + '" tabindex="0">' +
+      '<div class="card-head">' +
+        '<span class="avatar" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
+        '<div class="card-head-text"><h3>' + esc(name) + '</h3>' +
+        (c.cliente ? '<span class="client-chip" style="--h:' + hueFor(c.cliente) + '">' + esc(c.cliente) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
       email + tel + notas +
       '</div>';
   }

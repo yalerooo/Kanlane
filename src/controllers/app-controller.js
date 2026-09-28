@@ -22,6 +22,8 @@
       this.models.backup = new M.BackupModel(this.models);
 
       this.shell = new V.ShellView();
+      V.Dropdown.enhanceAll(document);
+      this.shell.addDialogCloseButtons();
 
       /* Ajustes primero: aplica acento y tema antes de pintar nada más. */
       this.controllers = {
@@ -53,6 +55,7 @@
       this.shell.show(view);
       prefs.write(TAB_PREF, view);
       const c = this.controllers;
+      if(view === 'tasks') c.tasks.board.fitHeight();
       if(view === 'settings') c.settings.render();
       if(view === 'calendar') c.calendar.render();
       if(view === 'clients') c.clients.render();

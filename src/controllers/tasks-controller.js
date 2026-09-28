@@ -1,15 +1,24 @@
-/* Tablero de tareas y diálogo de tarea (notas y vínculos incluidos). */
+/* Tablero de tareas, ficha de solo lectura de una tarea y diálogo de edición
+   (notas y vínculos incluidos). Clic en una tarea → ficha; "Editar tarea" →
+   formulario, y al guardar o cancelar se vuelve a la ficha. */
 (function(){
   const platform = Workhub.services.platform;
 
   class TasksController {
-    constructor(app, board, dialog){
+    constructor(app, board, dialog, detail){
       this.app = app;
       this.tasks = app.models.tasks;
       this.contacts = app.models.contacts;
       this.vault = app.models.vault;
       this.board = board;
       this.dialog = dialog;
+      this.detail = detail;
+
+      /* Tarea abierta en la ficha */
+      this.detailId = null;
+      this.stopDetailNotes = null;
+      /* Tarea a cuya ficha se vuelve al cerrar el formulario de edición */
+      this.backToDetailId = null;
 
       /* Tarea abierta en el diálogo */
       this.currentId = null;
@@ -20,7 +29,10 @@
       this.tasks.on('change', () => {
         this.board.showLoaded();
         this.render();
+        this.refreshDetail();
       });
+      this.contacts.on('change', () => this.refreshDetail());
+      this.vault.on('change', () => this.refreshDetail());
       this.tasks.on('error', (err) => {
         this.board.showError('No se pudieron cargar las tareas (' + (err && err.code || 'error') + ').');
       });
@@ -29,17 +41,18 @@
         this.board.setClientOptions(names);
         this.dialog.setCliente(names);
         this.render();
+        this.refreshDetail();
       });
 
       this.board.bindNew(() => this.openNew());
       this.board.bindFilters(() => this.render());
-      this.board.bindOpen((id) => this.openEdit(id));
+      this.board.bindOpen((id) => this.openDetail(id));
       this.board.bindQuickAdd((status) => this.openNew(status));
       this.board.bindMove((id, status, beforeId) => this.tasks.move(id, status, beforeId));
 
       this.dialog.cliente.bindCreate((name) => app.createClient(name));
       this.dialog.bindSubmit((id, values) => this.save(id, values));
-      this.dialog.bindCancel(() => this.closeDialog());
+      this.dialog.bindCancel(() => this.closeDialog(true));
       this.dialog.bindDelete((id) => this.remove(id));
       this.dialog.bindAddNote((text, image) => this.addNote(text, image));
       this.dialog.bindDeleteNote((noteId) => {
@@ -50,11 +63,87 @@
         (id) => this.link('vault', id)
       );
       this.dialog.bindLinkedActions((action, id, btn) => this.onLinkedAction(action, id, btn));
+
+      this.detail.bindClose(() => this.closeDetail());
+      this.detail.bindEdit((id) => {
+        this.closeDetail();
+        this.openEdit(id, true);
+      });
+      this.detail.bindStatus((id, status) => this.tasks.move(id, status));
+      this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
+      /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
+      this.detail.dlg.addEventListener('close', () => {
+        if(!this.detail.isOpen()) this.releaseDetail();
+      });
     }
 
     render(){
       const f = this.board.filters();
       this.board.render(this.tasks.filter(f.query, f.cliente));
+    }
+
+    /* ---------- Ficha de la tarea ---------- */
+
+    detailContext(){
+      return {contacts:this.contacts.items, vault:this.vault};
+    }
+
+    openDetail(id){
+      const t = this.tasks.find(id);
+      if(!t) return;
+      this.releaseDetail();
+      this.detailId = id;
+      this.detail.open(t, this.detailContext());
+      try{
+        this.stopDetailNotes = this.tasks.watchNotes(id,
+          (docs) => this.detail.renderNotes(docs),
+          () => this.detail.showNotesError());
+      }catch(e){
+        this.detail.showNotesError();
+      }
+    }
+
+    /* Mantiene la ficha al día si cambian la tarea, sus vínculos o los clientes. */
+    refreshDetail(){
+      if(!this.detailId || !this.detail.isOpen()) return;
+      const t = this.tasks.find(this.detailId);
+      if(!t){ this.closeDetail(); return; }
+      this.detail.render(t, this.detailContext());
+    }
+
+    releaseDetail(){
+      if(this.stopDetailNotes){ this.stopDetailNotes(); this.stopDetailNotes = null; }
+      this.detailId = null;
+    }
+
+    closeDetail(){
+      this.releaseDetail();
+      this.detail.close();
+    }
+
+    onDetailLinkAction(action, id, btn){
+      switch(action){
+        case 'open-contact':
+          this.closeDetail();
+          this.app.navigate('contacts');
+          this.app.controllers.contacts.openEdit(id);
+          break;
+        case 'toggle-linked-vault':
+          if(!this.vault.find(id)) return;
+          this.vault.toggleVisible(id).then(() => this.refreshDetail()).catch(() => {});
+          break;
+        case 'copy-linked-vault':
+          if(!this.vault.find(id)) return;
+          this.vault.reveal(id).then((data) => this.detail.copy(btn, data.password)).catch(() => {});
+          break;
+        case 'goto-vault': {
+          const returnTo = this.detailId;
+          this.closeDetail();
+          this.app.controllers.vault.returnToTaskAfterUnlock(returnTo, 'detail');
+          this.app.navigate('vault');
+          break;
+        }
+      }
     }
 
     /* ---------- Diálogo ---------- */
@@ -73,10 +162,11 @@
       if(cliente) this.dialog.setCliente(this.app.clientNames(), cliente);
     }
 
-    openEdit(id){
+    openEdit(id, fromDetail){
       const t = this.tasks.find(id);
       if(!t) return;
       this.releaseTask();
+      this.backToDetailId = fromDetail ? id : null;
       this.linkedContacts = Array.isArray(t.linkedContacts) ? t.linkedContacts.slice() : [];
       this.linkedVault = Array.isArray(t.linkedVault) ? t.linkedVault.slice() : [];
       this.renderLinks();
@@ -100,15 +190,19 @@
       this.linkedVault = [];
     }
 
-    closeDialog(){
+    /* back: volver a la ficha si el formulario se abrió desde ella. */
+    closeDialog(back){
+      const returnTo = back ? this.backToDetailId : null;
+      this.backToDetailId = null;
       this.releaseTask();
       this.dialog.close();
+      if(returnTo) this.openDetail(returnTo);
     }
 
     save(id, values){
       if(!this.tasks.isReady()){ this.closeDialog(); return; }
       if(!values.cliente || !values.title) return;
-      this.tasks.save(id, values).then(() => this.closeDialog(), () => this.closeDialog());
+      this.tasks.save(id, values).then(() => this.closeDialog(true), () => this.closeDialog());
     }
 
     remove(id){
@@ -179,7 +273,7 @@
           /* Tras desbloquear, el gestor de contraseñas vuelve a abrir esta tarea. */
           const returnTo = this.currentId;
           this.closeDialog();
-          this.app.controllers.vault.returnToTaskAfterUnlock(returnTo);
+          this.app.controllers.vault.returnToTaskAfterUnlock(returnTo, 'edit');
           this.app.navigate('vault');
           break;
         }

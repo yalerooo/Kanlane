@@ -98,7 +98,7 @@
     }
 
     openItem(kind, id){
-      if(kind === 'task') this.app.controllers.tasks.openEdit(id);
+      if(kind === 'task') this.app.controllers.tasks.openDetail(id);
       else this.openMeetingDetail(id);
     }
 

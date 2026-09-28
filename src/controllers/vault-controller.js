@@ -116,8 +116,10 @@
       this.maybeReturnToTask();
     }
 
-    returnToTaskAfterUnlock(taskId){
+    /* mode: 'detail' (ficha) o 'edit' (formulario), según desde dónde se vino. */
+    returnToTaskAfterUnlock(taskId, mode){
       this.returnTaskId = taskId;
+      this.returnTaskMode = mode || 'edit';
     }
 
     maybeReturnToTask(){
@@ -125,7 +127,8 @@
       const id = this.returnTaskId;
       this.returnTaskId = null;
       this.app.navigate('tasks');
-      this.app.controllers.tasks.openEdit(id);
+      if(this.returnTaskMode === 'detail') this.app.controllers.tasks.openDetail(id);
+      else this.app.controllers.tasks.openEdit(id);
     }
 
     presentRecoveryKey(key, isReset){

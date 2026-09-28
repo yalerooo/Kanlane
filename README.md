@@ -1,6 +1,6 @@
-# Tablero de tareas
+# Workhub
 
-Copia de seguridad del código y los datos del tablero de tareas (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.).
+Gestor de trabajo por cliente: tareas, calendario con reuniones, contactos, contraseñas cifradas y clientes (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.). En Ajustes se puede elegir el color de acento y el tema claro/oscuro.
 
 **Versión en vivo (la que usas normalmente):**
 https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5

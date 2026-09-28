@@ -2102,8 +2102,18 @@ if(!window.claude){
     tabData.classList.toggle('active', isData);
     tabSettings.classList.toggle('active', isSettings);
     Array.prototype.forEach.call(document.querySelectorAll('.tabs .tab'), function(t){
-      if(t.classList.contains('active')) t.setAttribute('aria-current', 'page');
-      else t.removeAttribute('aria-current');
+      if(t.classList.contains('active')){
+        t.setAttribute('aria-current', 'page');
+        var nav = t.parentNode;
+        if(nav.scrollWidth > nav.clientWidth){
+          var left = t.offsetLeft - nav.offsetLeft;
+          if(left < nav.scrollLeft || left + t.offsetWidth > nav.scrollLeft + nav.clientWidth){
+            nav.scrollLeft = Math.max(0, left - 16);
+          }
+        }
+      } else {
+        t.removeAttribute('aria-current');
+      }
     });
     viewTasksEl.hidden = !isTasks;
     viewCalendarEl.hidden = !isCalendar;

@@ -30,7 +30,7 @@
       this.controllers = {
         settings: new C.SettingsController(this, new V.SettingsView()),
         clients: new C.ClientsController(this, new V.ClientsView()),
-        tasks: new C.TasksController(this, new V.BoardView(), new V.TaskDialogView()),
+        tasks: new C.TasksController(this, new V.BoardView(), new V.TaskDialogView(), new V.TaskDetailView()),
         calendar: new C.CalendarController(this, new V.CalendarView()),
         contacts: new C.ContactsController(this, new V.ContactsView()),
         vault: new C.VaultController(this, new V.VaultView()),

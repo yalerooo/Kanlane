@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="assets/css/components/cards.css">
   <link rel="stylesheet" href="assets/css/components/dialogs.css">
   <link rel="stylesheet" href="assets/css/views/board.css">
+  <link rel="stylesheet" href="assets/css/views/task-detail.css">
   <link rel="stylesheet" href="assets/css/views/calendar.css">
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
@@ -329,6 +330,41 @@
   </form>
 </dialog>
 
+<dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
+  <div class="dlg-inner">
+    <div class="tv-top" id="tvTop"></div>
+    <h2 id="tvTitle"></h2>
+    <div class="tv-facts" id="tvFacts"></div>
+    <section class="tv-section" id="tvDescWrap" hidden>
+      <h3>Descripción</h3>
+      <div class="tv-desc" id="tvDesc"></div>
+    </section>
+    <section class="tv-section">
+      <h3>Notas <span class="tv-count" id="tvNotesCount"></span></h3>
+      <div class="tv-notes" id="tvNotes"></div>
+    </section>
+    <section class="tv-section" id="tvLinksWrap" hidden>
+      <h3>Vínculos</h3>
+      <div class="tv-links" id="tvLinks"></div>
+    </section>
+    <div class="dlg-actions">
+      <div class="tv-status-field">
+        <label for="tvEstado">Estado</label>
+        <select id="tvEstado" data-dots="status">
+          <option value="pendiente">Pendiente</option>
+          <option value="proceso">En proceso</option>
+          <option value="espera">Esperando al cliente</option>
+          <option value="completada">Completada</option>
+        </select>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnTvClose" data-dismiss>Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnTvEdit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
 
 <dialog id="dlgContact">
@@ -609,6 +645,7 @@
 <script src="src/views/shell-view.js"></script>
 <script src="src/views/board-view.js"></script>
 <script src="src/views/task-dialog-view.js"></script>
+<script src="src/views/task-detail-view.js"></script>
 <script src="src/views/calendar-view.js"></script>
 <script src="src/views/contacts-view.js"></script>
 <script src="src/views/vault-view.js"></script>

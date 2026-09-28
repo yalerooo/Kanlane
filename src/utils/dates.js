@@ -34,5 +34,11 @@
     return capitalize(d.toLocaleDateString('es-ES', opts));
   }
 
-  Workhub.utils.dates = {pad2, ymd, todayYmd, parseYmd, capitalize, fmtDate, fmtDateTime, longDay};
+  /* Días desde hoy hasta la fecha AAAA-MM-DD (negativo si ya pasó). */
+  function daysFromToday(s){
+    const today = parseYmd(todayYmd());
+    return Math.round((parseYmd(s) - today) / 86400000);
+  }
+
+  Workhub.utils.dates = {pad2, ymd, todayYmd, parseYmd, capitalize, fmtDate, fmtDateTime, longDay, daysFromToday};
 })();

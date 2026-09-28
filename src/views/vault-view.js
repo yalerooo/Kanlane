@@ -449,19 +449,21 @@
 
   function cardHtml(v, vault){
     const tipo = v.tipo || 'correo';
+    /* Sin etiqueta, el título ya es el correo/usuario/IP: no repetirlo debajo. */
+    const titled = (text) => (v.label ? text : '');
     let lines;
     if(tipo === 'correo'){
-      lines = line('mail', v.correo) + line('link', v.web);
+      lines = line('mail', titled(v.correo)) + line('link', v.web);
     } else if(tipo === 'usuario'){
-      lines = line('user', v.usuario) + line('link', v.web);
+      lines = line('user', titled(v.usuario)) + line('link', v.web);
     } else if(tipo === 'rdp'){
       const hostText = v.ip ? (v.puerto ? v.ip + ':' + v.puerto : v.ip) : '';
       const userText = v.dominio ? v.dominio + '\\' + (v.usuario || '') : v.usuario;
-      lines = line('monitor', hostText) + line('user', userText);
+      lines = line('monitor', v.label || v.puerto ? hostText : '') + line('user', userText);
     } else if(tipo === 'vpn'){
-      lines = line('user', v.usuario);
+      lines = line('user', titled(v.usuario));
     } else {
-      lines = line('server', v.ip) + line('user', v.usuario);
+      lines = line('server', titled(v.ip)) + line('user', v.usuario);
     }
     const visible = vault.isVisible(v.id);
     const data = vault.revealed[v.id];

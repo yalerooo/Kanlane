@@ -4,82 +4,71 @@
   gap:8px;
   flex-wrap:wrap;
   align-items:center;
-  margin-bottom:16px;
+  margin-bottom:14px;
 }
-.toolbar input[type="search"]{flex:1 1 240px;}
-.toolbar .dd{flex:0 1 220px;min-width:170px;}
-.summary{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
-.stat{
-  display:inline-flex;
+.toolbar input[type="search"]{flex:1 1 240px;max-width:420px;}
+.toolbar .dd{flex:0 1 210px;min-width:170px;}
+
+/* Resumen del tablero ("17 tareas · 2 vencidas · 1 para hoy") */
+.summary{
+  display:flex;
   align-items:center;
-  gap:7px;
+  gap:14px;
+  margin-left:auto;
   font-size:12.5px;
-  font-weight:500;
-  color:var(--ink-soft);
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:999px;
-  padding:4px 5px 4px 10px;
-  box-shadow:var(--shadow-sm);
-}
-.stat b{
-  font-weight:650;
-  font-size:12px;
-  min-width:20px;
-  text-align:center;
-  padding:0 6px;
-  border-radius:999px;
-  color:var(--st, var(--ink));
-  background:var(--st-bg, var(--surface-2));
+  color:var(--ink-faint);
   font-variant-numeric:tabular-nums;
 }
-.stat.is-danger{color:var(--danger);border-color:color-mix(in srgb, var(--danger) 30%, var(--line));}
-.stat.is-danger b{color:var(--danger);background:var(--danger-bg);}
+.summary .stat{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.summary .stat b{font-weight:600;color:var(--ink-soft);}
+.summary .stat .dot{width:6px;height:6px;}
+.summary .stat.is-danger b{color:var(--danger);}
+.summary .stat.is-warn b{color:var(--st-wait);}
+
+/* Pastillas genéricas */
 .pill{
   display:inline-flex;
   align-items:center;
   font-size:12px;
-  font-weight:600;
-  padding:3px 10px;
+  font-weight:500;
+  padding:2px 8px;
   border-radius:999px;
   font-variant-numeric:tabular-nums;
 }
 
 .hint{
   position:relative;
-  font-size:13px;
+  font-size:12.5px;
   line-height:1.5;
   color:var(--ink-soft);
-  background:var(--surface);
+  background:var(--surface-2);
   border:1px solid var(--line);
-  border-radius:10px;
-  padding:11px 14px 11px 40px;
-  margin:0 0 16px;
+  border-radius:var(--r-lg);
+  padding:9px 12px 9px 36px;
+  margin:0 0 14px;
 }
 .hint::before{
   content:"";
   position:absolute;
-  left:14px;
-  top:13px;
-  width:16px;
-  height:16px;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B929D' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center/16px;
+  left:12px;
+  top:11px;
+  width:15px;
+  height:15px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E97' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center/15px;
 }
 .hint strong{color:var(--ink);font-weight:600;}
 
 .state-msg{
   text-align:center;
-  color:var(--ink-soft);
-  font-size:13.5px;
+  color:var(--ink-faint);
+  font-size:13px;
   padding:56px 20px;
   border:1px dashed var(--line-strong);
-  border-radius:12px;
-  background:var(--surface);
+  border-radius:var(--r-xl);
 }
 
 @media (max-width:900px){
-  .toolbar .dd{flex:1 1 100%;}
-  .summary{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;}
-  .summary::-webkit-scrollbar{display:none;}
-  .stat{flex:none;}
+  .toolbar input[type="search"]{max-width:none;flex-basis:100%;}
+  .toolbar .dd{flex:1 1 180px;}
+  .summary{margin-left:0;flex-basis:100%;gap:12px;}
 }

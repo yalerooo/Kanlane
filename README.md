@@ -40,6 +40,9 @@ src/
 Detalles de interfaz:
 
 - **Tablero**: ocupa el alto de la ventana y cada columna tiene scroll propio. Al arrastrar una tarea, las columnas y la página se desplazan solas al acercarte a un borde, y una línea marca la posición exacta donde caerá; el orden dentro de cada columna se guarda (campo `order`). El botón **+** de cada columna crea una tarea con ese estado.
+- **Paleta de comandos** (`Ctrl K` / `⌘K` o el botón *Buscar…* de la barra lateral): busca tareas, contactos, reuniones y clientes, y lanza acciones (nueva tarea/reunión/contacto/credencial/cliente, ir a una sección, cambiar el tema, exportar la copia).
+- **Atajos**: `N` crea una tarea y `/` enfoca el buscador de la sección actual (no se activan mientras escribes ni con un diálogo abierto).
+- **Avisos**: confirmación breve al crear, guardar, mover o eliminar, y aviso si algo falla.
 - **Ficha de tarea**: al hacer clic en una tarea (en el tablero o en el calendario) se abre una ficha de solo lectura con estado, cliente, fecha límite (con días restantes), contacto, descripción, notas y vínculos. Desde ella se puede cambiar el estado o pulsar **Editar tarea**; al guardar o cancelar la edición se vuelve a la ficha.
 - **Colores de cliente**: en Clientes, el botón de paleta (o el avatar) permite elegir el color de cada cliente; se usa en etiquetas, avatares y desplegables. "Auto" vuelve al color derivado del nombre. Se guarda en el campo `color` (tono HSL) del cliente.
 - **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.

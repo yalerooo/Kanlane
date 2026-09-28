@@ -14,7 +14,8 @@
   background:var(--surface);
   border:1px solid var(--line-strong);
   border-radius:var(--r-md);
-  padding:8px 10px 8px 11px;
+  padding:0 9px 0 10px;
+  min-height:34px;
   box-shadow:var(--shadow-sm);
   cursor:pointer;
   transition:border-color .12s ease, box-shadow .12s ease, background .12s ease;
@@ -23,8 +24,8 @@
 .dd-trigger:focus-visible,
 .dd.is-open .dd-trigger{
   outline:none;
-  border-color:var(--accent);
-  box-shadow:0 0 0 3px var(--accent-soft);
+  border-color:var(--accent-solid);
+  box-shadow:0 0 0 3px var(--focus);
 }
 .dd-trigger:disabled{opacity:.55;cursor:not-allowed;}
 .dd-value{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
@@ -69,18 +70,19 @@
   display:flex;
   align-items:center;
   gap:9px;
-  padding:8px 10px;
-  border-radius:var(--r-sm);
+  padding:0 10px;
+  min-height:34px;
+  border-radius:var(--r-md);
   font-size:13.5px;
   color:var(--ink);
   cursor:pointer;
   user-select:none;
 }
 .dd-option .dd-text{flex:1;}
-.dd-option.is-active{background:var(--surface-2);}
-.dd-option.is-selected{font-weight:600;}
+.dd-option.is-active{background:var(--hover);}
+.dd-option.is-selected{font-weight:500;}
 .dd-option.is-selected .dd-check{color:var(--accent);flex:none;}
-.dd-option.is-action{color:var(--accent);font-weight:600;}
+.dd-option.is-action{color:var(--accent);font-weight:500;}
 .dd-option.is-action svg{flex:none;}
 .dd-sep{height:1px;background:var(--line);margin:4px 2px;}
 .dd-empty{padding:12px 10px;font-size:13px;color:var(--ink-faint);text-align:center;}

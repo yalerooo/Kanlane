@@ -2,6 +2,7 @@
 (function(){
   const cryptoSvc = Workhub.services.crypto;
   const platform = Workhub.services.platform;
+  const toast = Workhub.views.toast;
   const MIN_PASSWORD_LENGTH = 6;
   const RECOVERY_KEY_BYTES = 32;
 
@@ -237,14 +238,23 @@
         this.view.showFormError('La contraseña es obligatoria.');
         return;
       }
-      this.vault.saveEntry(id, values.meta, values.secret).then(() => this.view.closeForm()).catch(() => {
+      this.vault.saveEntry(id, values.meta, values.secret).then(() => {
+        toast.success(id ? 'Credencial actualizada' : 'Credencial guardada');
+        this.view.closeForm();
+      }).catch(() => {
         this.view.showFormError('No se pudo cifrar y guardar. Inténtalo de nuevo.');
       });
     }
 
     remove(id){
       if(!id || !this.vault.isReady()) return;
-      this.vault.removeEntry(id).then(() => this.view.closeForm(), () => this.view.closeForm());
+      this.vault.removeEntry(id).then(() => {
+        toast.success('Credencial eliminada');
+        this.view.closeForm();
+      }, () => {
+        toast.error('No se pudo eliminar la credencial');
+        this.view.closeForm();
+      });
     }
   }
 

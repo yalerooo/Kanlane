@@ -97,7 +97,7 @@
           set(v){ desc.set.call(this, v); self.refresh(); }
         });
       });
-      new MutationObserver(() => this.refresh()).observe(this.select, {childList:true, subtree:true, characterData:true});
+      new MutationObserver(() => this.refresh()).observe(this.select, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['data-hue']});
       this.select.addEventListener('change', () => this.refresh());
       if(this.select.form){
         this.select.form.addEventListener('reset', () => setTimeout(() => this.refresh(), 0));
@@ -108,16 +108,20 @@
       return this.select.hasAttribute('data-placeholder') && opt && opt.value === '';
     }
 
-    _dotFor(value){
+    /* Punto de color: estado (data-dots="status") o color de cliente (data-hue). */
+    _dotFor(opt){
+      if(!opt) return '';
+      const hue = opt.getAttribute('data-hue');
+      if(hue !== null) return '<span class="dd-dot is-client" style="--h:' + hue + '"></span>';
       if(this.select.getAttribute('data-dots') !== 'status') return '';
-      const v = STATUS_DOT[value];
+      const v = STATUS_DOT[opt.value];
       return v ? '<span class="dd-dot" style="background:var(' + v + ')"></span>' : '';
     }
 
     refresh(){
       const opt = this.select.options[this.select.selectedIndex];
       const placeholder = !opt || this._isPlaceholder(opt);
-      this.valueEl.innerHTML = opt ? this._dotFor(opt.value) + '<span class="dd-text">' + esc(opt.textContent) + '</span>' : '';
+      this.valueEl.innerHTML = opt ? this._dotFor(opt) + '<span class="dd-text">' + esc(opt.textContent) + '</span>' : '';
       this.trigger.classList.toggle('is-placeholder', placeholder);
       this.trigger.disabled = this.select.disabled;
       if(this.isOpen()) this._renderList();
@@ -152,7 +156,7 @@
         const cls = 'dd-option' + (isAction ? ' is-action' : '') + (isSel ? ' is-selected' : '') + (index === this.activeIndex ? ' is-active' : '');
         return (isAction ? '<div class="dd-sep" role="separator"></div>' : '') +
           '<div class="' + cls + '" role="option" id="' + this.id + '-o' + index + '" data-index="' + index + '" aria-selected="' + isSel + '">' +
-          (isAction ? PLUS : this._dotFor(opt.value)) +
+          (isAction ? PLUS : this._dotFor(opt)) +
           '<span class="dd-text">' + esc(isAction ? opt.textContent.replace(/^\+\s*/, '') : opt.textContent) + '</span>' +
           (isSel ? CHECK : '') + '</div>';
       }).join('');

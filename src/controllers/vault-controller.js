@@ -39,6 +39,7 @@
         const names = app.clientNames();
         this.view.setClientOptions(names);
         this.view.cliente.populate(names);
+        this.render();
       });
 
       this.view.bindUnlock((pass, pass2) => this.unlock(pass, pass2));

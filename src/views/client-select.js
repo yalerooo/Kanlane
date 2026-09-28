@@ -5,7 +5,7 @@
   const NEW_VALUE = '__new__';
 
   function option(name){
-    return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+    return '<option value="' + esc(name) + '" data-hue="' + Workhub.views.clientColors.hueOf(name) + '">' + esc(name) + '</option>';
   }
 
   function populateFilter(selectEl, names){

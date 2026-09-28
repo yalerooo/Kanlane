@@ -1,0 +1,83 @@
+/* Estructura general: barra lateral, cabecera de página y cambio de sección. */
+(function(){
+  const PAGE_INFO = {
+    tasks: ['Tareas', 'Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.'],
+    calendar: ['Calendario', 'Fechas límite de las tareas y reuniones programadas con cada cliente.'],
+    contacts: ['Contactos', 'Personas de contacto y datos útiles de cada cliente.'],
+    vault: ['Contraseñas', 'Credenciales cifradas en tu navegador con tu contraseña maestra.'],
+    clients: ['Clientes', 'Los clientes que aparecen en tareas, reuniones, contactos y contraseñas.'],
+    data: ['Copia de seguridad', 'Exporta todos los datos a un archivo o restáuralos desde una copia.'],
+    settings: ['Ajustes', 'Personaliza el aspecto de Workhub.']
+  };
+
+  const SECTION_IDS = {
+    tasks: 'viewTasks',
+    calendar: 'viewCalendar',
+    contacts: 'viewContacts',
+    vault: 'viewVault',
+    clients: 'viewClients',
+    data: 'viewData',
+    settings: 'viewSettings'
+  };
+
+  class ShellView {
+    constructor(){
+      this.nav = document.querySelector('.tabs');
+      this.tabs = Array.from(this.nav.querySelectorAll('.tab[data-view]'));
+      this.pageTitle = document.getElementById('pageTitle');
+      this.pageDesc = document.getElementById('pageDesc');
+      this.btnNewTask = document.getElementById('btnNew');
+      this.storageLabel = document.getElementById('storageLabel');
+      this.sections = {};
+      Object.keys(SECTION_IDS).forEach((k) => { this.sections[k] = document.getElementById(SECTION_IDS[k]); });
+    }
+
+    static get VIEWS(){
+      return Object.keys(SECTION_IDS);
+    }
+
+    bindTabClick(handler){
+      this.tabs.forEach((t) => {
+        t.addEventListener('click', () => handler(t.getAttribute('data-view')));
+      });
+    }
+
+    isVisible(view){
+      return !this.sections[view].hidden;
+    }
+
+    show(view){
+      this.tabs.forEach((t) => {
+        const active = t.getAttribute('data-view') === view;
+        t.classList.toggle('active', active);
+        if(active){
+          t.setAttribute('aria-current', 'page');
+          this._scrollTabIntoView(t);
+        } else {
+          t.removeAttribute('aria-current');
+        }
+      });
+      Object.keys(this.sections).forEach((k) => { this.sections[k].hidden = k !== view; });
+      this.btnNewTask.hidden = view !== 'tasks';
+      const info = PAGE_INFO[view] || PAGE_INFO.tasks;
+      this.pageTitle.textContent = info[0];
+      this.pageDesc.textContent = info[1];
+    }
+
+    /* En móvil la barra de secciones es horizontal y desplazable. */
+    _scrollTabIntoView(t){
+      const nav = t.parentNode;
+      if(nav.scrollWidth <= nav.clientWidth) return;
+      const left = t.offsetLeft - nav.offsetLeft;
+      if(left < nav.scrollLeft || left + t.offsetWidth > nav.scrollLeft + nav.clientWidth){
+        nav.scrollLeft = Math.max(0, left - 16);
+      }
+    }
+
+    setStorageMode(isLocal){
+      this.storageLabel.textContent = isLocal ? 'Modo local' : 'Sincronizado';
+    }
+  }
+
+  Workhub.views.ShellView = ShellView;
+})();

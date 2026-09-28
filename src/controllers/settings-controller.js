@@ -16,11 +16,14 @@
         this.view.applyAccent(this.model.currentAccent());
         this.render();
       });
-      this.view.bindTheme((theme) => {
-        this.model.setTheme(theme);
-        this.view.applyTheme(theme, true);
-        this.render();
-      });
+      this.view.bindTheme((theme) => this.setTheme(theme));
+    }
+
+    /* theme: 'system' | 'light' | 'dark' */
+    setTheme(theme){
+      this.model.setTheme(theme);
+      this.view.applyTheme(theme, true);
+      this.render();
     }
 
     render(){

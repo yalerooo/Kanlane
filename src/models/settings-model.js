@@ -2,14 +2,17 @@
 (function(){
   const prefs = Workhub.services.preferences;
 
+  /* Claves estables (se guardan en las preferencias); los nombres y colores
+     pueden cambiar. solid/ink: botones principales; textL/textD: texto e iconos
+     de acento en claro/oscuro; softL/softD: fondos de selección. */
   const ACCENTS = [
-    {key:'azul',      name:'Azul',      solid:'#B7D3F6', ink:'#0F2C4D', textL:'#2F66AD', textD:'#A9CBF4', softL:'#EAF2FC', softD:'#1B2636'},
-    {key:'lavanda',   name:'Lavanda',   solid:'#CDC3F5', ink:'#241A52', textL:'#5B47C2', textD:'#C3B7F4', softL:'#F0EDFC', softD:'#231F38'},
-    {key:'rosa',      name:'Rosa',      solid:'#F6BFD0', ink:'#4B1528', textL:'#B7386A', textD:'#F4B3C7', softL:'#FCEBF1', softD:'#35202A'},
-    {key:'menta',     name:'Menta',     solid:'#B5E4CF', ink:'#0F3A29', textL:'#237A55', textD:'#A6DCC3', softL:'#E7F6EF', softD:'#1A2D25'},
-    {key:'melocoton', name:'Melocotón', solid:'#F9CDB0', ink:'#4A230F', textL:'#B35523', textD:'#F5C3A2', softL:'#FDEFE6', softD:'#35251C'},
-    {key:'limon',     name:'Limón',     solid:'#F1E4A2', ink:'#3A3208', textL:'#8C7212', textD:'#EADB95', softL:'#FBF6DE', softD:'#2F2B18'},
-    {key:'grafito',   name:'Grafito',   solid:'#2B3038', ink:'#FFFFFF', textL:'#2B3038', textD:'#D5D9DF', softL:'#EEF0F3', softD:'#262A31', solidD:'#E4E7EB', inkD:'#15181D'}
+    {key:'azul',      name:'Azul',    solid:'#2F6BFF', ink:'#FFFFFF', textL:'#2457E0', textD:'#8FB0FF', softL:'#EEF3FF', softD:'#18223A', solidD:'#4D82FF'},
+    {key:'lavanda',   name:'Violeta', solid:'#7C5CFF', ink:'#FFFFFF', textL:'#6443E8', textD:'#B6A5FF', softL:'#F3F0FF', softD:'#211B3A', solidD:'#8E73FF'},
+    {key:'rosa',      name:'Rosa',    solid:'#E0457B', ink:'#FFFFFF', textL:'#C62F66', textD:'#F59BBB', softL:'#FDEFF4', softD:'#35182A', solidD:'#EC5A8D'},
+    {key:'menta',     name:'Verde',   solid:'#16A36A', ink:'#FFFFFF', textL:'#0F8456', textD:'#6BDDA8', softL:'#E8F7F0', softD:'#122B21', solidD:'#1DB477'},
+    {key:'melocoton', name:'Naranja', solid:'#EA6A1F', ink:'#FFFFFF', textL:'#C4520F', textD:'#F7A673', softL:'#FDF1E9', softD:'#33200F', solidD:'#F27B32'},
+    {key:'limon',     name:'Ámbar',   solid:'#E6A310', ink:'#1F1600', textL:'#9A6A00', textD:'#F2C75A', softL:'#FDF6E3', softD:'#2F2610', solidD:'#EBB42F'},
+    {key:'grafito',   name:'Grafito', solid:'#18181B', ink:'#FFFFFF', textL:'#18181B', textD:'#EDEDEF', softL:'#F1F1F3', softD:'#232328', solidD:'#EDEDEF', inkD:'#111113'}
   ];
 
   const ACCENT_KEY = 'workhub_accent';

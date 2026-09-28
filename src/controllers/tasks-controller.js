@@ -3,6 +3,7 @@
    formulario, y al guardar o cancelar se vuelve a la ficha. */
 (function(){
   const platform = Workhub.services.platform;
+  const toast = Workhub.views.toast;
 
   class TasksController {
     constructor(app, board, dialog, detail){
@@ -69,7 +70,10 @@
         this.closeDetail();
         this.openEdit(id, true);
       });
-      this.detail.bindStatus((id, status) => this.tasks.move(id, status));
+      this.detail.bindStatus((id, status) => {
+        this.tasks.move(id, status);
+        toast.success('Movida a «' + Workhub.models.TaskModel.statusOf(status).label + '»');
+      });
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
       this.detail.dlg.addEventListener('close', () => {
@@ -202,12 +206,24 @@
     save(id, values){
       if(!this.tasks.isReady()){ this.closeDialog(); return; }
       if(!values.cliente || !values.title) return;
-      this.tasks.save(id, values).then(() => this.closeDialog(true), () => this.closeDialog());
+      this.tasks.save(id, values).then(() => {
+        toast.success(id ? 'Cambios guardados' : 'Tarea creada');
+        this.closeDialog(true);
+      }, () => {
+        toast.error('No se pudo guardar la tarea');
+        this.closeDialog();
+      });
     }
 
     remove(id){
       if(!id || !this.tasks.isReady()) return;
-      this.tasks.remove(id).then(() => this.closeDialog(), () => this.closeDialog());
+      this.tasks.remove(id).then(() => {
+        toast.success('Tarea eliminada');
+        this.closeDialog();
+      }, () => {
+        toast.error('No se pudo eliminar la tarea');
+        this.closeDialog();
+      });
     }
 
     addNote(text, image){

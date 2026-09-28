@@ -1,6 +1,7 @@
 /* Exportar e importar copias de seguridad. */
 (function(){
   const platform = Workhub.services.platform;
+  const toast = Workhub.views.toast;
   const NOT_READY = 'El tablero todavía se está cargando, prueba de nuevo en unos segundos.';
 
   class BackupController {
@@ -21,6 +22,7 @@
       this.backup.build().then((result) => {
         return platform.download(result.filename, result.json).then(() => {
           const c = result.counts;
+          toast.success('Copia de seguridad descargada');
           this.view.showStatus('Copia descargada: ' + c.tasks + ' tareas, ' + c.meetings + ' reuniones, ' + c.contacts + ' contactos, ' + c.vault + ' contraseñas, ' + c.clients + ' clientes.');
         });
       }).catch(() => {
@@ -46,6 +48,7 @@
           msg += ' Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.';
         }
         this.view.showStatus(msg);
+        toast.success('Copia importada');
         this.view.resetImport();
       }).catch(() => {
         this.view.showError('Hubo un problema importando el archivo — puede que solo se haya importado una parte.');

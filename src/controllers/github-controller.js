@@ -53,6 +53,8 @@
         error: this.sync.error,
         last: this.sync.lastResult,
         hasToken: !!api.token(),
+        projects: this.app.models.projects.list().map((p) => ({id:p.id, nombre:p.nombre, linked:!!p.github})),
+        currentId: this.app.projectId,
         connecting: this.connecting,
         connectError: this.connectError
       });
@@ -141,6 +143,21 @@
         /* Un token rechazado no se conserva. */
         if(err && (err.code === 'auth' || err.code === 'scopes')) api.setToken('');
         this.render();
+      });
+    }
+
+    /* Desde el diálogo de «Nuevo proyecto → Desde GitHub»: crea el proyecto y lo abre. */
+    createFromGithub(v){
+      if(!api.token() && !v.token) return Promise.reject(new Error('Pega un token de GitHub.'));
+      if(!v.url) return Promise.reject(new Error('Pega el enlace de tu proyecto de GitHub.'));
+      return this.sync.link({url:v.url, token:v.token, target:Workhub.models.GithubSync.NEW, name:v.nombre}).then(() => {
+        this.schedule();
+        this.render();
+        toast.success('Proyecto creado desde GitHub');
+      }).catch((err) => {
+        if(err && (err.code === 'auth' || err.code === 'scopes')) api.setToken('');
+        this.render();
+        throw err;
       });
     }
 

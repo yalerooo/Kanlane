@@ -16,6 +16,7 @@
       this.search = document.getElementById('search');
       this.filterCliente = document.getElementById('filterCliente');
       this.btnNew = document.getElementById('btnNew');
+      this.tabs = document.getElementById('boardTabs');
 
       /* Línea que marca dónde caerá la tarea al soltarla. */
       this.indicator = document.createElement('div');
@@ -23,6 +24,41 @@
       this.dropBeforeId = null;
 
       window.addEventListener('resize', () => this.fitHeight());
+
+      /* Móvil: el tablero se desliza columna a columna; las pestañas de estado
+         llevan a cada una y marcan la que se está viendo. */
+      this.tabs.addEventListener('click', (ev) => {
+        const tab = closest(ev.target, '[data-goto]');
+        if(tab) this.scrollToColumn(tab.getAttribute('data-goto'));
+      });
+      let raf = 0;
+      this.board.addEventListener('scroll', () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => this.syncTabs());
+      }, {passive:true});
+    }
+
+    scrollToColumn(status){
+      const col = this.board.querySelector('.col[data-status="' + status + '"]');
+      if(!col) return;
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.board.scrollTo({left: col.offsetLeft - this.board.offsetLeft, behavior: reduce ? 'auto' : 'smooth'});
+    }
+
+    /* Columna más a la izquierda que se ve entera (o casi). */
+    syncTabs(){
+      const left = this.board.scrollLeft;
+      let active = null;
+      let best = Infinity;
+      this.board.querySelectorAll('.col').forEach((col) => {
+        const d = Math.abs(col.offsetLeft - this.board.offsetLeft - left);
+        if(d < best){ best = d; active = col.getAttribute('data-status'); }
+      });
+      this.tabs.querySelectorAll('[data-goto]').forEach((t) => {
+        const on = t.getAttribute('data-goto') === active;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
     }
 
     bindNew(handler){
@@ -152,7 +188,7 @@
           : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
         return '<section class="col" data-status="' + s.key + '" style="--st:' + s.dot + '">' +
           '<header class="col-head">' +
-            '<span class="name"><span class="dot"></span>' + s.label + '<span class="count">' + items.length + '</span></span>' +
+            '<span class="name"><span class="dot"></span><span class="col-label">' + s.label + '</span><span class="count">' + items.length + '</span></span>' +
             '<button type="button" class="col-add" data-add-status="' + s.key + '" aria-label="Nueva tarea en ' + esc(s.label) + '" title="Nueva tarea en ' + esc(s.label) + '">' + PLUS_ICON + '</button>' +
           '</header>' +
           '<div class="cards">' + cardsHtml + '</div></section>';
@@ -161,6 +197,12 @@
       this.board.querySelectorAll('.col').forEach((c) => {
         c.querySelector('.cards').scrollTop = scrolls[c.getAttribute('data-status')] || 0;
       });
+      this.tabs.innerHTML = TaskModel.STATUS.map((s) => {
+        const n = tasks.filter((t) => t.status === s.key).length;
+        return '<button type="button" class="board-tab" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
+          '<span class="dot"></span>' + esc(s.label) + '<span class="count">' + n + '</span></button>';
+      }).join('');
+      this.syncTabs();
       this.fitHeight();
     }
   }

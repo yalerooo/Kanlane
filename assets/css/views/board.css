@@ -10,22 +10,6 @@
   height:calc(100dvh - var(--board-top));
   min-height:420px;
 }
-/* En pantallas medianas y móviles las columnas se deslizan en horizontal. */
-@media (max-width:1180px){
-  .board{
-    grid-template-columns:none;
-    grid-auto-flow:column;
-    grid-auto-columns:minmax(276px, 1fr);
-    overflow-x:auto;
-    scroll-snap-type:x proximity;
-    padding-bottom:6px;
-  }
-  .col{scroll-snap-align:start;}
-}
-@media (max-width:640px){
-  .board{grid-auto-columns:86%;gap:10px;min-height:360px;}
-}
-
 .col{
   --st:var(--st-pend);
   display:flex;

@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="assets/css/views/clients.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
   <link rel="stylesheet" href="assets/css/views/auth.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
 
   <!-- Arranque: se decide ANTES de pintar nada. Si Workhub está publicado con
        Firebase, la app queda oculta desde el primer fotograma y solo se ve la
@@ -94,13 +95,13 @@
       <kbd class="kbd" id="cmdHint">Ctrl K</kbd>
     </button>
     <nav class="tabs" aria-label="Secciones">
-      <button class="tab active" id="tabTasks" data-view="tasks" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span>Tareas</span><span class="tab-count" id="countTasks"></span></button>
-      <button class="tab" id="tabCalendar" data-view="calendar" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Calendario</span><span class="tab-count" id="countCalendar"></span></button>
-      <button class="tab" id="tabVault" data-view="vault" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Contraseñas</span><span class="tab-count" id="countVault"></span></button>
-      <button class="tab" id="tabClients" data-view="clients" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span>Clientes</span><span class="tab-count" id="countClients"></span></button>
+      <button class="tab active" id="tabTasks" data-short="Tareas" title="Tareas" data-view="tasks" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span>Tareas</span><span class="tab-count" id="countTasks"></span></button>
+      <button class="tab" id="tabCalendar" data-short="Calendario" title="Calendario" data-view="calendar" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Calendario</span><span class="tab-count" id="countCalendar"></span></button>
+      <button class="tab" id="tabVault" data-short="Claves" title="Contraseñas" data-view="vault" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Contraseñas</span><span class="tab-count" id="countVault"></span></button>
+      <button class="tab" id="tabClients" data-short="Clientes" title="Clientes y contactos" data-view="clients" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span>Clientes</span><span class="tab-count" id="countClients"></span></button>
       <p class="nav-label">Sistema</p>
-      <button class="tab" id="tabData" data-view="data" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M20 12c0 1.66-3.58 3-8 3s-8-1.34-8-3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg><span>Copia de seguridad</span></button>
-      <button class="tab" id="tabSettings" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
+      <button class="tab" id="tabData" data-short="Copia" title="Copia de seguridad" data-view="data" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M20 12c0 1.66-3.58 3-8 3s-8-1.34-8-3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg><span>Copia de seguridad</span></button>
+      <button class="tab" id="tabSettings" data-short="Ajustes" title="Ajustes" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
     </nav>
     <div class="sidebar-foot">
       <div class="account" id="accountBox" hidden>
@@ -131,6 +132,7 @@
 
     <div id="boardWrap">
       <div class="state-msg" id="stateMsg">Cargando tareas…</div>
+      <div class="board-tabs" id="boardTabs" role="tablist" aria-label="Columnas del tablero"></div>
       <div class="board" id="board" hidden></div>
     </div>
   </section>
@@ -152,7 +154,7 @@
       <span><i style="background:var(--meet-bg);box-shadow:inset 0 0 0 1px var(--meet)"></i>Reunión</span>
       <span><i style="background:var(--st-pend-bg);box-shadow:inset 0 0 0 1px var(--st-pend)"></i>Tarea que vence ese día</span>
       <span><i style="background:var(--danger-bg);box-shadow:inset 0 0 0 1px var(--danger)"></i>Tarea vencida</span>
-      <span>Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
+      <span class="cal-hint">Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
     </div>
     <div class="cal-layout">
       <div>
@@ -246,7 +248,7 @@
   <section id="viewClients" hidden>
     <div class="toolbar">
       <input type="search" id="searchClients" placeholder="Buscar cliente, persona, email o teléfono…" aria-label="Buscar clientes y contactos">
-      <button class="btn btn-primary" id="btnNewContact" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
+      <button class="btn btn-primary" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
     </div>
     <div class="crm" id="crm">
       <div class="crm-list-pane">

@@ -119,41 +119,4 @@ header.page-head{
 .page-head h1{font-size:19px;font-weight:600;margin:0 0 2px;letter-spacing:-0.02em;}
 .page-head p{margin:0;color:var(--ink-soft);font-size:13px;max-width:72ch;}
 
-@media (max-width:900px){
-  .app{display:block;}
-  .sidebar{
-    position:sticky;
-    top:0;
-    z-index:30;
-    height:auto;
-    padding:10px 12px 0;
-    padding-top:calc(10px + env(safe-area-inset-top, 0px));
-    gap:0;
-    border-right:none;
-    border-bottom:1px solid var(--line);
-    overflow:visible;
-    flex-direction:row;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-  .brand{padding:2px 4px 8px;flex:1;}
-  .search-trigger{width:auto;margin:0 0 8px;flex:none;}
-  .search-trigger span,.search-trigger .kbd{display:none;}
-  .nav-label,.sidebar-foot{display:none;}
-  .tabs{
-    flex-basis:100%;
-    flex-direction:row;
-    gap:2px;
-    overflow-x:auto;
-    scrollbar-width:none;
-    padding-bottom:8px;
-    margin-inline:-2px;
-  }
-  .tabs::-webkit-scrollbar{display:none;}
-  .tab{width:auto;flex:none;padding:0 10px;}
-  .tab > span:first-of-type{flex:none;}
-  .main{padding:16px 16px 20px;}
-  header.page-head{padding-bottom:12px;margin-bottom:14px;}
-  .page-head p{display:none;}
-  .page-head h1{font-size:18px;margin:0;}
-}
+/* Tamaños de pantalla: ver assets/css/responsive.css. */

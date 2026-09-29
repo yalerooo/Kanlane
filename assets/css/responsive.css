@@ -1,0 +1,261 @@
+/* ==========================================================================
+   Tamaños de pantalla
+   - Grande (≥1600px): el contenido usa todo el ancho.
+   - Portátil / tablet horizontal (901–1279px): barra lateral de iconos.
+   - Móvil / tablet vertical (≤900px): barra superior + navegación inferior,
+     tablero columna a columna y diálogos a pantalla completa.
+   Va después del resto de hojas: solo ajusta lo que cambia con el tamaño.
+   ========================================================================== */
+
+/* Pestañas de estado del tablero: solo en móvil. */
+.board-tabs{display:none;}
+
+/* ---------- Grande ---------- */
+.main-inner{max-width:1480px;}
+@media (min-width:1600px){
+  .main{padding:26px 40px 28px;}
+  .main-inner{max-width:none;}
+  /* Lo que se lee de arriba abajo no necesita estirarse. */
+  #viewSettings,#viewData{max-width:1040px;}
+  .board{gap:14px;}
+  .cal-layout{grid-template-columns:minmax(0,1fr) 360px;}
+  /* El mes llena el alto de la ventana. */
+  .cal-cell{min-height:max(108px, calc((100dvh - 290px) / 6));}
+  .crm{grid-template-columns:minmax(260px, 340px) minmax(0, 1fr);}
+  .people{display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));column-gap:8px;}
+  .person + .person{border-top:none;}
+  .person{border-bottom:1px solid var(--line);}
+}
+@media (min-width:2200px){
+  .app{grid-template-columns:260px minmax(0,1fr);}
+  .main{padding:30px 56px 32px;}
+  .board{gap:18px;}
+}
+
+/* ---------- Portátil y tablet horizontal: barra de iconos ---------- */
+@media (min-width:901px) and (max-width:1279px){
+  .app{grid-template-columns:64px minmax(0,1fr);}
+  .sidebar{padding:12px 8px 10px;align-items:center;}
+  .brand{padding:0 0 10px;width:100%;}
+  .project-switch{justify-content:center;padding:5px;}
+  .project-switch-text,.project-switch-chevron{display:none;}
+  .search-trigger{width:40px;height:36px;padding:0;justify-content:center;margin-bottom:10px;}
+  .search-trigger span,.search-trigger .kbd{display:none;}
+  .tabs{width:100%;align-items:center;}
+  .tab{position:relative;width:44px;height:40px;padding:0;justify-content:center;}
+  .tab > span:first-of-type{display:none;}
+  .tab svg{width:18px;height:18px;}
+  .tab-count{
+    position:absolute;
+    top:3px;
+    right:2px;
+    min-width:15px;
+    height:15px;
+    padding:0 3px;
+    border-radius:8px;
+    font-size:9.5px;
+    line-height:15px;
+    text-align:center;
+    background:var(--surface-2);
+    box-shadow:0 0 0 1.5px var(--sidebar);
+  }
+  .nav-label{font-size:0;padding:10px 0 6px;width:28px;border-bottom:1px solid var(--line);margin-bottom:6px;}
+  .sidebar-foot{padding:10px 0 0;width:100%;}
+  .account{justify-content:center;padding:0;}
+  .account-text,#btnSignOut{display:none;}
+  .storage-status{justify-content:center;padding:0;}
+  .storage-status span:last-child{display:none;}
+  .main{padding:20px 24px 22px;}
+  .page-head p{max-width:56ch;}
+  .board{gap:10px;}
+  .cal-layout{grid-template-columns:minmax(0,1fr);}
+}
+/* Nombre de columna en una línea (con "…" si no cabe). */
+.col-head .name{white-space:nowrap;}
+.col-label{overflow:hidden;text-overflow:ellipsis;min-width:0;}
+
+/* ---------- Móvil y tablet vertical ---------- */
+@media (max-width:900px){
+  :root{--nav-h:calc(58px + env(safe-area-inset-bottom, 0px));}
+  .app{display:block;}
+
+  /* Barra superior: proyecto y buscar. */
+  .sidebar{
+    position:sticky;
+    top:0;
+    z-index:30;
+    height:auto;
+    flex-direction:row;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    padding-top:calc(8px + env(safe-area-inset-top, 0px));
+    border-right:none;
+    border-bottom:1px solid var(--line);
+    overflow:visible;
+    /* Sin backdrop-filter: haría que la navegación inferior (position:fixed,
+       hija de esta barra) se colocara respecto a la barra y no a la ventana. */
+    background:var(--sidebar);
+  }
+  .brand{padding:0;flex:1;min-width:0;}
+  .search-trigger{width:38px;height:38px;padding:0;margin:0;justify-content:center;flex:none;}
+  .search-trigger span,.search-trigger .kbd{display:none;}
+  .nav-label,.sidebar-foot{display:none;}
+
+  /* Navegación inferior, como en una app. */
+  .tabs{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:40;
+    display:grid;
+    grid-template-columns:repeat(6, minmax(0, 1fr));
+    gap:0;
+    height:var(--nav-h);
+    padding:4px 4px env(safe-area-inset-bottom, 0px);
+    background:color-mix(in srgb, var(--sidebar) 92%, transparent);
+    backdrop-filter:saturate(1.4) blur(14px);
+    -webkit-backdrop-filter:saturate(1.4) blur(14px);
+    border-top:1px solid var(--line);
+  }
+  .tab{
+    position:relative;
+    flex-direction:column;
+    justify-content:center;
+    gap:3px;
+    width:auto;
+    height:50px;
+    padding:0 2px;
+    border-radius:var(--r-lg);
+    font-size:10.5px;
+    font-weight:500;
+    color:var(--ink-faint);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tab > span:first-of-type{display:none;}
+  .tab::after{content:attr(data-short);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tab svg{width:20px;height:20px;}
+  .tab:hover{background:transparent;}
+  .tab.active{background:transparent;box-shadow:none;color:var(--accent);}
+  .tab.active svg{color:var(--accent);}
+  .tab-count{
+    position:absolute;
+    top:3px;
+    left:calc(50% + 5px);
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border-radius:8px;
+    font-size:10px;
+    line-height:16px;
+    text-align:center;
+    color:var(--ink-soft);
+    background:var(--surface-2);
+    box-shadow:0 0 0 1.5px var(--sidebar);
+  }
+  .tab-count.is-alert{color:#fff;background:var(--danger);}
+
+  .main{padding:14px 16px calc(var(--nav-h) + 16px);}
+  header.page-head{padding-bottom:10px;margin-bottom:12px;gap:10px;}
+  .page-head p{display:none;}
+  .page-head h1{font-size:19px;margin:0;}
+  .page-head .btn{height:36px;}
+
+  /* Tablero: pestañas de estado y columnas que se deslizan. */
+  .board-tabs{
+    display:flex;
+    gap:6px;
+    margin:0 -16px 10px;
+    padding:0 16px 2px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .board-tabs::-webkit-scrollbar{display:none;}
+  .board-tab{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    flex:none;
+    height:32px;
+    padding:0 11px;
+    font-family:inherit;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .board-tab .dot{background:var(--st);}
+  .board-tab .count{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .board-tab.is-active{color:var(--ink);border-color:var(--ink-faint);box-shadow:var(--shadow-sm);}
+  .board{
+    grid-template-columns:none;
+    grid-auto-flow:column;
+    grid-auto-columns:calc(50% - 5px);
+    gap:10px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+    min-height:340px;
+  }
+  .board::-webkit-scrollbar{display:none;}
+  .col{scroll-snap-align:start;}
+
+  /* Diálogos. */
+  dialog{max-height:calc(100dvh - 32px);}
+
+  /* Avisos por encima de la navegación inferior. */
+  .toasts{bottom:calc(var(--nav-h) + 10px) !important;}
+
+  .cal-layout{grid-template-columns:minmax(0,1fr);}
+  /* En pantallas táctiles no se arrastra: la pista sobra. */
+  .cal-hint{display:none !important;}
+  .cal-legend{gap:12px;}
+
+  /* Clientes: buscador y "Nuevo contacto" en la misma fila. */
+  #viewClients .toolbar{flex-wrap:nowrap;}
+  #viewClients .toolbar input[type="search"]{flex:1 1 auto;min-width:0;}
+  #viewClients .toolbar .btn{flex:none;}
+}
+
+@media (max-width:600px){
+  /* Una columna del tablero cada vez. */
+  .board{grid-auto-columns:100%;gap:12px;}
+  .col{border-radius:var(--r-lg);}
+
+  /* Diálogos como hoja que sube desde abajo, a todo lo ancho. */
+  /* !important: algunos diálogos fijan su ancho por id (#dlg…). */
+  dialog:not(.cmdk){
+    width:100vw !important;
+    max-width:100vw !important;
+    max-height:calc(100dvh - 24px - env(safe-area-inset-top, 0px));
+    margin:auto 0 0 !important;
+    border-radius:16px 16px 0 0;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  dialog:not(.cmdk)[open]{animation:sheet-in .22s cubic-bezier(.2,.8,.2,1);}
+  .dlg-inner{padding:18px 16px 16px;}
+  .dlg-actions{margin:18px -16px -16px;padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));border-radius:0;}
+  .dlg-actions .btn{height:38px;}
+  dialog.cmdk{width:calc(100vw - 16px);margin-top:calc(8px + env(safe-area-inset-top, 0px));}
+  .cmdk-meta,.cmdk-foot{display:none;}
+
+  /* Controles un poco más grandes para el dedo. */
+  .toolbar input[type="search"],.dd-trigger{min-height:40px;}
+  .btn{min-height:36px;}
+  input,select,textarea{font-size:16px;}
+  #btnNewContact{font-size:0;gap:0;width:40px;padding:0;justify-content:center;}
+  #btnNewContact svg{width:18px;height:18px;}
+}
+@keyframes sheet-in{from{transform:translateY(24px);opacity:.4;}to{transform:none;opacity:1;}}
+
+@media (max-width:380px){
+  .main{padding-left:12px;padding-right:12px;}
+  .board-tabs{margin:0 -12px 10px;padding:0 12px 2px;}
+  .tab{font-size:10px;}
+}

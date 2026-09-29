@@ -1,6 +1,11 @@
 /* Plantilla de plugin para Workhub. Cópiala, cambia el manifiesto y publica la
    carpeta en cualquier web con https (GitHub Pages, Netlify…). Guía completa:
-   https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md */
+   https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md
+
+   La misma página se carga de dos formas:
+   - wh.isBackground === true: oculta, al abrir Workhub (porque pide
+     "ui:extend"). Aquí se añaden botones y etiquetas a la interfaz.
+   - si no: en la sección Plugins, con tu interfaz. */
 const MANIFEST = {
   id: 'com.tu-nombre.mi-plugin',          // único; en minúsculas, con puntos o guiones
   name: 'Mi plugin',
@@ -10,12 +15,31 @@ const MANIFEST = {
   homepage: 'https://github.com/tu-nombre/mi-plugin',
   icon: 'puzzle',                         // nombre de un icono de Workhub (ver docs/PLUGINS.md)
   color: 172,                             // tono del color del icono, de 0 a 359
-  permissions: ['tasks:read', 'tasks:write', 'storage']   // pide solo lo que uses
+  permissions: ['tasks:read', 'tasks:write', 'storage', 'ui:extend']   // pide solo lo que uses
 };
 
 const $ = (id) => document.getElementById(id);
 
-WorkhubPlugin.connect(MANIFEST).then(async (wh) => {
+/* ---------- Segundo plano: botones dentro de Workhub ---------- */
+function background(wh){
+  // Botón en la barra de Tareas que abre tu panel.
+  wh.ui.addButton({id:'abrir', location:'tasks.toolbar', label:'Mi plugin', icon:'puzzle'});
+  // Botón en la ficha de cada tarea: recibe el id de la tarea.
+  wh.ui.addButton({id:'duplicar', location:'task.actions', label:'Duplicar', icon:'check', tooltip:'Crear una copia de esta tarea'});
+
+  wh.on('action', async ({id, context}) => {
+    if(id === 'abrir') wh.ui.openPanel();
+    if(id === 'duplicar'){
+      const t = (await wh.tasks.list()).find((x) => x.id === context.taskId);
+      if(!t) return;
+      await wh.tasks.create({title: t.title + ' (copia)', desc: t.desc, cliente: t.cliente, status: t.status});
+      wh.ui.toast('Tarea duplicada');
+    }
+  });
+}
+
+/* ---------- Panel: tu interfaz ---------- */
+async function panel(wh){
   $('status').textContent = 'Proyecto: ' + wh.context.project.name;
   $('panel').hidden = false;
 
@@ -37,8 +61,12 @@ WorkhubPlugin.connect(MANIFEST).then(async (wh) => {
   const visits = (await wh.storage.get('visits')) || 0;
   await wh.storage.set('visits', visits + 1);
   $('visits').textContent = 'Has abierto este plugin ' + (visits + 1) + ' veces en este proyecto.';
-}).catch((err) => {
-  $('status').textContent = err.message === 'not-in-workhub'
-    ? 'Abre este plugin desde Workhub: Plugins → pega el enlace de esta página.'
-    : 'No se pudo conectar con Workhub: ' + err.message;
-});
+}
+
+WorkhubPlugin.connect(MANIFEST)
+  .then((wh) => (wh.isBackground ? background(wh) : panel(wh)))
+  .catch((err) => {
+    $('status').textContent = err.message === 'not-in-workhub'
+      ? 'Abre este plugin desde Workhub: Plugins → pega el enlace de esta página.'
+      : 'No se pudo conectar con Workhub: ' + err.message;
+  });

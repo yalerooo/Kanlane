@@ -92,6 +92,10 @@
         {title:'Nueva credencial', icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
         {title:'Nuevo cliente', icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
       ];
+      /* Acciones que añaden los plugins a la paleta. */
+      Workhub.views.extensions.buttonsAt('command').forEach((b) => {
+        list.push({title:b.label, meta:b.pluginName, icon:Workhub.views.pluginIcons.svg(b.icon || 'puzzle', 16), run:() => Workhub.views.extensions.trigger(b.key, {})});
+      });
       app.models.plugins.list().forEach((p) => {
         const name = (p.manifest || {}).name || p.id;
         list.push({title:'Abrir plugin: ' + name, icon:ICONS.go, run:() => c.plugins.open(p.id)});

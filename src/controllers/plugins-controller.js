@@ -3,6 +3,7 @@
 (function(){
   const host = Workhub.services.pluginHost;
   const toast = Workhub.views.toast;
+  const extensions = Workhub.views.extensions;
   const TaskModel = Workhub.models.TaskModel;
   const MeetingModel = Workhub.models.MeetingModel;
   const PluginModel = Workhub.models.PluginModel;
@@ -16,6 +17,9 @@
   const EVENT_DELAY_MS = 250;
   const YMD = /^\d{4}-\d{2}-\d{2}$/;
   const HM = /^\d{2}:\d{2}$/;
+  const HEX = /^#[0-9a-fA-F]{6}$/;
+  const RADII = {sharp:{sm:2, md:3, lg:4, xl:6}, round:{sm:7, md:10, lg:14, xl:18}};
+  const DENSITIES = ['compact', 'normal', 'comfortable'];
 
   function fail(code, message){
     const e = new Error(message);
@@ -42,8 +46,17 @@
       this.active = null;
       this.pending = null;
       this.timers = {};
+      /* Plugins cargados ocultos para añadir botones o cambiar la apariencia:
+         id → {frame, url}. */
+      this.bg = new Map();
+      /* Apariencia aplicada por un plugin: {pluginId, values}. */
+      this.appearance = null;
 
-      this.plugins.on('change', () => this.render());
+      this.plugins.on('change', () => {
+        this.render();
+        this.upgradeOfficial();
+        this.syncBackground();
+      });
       this.view.bindAddUrl((url) => this.addFromUrl(url));
       this.view.bindCards({
         open: (id) => this.open(id),
@@ -67,7 +80,10 @@
       watch(this.m.clients, 'clients', () => this.m.clients.items.map(cleanClient));
       watch(this.m.contacts, 'contacts', () => this.m.contacts.items.map(cleanContact));
       watch(this.m.meetings, 'meetings', () => this.m.meetings.items.map(cleanMeeting));
-      this.m.settings.on('change', () => this.schedule('theme', () => this.theme()));
+      this.m.settings.on('change', () => {
+        if(this.appearance) this.applyAppearance();
+        else this.schedule('theme', () => this.theme());
+      });
     }
 
     /* ---------- Lista ---------- */
@@ -96,6 +112,125 @@
     onShow(){
       this.render();
       if(this.active) this.view.fitStage();
+    }
+
+    /* ---------- Segundo plano ---------- */
+
+    /* Los plugins oficiales son de Workhub: si una versión nueva pide más
+       permisos, se conceden solos (una vez por sesión). */
+    upgradeOfficial(){
+      this.upgraded = this.upgraded || {};
+      this.plugins.items.forEach((p) => {
+        if(!p.official || this.upgraded[p.id]) return;
+        const o = Workhub.services.officialPlugins.find((x) => x.manifest.id === p.id);
+        if(!o) return;
+        const want = o.manifest.permissions;
+        if(!sameSet(want, p.granted || []) || JSON.stringify(p.manifest || {}) !== JSON.stringify(o.manifest)){
+          this.upgraded[p.id] = true;
+          this.plugins.setGranted(p.id, want.slice(), o.manifest).catch(() => {});
+        }
+      });
+    }
+
+    needsBackground(p){
+      return (p.granted || []).some((x) => host.BACKGROUND_PERMISSIONS.indexOf(x) !== -1);
+    }
+
+    /* Arranca (o para) la instancia oculta de cada plugin que la necesite. */
+    syncBackground(){
+      if(location.protocol === 'file:' || !this.app.rootDb) return;
+      const want = new Map();
+      this.plugins.items.forEach((p) => { if(this.needsBackground(p)) want.set(p.id, p); });
+      this.bg.forEach((entry, id) => {
+        const p = want.get(id);
+        if(!p || p.url !== entry.url) this.stopBackground(id);
+      });
+      want.forEach((p, id) => {
+        if(this.bg.has(id)) return;
+        const official = !!p.official;
+        const url = host.resolveUrl(p.url) || p.url;
+        const frame = new host.PluginFrame({
+          url: url,
+          container: this.view.probeArea,
+          hidden: true,
+          official: official,
+          mode: 'background',
+          onHello: (raw) => this.hello(this.plugins.find(id) || p, raw, official, 'background'),
+          api: (method, params, f) => this.api(this.plugins.find(id) || p, method, params, f)
+        });
+        this.bg.set(id, {frame:frame, url:p.url});
+      });
+    }
+
+    stopBackground(id){
+      const entry = this.bg.get(id);
+      if(entry) entry.frame.destroy();
+      this.bg.delete(id);
+      extensions.clearPlugin(id);
+      this.resetAppearance(id);
+    }
+
+    /* Todos los marcos vivos: el panel abierto y los de segundo plano. */
+    frames(){
+      const list = [];
+      if(this.active) list.push(this.active.frame);
+      this.bg.forEach((e) => list.push(e.frame));
+      return list;
+    }
+
+    /* ---------- Apariencia ---------- */
+
+    setAppearance(pluginId, params){
+      const v = {};
+      if(params.accent != null){
+        if(!HEX.test(String(params.accent))) throw fail('bad-params', 'accent tiene que ser un color #RRGGBB.');
+        v.accent = String(params.accent).toUpperCase();
+      }
+      if(params.radius != null){
+        if(['sharp', 'normal', 'round'].indexOf(params.radius) === -1) throw fail('bad-params', 'radius: "sharp", "normal" o "round".');
+        v.radius = params.radius;
+      }
+      if(params.density != null){
+        if(DENSITIES.indexOf(params.density) === -1) throw fail('bad-params', 'density: "compact", "normal" o "comfortable".');
+        v.density = params.density;
+      }
+      this.appearance = {pluginId:pluginId, values:v};
+      this.applyAppearance();
+      return true;
+    }
+
+    resetAppearance(pluginId){
+      if(!this.appearance || (pluginId && this.appearance.pluginId !== pluginId)) return;
+      this.appearance = null;
+      this.applyAppearance();
+    }
+
+    /* Aplica la apariencia del plugin sobre la del usuario (o la retira). */
+    applyAppearance(){
+      const root = document.documentElement;
+      const settings = this.app.controllers.settings;
+      const v = this.appearance ? this.appearance.values : {};
+      settings.view.applyAccent(settings.model.currentAccent());
+      if(v.accent){
+        const hex = v.accent;
+        const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+        const ink = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#111113' : '#FFFFFF';
+        const set = (k, val) => root.style.setProperty(k, val);
+        set('--acc-solid-l', hex); set('--acc-solid-d', hex);
+        set('--acc-ink-l', ink); set('--acc-ink-d', ink);
+        set('--acc-text-l', 'color-mix(in srgb, ' + hex + ' 80%, #000)');
+        set('--acc-text-d', 'color-mix(in srgb, ' + hex + ' 60%, #fff)');
+        set('--acc-soft-l', 'color-mix(in srgb, ' + hex + ' 10%, #fff)');
+        set('--acc-soft-d', 'color-mix(in srgb, ' + hex + ' 18%, #161619)');
+      }
+      const radius = RADII[v.radius];
+      ['sm', 'md', 'lg', 'xl'].forEach((k) => {
+        if(radius) root.style.setProperty('--r-' + k, radius[k] + 'px');
+        else root.style.removeProperty('--r-' + k);
+      });
+      if(v.density && v.density !== 'normal') root.setAttribute('data-density', v.density);
+      else root.removeAttribute('data-density');
+      this.schedule('theme', () => this.theme());
     }
 
     /* ---------- Instalar ---------- */
@@ -176,6 +311,7 @@
       if(!p) return;
       this.view.setDialogBusy(true);
       if(this.active && this.active.id === id) this.close();
+      this.stopBackground(id);
       const wipes = this.m.projects.list().map((proj) =>
         PluginModel.clearData(ProjectModel.scope(this.app.rootDb, proj.id), id).catch(() => null));
       Promise.all(wipes).then(() => this.plugins.remove(id)).then(() => {
@@ -202,7 +338,8 @@
         url: host.resolveUrl(p.url) || p.url,
         container: this.view.frameWrap,
         official: official,
-        onHello: (raw) => this.hello(p, raw, official),
+        mode: 'panel',
+        onHello: (raw) => this.hello(p, raw, official, 'panel'),
         api: (method, params, f) => this.api(p, method, params, f)
       });
       frame.iframe.title = (p.manifest || {}).name || 'Plugin';
@@ -211,29 +348,33 @@
 
     /* El plugin se presenta: tiene que ser el que se instaló. Recibe los
        permisos aprobados (nunca más de los que pide). */
-    hello(p, raw, official){
+    hello(p, raw, official, mode){
+      const panel = mode !== 'background';
       const v = host.validateManifest(raw, official);
       if(v.error){
-        this.view.setNotice('<strong>Este plugin no se pudo iniciar.</strong> ' + Workhub.utils.html.esc(v.error));
+        if(panel) this.view.setNotice('<strong>Este plugin no se pudo iniciar.</strong> ' + Workhub.utils.html.esc(v.error));
         return {error:v.error};
       }
       if(v.manifest.id !== p.id){
         const msg = 'La página ya no corresponde a este plugin (su identificador ha cambiado).';
-        this.view.setNotice('<strong>Este plugin no se pudo iniciar.</strong> ' + msg);
+        if(panel) this.view.setNotice('<strong>Este plugin no se pudo iniciar.</strong> ' + msg);
         return {error:msg};
       }
-      const approved = p.granted || [];
+      /* Los oficiales usan los permisos de su catálogo (ver upgradeOfficial). */
+      const approved = official ? this.manifestOf(p).permissions || [] : (p.granted || []);
       const requested = v.manifest.permissions;
       const granted = requested.filter((x) => approved.indexOf(x) !== -1);
       const extra = requested.filter((x) => approved.indexOf(x) === -1);
-      if(extra.length){
+      if(extra.length && panel && !official){
         this.pendingExtra = {mode:'review', id:p.id, url:p.url, manifest:v.manifest, official:official, extra:extra};
         this.view.setNotice('Esta versión del plugin pide permisos nuevos. Funciona con los que ya tenía hasta que los revises. <button type="button" class="btn btn-ghost btn-sm" data-review>Revisar</button>');
-      } else if(!sameSet(requested, approved) || JSON.stringify(p.manifest || {}) !== JSON.stringify(v.manifest)){
+      } else if(!extra.length && panel && (!sameSet(requested, approved) || JSON.stringify(p.manifest || {}) !== JSON.stringify(v.manifest))){
         /* Pide menos permisos o cambió su descripción: se guarda tal cual. */
         this.plugins.setGranted(p.id, granted, v.manifest).catch(() => {});
       }
-      return {manifest:v.manifest, granted:granted, context:this.context()};
+      const ctx = this.context();
+      ctx.mode = panel ? 'panel' : 'background';
+      return {manifest:v.manifest, granted:granted, context:ctx};
     }
 
     reviewExtra(){
@@ -276,12 +417,21 @@
       return {theme:this.theme(), project:this.projectInfo(), locale:'es', app:{name:'Workhub', protocol:1}};
     }
 
+    /* Evento a todos los marcos vivos (cada uno solo lo recibe si tiene permiso). */
     schedule(name, data){
-      if(!this.active) return;
+      if(!this.active && !this.bg.size) return;
       clearTimeout(this.timers[name]);
       this.timers[name] = setTimeout(() => {
-        if(this.active) this.active.frame.emit(name, data());
+        const value = data();
+        this.frames().forEach((f) => f.emit(name, value));
       }, EVENT_DELAY_MS);
+    }
+
+    /* Otra instancia del mismo plugin cambió su almacenamiento. */
+    notifyStorage(pluginId, from, key, scope){
+      this.frames().forEach((f) => {
+        if(f !== from && f.manifest && f.manifest.id === pluginId) f.emit('storage', {key:key, scope:scope === 'user' ? 'user' : 'project'});
+      });
     }
 
     onProjectChange(){
@@ -294,9 +444,18 @@
       return ProjectModel.scope(this.app.rootDb, this.app.projectId);
     }
 
-    api(p, method, params){
+    /* scope 'user': común a todos los proyectos; si no, el proyecto abierto. */
+    bucket(pluginId, scope){
+      return scope === 'user'
+        ? PluginModel.userBucket(this.app.rootDb, pluginId)
+        : PluginModel.projectBucket(this.db(), pluginId);
+    }
+
+    api(p, method, params, frame){
       const m = this.m;
-      const name = (p.manifest || {}).name || p.id;
+      const manifest = this.manifestOf(p);
+      const name = manifest.name || p.id;
+      const who = {id:p.id, name:name, hue:typeof manifest.color === 'number' ? manifest.color : null};
       switch(method){
         case 'app.statuses':
           return TaskModel.STATUS.map((s) => ({key:s.key, label:s.label}));
@@ -311,10 +470,19 @@
         case 'meetings.list':
           return m.meetings.items.map(cleanMeeting);
         case 'meetings.create': return this.createMeeting(params);
-        case 'storage.get': return PluginModel.storageGet(this.db(), p.id, params.key);
-        case 'storage.set': return this.serial(p.id, () => PluginModel.storageSet(this.db(), p.id, params.key, params.value)).then(() => true);
-        case 'storage.remove': return this.serial(p.id, () => PluginModel.storageRemove(this.db(), p.id, params.key)).then(() => true);
-        case 'storage.keys': return PluginModel.storageKeys(this.db(), p.id);
+        case 'storage.get': return PluginModel.storageGet(this.bucket(p.id, params.scope), params.key);
+        case 'storage.set': return this.serial(p.id, () => PluginModel.storageSet(this.bucket(p.id, params.scope), params.key, params.value))
+          .then(() => { this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
+        case 'storage.remove': return this.serial(p.id, () => PluginModel.storageRemove(this.bucket(p.id, params.scope), params.key))
+          .then(() => { this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
+        case 'ui.openPanel':
+          this.open(p.id);
+          return true;
+        case 'ui.addButton': return extensions.addButton(who, frame, params);
+        case 'ui.removeButton': return extensions.removeButton(p.id, String(params.id || ''));
+        case 'ui.setTaskBadges': return extensions.setTaskBadges(who, params.badges);
+        case 'ui.setAppearance': return this.setAppearance(p.id, params);
+        case 'storage.keys': return PluginModel.storageKeys(this.bucket(p.id, params.scope));
         case 'ui.toast': {
           const msg = str(params.message, 140);
           if(!msg) throw fail('bad-params', 'Falta el mensaje.');

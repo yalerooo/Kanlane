@@ -83,6 +83,10 @@
 
     /* ctx: {contacts, vault} */
     render(t, ctx){
+      /* Botones que añaden los plugins a la ficha (reciben el id de la tarea). */
+      const slot = document.getElementById('tvExtSlot');
+      slot.setAttribute('data-ext-context', JSON.stringify({taskId:t.id}));
+      Workhub.views.extensions.fillSlots(slot.parentNode);
       this.taskId = t.id;
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);

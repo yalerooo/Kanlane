@@ -4,12 +4,12 @@
   var MANIFEST = {
     id: 'workhub.informe',
     name: 'Informe de trabajo',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.',
     author: 'Workhub',
     icon: 'chart',
     color: 238,
-    permissions: ['tasks:read']
+    permissions: ['tasks:read', 'ui:extend']
   };
   var STATUS_COLORS = {pendiente:'var(--st-pend)', proceso:'var(--st-proc)', espera:'var(--st-wait)', completada:'var(--st-done)'};
 
@@ -136,8 +136,15 @@
     });
   }
 
+  function background(){
+    wh.ui.addButton({id:'open', location:'tasks.toolbar', label:'Informe', icon:'chart', tooltip:'Ver el informe de trabajo'});
+    wh.ui.addButton({id:'open-cmd', location:'command', label:'Ver informe de trabajo', icon:'chart'});
+    wh.on('action', function(){ wh.ui.openPanel(); });
+  }
+
   WorkhubPlugin.connect(MANIFEST).then(function(client){
     wh = client;
+    if(wh.isBackground){ background(); throw 'background'; }
     return Promise.all([wh.statuses(), wh.tasks.list()]);
   }).then(function(res){
     statuses = res[0];
@@ -145,6 +152,7 @@
     render();
     wh.on('tasks', function(list){ tasks = list; render(); });
   }).catch(function(err){
+    if(err === 'background') return;
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
       ? 'Este plugin se abre desde Workhub (sección Plugins).'
       : 'No se pudo conectar con Workhub: ' + err.message;

@@ -272,25 +272,15 @@
   <section id="viewPlugins" hidden>
     <div id="pluginsHome">
       <p class="plugin-file-notice" id="pluginsFileNotice" hidden><strong>Los plugins no funcionan al abrir Workhub como archivo.</strong> El navegador no deja que una página aislada cargue archivos del disco. Abre Workhub con <code>start-workhub.bat</code> (o desde tu web publicada) para usarlos.</p>
-      <div class="plugin-add-card">
-        <div class="plugin-add-text">
-          <h2>Añadir un plugin por enlace</h2>
-          <p>Pega la dirección de la página del plugin. Antes de instalarlo verás quién lo ha hecho y qué permisos pide.</p>
+      <form class="plugin-add" id="formPluginUrl">
+        <div class="plugin-add-field">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="url" id="pluginUrl" placeholder="Pega el enlace de un plugin (https://…)" aria-label="Enlace del plugin" autocomplete="off" spellcheck="false">
         </div>
-        <form class="plugin-add" id="formPluginUrl">
-          <div class="plugin-add-field">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            <input type="url" id="pluginUrl" placeholder="https://…/mi-plugin/index.html" aria-label="Enlace del plugin" autocomplete="off" spellcheck="false">
-          </div>
-          <button type="submit" class="btn btn-primary">Añadir</button>
-        </form>
-        <p class="plugin-url-msg" id="pluginUrlMsg" role="status" hidden></p>
-        <p class="plugin-add-foot">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-          <span>Cada plugin se ejecuta aislado y nunca ve tus contraseñas.</span>
-          <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Crear un plugin</a>
-        </p>
-      </div>
+        <button type="submit" class="btn btn-primary">Añadir</button>
+      </form>
+      <p class="plugin-url-msg" id="pluginUrlMsg" role="status" hidden></p>
+      <p class="plugin-add-hint">Cada plugin se ejecuta aislado: solo ve lo que le permitas y nunca tus contraseñas. <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Crear un plugin</a></p>
 
       <div class="plugins-head"><h2>Instalados</h2><span class="plugins-count" id="pluginsInstalledCount"></span></div>
       <div class="plugins-empty" id="pluginsInstalledEmpty">

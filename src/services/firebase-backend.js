@@ -18,6 +18,8 @@
   let fb = null;        /* espacio de nombres firebase */
   let auth = null;
   let firestore = null;
+  /* Borrado de la caché local en curso (ver clearLocalCache). */
+  let clearing = Promise.resolve();
 
   function config(){
     return window.WORKHUB_FIREBASE || {};
@@ -69,10 +71,46 @@
       if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
         auth.useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
         firestore.useEmulator('127.0.0.1', 8080);
-      } else {
-        /* Caché local: carga instantánea y funciona sin conexión un rato. */
-        firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
       }
+    });
+  }
+
+  /* Sin sesión no debe quedar nada en el dispositivo: se borra la copia local
+     de Firestore (la de la última cuenta que usó este navegador). Solo se puede
+     antes de empezar a usar Firestore, por eso se hace al arrancar sin sesión y
+     no al cerrar sesión (que recarga la página). Si otra pestaña la tiene
+     abierta, falla sin más y se borrará en la próxima carga. */
+  function clearLocalCache(){
+    clearing = firestore.clearPersistence().catch(() => {});
+    return clearing;
+  }
+
+  /* Al entrar: caché local (carga instantánea y aguanta cortes de conexión). */
+  function startSession(){
+    return clearing.then(() => {
+      firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
+    });
+  }
+
+  /* Las cuentas de correo y contraseña tienen que verificar el correo antes
+     de leer o guardar datos (lo exige firestore.rules). Google y GitHub no. */
+  function needsVerification(user){
+    const providers = (user.providerData || []).map((p) => p.providerId);
+    return !user.emailVerified && providers.length > 0 && providers.every((id) => id === 'password');
+  }
+
+  function sendVerification(){
+    return auth.currentUser ? auth.currentUser.sendEmailVerification() : Promise.resolve();
+  }
+
+  /* Tras pulsar el enlace del correo: recarga el usuario y renueva el token
+     (el servidor solo ve email_verified en un token nuevo). */
+  function refreshVerification(){
+    const user = auth.currentUser;
+    if(!user) return Promise.resolve(false);
+    return user.reload().then(() => {
+      if(!auth.currentUser.emailVerified) return false;
+      return auth.currentUser.getIdToken(true).then(() => true);
     });
   }
 
@@ -125,8 +163,10 @@
 
   function signUpWithEmail(email, password, name){
     return auth.createUserWithEmailAndPassword(email, password).then((cred) => {
-      if(name && cred.user) return cred.user.updateProfile({displayName:name}).then(() => cred);
-      return cred;
+      const profile = name && cred.user ? cred.user.updateProfile({displayName:name}) : Promise.resolve();
+      /* Si el correo de verificación falla (p. ej. demasiados envíos), se puede
+         reenviar desde la pantalla de verificación. */
+      return profile.then(() => sendVerification().catch(() => {})).then(() => cred);
     });
   }
 
@@ -252,7 +292,10 @@
 
   Workhub.services.firebase = {
     isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
-    resetPassword, signOut, install,
-    providers: () => (config().providers || ['google']).slice()
+    resetPassword, signOut, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
+    currentUser: () => auth.currentUser,
+    providers: () => (config().providers || ['google']).slice(),
+    /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */
+    allowSignup: () => config().allowSignup !== false
   };
 })();

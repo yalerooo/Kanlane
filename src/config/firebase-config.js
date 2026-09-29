@@ -26,6 +26,11 @@ window.WORKHUB_FIREBASE = {
      Posibles: 'google', 'github', 'microsoft', 'apple', 'password'. */
   providers: ['google', 'github', 'password'],
 
+  /* true: cualquiera puede crearse una cuenta ("Crear una cuenta" en la
+     pantalla de acceso). Con false se oculta ese enlace; para cerrar el
+     registro del todo, desactívalo también en la consola (ver docs/SEGURIDAD.md). */
+  allowSignup: true,
+
   /* Solo para desarrollo: con true, en localhost se usan los emuladores de
      Firebase (firebase emulators:start) en lugar del proyecto real. */
   useEmulators: false

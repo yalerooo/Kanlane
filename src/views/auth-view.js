@@ -41,6 +41,7 @@
       this.switchLink = $('authSwitchLink');
       this.mode = 'signin';
       this.hasPassword = true;
+      this.allowSignup = true;
 
       this.accountBox = $('accountBox');
       this.accountAvatar = $('accountAvatar');
@@ -88,7 +89,7 @@
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.loading.hidden = false;
-      this.loading.classList.remove('is-error');
+      this.loading.classList.remove('is-error', 'is-verify');
       this.loading.innerHTML = '<span class="spinner" aria-hidden="true"></span>Cargando…';
       this.panel.hidden = true;
     }
@@ -107,8 +108,9 @@
       this.loading.appendChild(btn);
     }
 
-    /* providers: lista de claves ('google', 'github', …, 'password'). */
-    showSignIn(providers){
+    /* providers: lista de claves ('google', 'github', …, 'password').
+       allowSignup: false oculta "Crear una cuenta". */
+    showSignIn(providers, allowSignup){
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.loading.hidden = true;
@@ -121,8 +123,60 @@
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
       this.form.hidden = !this.hasPassword;
-      this.switchWrap.hidden = !this.hasPassword;
+      this.allowSignup = allowSignup !== false;
       this.setMode('signin');
+    }
+
+    /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
+       resend() → Promise<bool>, signOut()} */
+    showVerify(email, handlers){
+      document.body.classList.add('is-authing');
+      this.screen.hidden = false;
+      this.panel.hidden = true;
+      this.loading.hidden = false;
+      this.loading.classList.remove('is-error');
+      this.loading.classList.add('is-verify');
+      this.loading.textContent = '';
+      const title = document.createElement('strong');
+      title.textContent = 'Verifica tu correo';
+      const text = document.createElement('span');
+      text.textContent = 'Te hemos enviado un enlace a ' + (email || 'tu correo') + '. Ábrelo para activar la cuenta y después pulsa "Ya lo he verificado". Si no lo ves, mira en la carpeta de spam.';
+      this.verifyMsg = document.createElement('span');
+      this.verifyMsg.className = 'auth-verify-msg';
+      this.verifyMsg.setAttribute('role', 'status');
+      const actions = document.createElement('div');
+      actions.className = 'auth-noaccess-actions';
+      const check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'btn btn-primary';
+      check.textContent = 'Ya lo he verificado';
+      const resend = document.createElement('button');
+      resend.type = 'button';
+      resend.className = 'btn btn-ghost';
+      resend.textContent = 'Reenviar correo';
+      const out = document.createElement('button');
+      out.type = 'button';
+      out.className = 'btn btn-ghost';
+      out.textContent = 'Usar otra cuenta';
+      check.addEventListener('click', () => {
+        check.disabled = true;
+        handlers.check().then((ok) => {
+          if(!ok) this.showVerifyMessage('Todavía no consta como verificado. Abre el enlace del correo y vuelve a probar.');
+        }, () => this.showVerifyMessage('No se pudo comprobar. Revisa tu conexión.')).finally(() => { check.disabled = false; });
+      });
+      resend.addEventListener('click', () => {
+        resend.disabled = true;
+        handlers.resend().then((ok) => { if(ok) this.showVerifyMessage('Correo reenviado.', true); }).finally(() => { resend.disabled = false; });
+      });
+      out.addEventListener('click', handlers.signOut);
+      actions.append(check, resend, out);
+      this.loading.append(title, text, this.verifyMsg, actions);
+    }
+
+    showVerifyMessage(text, isInfo){
+      if(!this.verifyMsg) return;
+      this.verifyMsg.textContent = text;
+      this.verifyMsg.classList.toggle('is-info', !!isInfo);
     }
 
     hide(){
@@ -146,6 +200,7 @@
       this.forgot.hidden = mode !== 'signin';
       this.providersEl.hidden = mode === 'reset' || !this.providersEl.children.length;
       this.divider.hidden = mode === 'reset' || !this.providersEl.children.length || !this.hasPassword;
+      this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
       this.clearMessage();
     }
 
@@ -170,9 +225,18 @@
       this.accountName.textContent = name;
       this.accountMail.textContent = user.email || '';
       this.accountAvatar.style.setProperty('--h', hueFor(user.uid));
-      this.accountAvatar.innerHTML = user.photoURL
-        ? '<img src="' + esc(user.photoURL) + '" alt="" referrerpolicy="no-referrer">'
-        : esc(initials(name));
+      /* La foto viene del proveedor (Google, GitHub): solo se acepta https. */
+      const photo = Workhub.utils.urls.safeUrl(user.photoURL);
+      this.accountAvatar.textContent = '';
+      if(photo && photo.indexOf('https:') === 0){
+        const img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.src = photo;
+        this.accountAvatar.appendChild(img);
+      } else {
+        this.accountAvatar.textContent = initials(name);
+      }
       this.settingsAccount.hidden = false;
       this.settingsAccountText.textContent = 'Sesión iniciada como ' + (user.email || name) + '.';
     }

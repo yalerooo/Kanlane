@@ -69,7 +69,7 @@ Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual qu
 
 ## Seguridad
 
-Qué protege el código y qué hay que activar en la consola de Firebase (lista de acceso, cerrar el registro, política de contraseñas…): [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
+Qué protege el código y qué hay que activar en la consola de Firebase (verificación de correo, política de contraseñas, dominios autorizados…): [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
 ## Cómo lanzarlo en local
 

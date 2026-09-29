@@ -85,15 +85,33 @@
     return clearing;
   }
 
-  /* Al entrar: caché local (carga instantánea y aguanta cortes de conexión)
-     y comprobación de la lista de acceso. Devuelve 'allowed', 'denied' o
-     'unknown' (sin conexión, o reglas antiguas sin lista: entonces decide
-     el servidor en cada lectura). */
-  function startSession(user){
+  /* Al entrar: caché local (carga instantánea y aguanta cortes de conexión). */
+  function startSession(){
     return clearing.then(() => {
       firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
-      return firestore.collection('allowlist').doc(user.uid).get({source:'server'});
-    }).then((snap) => (snap.exists ? 'allowed' : 'denied'), () => 'unknown');
+    });
+  }
+
+  /* Las cuentas de correo y contraseña tienen que verificar el correo antes
+     de leer o guardar datos (lo exige firestore.rules). Google y GitHub no. */
+  function needsVerification(user){
+    const providers = (user.providerData || []).map((p) => p.providerId);
+    return !user.emailVerified && providers.length > 0 && providers.every((id) => id === 'password');
+  }
+
+  function sendVerification(){
+    return auth.currentUser ? auth.currentUser.sendEmailVerification() : Promise.resolve();
+  }
+
+  /* Tras pulsar el enlace del correo: recarga el usuario y renueva el token
+     (el servidor solo ve email_verified en un token nuevo). */
+  function refreshVerification(){
+    const user = auth.currentUser;
+    if(!user) return Promise.resolve(false);
+    return user.reload().then(() => {
+      if(!auth.currentUser.emailVerified) return false;
+      return auth.currentUser.getIdToken(true).then(() => true);
+    });
   }
 
   function onAuthChange(cb){
@@ -145,8 +163,10 @@
 
   function signUpWithEmail(email, password, name){
     return auth.createUserWithEmailAndPassword(email, password).then((cred) => {
-      if(name && cred.user) return cred.user.updateProfile({displayName:name}).then(() => cred);
-      return cred;
+      const profile = name && cred.user ? cred.user.updateProfile({displayName:name}) : Promise.resolve();
+      /* Si el correo de verificación falla (p. ej. demasiados envíos), se puede
+         reenviar desde la pantalla de verificación. */
+      return profile.then(() => sendVerification().catch(() => {})).then(() => cred);
     });
   }
 
@@ -272,7 +292,8 @@
 
   Workhub.services.firebase = {
     isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
-    resetPassword, signOut, install, clearLocalCache, startSession,
+    resetPassword, signOut, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
+    currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),
     /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */
     allowSignup: () => config().allowSignup !== false

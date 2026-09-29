@@ -144,7 +144,7 @@
       return {
         title: this.fields.title.value.trim(),
         desc: this.fields.desc.value.trim(),
-        cliente: this.cliente.value(),
+        cliente: this.cliente.value() || '',
         status: this.fields.estado.value,
         contacto: this.fields.contacto.value.trim(),
         dueDate: this.fields.fecha.value || ''
@@ -156,7 +156,7 @@
       this.resetNoteForm();
       this.fields.id.value = '';
       this.title.textContent = 'Nueva tarea';
-      this.fields.estado.value = status || 'pendiente';
+      this.fields.estado.value = status || Workhub.models.TaskModel.STATUS[0].key;
       this.cliente.reset(clientNames, defaultCliente);
       this.notesSection.hidden = true;
       this.linksSection.hidden = true;
@@ -171,7 +171,7 @@
       this.title.textContent = 'Editar tarea';
       this.fields.title.value = t.title || '';
       this.fields.desc.value = t.desc || '';
-      this.fields.estado.value = t.status || 'pendiente';
+      this.fields.estado.value = Workhub.models.TaskModel.stageKey(t);
       this.fields.contacto.value = t.contacto || '';
       this.fields.fecha.value = t.dueDate || '';
       this.cliente.reset(clientNames, t.cliente || '');

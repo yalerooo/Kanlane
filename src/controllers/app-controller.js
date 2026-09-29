@@ -160,6 +160,7 @@
           return;
         }
         this.rootDb = db;
+        this.models.settings.connect(db);
         this.models.projects.connect(db);
         this.connectProject();
 

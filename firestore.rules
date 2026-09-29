@@ -25,8 +25,10 @@ service cloud.firestore {
 
     match /users/{uid} {
       // Proyecto principal: sus datos cuelgan directamente de users/{uid}.
+      // 'settings' guarda las preferencias del usuario (color, tema), comunes
+      // a todos sus proyectos.
       match /{col}/{docId} {
-        allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets']);
+        allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings']);
       }
       match /tasks/{taskId}/notes/{noteId} {
         allow read, write: if canUse(uid);

@@ -23,8 +23,28 @@
     permissions: ['tasks:read', 'storage', 'ui:extend']
   };
   var MAX_SESSIONS = 300;
+  var tr = WorkhubPlugin.translations({en:{
+    'No se pudo guardar: {error}':'Could not save: {error}',
+    'En marcha · {time}':'Running · {time}', 'Detener · {time}':'Stop · {time}',
+    'Detener el cronómetro':'Stop the timer', 'Detener el cronómetro de «{task}»':'Stop the timer for “{task}”',
+    'Detener cronómetro':'Stop timer', 'Iniciar cronómetro':'Start timer', 'Medir el tiempo de esta tarea':'Track time on this task',
+    'Abrir temporizador':'Open timer', 'Ya está contando en «{task}»':'Already tracking “{task}”',
+    'Guardados {time} en «{task}». ':'Saved {time} on “{task}”. ', 'Contando en «{task}»':'Tracking “{task}”',
+    'Guardado: {time}':'Saved: {time}', 'Guardado: {time} en «{task}»':'Saved: {time} on “{task}”',
+    '¿Seguro? Pulsa otra vez':'Sure? Click again', 'Temporizador':'Timer',
+    'También puedes iniciarlo desde la ficha de cualquier tarea.':'You can also start it from any task’s details.',
+    'Contando en':'Tracking', 'una tarea que ya no existe':'a task that no longer exists', 'Detener y guardar':'Stop and save',
+    'No hay tareas abiertas en este proyecto.':'There are no open tasks in this project.',
+    'Tarea':'Task', 'Elige una tarea…':'Choose a task…', 'Empezar':'Start', 'Sin cliente':'No client',
+    'Total':'Total', 'últimos 7 días':'last 7 days', 'Borrar tiempos':'Clear times', 'Por tarea':'By task', 'Por cliente':'By client',
+    'Tarea eliminada':'Deleted task', 'Aún no has medido tiempo. Elige una tarea y pulsa Empezar.':'You haven’t tracked any time yet. Choose a task and click Start.',
+    'Conectando con Workhub…':'Connecting to Workhub…',
+    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
+    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+  }});
 
   var app = document.getElementById('app');
+  document.getElementById('status').textContent = tr('Conectando con Workhub…');
   var wh = null, tasks = [], running = null, totals = {}, sessions = [], tick = null, selected = '';
 
   function esc(s){
@@ -41,7 +61,7 @@
     return Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0') + ' min';
   }
   function task(id){ return tasks.find(function(t){ return t.id === id; }); }
-  function fail(err){ wh.ui.toast('No se pudo guardar: ' + err.message, {type:'error'}); }
+  function fail(err){ wh.ui.toast(tr('No se pudo guardar: {error}', {error:err.message}), {type:'error'}); }
 
   /* ---------- Datos (compartidos por panel y segundo plano) ---------- */
 
@@ -80,11 +100,11 @@
     });
     if(running){
       var elapsed = Date.now() - running.startedAt + (totals[running.taskId] || 0);
-      badges[running.taskId] = {text:'En marcha · ' + human(elapsed), icon:'timer', tone:'accent'};
+      badges[running.taskId] = {text:tr('En marcha · {time}', {time:human(elapsed)}), icon:'timer', tone:'accent'};
       var t = task(running.taskId);
-      var label = 'Detener · ' + human(Date.now() - running.startedAt);
-      wh.ui.addButton({id:'stop', location:'tasks.toolbar', label:label, icon:'timer', variant:'primary', tooltip:'Detener el cronómetro' + (t ? ' de «' + t.title + '»' : '')});
-      wh.ui.addButton({id:'stop-cmd', location:'command', label:'Detener cronómetro', icon:'timer'});
+      var label = tr('Detener · {time}', {time:human(Date.now() - running.startedAt)});
+      wh.ui.addButton({id:'stop', location:'tasks.toolbar', label:label, icon:'timer', variant:'primary', tooltip:t ? tr('Detener el cronómetro de «{task}»', {task:t.title}) : tr('Detener el cronómetro')});
+      wh.ui.addButton({id:'stop-cmd', location:'command', label:tr('Detener cronómetro'), icon:'timer'});
     } else {
       wh.ui.removeButton('stop');
       wh.ui.removeButton('stop-cmd');
@@ -93,25 +113,25 @@
   }
 
   function background(){
-    wh.ui.addButton({id:'start', location:'task.actions', label:'Iniciar cronómetro', icon:'timer', tooltip:'Medir el tiempo de esta tarea'});
-    wh.ui.addButton({id:'open-cmd', location:'command', label:'Abrir temporizador', icon:'timer'});
+    wh.ui.addButton({id:'start', location:'task.actions', label:tr('Iniciar cronómetro'), icon:'timer', tooltip:tr('Medir el tiempo de esta tarea')});
+    wh.ui.addButton({id:'open-cmd', location:'command', label:tr('Abrir temporizador'), icon:'timer'});
 
     wh.on('action', function(ev){
       if(ev.id === 'start'){
         var t = task(ev.context.taskId);
         if(!t) return;
-        if(running && running.taskId === t.id){ wh.ui.toast('Ya está contando en «' + t.title + '»'); return; }
+        if(running && running.taskId === t.id){ wh.ui.toast(tr('Ya está contando en «{task}»', {task:t.title})); return; }
         var prev = running && task(running.taskId);
         stop().then(function(ms){
           return start(t.id).then(function(){
-            wh.ui.toast((prev ? 'Guardados ' + human(ms) + ' en «' + prev.title + '». ' : '') + 'Contando en «' + t.title + '»');
+            wh.ui.toast((prev ? tr('Guardados {time} en «{task}». ', {time:human(ms), task:prev.title}) : '') + tr('Contando en «{task}»', {task:t.title}));
             refreshUi();
           });
         }).catch(fail);
       } else if(ev.id === 'stop' || ev.id === 'stop-cmd'){
         var rt = running && task(running.taskId);
         stop().then(function(ms){
-          wh.ui.toast('Guardado: ' + human(ms) + (rt ? ' en «' + rt.title + '»' : ''));
+          wh.ui.toast(rt ? tr('Guardado: {time} en «{task}»', {time:human(ms), task:rt.title}) : tr('Guardado: {time}', {time:human(ms)}));
           refreshUi();
         }).catch(fail);
       } else if(ev.id === 'open-cmd'){
@@ -134,7 +154,7 @@
     if(!resetArmed){
       resetArmed = true;
       var b = document.getElementById('reset');
-      if(b) b.textContent = '¿Seguro? Pulsa otra vez';
+      if(b) b.textContent = tr('¿Seguro? Pulsa otra vez');
       setTimeout(function(){ resetArmed = false; render(); }, 4000);
       return;
     }
@@ -152,38 +172,38 @@
   function render(){
     if(running) selected = running.taskId;
     var open = tasks.filter(function(t){ return t.status !== 'completada' || t.id === selected; })
-      .sort(function(a, b){ return (a.cliente || '').localeCompare(b.cliente || '', 'es') || a.title.localeCompare(b.title, 'es'); });
+      .sort(function(a, b){ return (a.cliente || '').localeCompare(b.cliente || '', WorkhubPlugin.lang) || a.title.localeCompare(b.title, WorkhubPlugin.lang); });
     var elapsed = running ? Date.now() - running.startedAt : 0;
     var rt = running && task(running.taskId);
-    var html = '<h1>Temporizador</h1><p class="wh-muted">' + esc((wh.context.project || {}).name || '') +
-      ' · También puedes iniciarlo desde la ficha de cualquier tarea.</p>' +
+    var html = '<h1>' + tr('Temporizador') + '</h1><p class="wh-muted">' + esc((wh.context.project || {}).name || '') +
+      ' · ' + tr('También puedes iniciarlo desde la ficha de cualquier tarea.') + '</p>' +
       '<div class="timer"><div class="clock' + (running ? ' is-running' : '') + '" id="clock">' + hms(elapsed) + '</div>';
     if(running){
-      html += '<div class="running-on">Contando en <b>' + esc(rt ? rt.title : 'una tarea que ya no existe') + '</b>' + (rt && rt.cliente ? ' · ' + esc(rt.cliente) : '') + '</div>' +
-        '<button class="wh-btn is-primary" id="toggle">Detener y guardar</button>';
+      html += '<div class="running-on">' + tr('Contando en') + ' <b>' + esc(rt ? rt.title : tr('una tarea que ya no existe')) + '</b>' + (rt && rt.cliente ? ' · ' + esc(rt.cliente) : '') + '</div>' +
+        '<button class="wh-btn is-primary" id="toggle">' + tr('Detener y guardar') + '</button>';
     } else if(!open.length){
-      html += '<div class="running-on">No hay tareas abiertas en este proyecto.</div>';
+      html += '<div class="running-on">' + tr('No hay tareas abiertas en este proyecto.') + '</div>';
     } else {
-      html += '<select class="wh-select" id="task" aria-label="Tarea"><option value="">Elige una tarea…</option>' +
+      html += '<select class="wh-select" id="task" aria-label="' + tr('Tarea') + '"><option value="">' + tr('Elige una tarea…') + '</option>' +
         open.map(function(t){ return '<option value="' + esc(t.id) + '"' + (t.id === selected ? ' selected' : '') + '>' + esc((t.cliente ? t.cliente + ' — ' : '') + t.title) + '</option>'; }).join('') +
-        '</select><button class="wh-btn is-primary" id="toggle"' + (selected ? '' : ' disabled') + '>Empezar</button>';
+        '</select><button class="wh-btn is-primary" id="toggle"' + (selected ? '' : ' disabled') + '>' + tr('Empezar') + '</button>';
     }
     html += '</div>';
 
     var ids = Object.keys(totals).filter(function(id){ return totals[id] > 0; }).sort(function(a, b){ return totals[b] - totals[a]; });
     if(ids.length){
       var byClient = {};
-      ids.forEach(function(id){ var t = task(id); var c = (t && t.cliente) || 'Sin cliente'; byClient[c] = (byClient[c] || 0) + totals[id]; });
+      ids.forEach(function(id){ var t = task(id); var c = (t && t.cliente) || tr('Sin cliente'); byClient[c] = (byClient[c] || 0) + totals[id]; });
       var sum = ids.reduce(function(n, id){ return n + totals[id]; }, 0);
-      html += '<div class="wh-row" style="justify-content:space-between"><p class="wh-muted">Total: <b>' + human(sum) + '</b> · últimos 7 días: <b>' + human(weekTotal()) + '</b></p>' +
-        '<button class="wh-btn is-danger" id="reset">Borrar tiempos</button></div>' +
-        '<div class="cols"><div class="section"><h2>Por tarea</h2><div class="table-wrap"><table class="wh-table"><tbody>' +
-        ids.map(function(id){ var t = task(id); return '<tr><td>' + esc(t ? t.title : 'Tarea eliminada') + '<div class="wh-muted">' + esc(t ? t.cliente : '') + '</div></td><td class="num">' + human(totals[id]) + '</td></tr>'; }).join('') +
-        '</tbody></table></div></div><div class="section"><h2>Por cliente</h2><div class="table-wrap"><table class="wh-table"><tbody>' +
+      html += '<div class="wh-row" style="justify-content:space-between"><p class="wh-muted">' + tr('Total') + ': <b>' + human(sum) + '</b> · ' + tr('últimos 7 días') + ': <b>' + human(weekTotal()) + '</b></p>' +
+        '<button class="wh-btn is-danger" id="reset">' + tr('Borrar tiempos') + '</button></div>' +
+        '<div class="cols"><div class="section"><h2>' + tr('Por tarea') + '</h2><div class="table-wrap"><table class="wh-table"><tbody>' +
+        ids.map(function(id){ var t = task(id); return '<tr><td>' + esc(t ? t.title : tr('Tarea eliminada')) + '<div class="wh-muted">' + esc(t ? t.cliente : '') + '</div></td><td class="num">' + human(totals[id]) + '</td></tr>'; }).join('') +
+        '</tbody></table></div></div><div class="section"><h2>' + tr('Por cliente') + '</h2><div class="table-wrap"><table class="wh-table"><tbody>' +
         Object.keys(byClient).sort(function(a, b){ return byClient[b] - byClient[a]; }).map(function(c){ return '<tr><td>' + esc(c) + '</td><td class="num">' + human(byClient[c]) + '</td></tr>'; }).join('') +
         '</tbody></table></div></div></div>';
     } else {
-      html += '<div class="wh-empty">Aún no has medido tiempo. Elige una tarea y pulsa Empezar.</div>';
+      html += '<div class="wh-empty">' + tr('Aún no has medido tiempo. Elige una tarea y pulsa Empezar.') + '</div>';
     }
     app.innerHTML = html;
 
@@ -193,7 +213,7 @@
     if(toggle) toggle.onclick = function(){
       if(running){
         var t = task(running.taskId);
-        stop().then(function(ms){ wh.ui.toast('Guardado: ' + human(ms) + (t ? ' en «' + t.title + '»' : '')); }).catch(fail);
+        stop().then(function(ms){ wh.ui.toast(t ? tr('Guardado: {time} en «{task}»', {time:human(ms), task:t.title}) : tr('Guardado: {time}', {time:human(ms)})); }).catch(fail);
       } else if(selected){
         start(selected).catch(fail);
       }
@@ -228,7 +248,7 @@
     else panel();
   }).catch(function(err){
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? 'Este plugin se abre desde Workhub (sección Plugins).'
-      : 'No se pudo conectar con Workhub: ' + err.message;
+      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
+      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
   });
 })();

@@ -169,7 +169,7 @@
     /* buckets: {'AAAA-MM-DD': {tasks, meetings}} */
     render(year, month, selected, buckets){
       const first = new Date(year, month, 1);
-      this.monthLabel.textContent = capitalize(first.toLocaleDateString('es-ES', {month:'long', year:'numeric'}));
+      this.monthLabel.textContent = capitalize(first.toLocaleDateString(Workhub.i18n.locale, {month:'long', year:'numeric'}));
       const offset = (first.getDay() + 6) % 7;
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
@@ -316,7 +316,7 @@
 
   function meetingChipHtml(m){
     return '<span class="cal-chip is-meeting" draggable="true" data-kind="meeting" data-id="' + esc(m.id) + '" title="' + esc(MeetingModel.timeText(m) + ' · ' + m.title) + '">' +
-      (m.start ? '<b>' + esc(m.start) + '</b> ' : '') + esc(m.title) + '</span>';
+      (m.start ? '<b>' + esc(m.start) + '</b> ' : '') + '<span translate="no">' + esc(m.title) + '</span></span>';
   }
 
   function agendaMeetingHtml(m){
@@ -324,7 +324,7 @@
     const meta = [platformOf(m.link), m.cliente].filter(Boolean).join(' · ');
     return '<div class="agenda-item is-meeting" data-kind="meeting" data-id="' + esc(m.id) + '">' +
       '<div class="agenda-time">' + esc(MeetingModel.timeText(m)) + '</div>' +
-      '<div class="agenda-main"><div class="agenda-title">' + esc(m.title) + '</div>' +
+      '<div class="agenda-main"><div class="agenda-title" translate="no">' + esc(m.title) + '</div>' +
       (meta ? '<div class="agenda-meta">' + esc(meta) + '</div>' : '') + '</div>' +
       (url ? '<a class="btn btn-primary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" data-join="1">Unirse</a>' : '') +
       '</div>';
@@ -337,7 +337,7 @@
     const meta = [s.label, t.cliente].filter(Boolean).join(' · ');
     return '<div class="agenda-item is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '') + '" data-kind="task" data-id="' + esc(t.id) + '">' +
       '<div class="agenda-time"><span class="dot" style="background:' + (ds === 'overdue' ? 'var(--danger)' : s.dot) + '"></span>' + label + '</div>' +
-      '<div class="agenda-main"><div class="agenda-title">' + esc(t.title) + '</div>' +
+      '<div class="agenda-main"><div class="agenda-title" translate="no">' + esc(t.title) + '</div>' +
       '<div class="agenda-meta">' + esc(meta) + '</div></div>' +
       '</div>';
   }

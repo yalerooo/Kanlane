@@ -39,3 +39,6 @@ svg{flex:none;}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{transition:none!important;animation:none!important;}
 }
+
+/* Mientras se traduce la página (ver src/boot.js). */
+html.i18n-pending body{visibility:hidden;}

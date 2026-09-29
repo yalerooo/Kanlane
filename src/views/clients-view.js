@@ -203,7 +203,7 @@
       if(!orphan && e.stats.open) meta += ' · ' + plural(e.stats.open, 'tarea abierta', 'tareas abiertas');
       return '<button type="button" class="crm-item' + (orphan ? ' is-orphan' : '') + '" role="option" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '" data-client="' + esc(e.id) + '"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' +
         '<span class="avatar is-square is-sm' + (orphan ? ' is-lock' : '') + '" aria-hidden="true">' + (orphan ? '?' : esc(initials(e.nombre))) + '</span>' +
-        '<span class="crm-item-text"><span class="crm-item-name">' + (orphan ? esc(e.nombre) : highlight(e.nombre, q)) + '</span>' +
+        '<span class="crm-item-text"><span class="crm-item-name" translate="no">' + (orphan ? esc(e.nombre) : highlight(e.nombre, q)) + '</span>' +
         '<span class="crm-item-meta">' + esc(meta) + '</span></span>' +
         '</button>';
     }
@@ -232,7 +232,7 @@
           (orphan
             ? '<span class="avatar is-square is-lock" aria-hidden="true">?</span>'
             : '<button type="button" class="avatar is-square avatar-btn" data-action="toggle-color" aria-label="Cambiar color de ' + esc(e.nombre) + '" aria-expanded="' + !!state.colorOpen + '" title="Cambiar color">' + esc(initials(e.nombre)) + '</button>') +
-          '<div class="crm-title"><h2>' + esc(e.nombre) + '</h2><p>' + esc(meta) + '</p></div>' +
+          '<div class="crm-title"><h2 translate="no">' + esc(e.nombre) + '</h2><p>' + esc(meta) + '</p></div>' +
           (orphan ? '' :
             '<div class="crm-head-actions">' +
             '<button type="button" class="icon-only' + (state.colorOpen ? ' is-active' : '') + '" data-action="toggle-color" aria-label="Color" aria-expanded="' + !!state.colorOpen + '" title="Color">' + COLOR_ICON + '</button>' +
@@ -283,7 +283,7 @@
     const notas = c.notas ? '<p class="person-notes">' + highlight(c.notas, q) + '</p>' : '';
     return '<div class="person" data-action="open-contact" data-id="' + esc(c.id) + '" tabindex="0" role="button" aria-label="Editar contacto ' + esc(name) + '">' +
       '<span class="avatar is-sm" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
-      '<div class="person-main"><strong>' + highlight(name, q) + '</strong>' +
+      '<div class="person-main" translate="no"><strong>' + highlight(name, q) + '</strong>' +
       (email || tel ? '<div class="person-lines">' + email + tel + '</div>' : '') + notas + '</div>' +
       '<span class="person-edit" aria-hidden="true">' + EDIT_ICON + '</span>' +
       '</div>';

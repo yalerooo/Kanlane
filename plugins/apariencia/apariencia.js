@@ -19,7 +19,24 @@
   var DENSITY = {compact:{pad:'7px 10px', gap:'4px'}, normal:{pad:'10px 12px', gap:'6px'}, comfortable:{pad:'14px 15px', gap:'10px'}};
   var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
+  var tr = WorkhubPlugin.translations({en:{
+    'No se pudo guardar: {error}':'Could not save: {error}', 'Apariencia':'Appearance',
+    'Los cambios se aplican al momento en todo Workhub y en todos tus proyectos. Mientras este plugin esté instalado, su color manda sobre el elegido en Ajustes.':'Changes apply instantly across Workhub and all your projects. While this plugin is installed, its color overrides the one chosen in Settings.',
+    'Color de acento':'Accent color', 'Botones principales, sección activa y elementos seleccionados.':'Primary buttons, active section and selected items.',
+    'El de Ajustes':'From Settings', 'Otro':'Other', 'Esquinas':'Corners', 'Forma de tarjetas, botones y campos.':'Shape of cards, buttons and fields.',
+    'Rectas':'Sharp', 'Normales':'Normal', 'Redondeadas':'Rounded', 'Densidad':'Density',
+    'Espacio de las tarjetas del tablero, listas y barra lateral.':'Spacing of board cards, lists and sidebar.',
+    'Compacta':'Compact', 'Normal':'Normal', 'Amplia':'Comfortable',
+    'Para volver al aspecto original, restablece o quita el plugin.':'To go back to the original look, reset or remove the plugin.',
+    'Restablecer':'Reset', 'Vista previa':'Preview', 'Cliente':'Client', 'Otro cliente':'Another client',
+    'Preparar propuesta':'Prepare proposal', 'Revisar contrato':'Review contract', 'Nueva tarea':'New task',
+    'Conectando con Workhub…':'Connecting to Workhub…',
+    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
+    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+  }});
+
   var app = document.getElementById('app');
+  document.getElementById('status').textContent = tr('Conectando con Workhub…');
   var wh = null;
   var look = {accent:null, radius:'normal', density:'normal'};
 
@@ -38,12 +55,12 @@
 
   function save(){
     render();
-    wh.storage.user.set('look', look).catch(function(err){ wh.ui.toast('No se pudo guardar: ' + err.message, {type:'error'}); });
+    wh.storage.user.set('look', look).catch(function(err){ wh.ui.toast(tr('No se pudo guardar: {error}', {error:err.message}), {type:'error'}); });
   }
 
   function seg(name, options){
     return '<div class="seg" role="radiogroup">' + options.map(function(o){
-      return '<button type="button" role="radio" aria-checked="' + (look[name] === o[0]) + '" class="' + (look[name] === o[0] ? 'is-on' : '') + '" data-set="' + name + '" data-value="' + o[0] + '">' + o[1] + '</button>';
+      return '<button type="button" role="radio" aria-checked="' + (look[name] === o[0]) + '" class="' + (look[name] === o[0] ? 'is-on' : '') + '" data-set="' + name + '" data-value="' + o[0] + '">' + tr(o[1]) + '</button>';
     }).join('') + '</div>';
   }
 
@@ -51,21 +68,21 @@
     var r = RADIUS[look.radius], d = DENSITY[look.density];
     var pv = '--pv-sm:' + r.sm + 'px;--pv-md:' + r.md + 'px;--pv-lg:' + r.lg + 'px;--pv-xl:' + r.xl + 'px;--pv-pad:' + d.pad + ';--pv-gap:' + d.gap + ';' + (look.accent ? '--pv-accent:' + look.accent + ';' : '');
     app.innerHTML =
-      '<h1>Apariencia</h1><p class="wh-muted">Los cambios se aplican al momento en todo Workhub y en todos tus proyectos. Mientras este plugin esté instalado, su color manda sobre el elegido en Ajustes.</p>' +
+      '<h1>' + tr('Apariencia') + '</h1><p class="wh-muted">' + tr('Los cambios se aplican al momento en todo Workhub y en todos tus proyectos. Mientras este plugin esté instalado, su color manda sobre el elegido en Ajustes.') + '</p>' +
       '<div class="layout"><div>' +
-        '<div class="group"><h2>Color de acento</h2><p>Botones principales, sección activa y elementos seleccionados.</p><div class="swatches">' +
-          '<button type="button" class="sw-default' + (look.accent ? '' : ' is-on') + '" data-accent="">El de Ajustes</button>' +
+        '<div class="group"><h2>' + tr('Color de acento') + '</h2><p>' + tr('Botones principales, sección activa y elementos seleccionados.') + '</p><div class="swatches">' +
+          '<button type="button" class="sw-default' + (look.accent ? '' : ' is-on') + '" data-accent="">' + tr('El de Ajustes') + '</button>' +
           PRESETS.map(function(c){ return '<button type="button" class="sw' + (look.accent === c ? ' is-on' : '') + '" style="background:' + c + ';--sw:' + c + '" data-accent="' + c + '" aria-label="' + c + '">' + (look.accent === c ? CHECK : '') + '</button>'; }).join('') +
-          '<label class="custom">Otro<input type="color" id="custom" value="' + (look.accent || '#2F6BFF') + '"></label>' +
+          '<label class="custom">' + tr('Otro') + '<input type="color" id="custom" value="' + (look.accent || '#2F6BFF') + '"></label>' +
         '</div></div>' +
-        '<div class="group"><h2>Esquinas</h2><p>Forma de tarjetas, botones y campos.</p>' + seg('radius', [['sharp', 'Rectas'], ['normal', 'Normales'], ['round', 'Redondeadas']]) + '</div>' +
-        '<div class="group"><h2>Densidad</h2><p>Espacio de las tarjetas del tablero, listas y barra lateral.</p>' + seg('density', [['compact', 'Compacta'], ['normal', 'Normal'], ['comfortable', 'Amplia']]) + '</div>' +
-        '<div class="foot"><span class="wh-muted">Para volver al aspecto original, restablece o quita el plugin.</span><button type="button" class="wh-btn" id="reset">Restablecer</button></div>' +
+        '<div class="group"><h2>' + tr('Esquinas') + '</h2><p>' + tr('Forma de tarjetas, botones y campos.') + '</p>' + seg('radius', [['sharp', 'Rectas'], ['normal', 'Normales'], ['round', 'Redondeadas']]) + '</div>' +
+        '<div class="group"><h2>' + tr('Densidad') + '</h2><p>' + tr('Espacio de las tarjetas del tablero, listas y barra lateral.') + '</p>' + seg('density', [['compact', 'Compacta'], ['normal', 'Normal'], ['comfortable', 'Amplia']]) + '</div>' +
+        '<div class="foot"><span class="wh-muted">' + tr('Para volver al aspecto original, restablece o quita el plugin.') + '</span><button type="button" class="wh-btn" id="reset">' + tr('Restablecer') + '</button></div>' +
       '</div>' +
-      '<div class="preview"><h2>Vista previa</h2><div class="pv-col" style="' + pv + '">' +
-        '<div class="pv-card"><span class="pv-chip">Cliente</span><b>Preparar propuesta</b></div>' +
-        '<div class="pv-card"><span class="pv-chip">Otro cliente</span><b>Revisar contrato</b></div>' +
-        '<button class="pv-btn" type="button" tabindex="-1">Nueva tarea</button>' +
+      '<div class="preview"><h2>' + tr('Vista previa') + '</h2><div class="pv-col" style="' + pv + '">' +
+        '<div class="pv-card"><span class="pv-chip">' + tr('Cliente') + '</span><b>' + tr('Preparar propuesta') + '</b></div>' +
+        '<div class="pv-card"><span class="pv-chip">' + tr('Otro cliente') + '</span><b>' + tr('Revisar contrato') + '</b></div>' +
+        '<button class="pv-btn" type="button" tabindex="-1">' + tr('Nueva tarea') + '</button>' +
       '</div></div></div>';
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-accent]'), function(b){
@@ -94,7 +111,7 @@
     }
   }).catch(function(err){
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? 'Este plugin se abre desde Workhub (sección Plugins).'
-      : 'No se pudo conectar con Workhub: ' + err.message;
+      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
+      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
   });
 })();

@@ -7,8 +7,21 @@
   const RECOVERY_KEY_BYTES = 32;
 
   function recoveryFileText(key){
+    const when = new Date().toLocaleString(Workhub.i18n.locale);
+    if(Workhub.i18n.lang === 'en'){
+      return 'RECOVERY KEY - Workhub\n' +
+        'Generated: ' + when + '\n\n' +
+        'This key lets you reset the master password of this board\'s password\n' +
+        'manager if you forget it. Keep it somewhere safe (do not share it or\n' +
+        'upload it anywhere). Anyone who has it, together with access to this\n' +
+        'board, could read the saved passwords.\n\n' +
+        'Key:\n' + key + '\n\n' +
+        'How to use it: on the board, "Passwords" tab -> "Forgot your master\n' +
+        'password" -> paste this key and create a new password.\n' +
+        'Doing so generates a new recovery key and this one stops working.\n';
+    }
     return 'CLAVE DE RECUPERACION - Workhub\n' +
-      'Generada: ' + new Date().toLocaleString('es-ES') + '\n\n' +
+      'Generada: ' + when + '\n\n' +
       'Esta clave permite restablecer la contrasena maestra del gestor de\n' +
       'contrasenas de este tablero si la olvidas. Guardala en un lugar\n' +
       'seguro (no la compartas ni la subas a ningun sitio). Quien la tenga,\n' +
@@ -50,7 +63,7 @@
           this.awaitingRecoveryConfirm = false;
           this.showContent();
         },
-        download: (key) => platform.download('vault-clave-recuperacion.txt', recoveryFileText(key))
+        download: (key) => platform.download(Workhub.i18n.lang === 'en' ? 'vault-recovery-key.txt' : 'vault-clave-recuperacion.txt', recoveryFileText(key))
       });
       this.view.bindLock(() => this.lock());
 

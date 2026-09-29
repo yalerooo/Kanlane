@@ -17,21 +17,21 @@
     if(!iso) return '';
     const d = new Date(iso + 'T00:00:00');
     if(isNaN(d)) return '';
-    return d.toLocaleDateString('es-ES', {day:'2-digit', month:'short'});
+    return d.toLocaleDateString(Workhub.i18n.locale, {day:'2-digit', month:'short'});
   }
 
   function fmtDateTime(ts){
     if(!ts) return '';
     const d = new Date(ts);
     if(isNaN(d)) return '';
-    return d.toLocaleDateString('es-ES', {day:'2-digit', month:'short'}) + ' ' +
-      d.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    return d.toLocaleDateString(Workhub.i18n.locale, {day:'2-digit', month:'short'}) + ' ' +
+      d.toLocaleTimeString(Workhub.i18n.locale, {hour:'2-digit', minute:'2-digit'});
   }
 
   function longDay(d, withYear){
     const opts = {weekday:'long', day:'numeric', month:'long'};
     if(withYear) opts.year = 'numeric';
-    return capitalize(d.toLocaleDateString('es-ES', opts));
+    return capitalize(d.toLocaleDateString(Workhub.i18n.locale, opts));
   }
 
   /* Días desde hoy hasta la fecha AAAA-MM-DD (negativo si ya pasó). */

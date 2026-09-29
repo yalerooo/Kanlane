@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="assets/css/components/cards.css">
   <link rel="stylesheet" href="assets/css/components/dialogs.css">
   <link rel="stylesheet" href="assets/css/components/overlays.css">
+  <link rel="stylesheet" href="assets/css/components/projects.css">
   <link rel="stylesheet" href="assets/css/views/board.css">
   <link rel="stylesheet" href="assets/css/views/task-detail.css">
   <link rel="stylesheet" href="assets/css/views/calendar.css">
@@ -86,9 +87,16 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 3h5v3h-5z"/><path d="M9.5 13l2 2 3.5-4"/></svg></span>
-      <span class="brand-name">Workhub</span>
+      <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
+        <span class="project-mark" id="projectMark" aria-hidden="true">PP</span>
+        <span class="project-switch-text">
+          <span class="project-switch-name" id="projectName">Proyecto principal</span>
+          <span class="project-switch-sub">Workhub</span>
+        </span>
+        <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+      </button>
     </div>
+    <div class="dd-menu project-menu" id="projectMenu" role="menu" aria-label="Proyectos" hidden></div>
     <button type="button" class="search-trigger" id="btnCommand" aria-label="Buscar (Ctrl K)">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
       <span>Buscar…</span>
@@ -457,6 +465,33 @@
 
 <div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
 
+<dialog id="dlgProject">
+  <form class="dlg-inner" id="formProject" method="dialog">
+    <h2 id="dlgProjectTitle">Nuevo proyecto</h2>
+    <p class="dlg-lead">Cada proyecto tiene sus propias tareas, calendario, contactos, contraseñas y clientes.</p>
+    <input type="hidden" id="pId">
+    <div class="field">
+      <label for="pNombre">Nombre</label>
+      <input id="pNombre" maxlength="60" autocomplete="off" placeholder="Por ejemplo: Agencia, Freelance, Personal…">
+    </div>
+    <div class="field">
+      <span class="field-label" id="pColorsLabel">Color</span>
+      <div class="color-picker is-plain" id="pColors" role="radiogroup" aria-labelledby="pColorsLabel"></div>
+    </div>
+    <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>
+      <strong>Se borrará todo lo que hay dentro</strong>: tareas y notas, reuniones, contactos, contraseñas y clientes de este proyecto. No se puede deshacer; si quieres conservarlo, exporta antes una copia de seguridad desde el proyecto.
+    </div>
+    <p class="lock-error" id="pError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteProject" hidden>Eliminar proyecto</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelProject" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveProject">Crear proyecto</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgContact">
   <form class="dlg-inner" id="formContact" method="dialog">
     <h2 id="dlgContactTitle">Nuevo contacto</h2>
@@ -728,6 +763,7 @@
 <script src="src/models/vault-model.js"></script>
 <script src="src/models/settings-model.js"></script>
 <script src="src/models/backup-model.js"></script>
+<script src="src/models/project-model.js"></script>
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
@@ -746,6 +782,7 @@
 <script src="src/views/toast-view.js"></script>
 <script src="src/views/command-palette-view.js"></script>
 <script src="src/views/auth-view.js"></script>
+<script src="src/views/project-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -755,6 +792,7 @@
 <script src="src/controllers/contacts-controller.js"></script>
 <script src="src/controllers/vault-controller.js"></script>
 <script src="src/controllers/backup-controller.js"></script>
+<script src="src/controllers/projects-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>
 <script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>

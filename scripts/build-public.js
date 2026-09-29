@@ -7,7 +7,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'assets', 'src'];
+const INCLUDE = ['index.html', 'assets', 'src', 'plugins'];
 
 fs.rmSync(out, {recursive:true, force:true});
 fs.mkdirSync(out);

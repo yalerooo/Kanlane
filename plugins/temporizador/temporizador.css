@@ -1,0 +1,13 @@
+.timer{display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 16px;margin:14px 0 22px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);}
+.clock{font-family:var(--mono);font-size:48px;font-weight:500;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
+.clock.is-running{color:var(--accent);}
+.timer .wh-select{width:min(460px,100%);}
+.timer .wh-btn{min-width:150px;height:40px;font-size:14px;}
+.running-on{font-size:13px;color:var(--ink-soft);text-align:center;}
+.section{margin-top:20px;}
+.section h2{font-size:13px;color:var(--ink-soft);font-weight:600;}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow-x:auto;}
+.wh-table td.num,.wh-table th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.wh-table tr:last-child td{border-bottom:none;}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+@media (max-width:600px){ .clock{font-size:40px;} }

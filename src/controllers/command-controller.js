@@ -18,7 +18,7 @@
   const projectIcon = (hue, name) => '<span class="project-mark is-xs" style="--h:' + hue + '">' + Workhub.utils.html.esc(Workhub.utils.html.initials(name)) + '</span>';
   const clientIcon = (hue) => '<span class="dot" style="border-radius:2px;background:hsl(' + hue + ' 62% 52%)"></span>';
 
-  const VIEW_NAMES = {tasks:'Tareas', calendar:'Calendario', clients:'Clientes y contactos', vault:'Contraseñas', data:'Copia de seguridad', settings:'Ajustes'};
+  const VIEW_NAMES = {tasks:'Tareas', calendar:'Calendario', clients:'Clientes y contactos', vault:'Contraseñas', plugins:'Plugins', data:'Copia de seguridad', settings:'Ajustes'};
   const SEARCH_INPUTS = {tasks:'search', clients:'searchClients', vault:'searchVault'};
 
   function isTyping(el){
@@ -92,6 +92,10 @@
         {title:'Nueva credencial', icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
         {title:'Nuevo cliente', icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
       ];
+      app.models.plugins.list().forEach((p) => {
+        const name = (p.manifest || {}).name || p.id;
+        list.push({title:'Abrir plugin: ' + name, icon:ICONS.go, run:() => c.plugins.open(p.id)});
+      });
       list.push({title:'Nuevo proyecto', icon:ICONS.project, run:() => c.projects.openNew()});
       list.push({title:'Editar proyecto actual', icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {

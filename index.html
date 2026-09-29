@@ -544,6 +544,46 @@
   </form>
 </dialog>
 
+<dialog id="dlgColumn">
+  <form class="dlg-inner" id="formColumn" method="dialog">
+    <h2>Editar columna</h2>
+    <div class="field">
+      <label for="colName">Nombre</label>
+      <input id="colName" maxlength="40" autocomplete="off" translate="no" required>
+    </div>
+    <div class="field">
+      <span class="field-label" id="colColorLabel">Color</span>
+      <div class="stage-colors" id="colColors" role="radiogroup" aria-labelledby="colColorLabel"></div>
+    </div>
+    <div class="field">
+      <label for="colLimit">Límite de tarjetas</label>
+      <input id="colLimit" type="number" min="1" max="999" inputmode="numeric" placeholder="Sin límite">
+      <p class="field-help">Déjalo vacío para no poner límite. La cuenta se marca en rojo al superarlo.</p>
+    </div>
+    <label class="check-row"><input type="checkbox" id="colDone"> Las tarjetas de esta columna cuentan como terminadas</label>
+    <p class="lock-error" id="colError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelColumn" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm" aria-labelledby="confirmTitle">
+  <div class="dlg-inner">
+    <h2 id="confirmTitle">¿Seguro?</h2>
+    <p class="confirm-text" id="confirmText"></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnConfirmCancel" data-dismiss>Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmOk">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlgPlugin" aria-labelledby="pluginDlgTitle">
   <div class="dlg-inner">
     <h2 id="pluginDlgTitle">Instalar plugin</h2>
@@ -848,6 +888,7 @@
 <script src="src/views/client-select.js"></script>
 <script src="src/views/shell-view.js"></script>
 <script src="src/views/board-view.js"></script>
+<script src="src/views/column-view.js"></script>
 <script src="src/views/task-dialog-view.js"></script>
 <script src="src/views/task-detail-view.js"></script>
 <script src="src/views/calendar-view.js"></script>

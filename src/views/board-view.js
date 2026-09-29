@@ -7,6 +7,9 @@
   const {fmtDate} = Workhub.utils.dates;
   const {bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const TaskModel = Workhub.models.TaskModel;
+  const COL_MIME = 'text/x-workhub-column';
+  const isColumnDrag = (ev) => Array.from(ev.dataTransfer.types || []).indexOf(COL_MIME) !== -1;
+  const DOTS_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>';
 
   class BoardView {
     constructor(){
@@ -22,6 +25,8 @@
       this.indicator = document.createElement('div');
       this.indicator.className = 'drop-indicator';
       this.dropBeforeId = null;
+      /* Claves de las columnas ocultas en este navegador. */
+      this.hidden = [];
 
       window.addEventListener('resize', () => this.fitHeight());
 
@@ -98,6 +103,7 @@
       bindDragAndDrop(this.board, {
         itemSelector: '.card',
         targetSelector: '.col',
+        accept: (ev) => !isColumnDrag(ev),
         getPayload: (card) => card.getAttribute('data-id'),
         onOver: (ev, colEl) => this._placeIndicator(colEl, ev.clientY),
         onEnd: () => {
@@ -108,6 +114,79 @@
           const status = colEl.getAttribute('data-status');
           if(id && status) handler(id, status, this.dropBeforeId);
         }
+      });
+    }
+
+    /* Menú "···" de la cabecera de cada columna: handler(status, botón). */
+    bindColumnMenu(handler){
+      this.board.addEventListener('click', (ev) => {
+        const btn = closest(ev.target, '[data-col-menu]');
+        if(btn) handler(btn.getAttribute('data-col-menu'), btn);
+      });
+    }
+
+    /* "N columnas ocultas · Mostrar" en el resumen. */
+    bindShowHidden(handler){
+      this.summary.addEventListener('click', (ev) => {
+        if(closest(ev.target, '[data-show-hidden]')) handler();
+      });
+    }
+
+    setHidden(keys){
+      this.hidden = keys.slice();
+    }
+
+    /* Arrastrar una columna por su cabecera: handler(status, beforeStatus|null). */
+    bindColumnMove(handler){
+      let dragged = null;
+      let target = null;
+      let after = false;
+      const clear = () => {
+        this.board.querySelectorAll('.drop-before, .drop-after, .col-dragging').forEach((c) => c.classList.remove('drop-before', 'drop-after', 'col-dragging'));
+        target = null;
+      };
+      this.board.addEventListener('dragstart', (ev) => {
+        const head = closest(ev.target, '.col-head');
+        if(!head || closest(ev.target, '.card')) return;
+        const col = head.parentNode;
+        dragged = col.getAttribute('data-status');
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData(COL_MIME, dragged);
+        requestAnimationFrame(() => col.classList.add('col-dragging'));
+        Workhub.utils.autoscroll.start();
+      });
+      this.board.addEventListener('dragover', (ev) => {
+        if(!dragged || !isColumnDrag(ev)) return;
+        const col = closest(ev.target, '.col');
+        if(!col) return;
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = 'move';
+        const r = col.getBoundingClientRect();
+        after = ev.clientX > r.left + r.width / 2;
+        if(target !== col) this.board.querySelectorAll('.drop-before, .drop-after').forEach((c) => c.classList.remove('drop-before', 'drop-after'));
+        target = col;
+        col.classList.toggle('drop-before', !after);
+        col.classList.toggle('drop-after', after);
+      });
+      this.board.addEventListener('drop', (ev) => {
+        if(!dragged || !isColumnDrag(ev)) return;
+        ev.preventDefault();
+        const from = dragged;
+        let before = null;
+        if(target){
+          const cols = Array.from(this.board.querySelectorAll('.col'));
+          const i = cols.indexOf(target) + (after ? 1 : 0);
+          before = cols[i] ? cols[i].getAttribute('data-status') : null;
+        }
+        clear();
+        dragged = null;
+        if(before !== from) handler(from, before);
+      });
+      this.board.addEventListener('dragend', () => {
+        if(!dragged) return;
+        dragged = null;
+        clear();
+        Workhub.utils.autoscroll.stop();
       });
     }
 
@@ -164,7 +243,11 @@
       this.board.style.setProperty('--board-top', Math.round(top + bottomSpace) + 'px');
     }
 
-    render(tasks){
+    /* tasks: las que se ven (respeta búsqueda y filtro); all: todas, para los límites. */
+    render(tasks, all){
+      all = all || tasks;
+      const stages = TaskModel.STATUS.filter((s) => this.hidden.indexOf(s.key) === -1);
+      const hiddenCount = TaskModel.STATUS.length - stages.length;
       /* Resumen compacto de lo que se está viendo (respeta búsqueda y filtro). */
       const open = tasks.filter((t) => !TaskModel.isDone(t));
       const overdue = tasks.filter((t) => TaskModel.dueState(t) === 'overdue').length;
@@ -173,7 +256,8 @@
         '<span class="stat"><b>' + open.length + '</b>' + (open.length === 1 ? 'abierta' : 'abiertas') + '</span>' +
         (today ? '<span class="stat is-warn"><span class="dot" style="background:var(--st-wait)"></span><b>' + today + '</b>para hoy</span>' : '') +
         (overdue ? '<span class="stat is-danger"><span class="dot" style="background:var(--danger)"></span><b>' + overdue + '</b>' + (overdue === 1 ? 'vencida' : 'vencidas') + '</span>' : '') +
-        (tasks.length - open.length ? '<span class="stat"><b>' + (tasks.length - open.length) + '</b>' + (tasks.length - open.length === 1 ? 'completada' : 'completadas') + '</span>' : '');
+        (tasks.length - open.length ? '<span class="stat"><b>' + (tasks.length - open.length) + '</b>' + (tasks.length - open.length === 1 ? 'completada' : 'completadas') + '</span>' : '') +
+        (hiddenCount ? '<button type="button" class="stat stat-link" data-show-hidden>' + hiddenCount + (hiddenCount === 1 ? ' columna oculta' : ' columnas ocultas') + ' · Mostrar</button>' : '');
 
       /* Conserva el scroll de cada columna al volver a pintar. */
       const scrolls = {};
@@ -181,18 +265,24 @@
         scrolls[c.getAttribute('data-status')] = c.querySelector('.cards').scrollTop;
       });
 
-      const n = TaskModel.STATUS.length;
+      const n = stages.length;
       this.board.style.setProperty('--cols', n);
       this.board.classList.toggle('is-many', n > 4);
-      this.board.innerHTML = TaskModel.STATUS.map((s) => {
+      this.board.innerHTML = stages.map((s) => {
         const items = tasks.filter((t) => TaskModel.stageKey(t) === s.key).sort(TaskModel.byOrder);
+        const total = all.filter((t) => TaskModel.stageKey(t) === s.key).length;
+        const state = s.limit ? (total > s.limit ? ' is-over' : total === s.limit ? ' is-full' : '') : '';
+        const countTxt = s.limit ? total + '/' + s.limit : String(items.length);
         const cardsHtml = items.length
           ? items.map(cardHtml).join('')
           : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
-        return '<section class="col" data-status="' + s.key + '" style="--st:' + s.dot + '">' +
-          '<header class="col-head">' +
-            '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count">' + items.length + '</span></span>' +
-            '<button type="button" class="col-add" data-add-status="' + s.key + '" aria-label="Nueva tarea en ' + esc(s.label) + '" title="Nueva tarea en ' + esc(s.label) + '">' + PLUS_ICON + '</button>' +
+        return '<section class="col' + state + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
+          '<header class="col-head" draggable="true" title="Arrastra para mover la columna">' +
+            '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count" title="' + (s.limit ? 'Límite: ' + s.limit + ' tarjetas' : '') + '">' + countTxt + '</span></span>' +
+            '<span class="col-tools">' +
+              '<button type="button" class="col-add" data-add-status="' + esc(s.key) + '" aria-label="Nueva tarea en ' + esc(s.label) + '" title="Nueva tarea en ' + esc(s.label) + '">' + PLUS_ICON + '</button>' +
+              '<button type="button" class="col-add" data-col-menu="' + esc(s.key) + '" aria-haspopup="menu" aria-expanded="false" aria-label="Opciones de ' + esc(s.label) + '" title="Opciones de la columna">' + DOTS_ICON + '</button>' +
+            '</span>' +
           '</header>' +
           '<div class="cards">' + cardsHtml + '</div></section>';
       }).join('');
@@ -200,7 +290,7 @@
       this.board.querySelectorAll('.col').forEach((c) => {
         c.querySelector('.cards').scrollTop = scrolls[c.getAttribute('data-status')] || 0;
       });
-      this.tabs.innerHTML = TaskModel.STATUS.map((s) => {
+      this.tabs.innerHTML = stages.map((s) => {
         const count = tasks.filter((t) => TaskModel.stageKey(t) === s.key).length;
         return '<button type="button" class="board-tab" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
           '<span class="dot"></span><span translate="no">' + esc(s.label) + '</span><span class="count">' + count + '</span></button>';

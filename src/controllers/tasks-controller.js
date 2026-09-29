@@ -50,6 +50,8 @@
       this.board.bindOpen((id) => this.openDetail(id));
       this.board.bindQuickAdd((status) => this.openNew(status));
       this.board.bindMove((id, status, beforeId) => this.tasks.move(id, status, beforeId));
+      this.columns = new Workhub.views.ColumnView();
+      this.bindColumns();
 
       this.dialog.cliente.bindCreate((name) => app.createClient(name));
       this.dialog.bindSubmit((id, values) => this.save(id, values));
@@ -83,7 +85,135 @@
 
     render(){
       const f = this.board.filters();
-      this.board.render(this.tasks.filter(f.query, f.cliente));
+      this.board.setHidden(this.hiddenColumns());
+      this.board.render(this.tasks.filter(f.query, f.cliente), this.tasks.items);
+    }
+
+    /* ---------- Columnas del tablero ---------- */
+
+    hiddenKey(){
+      return 'workhub_hidden_' + this.app.projectId;
+    }
+
+    /* Columnas ocultas de este proyecto en este navegador. */
+    hiddenColumns(){
+      let list = [];
+      try{ list = JSON.parse(Workhub.services.preferences.read(this.hiddenKey(), '[]')); }catch(e){ list = []; }
+      const keys = Workhub.models.TaskModel.STATUS.map((s) => s.key);
+      list = Array.isArray(list) ? list.filter((k) => keys.indexOf(k) !== -1) : [];
+      /* Nunca todas: siempre queda alguna a la vista. */
+      return list.length >= keys.length ? [] : list;
+    }
+
+    setHiddenColumns(list){
+      Workhub.services.preferences.write(this.hiddenKey(), JSON.stringify(list));
+      this.render();
+    }
+
+    stagesApi(){
+      return this.app.controllers.projects;
+    }
+
+    bindColumns(){
+      const TaskModel = Workhub.models.TaskModel;
+      const PT = Workhub.models.ProjectTemplates;
+      const col = this.columns;
+      this.board.bindColumnMenu((status, btn) => {
+        const stages = TaskModel.STATUS;
+        col.openMenu(btn, status, {
+          index: stages.findIndex((s) => s.key === status),
+          count: stages.length,
+          visible: stages.length - this.hiddenColumns().length,
+          tasks: this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).length,
+          canRemove: stages.length > PT.MIN_STAGES
+        });
+      });
+      col.bindMenu({
+        edit: (status, field) => {
+          const s = TaskModel.STATUS.find((x) => x.key === status);
+          if(s) col.openEdit(s, field);
+        },
+        hide: (status) => this.setHiddenColumns(this.hiddenColumns().concat(status)),
+        move: (status, dir) => this.moveColumn(status, dir),
+        remove: (status) => this.removeColumn(status),
+        removeAll: (status) => this.removeAllTasks(status)
+      });
+      col.bindSubmit((status, v) => {
+        this.stagesApi().updateStages((stages) => {
+          const s = stages.find((x) => x.key === status);
+          if(!s) return false;
+          s.label = v.label;
+          s.color = v.color;
+          s.limit = v.limit;
+          s.done = v.done;
+          if(!stages.some((x) => x.done)){
+            col.showError('Tiene que haber al menos una columna cuyas tarjetas cuenten como terminadas.');
+            return false;
+          }
+        }).then((ok) => { if(ok) col.closeEdit(); });
+      });
+      this.board.bindShowHidden(() => this.setHiddenColumns([]));
+      this.board.bindColumnMove((status, before) => this.reorderColumn(status, before));
+    }
+
+    moveColumn(status, dir){
+      this.stagesApi().updateStages((stages) => {
+        const i = stages.findIndex((s) => s.key === status);
+        const j = i + dir;
+        if(i < 0 || j < 0 || j >= stages.length) return false;
+        stages.splice(j, 0, stages.splice(i, 1)[0]);
+      });
+    }
+
+    /* Suelta una columna justo antes de otra (o al final si before es null). */
+    reorderColumn(status, before){
+      this.stagesApi().updateStages((stages) => {
+        const i = stages.findIndex((s) => s.key === status);
+        if(i < 0) return false;
+        const moved = stages.splice(i, 1)[0];
+        let j = before ? stages.findIndex((s) => s.key === before) : -1;
+        if(j < 0) j = stages.length;
+        stages.splice(j, 0, moved);
+      });
+    }
+
+    removeColumn(status){
+      const TaskModel = Workhub.models.TaskModel;
+      const s = TaskModel.STATUS.find((x) => x.key === status);
+      if(!s) return;
+      const n = this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).length;
+      const text = n
+        ? 'Se eliminará la columna «' + s.label + '». Sus ' + n + (n === 1 ? ' tarjeta pasará' : ' tarjetas pasarán') + ' a la primera columna; no se borra ninguna.'
+        : 'Se eliminará la columna «' + s.label + '».';
+      this.columns.confirm('Eliminar columna', text, 'Eliminar columna').then((ok) => {
+        if(!ok) return;
+        /* Antes de quitarla, sus tarjetas se pasan a la primera columna que quede. */
+        const target = TaskModel.STATUS.filter((x) => x.key !== status)[0];
+        if(target){
+          this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).forEach((t) => this.tasks.move(t.id, target.key));
+        }
+        this.stagesApi().updateStages((stages) => {
+          const i = stages.findIndex((x) => x.key === status);
+          if(i < 0) return false;
+          const removed = stages.splice(i, 1)[0];
+          if(removed.done && !stages.some((x) => x.done)) stages[stages.length - 1].done = true;
+        });
+      });
+    }
+
+    removeAllTasks(status){
+      const TaskModel = Workhub.models.TaskModel;
+      const s = TaskModel.STATUS.find((x) => x.key === status);
+      const list = this.tasks.items.filter((t) => TaskModel.stageKey(t) === status);
+      if(!s || !list.length) return;
+      this.columns.confirm('Eliminar todas las tarjetas',
+        'Se eliminarán ' + list.length + (list.length === 1 ? ' tarjeta' : ' tarjetas') + ' de «' + s.label + '». No se puede deshacer.',
+        'Eliminar todas').then((ok) => {
+        if(!ok) return;
+        Promise.all(list.map((t) => this.tasks.remove(t.id))).then(
+          () => toast.success(list.length === 1 ? 'Tarjeta eliminada' : list.length + ' tarjetas eliminadas'),
+          () => toast.error('No se pudieron eliminar todas las tarjetas'));
+      });
     }
 
     /* ---------- Ficha de la tarea ---------- */

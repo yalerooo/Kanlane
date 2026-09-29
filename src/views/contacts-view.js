@@ -1,16 +1,10 @@
-/* Contactos: rejilla de tarjetas y diálogo de edición. */
+/* Diálogo para añadir o editar una persona de contacto. La lista de contactos
+   se ve en la ficha de cada cliente (clients-view.js). */
 (function(){
-  const {esc, iconSpan, closest, hueFor, initials} = Workhub.utils.html;
-  const clientColors = Workhub.views.clientColors;
   const $ = (id) => document.getElementById(id);
 
   class ContactsView {
     constructor(){
-      this.grid = $('contactsGrid');
-      this.stateMsg = $('stateMsgContacts');
-      this.search = $('searchContacts');
-      this.btnNew = $('btnNewContact');
-
       this.dlg = $('dlgContact');
       this.form = $('formContact');
       this.title = $('dlgContactTitle');
@@ -28,21 +22,6 @@
       this.btnCancel.addEventListener('click', () => this.close());
     }
 
-    bindNew(handler){ this.btnNew.addEventListener('click', () => handler()); }
-
-    bindSearch(handler){ this.search.addEventListener('input', handler); }
-
-    bindOpen(handler){
-      this.grid.addEventListener('click', (ev) => {
-        const card = closest(ev.target, '.contact-card');
-        if(card) handler(card.getAttribute('data-id'));
-      });
-      this.grid.addEventListener('keydown', (ev) => {
-        const card = closest(ev.target, '.contact-card');
-        if(card && ev.key === 'Enter') handler(card.getAttribute('data-id'));
-      });
-    }
-
     bindSubmit(handler){
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
@@ -54,8 +33,6 @@
       this.btnDelete.addEventListener('click', () => handler(this.fields.id.value));
     }
 
-    query(){ return this.search.value; }
-
     values(){
       return {
         cliente: this.cliente.value(),
@@ -64,24 +41,6 @@
         telefono: this.fields.telefono.value.trim(),
         notas: this.fields.notas.value.trim()
       };
-    }
-
-    render(contacts, hasAny){
-      if(!contacts.length){
-        this.grid.hidden = true;
-        this.stateMsg.hidden = false;
-        this.stateMsg.textContent = hasAny ? 'Sin resultados para esa búsqueda.' : 'Aún no hay contactos guardados. Añade el primero.';
-        return;
-      }
-      this.stateMsg.hidden = true;
-      this.grid.hidden = false;
-      this.grid.innerHTML = contacts.map(cardHtml).join('');
-    }
-
-    showError(msg){
-      this.stateMsg.hidden = false;
-      this.grid.hidden = true;
-      this.stateMsg.textContent = msg;
     }
 
     openNew(clientNames, defaultCliente){
@@ -106,22 +65,6 @@
     }
 
     close(){ this.dlg.close(); }
-  }
-
-  function cardHtml(c){
-    const email = c.email ? '<p class="line">' + iconSpan('mail') + esc(c.email) + '</p>' : '';
-    const tel = c.telefono ? '<p class="line">' + iconSpan('phone') + esc(c.telefono) + '</p>' : '';
-    const notas = c.notas ? '<div class="notes">' + esc(c.notas) + '</div>' : '';
-    const name = c.nombre || 'Sin nombre';
-    return '<div class="contact-card" data-id="' + esc(c.id) + '" tabindex="0">' +
-      '<div class="card-head">' +
-        '<span class="avatar" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
-        '<div class="card-head-text"><h3>' + esc(name) + '</h3>' +
-        (c.cliente ? clientColors.chip(c.cliente) : '') +
-        '</div>' +
-      '</div>' +
-      email + tel + notas +
-      '</div>';
   }
 
   Workhub.views.ContactsView = ContactsView;

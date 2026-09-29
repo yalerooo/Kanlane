@@ -8,6 +8,9 @@
   const prefs = Workhub.services.preferences;
 
   const TAB_PREF = 'tablero_tab';
+  const PROJECT_PREF = 'workhub_project';
+  /* Modelos con los datos de cada proyecto (se reconectan al cambiar). */
+  const PROJECT_MODELS = ['clients', 'tasks', 'contacts', 'vault', 'meetings'];
 
   class AppController {
     constructor(){
@@ -17,8 +20,12 @@
         contacts: new M.ContactModel(),
         meetings: new M.MeetingModel(),
         vault: new M.VaultModel(),
-        settings: new M.SettingsModel()
+        settings: new M.SettingsModel(),
+        projects: new M.ProjectModel()
       };
+      /* Base de datos sin acotar y proyecto abierto. */
+      this.rootDb = null;
+      this.projectId = this.cachedProject().id;
       this.models.backup = new M.BackupModel(this.models);
 
       V.clientColors.setResolver((name) => this.models.clients.hueOf(name));
@@ -36,7 +43,9 @@
         vault: new C.VaultController(this, new V.VaultView()),
         backup: new C.BackupController(this, new V.BackupView())
       };
+      this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
+      this.controllers.projects.render();
 
       /* Contadores de la barra lateral. */
       const m = this.models;
@@ -85,6 +94,60 @@
       if(view === 'vault') c.vault.onShow();
     }
 
+    /* ---------- Proyectos ---------- */
+
+    /* {id, nombre, color} del último proyecto abierto en este navegador. */
+    cachedProject(){
+      const main = {id:M.ProjectModel.MAIN_ID, nombre:'Proyecto principal'};
+      try{
+        const p = JSON.parse(prefs.read(PROJECT_PREF, 'null'));
+        return p && typeof p.id === 'string' && p.id ? p : main;
+      }catch(e){
+        return main;
+      }
+    }
+
+    rememberProject(p){
+      const data = {id:p.id, nombre:p.nombre};
+      if(typeof p.color === 'number') data.color = p.color;
+      prefs.write(PROJECT_PREF, JSON.stringify(data));
+    }
+
+    connectProject(){
+      const db = M.ProjectModel.scope(this.rootDb, this.projectId);
+      PROJECT_MODELS.forEach((name) => this.models[name].connect(db));
+    }
+
+    /* Cambia de proyecto sin recargar: cierra lo que hubiera abierto, vacía los
+       filtros y reconecta los modelos a los datos del otro proyecto. */
+    switchProject(id, announce){
+      if(!this.rootDb || id === this.projectId) return;
+      /* El diálogo de proyectos se queda: desde él se puede estar eliminando este. */
+      document.querySelectorAll('dialog[open]:not(#dlgProject)').forEach((dlg) => {
+        const dismiss = dlg.querySelector('[data-dismiss]');
+        if(dismiss) dismiss.click();
+        if(dlg.open) dlg.close();
+      });
+      this.projectId = id;
+      const p = this.models.projects.get(id) || {id:id, nombre:''};
+      if(p.nombre) this.rememberProject(p);
+      this.shell.resetFilters();
+      this.connectProject();
+      this.controllers.vault.onProjectChange();
+      this.controllers.projects.render();
+      this.updateCounts();
+      if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
+    }
+
+    /* Borra un proyecto y todos sus datos. Si es el abierto, antes se pasa al principal. */
+    deleteProject(id){
+      if(!this.rootDb) return Promise.reject(new Error('not-ready'));
+      if(id === this.projectId) this.switchProject(M.ProjectModel.MAIN_ID, false);
+      return platform.connectAssets().catch(() => null).then((assets) => {
+        return this.models.projects.removeProject(id, this.rootDb, assets);
+      });
+    }
+
     start(){
       const board = this.controllers.tasks.board;
       this.shell.setStorageMode(platform.mode());
@@ -97,8 +160,9 @@
           board.setMessage('No se pudo conectar al almacenamiento de tareas en esta vista.');
           return;
         }
-        const m = this.models;
-        [m.clients, m.tasks, m.contacts, m.vault, m.meetings].forEach((model) => model.connect(db));
+        this.rootDb = db;
+        this.models.projects.connect(db);
+        this.connectProject();
 
         const savedTab = prefs.read(TAB_PREF, null);
         if(savedTab && savedTab !== 'tasks' && V.ShellView.VIEWS.indexOf(savedTab) !== -1) this.navigate(savedTab);

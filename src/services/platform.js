@@ -27,6 +27,10 @@
     return use('db');
   }
 
+  function connectAssets(){
+    return use('assets');
+  }
+
   /* Sube una imagen y devuelve su id, o '' si no se pudo. */
   function uploadAsset(file){
     return use('assets').then((assets) => {
@@ -67,5 +71,5 @@
     }
   }
 
-  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, uploadAsset, download, assetSrc, hydrateAssetImages, whenReady};
+  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, connectAssets, uploadAsset, download, assetSrc, hydrateAssetImages, whenReady};
 })();

@@ -54,6 +54,8 @@
       this.bindColumns();
 
       this.dialog.cliente.bindCreate((name) => app.createClient(name));
+      this.dialog.bindCreateLabel((name, color) => app.controllers.projects.addLabel(name, color));
+      this.dialog.setLabelCatalog(Workhub.views.labels.catalog());
       this.dialog.bindSubmit((id, values) => this.save(id, values));
       this.dialog.bindCancel(() => this.closeDialog(true));
       this.dialog.bindDelete((id) => this.remove(id));
@@ -228,6 +230,7 @@
       this.releaseDetail();
       this.detailId = id;
       this.detail.open(t, this.detailContext());
+      this.loadGithubDetails(t);
       try{
         this.stopDetailNotes = this.tasks.watchNotes(id,
           (docs) => this.detail.renderNotes(docs),
@@ -238,6 +241,16 @@
     }
 
     /* Mantiene la ficha al día si cambian la tarea, sus vínculos o los clientes. */
+    /* Actividad y pull requests de la incidencia enlazada con GitHub (si la hay). */
+    loadGithubDetails(t){
+      const gh = this.app.controllers.github;
+      if(!gh || !gh.canLoadDetails(t)) return;
+      const id = t.id;
+      const same = () => this.detail.isOpen() && this.detailId === id;
+      gh.loadDetails(t).then((d) => { if(same()) this.detail.renderGithub(id, d); })
+        .catch((err) => { if(same()) this.detail.renderGithub(id, null, err); });
+    }
+
     refreshDetail(){
       if(!this.detailId || !this.detail.isOpen()) return;
       const t = this.tasks.find(this.detailId);

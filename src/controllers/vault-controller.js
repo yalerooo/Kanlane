@@ -105,6 +105,16 @@
       if(!this.vault.unlocked) this.checkLockMode();
     }
 
+    /* Otro proyecto, otro gestor: queda bloqueado y se vuelve a mirar si ya
+       tiene contraseña maestra. */
+    onProjectChange(){
+      this.awaitingRecoveryConfirm = false;
+      this.returnTaskId = null;
+      this.view.clearPasswords();
+      this.view.showScreen('lock');
+      if(this.app.shell.isVisible('vault')) this.onShow();
+    }
+
     checkLockMode(){
       if(this.vault.metaState !== null){
         this.view.setLockMode(this.vault.metaState);

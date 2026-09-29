@@ -4,6 +4,12 @@
   const {safeUrl} = Workhub.utils.urls;
   const FORMAT_VERSION = 1;
 
+  /* "Agencia Norte" → "agencia-norte" (para el nombre del archivo). */
+  function slug(text){
+    return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  }
+
   class BackupModel {
     constructor(models){
       this.models = models;
@@ -14,14 +20,16 @@
       return m.tasks.isReady() && m.contacts.isReady() && m.vault.isReady() && m.clients.isReady() && m.meetings.isReady();
     }
 
-    /* Devuelve {filename, json, counts}. */
-    build(){
+    /* Devuelve {filename, json, counts}. projectName: proyecto abierto (se
+       guarda en el archivo y en su nombre). */
+    build(projectName){
       const m = this.models;
       return m.tasks.withNotes().then((tasksWithNotes) => {
         return m.vault.getMeta().then((metaSnap) => {
           const data = {
             exportedAt: new Date().toISOString(),
             formatVersion: FORMAT_VERSION,
+            project: projectName || '',
             clients: m.clients.items,
             tasks: tasksWithNotes,
             meetings: m.meetings.items,
@@ -32,7 +40,7 @@
             }
           };
           return {
-            filename: 'workhub-backup-' + new Date().toISOString().slice(0, 10) + '.json',
+            filename: 'workhub-backup-' + (slug(projectName) ? slug(projectName) + '-' : '') + new Date().toISOString().slice(0, 10) + '.json',
             json: JSON.stringify(data, null, 2),
             counts: {
               tasks: tasksWithNotes.length,

@@ -6,7 +6,7 @@
     contacts: ['Contactos', 'Personas de contacto y datos útiles de cada cliente.'],
     vault: ['Contraseñas', 'Credenciales cifradas en tu navegador con tu contraseña maestra.'],
     clients: ['Clientes', 'Los clientes que aparecen en tareas, reuniones, contactos y contraseñas.'],
-    data: ['Copia de seguridad', 'Exporta todos los datos a un archivo o restáuralos desde una copia.'],
+    data: ['Copia de seguridad', 'Exporta los datos del proyecto abierto a un archivo o restáuralos desde una copia.'],
     settings: ['Ajustes', 'Personaliza el aspecto de Workhub.']
   };
 
@@ -100,6 +100,22 @@
         const n = counts[view];
         el.textContent = n ? String(n) : '';
         el.classList.toggle('is-alert', !!(alerts && alerts[view]));
+      });
+    }
+
+    /* Al cambiar de proyecto: búsquedas vacías y todos los clientes. */
+    resetFilters(){
+      ['search', 'searchContacts', 'searchVault'].forEach((id) => {
+        const el = document.getElementById(id);
+        if(!el || !el.value) return;
+        el.value = '';
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+      });
+      ['filterCliente', 'calFilterCliente', 'filterClienteVault'].forEach((id) => {
+        const el = document.getElementById(id);
+        if(!el || !el.value) return;
+        el.value = '';
+        el.dispatchEvent(new Event('change', {bubbles:true}));
       });
     }
 

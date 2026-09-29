@@ -216,6 +216,7 @@
       due = '<span class="' + dueCls + '">' + iconSpan('calendar') + esc(dueTxt) + '</span>';
     }
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
+    const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';
     const meta = [
       t.contacto ? '<span class="contact">' + iconSpan('user') + '<span>' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
@@ -226,6 +227,7 @@
       '<h3>' + esc(t.title) + '</h3>' +
       (t.desc ? '<p>' + esc(t.desc) + '</p>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +
+      (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';
   }
 

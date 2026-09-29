@@ -73,7 +73,8 @@ Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual qu
 
 Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la sección **Plugins**, aisladas en un `<iframe sandbox>`, y que solo acceden a los datos que el usuario les permite al instalarlas (nunca a las contraseñas guardadas).
 
-- **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo** y **Temporizador**. Se instalan con un clic desde la sección Plugins.
+- **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (color, esquinas, densidad). No toca el HTML de Workhub: declara lo que quiere añadir y Workhub lo pinta.
+- **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo**, **Temporizador** (cronómetro desde la ficha de cada tarea y tiempo en cada tarjeta) y **Apariencia**. Se instalan con un clic desde la sección Plugins.
 - **De terceros:** cualquiera puede publicar el suyo en una web con https, y se instala pegando su enlace.
 
 **Guía para crear un plugin:** [docs/PLUGINS.md](docs/PLUGINS.md) (SDK, permisos, API, eventos, estilos y una [plantilla](plugins/plantilla) lista para copiar).

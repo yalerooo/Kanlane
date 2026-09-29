@@ -1,5 +1,13 @@
 /* Plugin oficial "Temporizador": cronómetro por tarea y tiempo acumulado.
-   Permisos: tasks:read, storage. Datos guardados (por proyecto):
+   Permisos: tasks:read, storage, ui:extend.
+
+   - En segundo plano (se carga oculto al abrir Workhub):
+       · botón "Iniciar cronómetro" en la ficha de cada tarea;
+       · mientras cuenta, botón "Detener" en la barra de Tareas y en la paleta;
+       · etiqueta con el tiempo acumulado en cada tarjeta del tablero.
+   - En el panel (sección Plugins): cronómetro grande y totales.
+
+   Datos guardados (por proyecto):
    - running:  {taskId, startedAt} | null   (sigue contando aunque cierres)
    - totals:   {taskId: milisegundos}
    - sessions: [{taskId, start, end}]       (las 300 últimas) */
@@ -7,12 +15,12 @@
   var MANIFEST = {
     id: 'workhub.temporizador',
     name: 'Temporizador',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.',
     author: 'Workhub',
     icon: 'timer',
     color: 24,
-    permissions: ['tasks:read', 'storage']
+    permissions: ['tasks:read', 'storage', 'ui:extend']
   };
   var MAX_SESSIONS = 300;
 
@@ -33,55 +41,108 @@
     return Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0') + ' min';
   }
   function task(id){ return tasks.find(function(t){ return t.id === id; }); }
+  function fail(err){ wh.ui.toast('No se pudo guardar: ' + err.message, {type:'error'}); }
+
+  /* ---------- Datos (compartidos por panel y segundo plano) ---------- */
 
   function load(){
     return Promise.all([wh.storage.get('running'), wh.storage.get('totals'), wh.storage.get('sessions')]).then(function(r){
       running = r[0] && r[0].taskId ? r[0] : null;
       totals = r[1] && typeof r[1] === 'object' ? r[1] : {};
       sessions = Array.isArray(r[2]) ? r[2] : [];
-      if(running) selected = running.taskId;
     });
   }
 
-  function start(){
-    if(!selected || running) return;
-    running = {taskId:selected, startedAt:Date.now()};
-    wh.storage.set('running', running).catch(fail);
-    render();
+  function start(taskId){
+    running = {taskId:taskId, startedAt:Date.now()};
+    return wh.storage.set('running', running);
   }
 
+  /* Guarda lo contado y para. Devuelve los milisegundos guardados. */
   function stop(){
-    if(!running) return;
+    if(!running) return Promise.resolve(0);
     var end = Date.now();
     var ms = end - running.startedAt;
     totals[running.taskId] = (totals[running.taskId] || 0) + ms;
     sessions.push({taskId:running.taskId, start:running.startedAt, end:end});
     if(sessions.length > MAX_SESSIONS) sessions = sessions.slice(-MAX_SESSIONS);
-    var t = task(running.taskId);
     running = null;
-    Promise.all([wh.storage.set('running', null), wh.storage.set('totals', totals), wh.storage.set('sessions', sessions)])
-      .then(function(){ wh.ui.toast('Guardado: ' + human(ms) + (t ? ' en «' + t.title + '»' : '')); })
-      .catch(fail);
-    render();
+    return Promise.all([wh.storage.set('running', null), wh.storage.set('totals', totals), wh.storage.set('sessions', sessions)])
+      .then(function(){ return ms; });
   }
 
+  /* ---------- Segundo plano: botones y etiquetas en Workhub ---------- */
+
+  function refreshUi(){
+    var badges = {};
+    Object.keys(totals).forEach(function(id){
+      if(totals[id] > 60000) badges[id] = {text:human(totals[id]), icon:'clock', tone:'neutral'};
+    });
+    if(running){
+      var elapsed = Date.now() - running.startedAt + (totals[running.taskId] || 0);
+      badges[running.taskId] = {text:'En marcha · ' + human(elapsed), icon:'timer', tone:'accent'};
+      var t = task(running.taskId);
+      var label = 'Detener · ' + human(Date.now() - running.startedAt);
+      wh.ui.addButton({id:'stop', location:'tasks.toolbar', label:label, icon:'timer', variant:'primary', tooltip:'Detener el cronómetro' + (t ? ' de «' + t.title + '»' : '')});
+      wh.ui.addButton({id:'stop-cmd', location:'command', label:'Detener cronómetro', icon:'timer'});
+    } else {
+      wh.ui.removeButton('stop');
+      wh.ui.removeButton('stop-cmd');
+    }
+    wh.ui.setTaskBadges(badges);
+  }
+
+  function background(){
+    wh.ui.addButton({id:'start', location:'task.actions', label:'Iniciar cronómetro', icon:'timer', tooltip:'Medir el tiempo de esta tarea'});
+    wh.ui.addButton({id:'open-cmd', location:'command', label:'Abrir temporizador', icon:'timer'});
+
+    wh.on('action', function(ev){
+      if(ev.id === 'start'){
+        var t = task(ev.context.taskId);
+        if(!t) return;
+        if(running && running.taskId === t.id){ wh.ui.toast('Ya está contando en «' + t.title + '»'); return; }
+        var prev = running && task(running.taskId);
+        stop().then(function(ms){
+          return start(t.id).then(function(){
+            wh.ui.toast((prev ? 'Guardados ' + human(ms) + ' en «' + prev.title + '». ' : '') + 'Contando en «' + t.title + '»');
+            refreshUi();
+          });
+        }).catch(fail);
+      } else if(ev.id === 'stop' || ev.id === 'stop-cmd'){
+        var rt = running && task(running.taskId);
+        stop().then(function(ms){
+          wh.ui.toast('Guardado: ' + human(ms) + (rt ? ' en «' + rt.title + '»' : ''));
+          refreshUi();
+        }).catch(fail);
+      } else if(ev.id === 'open-cmd'){
+        wh.ui.openPanel();
+      }
+    });
+    /* El panel cambió algo: releer. Otro proyecto: sus tiempos son otros. */
+    wh.on('storage', function(){ load().then(refreshUi); });
+    wh.on('project', function(){ wh.tasks.list().then(function(list){ tasks = list; return load(); }).then(refreshUi); });
+    wh.on('tasks', function(list){ tasks = list; refreshUi(); });
+    /* Actualiza el tiempo que se ve en el botón y la etiqueta. */
+    setInterval(function(){ if(running) refreshUi(); }, 30000);
+    refreshUi();
+  }
+
+  /* ---------- Panel ---------- */
+
+  var resetArmed = false;
   function reset(){
-    if(!confirmReset()) return;
+    if(!resetArmed){
+      resetArmed = true;
+      var b = document.getElementById('reset');
+      if(b) b.textContent = '¿Seguro? Pulsa otra vez';
+      setTimeout(function(){ resetArmed = false; render(); }, 4000);
+      return;
+    }
+    resetArmed = false;
     totals = {}; sessions = [];
     Promise.all([wh.storage.set('totals', totals), wh.storage.set('sessions', sessions)]).catch(fail);
     render();
   }
-  var resetArmed = false;
-  function confirmReset(){
-    if(resetArmed) return true;
-    resetArmed = true;
-    var b = document.getElementById('reset');
-    if(b){ b.textContent = '¿Seguro? Pulsa otra vez'; }
-    setTimeout(function(){ resetArmed = false; render(); }, 4000);
-    return false;
-  }
-
-  function fail(err){ wh.ui.toast('No se pudo guardar: ' + err.message, {type:'error'}); }
 
   function weekTotal(){
     var weekAgo = Date.now() - 7 * 864e5;
@@ -89,11 +150,13 @@
   }
 
   function render(){
+    if(running) selected = running.taskId;
     var open = tasks.filter(function(t){ return t.status !== 'completada' || t.id === selected; })
       .sort(function(a, b){ return (a.cliente || '').localeCompare(b.cliente || '', 'es') || a.title.localeCompare(b.title, 'es'); });
     var elapsed = running ? Date.now() - running.startedAt : 0;
     var rt = running && task(running.taskId);
-    var html = '<h1>Temporizador</h1><p class="wh-muted">' + esc((wh.context.project || {}).name || '') + '</p>' +
+    var html = '<h1>Temporizador</h1><p class="wh-muted">' + esc((wh.context.project || {}).name || '') +
+      ' · También puedes iniciarlo desde la ficha de cualquier tarea.</p>' +
       '<div class="timer"><div class="clock' + (running ? ' is-running' : '') + '" id="clock">' + hms(elapsed) + '</div>';
     if(running){
       html += '<div class="running-on">Contando en <b>' + esc(rt ? rt.title : 'una tarea que ya no existe') + '</b>' + (rt && rt.cliente ? ' · ' + esc(rt.cliente) : '') + '</div>' +
@@ -127,7 +190,15 @@
     var sel = document.getElementById('task');
     if(sel) sel.onchange = function(){ selected = sel.value; render(); };
     var toggle = document.getElementById('toggle');
-    if(toggle) toggle.onclick = function(){ running ? stop() : start(); };
+    if(toggle) toggle.onclick = function(){
+      if(running){
+        var t = task(running.taskId);
+        stop().then(function(ms){ wh.ui.toast('Guardado: ' + human(ms) + (t ? ' en «' + t.title + '»' : '')); }).catch(fail);
+      } else if(selected){
+        start(selected).catch(fail);
+      }
+      render();
+    };
     var rs = document.getElementById('reset');
     if(rs) rs.onclick = reset;
 
@@ -138,6 +209,14 @@
     }, 1000);
   }
 
+  function panel(){
+    render();
+    wh.on('tasks', function(list){ tasks = list; render(); });
+    /* Se inició o paró desde una tarea: releer. */
+    wh.on('storage', function(){ load().then(render); });
+    wh.on('project', function(){ clearInterval(tick); selected = ''; wh.tasks.list().then(function(list){ tasks = list; return load(); }).then(render); });
+  }
+
   WorkhubPlugin.connect(MANIFEST).then(function(client){
     wh = client;
     return wh.tasks.list();
@@ -145,10 +224,8 @@
     tasks = list;
     return load();
   }).then(function(){
-    render();
-    wh.on('tasks', function(list){ tasks = list; render(); });
-    /* Otro proyecto: sus tiempos son otros. */
-    wh.on('project', function(){ clearInterval(tick); selected = ''; wh.tasks.list().then(function(list){ tasks = list; return load(); }).then(render); });
+    if(wh.isBackground) background();
+    else panel();
   }).catch(function(err){
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
       ? 'Este plugin se abre desde Workhub (sección Plugins).'

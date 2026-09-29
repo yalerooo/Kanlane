@@ -18,8 +18,8 @@
   const projectIcon = (hue, name) => '<span class="project-mark is-xs" style="--h:' + hue + '">' + Workhub.utils.html.esc(Workhub.utils.html.initials(name)) + '</span>';
   const clientIcon = (hue) => '<span class="dot" style="border-radius:2px;background:hsl(' + hue + ' 62% 52%)"></span>';
 
-  const VIEW_NAMES = {tasks:'Tareas', calendar:'Calendario', contacts:'Contactos', vault:'Contraseñas', clients:'Clientes', data:'Copia de seguridad', settings:'Ajustes'};
-  const SEARCH_INPUTS = {tasks:'search', contacts:'searchContacts', vault:'searchVault'};
+  const VIEW_NAMES = {tasks:'Tareas', calendar:'Calendario', clients:'Clientes y contactos', vault:'Contraseñas', data:'Copia de seguridad', settings:'Ajustes'};
+  const SEARCH_INPUTS = {tasks:'search', clients:'searchClients', vault:'searchVault'};
 
   function isTyping(el){
     if(!el) return false;
@@ -88,7 +88,7 @@
       const list = [
         {title:'Nueva tarea', meta:'N', icon:ICONS.plus, run:() => this.newTask()},
         {title:'Nueva reunión', icon:ICONS.plus, run:() => { app.navigate('calendar'); c.calendar.openNewMeeting(); }},
-        {title:'Nuevo contacto', icon:ICONS.plus, run:() => { app.navigate('contacts'); c.contacts.openNew(); }},
+        {title:'Nuevo contacto', icon:ICONS.plus, run:() => { app.navigate('clients'); c.contacts.openNew(c.clients.selectedClientName()); }},
         {title:'Nueva credencial', icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
         {title:'Nuevo cliente', icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
       ];
@@ -147,7 +147,7 @@
           title: ct.nombre || 'Sin nombre',
           meta: [ct.email, ct.cliente].filter(Boolean).join(' · '),
           icon: ICONS.user,
-          run: () => { this.app.navigate('contacts'); this.app.controllers.contacts.openEdit(ct.id); }
+          run: () => this.app.controllers.clients.showContact(ct.id)
         }));
 
       const meetings = !q ? [] : m.meetings.items
@@ -169,9 +169,9 @@
         .slice(0, MAX_PER_GROUP)
         .map((cl) => ({
           title: cl.nombre,
-          meta: 'Ver tareas del cliente',
+          meta: 'Ver ficha y contactos',
           icon: clientIcon(clientColors.hueOf(cl.nombre)),
-          run: () => this.showClientTasks(cl.nombre)
+          run: () => { this.app.navigate('clients'); this.app.controllers.clients.select(cl.id, true); }
         }));
 
       const projects = this.projectItems().filter((p) => !q || has(p.title, 'proyecto')).slice(0, MAX_PER_GROUP);

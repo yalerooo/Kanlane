@@ -40,13 +40,14 @@ Workhub.models.ClientModel = class ClientModel extends Workhub.models.Collection
     return this.add({nombre:name, createdAt:Date.now()});
   }
 
-  rename(id, newName, tasks, meetings){
+  /* related: modelos que guardan el nombre del cliente (tareas, reuniones,
+     contactos, contraseñas); todos pasan a usar el nombre nuevo. */
+  rename(id, newName, related){
     const client = this.find(id);
     if(!client) return Promise.resolve();
     const oldName = client.nombre;
-    return this.update(id, {nombre:newName})
-      .then(() => tasks.isReady() && tasks.updateWhere('cliente', oldName, {cliente:newName}))
-      .then(() => meetings.isReady() && meetings.updateWhere('cliente', oldName, {cliente:newName}));
+    return this.update(id, {nombre:newName}).then(() => Promise.all((related || []).map((model) =>
+      model.isReady() ? model.updateWhere('cliente', oldName, {cliente:newName}) : null)));
   }
 
   /* Elimina el cliente y todas sus tareas (reuniones, contactos y contraseñas se conservan). */

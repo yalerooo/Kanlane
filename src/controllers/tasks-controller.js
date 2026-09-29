@@ -129,8 +129,7 @@
       switch(action){
         case 'open-contact':
           this.closeDetail();
-          this.app.navigate('contacts');
-          this.app.controllers.contacts.openEdit(id);
+          this.app.controllers.clients.showContact(id);
           break;
         case 'toggle-linked-vault':
           if(!this.vault.find(id)) return;
@@ -274,8 +273,7 @@
           break;
         case 'open-contact':
           this.closeDialog();
-          this.app.navigate('contacts');
-          this.app.controllers.contacts.openEdit(id);
+          this.app.controllers.clients.showContact(id);
           break;
         case 'toggle-linked-vault':
           if(!this.vault.find(id)) return;

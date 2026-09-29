@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="assets/css/views/calendar.css">
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/clients.css">
+  <link rel="stylesheet" href="assets/css/views/github.css">
   <link rel="stylesheet" href="assets/css/views/plugins.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
   <link rel="stylesheet" href="assets/css/views/auth.css">
@@ -131,6 +132,7 @@
     <div class="toolbar">
       <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
       <select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
       <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
       <div class="summary" id="summary" aria-live="polite"></div>
     </div>
@@ -318,6 +320,15 @@
   </section>
 
   <section id="viewSettings" hidden>
+    <div class="settings-card gh-card">
+      <div class="settings-row">
+        <div>
+          <h3>GitHub Projects</h3>
+          <p>Sincroniza el tablero de este proyecto con un proyecto de GitHub.</p>
+        </div>
+      </div>
+      <div class="gh-body" id="ghBody"></div>
+    </div>
     <div class="settings-card">
       <div class="settings-row">
         <div>
@@ -864,6 +875,7 @@
 <script src="src/services/platform.js"></script>
 <script src="src/services/crypto.js"></script>
 <script src="src/services/firebase-backend.js"></script>
+<script src="src/services/github-api.js"></script>
 <script src="src/services/plugin-host.js"></script>
 <script src="src/services/official-plugins.js"></script>
 
@@ -879,6 +891,7 @@
 <script src="src/models/backup-model.js"></script>
 <script src="src/models/project-model.js"></script>
 <script src="src/models/plugin-model.js"></script>
+<script src="src/models/github-sync.js"></script>
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
@@ -902,6 +915,7 @@
 <script src="src/views/auth-view.js"></script>
 <script src="src/views/project-view.js"></script>
 <script src="src/views/plugins-view.js"></script>
+<script src="src/views/github-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -913,6 +927,7 @@
 <script src="src/controllers/backup-controller.js"></script>
 <script src="src/controllers/projects-controller.js"></script>
 <script src="src/controllers/plugins-controller.js"></script>
+<script src="src/controllers/github-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>
 <script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>

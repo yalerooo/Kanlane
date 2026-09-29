@@ -1,0 +1,30 @@
+/* ---------- Integración con GitHub Projects ---------- */
+.gh-card{margin-bottom:16px;}
+.gh-body{padding:0 18px 18px;}
+.gh-form,.gh-linked{display:grid;gap:12px;max-width:560px;}
+.gh-form .field{margin-bottom:0;}
+.gh-lead,.gh-note{margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft);}
+.gh-note{font-size:12.5px;}
+.gh-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.gh-project{display:flex;align-items:flex-start;gap:10px;color:var(--ink);}
+.gh-project > svg{flex:none;margin-top:2px;}
+.gh-project a{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;}
+.gh-project a:hover{text-decoration:underline;}
+.gh-state{font-size:12.5px;color:var(--ink-faint);}
+.gh-state.is-error{color:var(--danger);}
+.link-btn{padding:0;font:inherit;color:var(--accent);background:none;border:none;cursor:pointer;}
+.link-btn:hover{text-decoration:underline;}
+
+/* Botón de la barra de Tareas. */
+.gh-sync{gap:6px;}
+.gh-sync svg{flex:none;}
+.gh-sync.is-busy svg{animation:gh-pulse 1s ease-in-out infinite;}
+.gh-sync.is-error{color:var(--danger);}
+@keyframes gh-pulse{50%{opacity:.35;}}
+@media (prefers-reduced-motion:reduce){.gh-sync.is-busy svg{animation:none;}}
+
+/* Marca en las tarjetas enlazadas. */
+.gh-tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-faint);}
+.gh-tag svg{flex:none;}
+.tv-fact-value a{color:var(--accent);text-decoration:none;}
+.tv-fact-value a:hover{text-decoration:underline;}

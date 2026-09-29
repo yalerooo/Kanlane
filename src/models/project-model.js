@@ -67,16 +67,22 @@
       return Workhub.utils.html.hueFor(project ? project.nombre : '');
     }
 
-    create(nombre, color){
-      const data = {nombre:nombre, createdAt:Date.now()};
+    /* Etapas y clientes de un proyecto: {tipo, stages, clients} (ver ProjectTemplates). */
+    configOf(project){
+      return Workhub.models.ProjectTemplates.resolve(project);
+    }
+
+    /* config: campos del tipo de proyecto (ProjectTemplates.fieldsFor). */
+    create(nombre, color, config){
+      const data = Object.assign({nombre:nombre, createdAt:Date.now()}, config || {});
       if(typeof color === 'number') data.color = color;
       return this.add(data);
     }
 
     /* set con merge: el documento del principal puede no existir todavía. */
-    save(id, nombre, color){
+    save(id, nombre, color, config){
       const current = this.get(id) || {};
-      const data = {nombre:nombre, createdAt:current.createdAt || (id === MAIN_ID ? 0 : Date.now())};
+      const data = Object.assign({nombre:nombre, createdAt:current.createdAt || (id === MAIN_ID ? 0 : Date.now())}, config || {});
       if(typeof color === 'number') data.color = color;
       return this.set(id, data);
     }

@@ -11,7 +11,16 @@
     color: 238,
     permissions: ['tasks:read', 'ui:extend']
   };
-  var STATUS_COLORS = {pendiente:'var(--st-pend)', proceso:'var(--st-proc)', espera:'var(--st-wait)', completada:'var(--st-done)'};
+  /* Colores de las etapas del proyecto (el nombre del color lo da Workhub). */
+  var COLOR_VARS = {gray:'var(--st-pend)', blue:'var(--st-proc)', orange:'var(--st-wait)', green:'var(--st-done)', red:'var(--danger)', violet:'var(--meet)'};
+  function colorOf(key){
+    var st = statuses.filter(function(s){ return s.key === key; })[0];
+    return COLOR_VARS[st && st.color] || COLOR_VARS.gray;
+  }
+  /* Una tarea está terminada si su etapa es una de las marcadas como final. */
+  function isDone(t){
+    return statuses.some(function(s){ return s.key === t.status && s.done; });
+  }
 
   var tr = WorkhubPlugin.translations({en:{
     'Informe de trabajo':'Work report', 'Copiar resumen':'Copy summary', 'Descargar CSV':'Download CSV',
@@ -47,11 +56,11 @@
   function stats(){
     var today = ymd(new Date());
     var weekAgo = Date.now() - 7 * 864e5;
-    var open = tasks.filter(function(t){ return t.status !== 'completada'; });
+    var open = tasks.filter(function(t){ return !isDone(t); });
     var overdue = open.filter(function(t){ return t.dueDate && t.dueDate < today; })
       .sort(function(a, b){ return a.dueDate.localeCompare(b.dueDate); });
     var dueToday = open.filter(function(t){ return t.dueDate === today; });
-    var doneWeek = tasks.filter(function(t){ return t.status === 'completada' && (t.updatedAt || 0) >= weekAgo; });
+    var doneWeek = tasks.filter(function(t){ return isDone(t) && (t.updatedAt || 0) >= weekAgo; });
     var byClient = {};
     tasks.forEach(function(t){
       var c = t.cliente || tr('Sin cliente');
@@ -89,7 +98,7 @@
         return '<tr><td>' + esc(r.cliente) + '</td>' +
           statuses.map(function(st){ return '<td class="num">' + (r[st.key] || '·') + '</td>'; }).join('') +
           '<td class="num"><b>' + r.total + '</b></td><td><div class="bar">' +
-          statuses.map(function(st){ return r[st.key] ? '<i style="width:' + (100 * r[st.key] / r.total) + '%;background:' + STATUS_COLORS[st.key] + '"></i>' : ''; }).join('') +
+          statuses.map(function(st){ return r[st.key] ? '<i style="width:' + (100 * r[st.key] / r.total) + '%;background:' + colorOf(st.key) + '"></i>' : ''; }).join('') +
           '</div></td></tr>';
       }).join('') + '</tbody></table></div></div>';
 
@@ -97,7 +106,7 @@
       html += '<div class="section"><h2>' + tr('Requieren atención') + '</h2><div class="list">' +
         s.overdue.concat(s.dueToday).map(function(t){
           var late = t.dueDate < ymd(new Date());
-          return '<button class="item" data-open="' + esc(t.id) + '"><span class="wh-dot" style="background:' + STATUS_COLORS[t.status] + '"></span>' +
+          return '<button class="item" data-open="' + esc(t.id) + '"><span class="wh-dot" style="background:' + colorOf(t.status) + '"></span>' +
             '<span class="t">' + esc(t.title) + '</span><span class="wh-muted">' + esc(t.cliente) + '</span>' +
             '<span class="d' + (late ? ' is-late' : '') + '">' + (late ? tr('Vencida · {date}', {date:fmt(t.dueDate)}) : tr('Hoy')) + '</span></button>';
         }).join('') + '</div></div>';
@@ -167,6 +176,9 @@
     tasks = res[1];
     render();
     wh.on('tasks', function(list){ tasks = list; render(); });
+    wh.on('project', function(){
+      Promise.all([wh.statuses(), wh.tasks.list()]).then(function(r){ statuses = r[0]; tasks = r[1]; render(); });
+    });
   }).catch(function(err){
     if(err === 'background') return;
     document.getElementById('status').textContent = err.message === 'not-in-workhub'

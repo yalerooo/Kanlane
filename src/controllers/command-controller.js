@@ -136,7 +136,7 @@
       const actions = this.actions().filter((a) => !q || has(a.title));
 
       const tasks = m.tasks.items
-        .filter((t) => q ? has(t.title, t.cliente, t.contacto, t.desc) : t.status !== 'completada')
+        .filter((t) => q ? has(t.title, t.cliente, t.contacto, t.desc) : !TaskModel.isDone(t))
         .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
         .slice(0, MAX_PER_GROUP)
         .map((t) => {

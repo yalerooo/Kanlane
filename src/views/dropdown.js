@@ -14,7 +14,6 @@
   const MENU_GAP = 6;
   const MENU_MAX_HEIGHT = 320;
   const NEW_VALUE = '__new__';
-  const STATUS_DOT = {pendiente:'--st-pend', proceso:'--st-proc', espera:'--st-wait', completada:'--st-done'};
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
 
   const CHEVRON = '<svg class="dd-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -114,8 +113,8 @@
       const hue = opt.getAttribute('data-hue');
       if(hue !== null) return '<span class="dd-dot is-client" style="--h:' + hue + '"></span>';
       if(this.select.getAttribute('data-dots') !== 'status') return '';
-      const v = STATUS_DOT[opt.value];
-      return v ? '<span class="dd-dot" style="background:var(' + v + ')"></span>' : '';
+      const st = Workhub.models.TaskModel.STATUS.find((s) => s.key === opt.value);
+      return st ? '<span class="dd-dot" style="background:' + st.dot + '"></span>' : '';
     }
 
     refresh(){

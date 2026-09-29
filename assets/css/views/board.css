@@ -4,7 +4,7 @@
 .board{
   --board-top:240px;
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(var(--cols, 4),minmax(0,1fr));
   gap:12px;
   height:calc(100vh - var(--board-top));
   height:calc(100dvh - var(--board-top));
@@ -179,3 +179,12 @@
 .due-badge.is-today{background:var(--st-wait-bg);color:var(--st-wait);}
 .due-badge.is-overdue{background:var(--danger-bg);color:var(--danger);}
 .due-badge.is-done{background:var(--st-done-bg);color:var(--st-done);}
+
+/* El número de columnas depende del tipo de proyecto. Con más de cuatro, cada
+   una mantiene un ancho mínimo y el tablero se desplaza en horizontal. */
+@media (min-width:901px){
+  .board.is-many{
+    grid-template-columns:repeat(var(--cols), minmax(230px, 1fr));
+    overflow-x:auto;
+  }
+}

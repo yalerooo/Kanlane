@@ -169,8 +169,10 @@ wh.context.project      // {id, name} proyecto abierto
 wh.context.theme        // {scheme: 'light' | 'dark', vars: {...}}
 wh.context.locale       // idioma de Workhub: 'es' o 'en' (también wh.lang)
 wh.locale               // formato de fechas: 'es-ES' o 'en-US'
-await wh.statuses()     // [{key:'pendiente', label:'Pendiente'}, {key:'proceso', ...}, {key:'espera', ...}, {key:'completada', ...}]
+await wh.statuses()     // etapas del proyecto abierto: [{key, label, done, color}, ...]
 ```
+
+Las etapas dependen del tipo de proyecto (soporte, desarrollo, personalizado…), así que **no des por hechas las claves** `pendiente` o `completada`. `done` es `true` en las etapas que cuentan como terminadas; `color` es `gray`, `blue`, `orange`, `green`, `red` o `violet`. Cada tarea trae en `status` la clave de una de esas etapas, y al crear una sin `status` va a la primera. Al cambiar de proyecto llega el evento `project`: vuelve a pedir `wh.statuses()`.
 
 Si la página se abre fuera de Workhub, `connect` falla con el mensaje `not-in-workhub`, así puedes mostrar una explicación.
 

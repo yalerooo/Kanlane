@@ -166,7 +166,7 @@
 
     render(tasks){
       /* Resumen compacto de lo que se está viendo (respeta búsqueda y filtro). */
-      const open = tasks.filter((t) => t.status !== 'completada');
+      const open = tasks.filter((t) => !TaskModel.isDone(t));
       const overdue = tasks.filter((t) => TaskModel.dueState(t) === 'overdue').length;
       const today = tasks.filter((t) => TaskModel.dueState(t) === 'today').length;
       this.summary.innerHTML =
@@ -181,14 +181,17 @@
         scrolls[c.getAttribute('data-status')] = c.querySelector('.cards').scrollTop;
       });
 
+      const n = TaskModel.STATUS.length;
+      this.board.style.setProperty('--cols', n);
+      this.board.classList.toggle('is-many', n > 4);
       this.board.innerHTML = TaskModel.STATUS.map((s) => {
-        const items = tasks.filter((t) => t.status === s.key).sort(TaskModel.byOrder);
+        const items = tasks.filter((t) => TaskModel.stageKey(t) === s.key).sort(TaskModel.byOrder);
         const cardsHtml = items.length
           ? items.map(cardHtml).join('')
           : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
         return '<section class="col" data-status="' + s.key + '" style="--st:' + s.dot + '">' +
           '<header class="col-head">' +
-            '<span class="name"><span class="dot"></span><span class="col-label">' + s.label + '</span><span class="count">' + items.length + '</span></span>' +
+            '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count">' + items.length + '</span></span>' +
             '<button type="button" class="col-add" data-add-status="' + s.key + '" aria-label="Nueva tarea en ' + esc(s.label) + '" title="Nueva tarea en ' + esc(s.label) + '">' + PLUS_ICON + '</button>' +
           '</header>' +
           '<div class="cards">' + cardsHtml + '</div></section>';
@@ -198,9 +201,9 @@
         c.querySelector('.cards').scrollTop = scrolls[c.getAttribute('data-status')] || 0;
       });
       this.tabs.innerHTML = TaskModel.STATUS.map((s) => {
-        const n = tasks.filter((t) => t.status === s.key).length;
+        const count = tasks.filter((t) => TaskModel.stageKey(t) === s.key).length;
         return '<button type="button" class="board-tab" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
-          '<span class="dot"></span>' + esc(s.label) + '<span class="count">' + n + '</span></button>';
+          '<span class="dot"></span><span translate="no">' + esc(s.label) + '</span><span class="count">' + count + '</span></button>';
       }).join('');
       this.syncTabs();
       this.fitHeight();
@@ -223,7 +226,7 @@
       due
     ].join('');
     return '<article class="card" draggable="true" tabindex="0" data-id="' + esc(t.id) + '">' +
-      (t.cliente ? clientColors.chip(t.cliente) : '') +
+      (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
       '<h3 translate="no">' + esc(t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +

@@ -72,7 +72,7 @@
       });
       this.detail.bindStatus((id, status) => {
         this.tasks.move(id, status);
-        toast.success('Movida a «' + Workhub.models.TaskModel.statusOf(status).label + '»');
+        toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
@@ -204,7 +204,14 @@
 
     save(id, values){
       if(!this.tasks.isReady()){ this.closeDialog(); return; }
-      if(!values.cliente || !values.title) return;
+      if(this.app.clientsEnabled()){
+        if(!values.cliente || !values.title) return;
+      } else {
+        /* Sin clientes: no se asigna ninguno (una tarea que ya lo tenía lo conserva). */
+        if(!values.title) return;
+        const prev = id ? this.tasks.find(id) : null;
+        values.cliente = prev ? (prev.cliente || '') : '';
+      }
       this.tasks.save(id, values).then(() => {
         toast.success(id ? 'Cambios guardados' : 'Tarea creada');
         this.closeDialog(true);

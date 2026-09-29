@@ -47,12 +47,13 @@
       this.view.bindAddUrl((url) => this.addFromUrl(url));
       this.view.bindCards({
         open: (id) => this.open(id),
-        manage: (id) => this.manage(id),
-        install: (i) => this.installOfficial(i)
+        details: (id) => this.details(id),
+        install: (i) => this.installOfficial(i),
+        officialDetails: (i) => this.installOfficial(i)
       });
       this.view.bindStage({
         back: () => this.close(),
-        manage: () => this.active && this.manage(this.active.id),
+        details: () => this.active && this.details(this.active.id),
         review: () => this.reviewExtra()
       });
       this.view.bindDialog({
@@ -71,8 +72,17 @@
 
     /* ---------- Lista ---------- */
 
+    /* Los oficiales se muestran con el manifiesto del catálogo (el más reciente). */
+    manifestOf(p){
+      if(p.official){
+        const o = Workhub.services.officialPlugins.find((x) => x.manifest.id === p.id);
+        if(o) return o.manifest;
+      }
+      return host.validateManifest(p.manifest || {}, !!p.official).manifest || p.manifest || {};
+    }
+
     installedList(){
-      return this.plugins.list().map((p) => ({id:p.id, url:p.url, manifest:p.manifest || {}, official:!!p.official, granted:p.granted || []}));
+      return this.plugins.list().map((p) => ({id:p.id, url:p.url, manifest:this.manifestOf(p), official:!!p.official, granted:p.granted || [], installedAt:p.installedAt}));
     }
 
     render(){
@@ -122,6 +132,11 @@
     confirmDialog(){
       const p = this.pending;
       if(!p) return;
+      if(p.mode === 'details'){
+        this.view.closeDialog();
+        this.open(p.id);
+        return;
+      }
       this.view.setDialogBusy(true);
       let done;
       if(p.mode === 'install'){
@@ -148,11 +163,11 @@
       });
     }
 
-    manage(id){
+    details(id){
       const p = this.plugins.find(id);
       if(!p) return;
-      this.pending = {mode:'manage', id:id, url:p.url, manifest:p.manifest || {}, official:!!p.official, granted:p.granted || []};
-      this.view.openDialog('manage', this.pending);
+      this.pending = {mode:'details', id:id, url:p.url, manifest:this.manifestOf(p), official:!!p.official, granted:p.granted || [], installedAt:p.installedAt};
+      this.view.openDialog('details', this.pending);
     }
 
     /* Quita el plugin y borra sus datos en todos los proyectos. */
@@ -181,7 +196,7 @@
       this.app.navigate('plugins');
       if(this.active && this.active.id === id && !force) return;
       this.closeFrame();
-      this.view.showStage(p);
+      this.view.showStage(Object.assign({}, p, {manifest:this.manifestOf(p)}));
       const official = !!p.official;
       const frame = new host.PluginFrame({
         url: host.resolveUrl(p.url) || p.url,
@@ -214,8 +229,8 @@
       if(extra.length){
         this.pendingExtra = {mode:'review', id:p.id, url:p.url, manifest:v.manifest, official:official, extra:extra};
         this.view.setNotice('Esta versión del plugin pide permisos nuevos. Funciona con los que ya tenía hasta que los revises. <button type="button" class="btn btn-ghost btn-sm" data-review>Revisar</button>');
-      } else if(!sameSet(requested, approved) || (p.manifest || {}).version !== v.manifest.version){
-        /* Pide menos permisos o cambió de versión: se guarda tal cual. */
+      } else if(!sameSet(requested, approved) || JSON.stringify(p.manifest || {}) !== JSON.stringify(v.manifest)){
+        /* Pide menos permisos o cambió su descripción: se guarda tal cual. */
         this.plugins.setGranted(p.id, granted, v.manifest).catch(() => {});
       }
       return {manifest:v.manifest, granted:granted, context:this.context()};

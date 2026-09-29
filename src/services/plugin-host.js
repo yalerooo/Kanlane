@@ -25,6 +25,17 @@
     'storage': 'Guardar sus propios datos en tu cuenta'
   };
 
+  /* Nombre corto e icono de cada permiso (etiquetas de las tarjetas). */
+  const PERMISSION_INFO = {
+    'tasks:read': {short:'Ver tareas', icon:'list'},
+    'tasks:write': {short:'Editar tareas', icon:'check'},
+    'clients:read': {short:'Clientes', icon:'briefcase'},
+    'contacts:read': {short:'Contactos', icon:'users'},
+    'calendar:read': {short:'Calendario', icon:'calendar'},
+    'calendar:write': {short:'Crear reuniones', icon:'calendar'},
+    'storage': {short:'Guardar datos', icon:'database'}
+  };
+
   /* Permiso que exige cada método (null: ninguno). */
   const METHODS = {
     'app.statuses': null,
@@ -79,7 +90,11 @@
       description: text(m.description, 200),
       author: text(m.author, 60),
       homepage: Workhub.utils.urls.safeUrl(text(m.homepage, 300)),
-      icon: text(m.icon, 4),
+      /* Nombre de un icono del set de Workhub (src/views/plugin-icons.js);
+         si no existe se usa el genérico. Nada de emojis ni imágenes. */
+      icon: /^[a-z]{2,20}$/.test(text(m.icon, 20)) ? text(m.icon, 20) : 'puzzle',
+      /* Tono del color del icono (0–359); si no, uno derivado del id. */
+      color: typeof m.color === 'number' && isFinite(m.color) ? Math.round(((m.color % 360) + 360) % 360) : null,
       permissions: perms.filter((p, i) => perms.indexOf(p) === i)
     }};
   }
@@ -227,7 +242,7 @@
   }
 
   Workhub.services.pluginHost = {
-    PERMISSIONS, EVENTS, OFFICIAL_PREFIX,
+    PERMISSIONS, PERMISSION_INFO, EVENTS, OFFICIAL_PREFIX,
     PluginFrame, probe, validateManifest, resolveUrl
   };
 })();

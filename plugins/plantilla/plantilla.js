@@ -8,7 +8,8 @@ const MANIFEST = {
   description: 'Qué hace tu plugin, en una frase.',
   author: 'Tu nombre',
   homepage: 'https://github.com/tu-nombre/mi-plugin',
-  icon: '🧩',                              // un emoji
+  icon: 'puzzle',                         // nombre de un icono de Workhub (ver docs/PLUGINS.md)
+  color: 172,                             // tono del color del icono, de 0 a 359
   permissions: ['tasks:read', 'tasks:write', 'storage']   // pide solo lo que uses
 };
 

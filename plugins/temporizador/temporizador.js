@@ -10,7 +10,8 @@
     version: '1.0.0',
     description: 'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.',
     author: 'Workhub',
-    icon: '⏱️',
+    icon: 'timer',
+    color: 24,
     permissions: ['tasks:read', 'storage']
   };
   var MAX_SESSIONS = 300;

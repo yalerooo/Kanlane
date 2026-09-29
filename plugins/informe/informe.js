@@ -7,7 +7,8 @@
     version: '1.0.0',
     description: 'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.',
     author: 'Workhub',
-    icon: '📊',
+    icon: 'chart',
+    color: 238,
     permissions: ['tasks:read']
   };
   var STATUS_COLORS = {pendiente:'var(--st-pend)', proceso:'var(--st-proc)', espera:'var(--st-wait)', completada:'var(--st-done)'};

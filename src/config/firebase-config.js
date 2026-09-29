@@ -8,12 +8,12 @@
    Mientras apiKey esté vacío, Workhub funciona como hasta ahora (modo local en
    el navegador, o dentro de claude.ai). */
 window.WORKHUB_FIREBASE = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyDqO3Mxm7kP7H0Mz5fOZbWN6k7nRPxhXYk',
+  authDomain: 'workhub-26f50.firebaseapp.com',
+  projectId: 'workhub-26f50',
+  storageBucket: 'workhub-26f50.firebasestorage.app',
+  messagingSenderId: '1056897810807',
+  appId: '1:1056897810807:web:dacc47f0a05651f91c6172',
 
   /* Botones de acceso que se muestran, en este orden. Cada uno debe estar
      activado en Firebase → Authentication → Sign-in method.

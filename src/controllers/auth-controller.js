@@ -5,7 +5,9 @@
    la página para no mezclar datos de dos usuarios. */
 (function(){
   const firebase = Workhub.services.firebase;
-  const MIN_PASSWORD = 6;
+  const MIN_PASSWORD = 8;
+  /* Datos de la sesión que se guardan en este navegador y se borran al salir. */
+  const SESSION_PREFS = ['workhub_project'];
 
   const ERRORS = {
     'auth/invalid-email': 'El correo no es válido.',
@@ -16,7 +18,9 @@
     'auth/invalid-login-credentials': 'Correo o contraseña incorrectos.',
     'auth/missing-password': 'Escribe tu contraseña.',
     'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Inicia sesión.',
-    'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+    'auth/weak-password': 'La contraseña debe tener al menos 8 caracteres.',
+    'auth/password-does-not-meet-requirements': 'La contraseña no cumple los requisitos: usa al menos 8 caracteres, con mayúsculas, minúsculas y números.',
+    'auth/admin-restricted-operation': 'Esta cuenta no tiene acceso a Workhub.',
     'auth/user-disabled': 'Esta cuenta está desactivada.',
     'auth/account-exists-with-different-credential': 'Ya tienes una cuenta con ese correo usando otro método de acceso. Entra con ese método.',
     'auth/operation-not-allowed': 'Este método de acceso no está activado en Firebase (Authentication → Sign-in method).',
@@ -77,15 +81,44 @@
           return;
         }
         this.user = user;
+        if(firebase.needsVerification(user)){
+          this.showVerify(user);
+          return;
+        }
+        this.enter(user);
+      } else if(this.user){
+        location.reload();
+      } else {
+        firebase.clearLocalCache();
+        this.view.showSignIn(firebase.providers(), firebase.allowSignup());
+      }
+    }
+
+    /* Sesión válida: caché local, datos del usuario y arranque de la app. */
+    enter(user){
+      this.view.showLoading();
+      firebase.startSession().then(() => {
         firebase.install(user);
         this.view.hide();
         this.view.showAccount(user);
         if(this.resolveGate) this.resolveGate();
-      } else if(this.user){
-        location.reload();
-      } else {
-        this.view.showSignIn(firebase.providers());
-      }
+      });
+    }
+
+    /* Cuenta de correo sin verificar: no llega a la app hasta que pulse el
+       enlace del correo (firestore.rules tampoco le deja leer ni guardar). */
+    showVerify(user){
+      this.view.showVerify(user.email, {
+        check: () => firebase.refreshVerification().then((ok) => {
+          if(ok) this.enter(firebase.currentUser ? firebase.currentUser() : user);
+          return ok;
+        }),
+        resend: () => firebase.sendVerification().then(() => true, (err) => {
+          this.view.showVerifyMessage(messageFor(err));
+          return false;
+        }),
+        signOut: () => this.signOut()
+      });
     }
 
     showError(err){
@@ -129,8 +162,11 @@
       p.finally(() => this.view.setBusy(false));
     }
 
+    /* Al salir se recarga la página (onUser) y, ya sin sesión, se borra la
+       copia local de los datos (clearLocalCache). */
     signOut(){
       if(!this.user) return;
+      SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
       firebase.signOut().catch(() => location.reload());
     }
   }

@@ -3,7 +3,7 @@
   const cryptoSvc = Workhub.services.crypto;
   const platform = Workhub.services.platform;
   const toast = Workhub.views.toast;
-  const MIN_PASSWORD_LENGTH = 6;
+  const MIN_PASSWORD_LENGTH = 8;
   const RECOVERY_KEY_BYTES = 32;
 
   function recoveryFileText(key){
@@ -163,7 +163,7 @@
 
       if(state === 'none'){
         if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
-        if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 6 caracteres.'); done(); return; }
+        if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
         this.vault.create(pass).then((key) => this.presentRecoveryKey(key, false)).catch(() => {
           this.view.showLockError('No se pudo crear la contraseña maestra. Inténtalo de nuevo.');
         }).finally(done);
@@ -190,7 +190,7 @@
         return;
       }
       if(newPass !== newPass2){ this.view.showRecoverError('Las dos contraseñas nuevas no coinciden.'); return; }
-      if(newPass.length < MIN_PASSWORD_LENGTH){ this.view.showRecoverError('Usa al menos 6 caracteres.'); return; }
+      if(newPass.length < MIN_PASSWORD_LENGTH){ this.view.showRecoverError('Usa al menos 8 caracteres.'); return; }
 
       this.view.setRecovering(true);
       this.vault.recover(keyBytes, newPass).then((key) => this.presentRecoveryKey(key, true)).catch((err) => {

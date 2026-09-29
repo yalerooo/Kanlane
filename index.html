@@ -32,17 +32,7 @@
        pantalla de acceso/carga hasta que hay sesión (AuthController quita la
        clase). También se aplica ya el tema guardado, para no ver un parpadeo. -->
   <script src="src/config/firebase-config.js"></script>
-  <script>
-    (function(){
-      var root = document.documentElement;
-      var c = window.WORKHUB_FIREBASE || {};
-      if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)) root.classList.add('auth-gate');
-      try{
-        var theme = localStorage.getItem('workhub_theme');
-        if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
-      }catch(e){}
-    })();
-  </script>
+  <script src="src/boot.js"></script>
 </head>
 <body>
 

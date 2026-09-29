@@ -25,6 +25,7 @@
      - getPayload(item): texto que viaja en dataTransfer
      - onDrop(payload, target, ev)
      - onOver(ev, target) y onEnd(): opcionales, para pintar dónde caerá.
+     - accept(ev): opcional; si devuelve false se ignora ese arrastre.
      Mientras se arrastra, la página y las listas se desplazan solas al
      acercarse a sus bordes (ver utils/autoscroll.js). */
   function bindDragAndDrop(container, opts){
@@ -61,6 +62,7 @@
     });
 
     container.addEventListener('dragover', (ev) => {
+      if(opts.accept && !opts.accept(ev)) return;
       const target = closest(ev.target, opts.targetSelector);
       if(!target) return;
       ev.preventDefault();
@@ -80,6 +82,7 @@
     });
 
     container.addEventListener('drop', (ev) => {
+      if(opts.accept && !opts.accept(ev)) return;
       const target = closest(ev.target, opts.targetSelector);
       if(!target) return;
       ev.preventDefault();

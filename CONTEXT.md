@@ -110,6 +110,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - Se guarda en el documento del proyecto: `tipo` (y `stages`, `clients` solo si es personalizado). Sin `tipo` = soporte, así que no hay migración. Se copia también en `workhub_project` (localStorage) para pintar bien antes de que llegue la lista.
 - `TaskModel.STATUS` es un array único que `TaskModel.setStages()` rellena en el sitio al abrir/editar un proyecto (`AppController.applyProjectConfig`). Usa `TaskModel.isDone(t)` (no `'completada'`) y `TaskModel.stageKey(t)`, que manda a la primera etapa las tareas cuyo estado ya no existe.
 - Sin clientes: `body.no-clients` y la clase `.needs-clients` en el HTML (JS `ShellView.setClientsEnabled`); las tareas y credenciales no piden cliente (`AppController.clientsEnabled()`). `Workhub.clientsEnabled` lo leen las vistas.
+- Menú «···» por columna (`ColumnView`, `TasksController.bindColumns`): editar nombre/color/límite/final, ocultar (localStorage `workhub_hidden_{proyecto}`), eliminar columna, eliminar todas las tarjetas, mover izquierda/derecha, y arrastrar la cabecera para reordenar. Cada cambio pasa por `ProjectsController.updateStages`, que convierte el proyecto en personalizado y guarda `stages` (con `limit` opcional). No hay «archivar» porque las tareas no tienen archivo.
 - Los plugins reciben las etapas con `wh.statuses()` (`key`, `label`, `done`, `color`); los oficiales ya no asumen `completada`.
 
 ### Calendario

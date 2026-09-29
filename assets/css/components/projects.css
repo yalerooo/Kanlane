@@ -166,3 +166,19 @@
 /* Proyectos sin clientes */
 .clients-off{display:none !important;}
 body.no-clients .client-chip{display:none;}
+
+/* Editar columna, menú de columna y confirmaciones */
+#dlgColumn{width:min(420px, calc(100vw - 32px));}
+#dlgConfirm{width:min(400px, calc(100vw - 32px));}
+.stage-colors{display:flex;flex-wrap:wrap;gap:10px;padding:2px 0;}
+.stage-color.is-lg{width:26px;height:26px;}
+.stage-color.is-selected{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--c);}
+.field-help{margin:0;font-size:12px;color:var(--ink-faint);}
+.confirm-text{margin:0 0 18px;font-size:13.5px;line-height:1.5;color:var(--ink-soft);}
+.col-menu{padding:5px;overflow:auto;}
+.col-menu button.dd-option{width:100%;border:none;background:transparent;font-family:inherit;text-align:left;}
+.col-menu button.dd-option:hover,
+.col-menu button.dd-option:focus-visible{background:var(--hover);outline:none;}
+.col-menu button.dd-option:disabled{opacity:.4;pointer-events:none;}
+.col-menu .dd-option.is-danger{color:var(--danger);}
+.col-menu .dd-option svg{flex:none;}

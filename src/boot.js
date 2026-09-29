@@ -9,6 +9,13 @@
   var root = document.documentElement;
   var c = window.WORKHUB_FIREBASE || {};
   if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)) root.classList.add('auth-gate');
+  /* Idioma distinto del español: la página se oculta hasta que se traduce
+     (src/i18n/i18n.js), para no ver los textos en español un instante. */
+  try{
+    var lang = localStorage.getItem('workhub_lang');
+    if(!lang) lang = /^es\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
+    if(lang !== 'es') root.classList.add('i18n-pending');
+  }catch(e){}
   try{
     var theme = localStorage.getItem('workhub_theme');
     if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);

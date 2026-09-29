@@ -12,6 +12,23 @@
 
   var PROTOCOL = 1;
   var CONNECT_TIMEOUT_MS = 8000;
+  var LOCALES = {es:'es-ES', en:'en-US'};
+
+  /* Idioma de Workhub ('es', 'en'…). Hasta conectar, el del navegador. */
+  var lang = /^es\b/i.test(global.navigator.language || 'es') ? 'es' : 'en';
+
+  /* Traducciones del plugin: const t = WorkhubPlugin.translations({en:{'Hola':'Hello'}});
+     t('Hola') devuelve el texto en el idioma de Workhub (o el original si
+     no hay traducción). Admite datos: t('Hola, {name}', {name:'Ana'}). */
+  function translations(dicts){
+    dicts = dicts || {};
+    return function(text, params){
+      var d = dicts[lang] || {};
+      var out = Object.prototype.hasOwnProperty.call(d, text) ? d[text] : text;
+      if(params) out = String(out).replace(/\{(\w+)\}/g, function(_, k){ return params[k] != null ? params[k] : ''; });
+      return out;
+    };
+  }
 
   function send(msg){
     msg.wh = PROTOCOL;
@@ -64,10 +81,15 @@
         if(msg.type === 'welcome' && !client){
           clearTimeout(timer);
           applyTheme(msg.context && msg.context.theme);
+          if(msg.context && LOCALES[msg.context.locale]) lang = msg.context.locale;
+          document.documentElement.lang = lang;
           client = {
             manifest: manifest,
             context: msg.context || {},
             permissions: msg.granted || [],
+            /* 'es' | 'en' y su formato de fechas ('es-ES' | 'en-US'). */
+            lang: lang,
+            locale: LOCALES[lang],
             has: function(p){ return this.permissions.indexOf(p) !== -1; },
             on: function(name, fn){
               (listeners[name] = listeners[name] || []).push(fn);
@@ -143,5 +165,9 @@
     });
   }
 
-  global.WorkhubPlugin = {connect:connect, version:PROTOCOL};
+  global.WorkhubPlugin = {
+    connect:connect, version:PROTOCOL, translations:translations,
+    get lang(){ return lang; },
+    get locale(){ return LOCALES[lang]; }
+  };
 })(window);

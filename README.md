@@ -1,6 +1,6 @@
 # Workhub
 
-Gestor de trabajo por cliente: tareas, calendario con reuniones, contactos, contraseñas cifradas y clientes (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.). En Ajustes se puede elegir el color de acento y el tema claro/oscuro.
+Gestor de trabajo por cliente: tareas, calendario con reuniones, contactos, contraseñas cifradas y clientes (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.). En Ajustes se puede elegir el color de acento, el tema claro/oscuro y el idioma (español o inglés).
 
 **Versión en vivo:**
 https://workhub-project.netlify.app/ 
@@ -28,6 +28,7 @@ src/
   utils/        HTML/iconos, fechas, URLs, ayudas de interfaz (copiar, arrastrar y soltar)
                 y desplazamiento automático al arrastrar
   config/       configuración de Firebase (vacía = modo local)
+  i18n/         traducciones: motor (i18n.js) y diccionario inglés (en.js)
   services/     acceso a la plataforma (db, imágenes, descargas), backend de Firebase,
                 cifrado y preferencias
   models/       datos y reglas de negocio: tareas, clientes, contactos, reuniones,
@@ -48,6 +49,7 @@ Detalles de interfaz:
 - **Proyectos**: el selector de la parte de arriba de la barra lateral cambia de proyecto al instante, sin recargar. Cada proyecto tiene sus propias tareas (con notas), reuniones, contactos, contraseñas (con su propia contraseña maestra) y clientes. Desde el mismo menú se crea un proyecto, y el lápiz de cada uno permite renombrarlo, cambiar su color o eliminarlo con todos sus datos (pide confirmación). El **proyecto principal** usa los datos de siempre, en la raíz de la base de datos, así que no hay que migrar nada y no se puede eliminar; los demás guardan todo en `projects/{id}/…`. La lista está en la colección `projects` (`ProjectModel`), y el último proyecto abierto se recuerda en el navegador. La copia de seguridad exporta e importa el proyecto abierto.
 - **Clientes y contactos**: una sola sección. A la izquierda, la lista de clientes (con cuántos contactos y tareas abiertas tiene cada uno); a la derecha, la ficha del cliente elegido con sus personas de contacto (email y teléfono se pueden pulsar para escribir o llamar), botones para ver sus tareas o sus contraseñas, y acciones para cambiar el color, renombrar o eliminar. El buscador encuentra a la vez clientes y personas (nombre, email, teléfono o notas) y resalta las coincidencias. Los contactos cuyo cliente se eliminó aparecen en "Sin cliente". Renombrar un cliente actualiza también sus tareas, reuniones, contactos y contraseñas. En móvil se ve primero la lista y, al elegir un cliente, su ficha.
 - **Plugins**: ver la sección [Plugins](#plugins) más abajo.
+- **Idiomas**: español e inglés (Ajustes → Idioma, o el selector de la pantalla de inicio de sesión). La primera vez se usa el idioma del navegador; después, el elegido, que se guarda en la cuenta. La app está escrita en español y `src/i18n/i18n.js` traduce cada texto al pintarse (diccionario y patrones en `src/i18n/en.js`), así las vistas no saben nada de idiomas. Los datos del usuario (tareas, clientes, notas…) van marcados con `translate="no"` y nunca se traducen. Para añadir un idioma: crea `src/i18n/<código>.js` con `Workhub.i18n.add('<código>', {...}, [...])`, añádelo a `LANGS` en `i18n.js`, cárgalo en `index.html` y ponlo en el selector de Ajustes. `Workhub.i18n.missing()` lista en la consola los textos que aún no tienen traducción.
 - **Paleta de comandos** (`Ctrl K` / `⌘K` o el botón *Buscar…* de la barra lateral): busca tareas, contactos, reuniones y clientes, y lanza acciones (nueva tarea/reunión/contacto/credencial/cliente, nuevo proyecto o cambiar a otro, ir a una sección, cambiar el tema, exportar la copia).
 - **Atajos**: `N` crea una tarea y `/` enfoca el buscador de la sección actual (no se activan mientras escribes ni con un diálogo abierto).
 - **Avisos**: confirmación breve al crear, guardar, mover o eliminar, y aviso si algo falla.

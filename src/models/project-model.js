@@ -49,7 +49,7 @@
     list(){
       const stored = this.items.filter((p) => p.id !== MAIN_ID);
       const mainDoc = this.items.find((p) => p.id === MAIN_ID) || {};
-      const main = Object.assign({createdAt:0}, mainDoc, {id:MAIN_ID, nombre:mainDoc.nombre || MAIN_NAME});
+      const main = Object.assign({createdAt:0}, mainDoc, {id:MAIN_ID, nombre:mainDoc.nombre || Workhub.t(MAIN_NAME)});
       stored.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || String(a.nombre).localeCompare(String(b.nombre), 'es'));
       return [main].concat(stored);
     }

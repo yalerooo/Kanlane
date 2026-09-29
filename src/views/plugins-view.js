@@ -35,7 +35,7 @@
 
   function dateText(ms){
     if(!ms) return '';
-    return new Date(ms).toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+    return new Date(ms).toLocaleDateString(Workhub.i18n.locale, {day:'numeric', month:'long', year:'numeric'});
   }
 
   class PluginsView {

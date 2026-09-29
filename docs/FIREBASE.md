@@ -89,7 +89,7 @@ Necesitas [Node.js](https://nodejs.org) instalado. En una terminal, dentro de la
 ```bash
 npm install -g firebase-tools     # una sola vez
 firebase login                    # abre el navegador para entrar con tu cuenta de Google
-firebase use --add                # elige tu proyecto; como alias escribe: default
+firebase use --add                # solo si cambias de proyecto (.firebaserc ya apunta a workhub-26f50)
 firebase deploy --only hosting,firestore
 ```
 

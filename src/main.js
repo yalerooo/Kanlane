@@ -1,6 +1,11 @@
-/* Punto de entrada. */
+/* Punto de entrada. Si Workhub está publicado con Firebase, primero se pide
+   iniciar sesión; si no, arranca directamente (modo local o claude.ai). */
 (function(){
   const app = new Workhub.controllers.AppController();
   Workhub.app = app;
-  Workhub.services.platform.whenReady(() => app.start());
+  const auth = new Workhub.controllers.AuthController(app, new Workhub.views.AuthView());
+  app.controllers.auth = auth;
+  Workhub.services.platform.whenReady(() => {
+    auth.gate().then(() => app.start());
+  });
 })();

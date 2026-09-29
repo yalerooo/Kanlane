@@ -133,6 +133,9 @@
         if(metaSnap.exists || !vaultData.meta){ vaultOutcome = 'skipped'; return; }
         vaultOutcome = 'imported';
         return m.vault.setMeta(vaultData.meta).then(() => {
+          /* Si ya se miró el estado del gestor (sin contraseña maestra), hay que
+             volver a comprobarlo: ahora tiene la del archivo importado. */
+          m.vault.metaState = null;
           return Promise.all(entries.map((v) => {
             if(!v || !v.cliente || !v.iv || !v.cipher) return Promise.resolve();
             counts.vault++;

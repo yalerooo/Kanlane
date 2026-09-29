@@ -24,8 +24,47 @@
   <link rel="stylesheet" href="assets/css/views/calendar.css">
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
+  <link rel="stylesheet" href="assets/css/views/auth.css">
 </head>
 <body>
+
+<!-- Pantalla de acceso (solo cuando Workhub está publicado con Firebase) -->
+<div id="authScreen" class="auth-screen" hidden>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 3h5v3h-5z"/><path d="M9.5 13l2 2 3.5-4"/></svg></span>
+      <span class="brand-name">Workhub</span>
+    </div>
+    <div id="authLoading" class="auth-loading" role="status"><span class="spinner" aria-hidden="true"></span>Cargando…</div>
+    <div id="authPanel" hidden>
+      <h1 id="authTitle">Inicia sesión</h1>
+      <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
+      <div class="auth-providers" id="authProviders"></div>
+      <div class="auth-divider" id="authDivider"><span>o con tu correo</span></div>
+      <form id="authEmailForm" class="auth-form" novalidate>
+        <div class="field" id="authNameField" hidden>
+          <label for="authName">Nombre</label>
+          <input id="authName" autocomplete="name" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="authEmail">Correo electrónico</label>
+          <input id="authEmail" type="email" autocomplete="email" required>
+        </div>
+        <div class="field" id="authPassField">
+          <div class="auth-label-row">
+            <label for="authPass">Contraseña</label>
+            <a href="#" id="authForgot">¿La has olvidado?</a>
+          </div>
+          <input id="authPass" type="password" autocomplete="current-password" minlength="6" required>
+        </div>
+        <p class="auth-msg" id="authMsg" role="alert" hidden></p>
+        <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
+      </form>
+      <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
+    </div>
+  </div>
+  <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+</div>
 
 <div class="app">
   <aside class="sidebar">
@@ -48,7 +87,14 @@
       <button class="tab" id="tabData" data-view="data" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M20 12c0 1.66-3.58 3-8 3s-8-1.34-8-3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg><span>Copia de seguridad</span></button>
       <button class="tab" id="tabSettings" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
     </nav>
-    <div class="sidebar-foot"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
+    <div class="sidebar-foot">
+      <div class="account" id="accountBox" hidden>
+        <span class="avatar is-xs" id="accountAvatar" aria-hidden="true"></span>
+        <div class="account-text"><span class="account-name" id="accountName"></span><span class="account-mail" id="accountMail"></span></div>
+        <button type="button" class="icon-only" id="btnSignOut" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+      <div class="storage-status"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
+    </div>
   </aside>
 
   <main class="main">
@@ -245,7 +291,13 @@
           <h3>Almacenamiento</h3>
           <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
         </div>
-        <div class="storage-line"><span class="status-dot"></span><span id="storageDetail"></span></div>
+        <div class="storage-block">
+          <div class="storage-line"><span class="status-dot"></span><span id="storageDetail"></span></div>
+          <div class="settings-account" id="settingsAccount" hidden>
+            <span id="settingsAccountText"></span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -637,6 +689,7 @@
 </dialog>
 
 <!-- Núcleo, utilidades y servicios -->
+<script src="src/config/firebase-config.js"></script>
 <script src="src/core/local-storage-shim.js"></script>
 <script src="src/core/namespace.js"></script>
 <script src="src/core/emitter.js"></script>
@@ -648,6 +701,7 @@
 <script src="src/services/preferences.js"></script>
 <script src="src/services/platform.js"></script>
 <script src="src/services/crypto.js"></script>
+<script src="src/services/firebase-backend.js"></script>
 
 <!-- Modelos: datos y persistencia -->
 <script src="src/models/collection-model.js"></script>
@@ -675,6 +729,7 @@
 <script src="src/views/settings-view.js"></script>
 <script src="src/views/toast-view.js"></script>
 <script src="src/views/command-palette-view.js"></script>
+<script src="src/views/auth-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -685,6 +740,7 @@
 <script src="src/controllers/vault-controller.js"></script>
 <script src="src/controllers/backup-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>
+<script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>
 
 <!-- Arranque -->

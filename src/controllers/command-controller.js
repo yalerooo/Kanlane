@@ -97,6 +97,9 @@
         list.push({title:'Usar tema ' + pair[1], icon:ICONS.theme, run:() => c.settings.setTheme(pair[0])});
       });
       list.push({title:'Exportar copia de seguridad', icon:ICONS.download, run:() => { app.navigate('data'); c.backup.exportData(); }});
+      if(c.auth && c.auth.user){
+        list.push({title:'Cerrar sesión', meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
+      }
       return list;
     }
 

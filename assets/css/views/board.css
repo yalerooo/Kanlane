@@ -188,3 +188,25 @@
     overflow-x:auto;
   }
 }
+
+/* Cabecera de columna: herramientas, límite y arrastre de la propia columna. */
+.col-head{cursor:grab;}
+.col-head:active{cursor:grabbing;}
+.col-tools{display:flex;align-items:center;gap:2px;flex:none;}
+.col-tools .col-add{cursor:pointer;}
+.col.is-full .col-head .count{color:var(--st-wait);}
+.col.is-over .col-head .count{color:var(--danger);font-weight:600;}
+.col.is-over{box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);}
+.col.col-dragging{opacity:.45;}
+.col.drop-before{box-shadow:-6px 0 0 -3px var(--accent-solid);}
+.col.drop-after{box-shadow:6px 0 0 -3px var(--accent-solid);}
+.stat-link{
+  font:inherit;
+  color:var(--accent);
+  background:none;
+  border:none;
+  padding:0;
+  cursor:pointer;
+}
+.stat-link:hover{text-decoration:underline;}
+@media (hover:none){.col-head{cursor:default;}}

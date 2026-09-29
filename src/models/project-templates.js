@@ -105,7 +105,11 @@
         while(seen[key]) key += 'x';
         seen[key] = true;
         const color = COLORS.some((c) => c.key === s.color) ? s.color : 'gray';
-        out.push({key:key, label:label, color:color, done:!!s.done});
+        const stage = {key:key, label:label, color:color, done:!!s.done};
+        /* Límite de tarjetas de la columna: entero de 1 a 999; sin él, sin límite. */
+        const limit = Math.floor(+s.limit);
+        if(limit >= 1 && limit <= 999) stage.limit = limit;
+        out.push(stage);
       });
       if(out.length && !out.some((s) => s.done)) out[out.length - 1].done = true;
       return out;

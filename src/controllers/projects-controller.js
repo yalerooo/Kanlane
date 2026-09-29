@@ -57,6 +57,28 @@
       this.render();
     }
 
+    /* Cambia las etapas del proyecto abierto desde el tablero (renombrar, color,
+       límite, orden…). fn recibe una copia editable y puede devolver false para
+       cancelar. Un proyecto de un tipo predefinido pasa a ser personalizado. */
+    updateStages(fn){
+      const PT = Workhub.models.ProjectTemplates;
+      const p = this.current();
+      if(!p || !this.projects.isReady()) return Promise.resolve(false);
+      const cfg = this.projects.configOf(p);
+      const stages = cfg.stages.map((s) => Object.assign({}, s));
+      if(fn(stages) === false) return Promise.resolve(false);
+      const clean = PT.normalizeStages(stages);
+      if(clean.length < PT.MIN_STAGES) return Promise.resolve(false);
+      const fields = PT.fieldsFor(PT.CUSTOM_TYPE, clean, cfg.clients);
+      const next = Object.assign({}, p, fields);
+      /* Se ve al instante; la base de datos confirma después. */
+      this.app.rememberProject(next);
+      this.app.applyProjectConfig(PT.resolve(next));
+      return this.projects.save(p.id, p.nombre, typeof p.color === 'number' ? p.color : null, fields)
+        .then(() => true)
+        .catch(() => { toast.error('No se pudo guardar el cambio'); return false; });
+    }
+
     openNew(){
       if(!this.projects.isReady()) return;
       this.view.openNew();

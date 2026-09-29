@@ -14,6 +14,7 @@ https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5
 - `start-workhub.bat` — doble clic y ya está (ver abajo).
 - `firebase.json`, `firestore.rules`, `firestore.indexes.json` y `src/config/firebase-config.js` — publicación en la web con inicio de sesión (ver abajo).
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
+- `netlify.toml` y `docs/NETLIFY.md` — publicación en Netlify.
 
 ## Arquitectura (MVC)
 
@@ -60,6 +61,8 @@ Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión
 1. Crea el proyecto en la consola de Firebase y copia su configuración en `src/config/firebase-config.js`.
 2. Activa los métodos de acceso (Authentication → Sign-in method) y crea la base de datos Firestore.
 3. `firebase deploy --only hosting,firestore`.
+
+También se puede publicar en **Netlify** (publicación automática al fusionar en `main`), usando Firebase solo para el acceso y los datos: ver **[docs/NETLIFY.md](docs/NETLIFY.md)**.
 
 Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 

@@ -19,6 +19,7 @@
   const COLORS = {GRAY:'gray', BLUE:'blue', GREEN:'green', ORANGE:'orange', YELLOW:'orange', RED:'red', PINK:'red', PURPLE:'violet'};
   const DONE_RE = /^(done|hecho|complet|closed|cerrad|finished|terminad|resuelt)/i;
   const MAX_IGNORED = 300;
+  const NEW = '__new__';
   const BODY_MAX = 5000;
 
   const keyOf = (optionId) => 'g' + String(optionId).replace(/[^a-z0-9_-]/gi, '');
@@ -62,14 +63,17 @@
 
     /* ---------- Conectar y desconectar ---------- */
 
-    /* opts: {url, token, pushExisting}. Enlaza el proyecto abierto. */
+    /* opts: {url, token, pushExisting, target, name}.
+       target: id del proyecto de Workhub donde inyectarlo, o NEW para crear uno
+       nuevo (con opts.name, o el título del proyecto de GitHub). */
     link(opts){
       const ref = api.parseProjectUrl(opts.url);
       if(!ref) return Promise.reject(new api.GithubError('bad-url', 'El enlace tiene que ser de un proyecto, por ejemplo https://github.com/users/tu-usuario/projects/1'));
       if(opts.token) api.setToken(opts.token);
-      const pid = this.app.projectId;
+      const opened = this.app.projectId;
+      const target = opts.target && opts.target !== NEW ? opts.target : (opts.target === NEW ? NEW : opened);
       return api.fetchProject(ref).then((proj) => {
-        if(pid !== this.app.projectId) throw new api.GithubError('changed', 'Cambiaste de proyecto mientras se conectaba.');
+        if(opened !== this.app.projectId) throw new api.GithubError('changed', 'Cambiaste de proyecto mientras se conectaba.');
         const stages = GithubSync.stagesFromOptions(proj.options);
         const cfg = {
           type: ref.type, login: ref.login, number: ref.number,
@@ -79,13 +83,25 @@
           pushFrom: opts.pushExisting ? 0 : Date.now(),
           ignored: []
         };
-        /* Las columnas pasan a ser las de GitHub; todo en una sola escritura. */
-        const current = this.projects.get(pid) || {};
+        /* Proyecto nuevo con lo que hay en GitHub (sin clientes). */
+        if(target === NEW){
+          const fields = Object.assign(PT.fieldsFor(PT.CUSTOM_TYPE, stages, false), {github:cfg});
+          const nombre = (opts.name || '').trim().slice(0, 60) || String(proj.title).slice(0, 60);
+          return this.app.controllers.projects.createAndOpen(nombre, null, fields).then(() => false);
+        }
+        /* Proyecto existente: sus columnas pasan a ser las de GitHub; todo en una sola escritura. */
+        const current = this.projects.get(target) || {};
         const fields = Object.assign(PT.fieldsFor(PT.CUSTOM_TYPE, stages, PT.resolve(current).clients), {github:cfg});
-        this.pendingCfg = cfg;
-        this.app.applyProjectConfig(PT.resolve(Object.assign({}, current, fields)));
-        return this.projects.patch(pid, fields);
-      }).then(() => this.sync());
+        if(target === opened){
+          this.pendingCfg = cfg;
+          this.app.applyProjectConfig(PT.resolve(Object.assign({}, current, fields)));
+          return this.projects.patch(target, fields).then(() => true);
+        }
+        return this.projects.patch(target, fields).then(() => {
+          this.app.switchProject(target, false);
+          return false;
+        });
+      }).then((here) => (here ? this.sync() : null));
     }
 
     unlink(){
@@ -294,5 +310,6 @@
     }
   }
 
+  GithubSync.NEW = NEW;
   Workhub.models.GithubSync = GithubSync;
 })();

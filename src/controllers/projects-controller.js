@@ -23,6 +23,17 @@
       });
       this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
       this.view.bindDelete((id) => this.remove(id));
+      /* «Desde GitHub»: crea el proyecto con las columnas y los elementos de un GitHub Project. */
+      this.view.bindGithubSubmit((v) => {
+        if(!this.projects.isReady()) return;
+        this.view.setBusy(true);
+        this.app.controllers.github.createFromGithub(v).then(() => {
+          this.view.closeDialog();
+        }).catch((err) => {
+          this.view.setBusy(false);
+          this.view.showError((err && err.message) || 'No se pudo conectar con GitHub.');
+        });
+      });
     }
 
     /* Mientras llega la lista (o justo tras crear uno) se usa la copia que
@@ -89,15 +100,22 @@
       if(p) this.view.openEdit(p, p.id !== ProjectModel.MAIN_ID, this.projects.configOf(p));
     }
 
+    /* Crea un proyecto y lo abre. Devuelve la referencia del documento nuevo. */
+    createAndOpen(nombre, color, config){
+      return this.projects.create(nombre, color, config).then((ref) => {
+        this.justCreated = ref.id;
+        this.app.rememberProject(Object.assign({id:ref.id, nombre:nombre, color:color}, config));
+        this.app.switchProject(ref.id, false);
+        return ref;
+      });
+    }
+
     save(id, nombre, color, config){
       if(!this.projects.isReady()) return;
       this.view.setBusy(true);
       if(!id){
-        this.projects.create(nombre, color, config).then((ref) => {
-          this.justCreated = ref.id;
-          this.app.rememberProject(Object.assign({id:ref.id, nombre:nombre, color:color}, config));
+        this.createAndOpen(nombre, color, config).then(() => {
           this.view.closeDialog();
-          this.app.switchProject(ref.id, false);
           toast.success('Proyecto «' + nombre + '» creado');
         }).catch(() => {
           this.view.setBusy(false);

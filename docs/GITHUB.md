@@ -2,12 +2,17 @@
 
 Workhub puede enlazar un proyecto suyo con un **GitHub Project** (los tableros nuevos, "v2"). Las columnas de GitHub pasan a ser las columnas de Workhub y las tareas se mantienen sincronizadas en los dos sentidos: si mueves algo en un lado, se mueve en el otro.
 
+## Dos formas de conectarlo
+
+- **Crear un proyecto nuevo desde GitHub**: en el menú de proyectos, *Nuevo proyecto → Desde GitHub*. Pegas el token y el enlace, y Workhub crea un proyecto nuevo (con el nombre que quieras o el del proyecto de GitHub) con sus columnas y elementos, ya sincronizado.
+- **Añadirlo a un proyecto que ya tienes**: *Ajustes → GitHub Projects*. Eliges en qué proyecto de Workhub se añade (por defecto, el abierto) o *Crear un proyecto nuevo*. Si eliges uno existente, **sus columnas se sustituyen por las de GitHub** y los elementos se importan junto a las tareas que ya tenía.
+
 ## Conectar
 
 1. En GitHub: **Settings → Developer settings → Personal access tokens → Tokens (classic)** → *Generate new token (classic)* y marca el permiso **`project`** (o `read:project` si solo quieres leer). Los tokens *fine-grained* no funcionan con proyectos de usuario.
-2. En Workhub abre el proyecto que quieras enlazar → **Ajustes → GitHub Projects**.
-3. Pega el token y el enlace del proyecto, por ejemplo `https://github.com/users/yalerooo/projects/1/views/1` (también valen los de organización: `https://github.com/orgs/…`).
-4. Opcional: *Enviar también a GitHub las tareas que ya hay en este proyecto*. Sin marcar, solo se envían las que crees a partir de ahora.
+2. En Workhub: *Nuevo proyecto → Desde GitHub*, o **Ajustes → GitHub Projects** (ver arriba).
+3. Pega el token y el enlace del proyecto de GitHub, por ejemplo `https://github.com/users/yalerooo/projects/1/views/1` (también valen los de organización: `https://github.com/orgs/…`).
+4. Solo al añadirlo a un proyecto existente, opcional: *Enviar también a GitHub las tareas que ya hay en ese proyecto*. Sin marcar, solo se envían las que crees a partir de ahora.
 5. **Conectar con GitHub**. Las columnas del tablero se sustituyen por las opciones del campo *Status* del proyecto y se importan sus elementos.
 
 Cada proyecto de Workhub puede enlazarse con un proyecto de GitHub distinto. El enlace se guarda en el documento del proyecto (`github`), sin secretos.

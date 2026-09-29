@@ -540,6 +540,17 @@
       <button type="button" class="btn btn-ghost btn-sm stage-add" id="pAddStage">Añadir etapa</button>
       <label class="check-row"><input type="checkbox" id="pClients"> Este proyecto trabaja con clientes</label>
     </div>
+    <div class="field" id="pGh" hidden>
+      <div class="field" id="pGhTokenField">
+        <label for="pGhToken">Token de GitHub</label>
+        <input id="pGhToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+        <p class="field-help">Un token clásico con el permiso <b>project</b>. Se guarda solo en este navegador.</p>
+      </div>
+      <p class="field-help" id="pGhTokenSaved" hidden>Se usará el token de GitHub guardado en este navegador.</p>
+      <label for="pGhUrl">Enlace del proyecto de GitHub</label>
+      <input id="pGhUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1">
+      <p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de ese GitHub Project, y se mantiene sincronizado. Si dejas el nombre vacío se usa el del proyecto de GitHub.</p>
+    </div>
     <p class="type-note" id="pTypeNote" hidden>Las tareas cuya etapa ya no exista pasarán a la primera columna. No se pierde ninguna.</p>
     <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>
       <strong>Se borrará todo lo que hay dentro</strong>: tareas y notas, reuniones, contactos, contraseñas y clientes de este proyecto. No se puede deshacer; si quieres conservarlo, exporta antes una copia de seguridad desde el proyecto.

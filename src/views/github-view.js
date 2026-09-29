@@ -22,7 +22,8 @@
       this.body = $('ghBody');
       this.button = $('btnGhSync');
       this.handlers = {};
-      this.form = {url:'', pushExisting:false};
+      this.form = {url:'', pushExisting:false, target:'', name:''};
+      this.last = null;
 
       this.body.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-gh]');
@@ -31,7 +32,9 @@
         if(act === 'connect') this.handlers.connect({
           url: $('ghUrl').value.trim(),
           token: $('ghToken') ? $('ghToken').value.trim() : '',
-          pushExisting: $('ghPushExisting').checked
+          target: $('ghTarget').value,
+          name: $('ghName') ? $('ghName').value.trim() : '',
+          pushExisting: !!$('ghPushExisting') && $('ghPushExisting').checked
         });
         else if(act === 'sync') this.handlers.sync();
         else if(act === 'unlink') this.handlers.unlink();
@@ -39,10 +42,15 @@
       });
       this.body.addEventListener('change', (ev) => {
         if(ev.target.id === 'ghPushNew') this.handlers.pushNew(ev.target.checked);
+        if(ev.target.id === 'ghTarget'){
+          this.form.target = ev.target.value;
+          this.render(this.last);
+        }
       });
       this.body.addEventListener('input', (ev) => {
         if(ev.target.id === 'ghUrl') this.form.url = ev.target.value;
         if(ev.target.id === 'ghPushExisting') this.form.pushExisting = ev.target.checked;
+        if(ev.target.id === 'ghName') this.form.name = ev.target.value;
       });
       this.body.addEventListener('submit', (ev) => ev.preventDefault());
       this.button.addEventListener('click', () => this.handlers.sync());
@@ -55,6 +63,7 @@
 
     /* s: {linked, cfg, busy, error, hasToken, last, project, connecting, connectError} */
     render(s){
+      this.last = s;
       /* Botón de la barra de Tareas. */
       this.button.hidden = !s.linked;
       if(s.linked){
@@ -68,7 +77,7 @@
       if(!this.body) return;
       /* No se repinta mientras el usuario escribe en el formulario de conexión. */
       const focused = document.activeElement;
-      if(!s.linked && this.body.contains(focused) && (focused.id === 'ghUrl' || focused.id === 'ghToken') && !s.connecting) return;
+      if(!s.linked && this.body.contains(focused) && (focused.id === 'ghUrl' || focused.id === 'ghToken' || focused.id === 'ghName') && !s.connecting) return;
 
       this.body.innerHTML = s.linked ? this._linked(s) : this._form(s);
     }
@@ -79,12 +88,32 @@
         : '<div class="field"><label for="ghToken">Token de GitHub</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
           '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
+      /* Destino: uno de los proyectos de Workhub o uno nuevo. */
+      const projects = s.projects || [];
+      /* Por defecto, el proyecto que está abierto (y se reinicia al cambiar de proyecto). */
+      if(this.form.forProject !== s.currentId){
+        this.form.forProject = s.currentId;
+        this.form.target = s.currentId;
+      }
+      if(!this.form.target || (this.form.target !== '__new__' && !projects.some((p) => p.id === this.form.target))) this.form.target = s.currentId;
+      const isNew = this.form.target === '__new__';
+      const options = projects.map((p) => '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(Workhub.t('ya enlazado')) : '') + '</option>').join('') +
+        '<option value="__new__"' + (isNew ? ' selected' : '') + '>' + esc(Workhub.t('+ Crear un proyecto nuevo')) + '</option>';
+      const targetName = (projects.find((p) => p.id === this.form.target) || {}).nombre || '';
+      const targetField = '<div class="field"><label for="ghTarget">Proyecto de Workhub donde añadirlo</label>' +
+        '<select id="ghTarget">' + options + '</select>' +
+        (isNew
+          ? '<input id="ghName" maxlength="60" autocomplete="off" placeholder="' + esc(Workhub.t('Nombre del proyecto nuevo (por defecto, el de GitHub)')) + '" value="' + esc(this.form.name) + '">' +
+            '<p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de GitHub, y se abre.</p>'
+          : '<p class="field-help">' + esc(Workhub.t('Las columnas de «{name}» se sustituirán por las de GitHub y sus elementos se importarán como tareas.', {name:targetName})) + '</p>') +
+        '</div>';
       return '<form class="gh-form" autocomplete="off">' +
         '<p class="gh-lead">Enlaza este proyecto de Workhub con un GitHub Project. Las columnas de GitHub pasan a ser las columnas del tablero y las tareas se mantienen sincronizadas en los dos sentidos.</p>' +
         tokenField +
-        '<div class="field"><label for="ghUrl">Enlace del proyecto</label>' +
+        '<div class="field"><label for="ghUrl">Enlace del proyecto de GitHub</label>' +
         '<input id="ghUrl" type="url" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1" value="' + esc(this.form.url) + '"></div>' +
-        '<label class="check-row"><input type="checkbox" id="ghPushExisting"' + (this.form.pushExisting ? ' checked' : '') + '> Enviar también a GitHub las tareas que ya hay en este proyecto</label>' +
+        targetField +
+        (isNew ? '' : '<label class="check-row"><input type="checkbox" id="ghPushExisting"' + (this.form.pushExisting ? ' checked' : '') + '> Enviar también a GitHub las tareas que ya hay en ese proyecto</label>') +
         (s.connectError ? '<p class="lock-error">' + esc(s.connectError) + '</p>' : '') +
         '<div class="gh-actions"><button type="button" class="btn btn-primary" data-gh="connect"' + (s.connecting ? ' disabled' : '') + '>' + esc(s.connecting ? Workhub.t('Conectando…') : Workhub.t('Conectar con GitHub')) + '</button></div>' +
         '</form>';

@@ -24,6 +24,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Rama de trabajo de Claude:** `claude/sleepy-brown-tdi6yq`.
   - Siempre se trabaja y se sube aquí, y después se abre un pull request contra `main`.
   - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main`: `git checkout -B claude/sleepy-brown-tdi6yq origin/main`.
+  - Excepción: la última tanda (tipos de proyecto, columnas, GitHub, etiquetas) se hizo en un worktree, en la rama **`claude/read-context-md-df6b13`**, ya subida; **su pull request contra `main` está pendiente de abrir** (en ese equipo no había `gh`; enlace: https://github.com/yalerooo/Workhub/pull/new/claude/read-context-md-df6b13).
 - **Firebase:** proyecto `workhub-26f50` (Auth + Firestore).
 - **Correo del usuario:** yaleros2@gmail.com.
 
@@ -36,6 +37,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **NUNCA publiques ni pegues `data-backup.json`.** Contiene datos reales de clientes.
   - Está en el repositorio, pero `scripts/build-public.js` usa una lista blanca y solo publica `index.html`, `assets`, `src` y `plugins`.
 - **NUNCA pegues ni subas el client secret de GitHub OAuth.** Solo va en la consola de Firebase.
+- **Tokens:** el token de GitHub de la integración no se guarda en ningún fichero ni en Firestore, solo en el navegador. Si el usuario pega un token en el chat, no se usa; se le recuerda que no lo haga (aunque diga que ya lo borró).
+- El usuario pide cambios de forma directa y con libertad de diseño; cuando algo no puede verificarse contra un servicio real (GitHub, Firebase), hay que decirlo claramente en el resumen.
 - La visibilidad de producción en Netlify debe seguir en **Public**.
 - Cualquiera puede **crearse una cuenta**, no solo el usuario. El correo tiene que verificarse.
 - Estética: **minimalista**, estilo Linear/Vercel, **sin emojis**. Usa iconos SVG.
@@ -50,7 +53,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - `src/models/`: datos y lógica. `CollectionModel` sincroniza en memoria y emite `change`.
   - `src/views/`: solo DOM. Exponen `bindX(handler)`.
   - `src/controllers/`: conectan modelos y vistas.
-  - `src/services/`: plataforma, Firebase, cifrado, host de plugins, preferencias, plugins oficiales.
+  - `src/services/`: plataforma, Firebase, cifrado, host de plugins, preferencias, plugins oficiales y `github-api.js` (cliente GraphQL de GitHub).
   - `src/utils/`: html/iconos, fechas, urls, ui, autoscroll.
   - `src/core/`: namespace, emitter, local-storage-shim.
   - `src/i18n/`: traducciones.
@@ -69,6 +72,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Netlify redirige `/__/auth/*` y `/__/firebase/*` a `workhub-26f50.firebaseapp.com`, así el login se completa en el propio dominio.
   - El login usa popup y, si falla, redirect.
   - Al cerrar sesión se ejecuta `clearPersistence` (se borra la caché local).
+- **Ficheros nuevos de esta tanda** (todos cargados con `<script>` en `index.html`, en este orden relativo): `models/project-templates.js` (antes de `task-model.js`), `models/github-sync.js`, `services/github-api.js`, `views/labels.js`, `views/column-view.js`, `views/github-view.js`, `controllers/github-controller.js`, y `assets/css/views/github.css`.
 - **Estructura en Firestore:**
   - Proyecto principal: `users/{uid}/{tasks|clients|contacts|meetings|vault|vault_meta|plugin_data}/…`.
   - Notas de cada tarea: `users/{uid}/tasks/{id}/notes/{id}`.
@@ -83,12 +87,14 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
     - `X-Frame-Options: DENY`, HSTS, `nosniff` y `Permissions-Policy`.
     - **CSP estricta**: sin scripts en línea; `script-src` solo el propio dominio más gstatic y apis.google.
     - `frame-src 'self' https: http://localhost:* http://127.0.0.1:*`, para los plugins.
+    - `connect-src` incluye `https://api.github.com` (integración con GitHub Projects) en las dos cabeceras de `netlify.toml`.
   - Si añades un servicio externo, añade su dominio a la CSP.
 - **Documentación:**
   - `README.md`: todo el funcionamiento, sección Plugins y sección Idiomas.
   - `docs/FIREBASE.md`, `docs/NETLIFY.md`.
   - `docs/SEGURIDAD.md`: pasos en la consola, como publicar reglas, política de contraseñas, protección contra la enumeración de correos, dominios autorizados y restringir la API key.
   - `docs/PLUGINS.md`: guía completa para crear plugins.
+  - `docs/GITHUB.md`: integración con GitHub Projects (conectar, qué se sincroniza, límites, seguridad, estructura interna).
 
 ## 4. Funcionalidades (estado actual)
 
@@ -106,14 +112,36 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Atajos:** `N` crea una tarea y `/` enfoca el buscador (no funcionan mientras escribes ni con un diálogo abierto).
 
 ### Tipos de proyecto (etapas y clientes)
-- Al crear o editar un proyecto se elige el tipo (`src/models/project-templates.js`, `ProjectTemplates`): **soporte** (4 etapas, con clientes; el de siempre y el que usa el proyecto principal), **desarrollo** (Por hacer, En curso, Hecho), **kanban** (Backlog, En curso, En revisión, Hecho) y **personalizado** (2 a 8 etapas con nombre, color y orden, una o varias finales, y casilla "trabaja con clientes").
-- Se guarda en el documento del proyecto: `tipo` (y `stages`, `clients` solo si es personalizado). Sin `tipo` = soporte, así que no hay migración. Se copia también en `workhub_project` (localStorage) para pintar bien antes de que llegue la lista.
-- `TaskModel.STATUS` es un array único que `TaskModel.setStages()` rellena en el sitio al abrir/editar un proyecto (`AppController.applyProjectConfig`). Usa `TaskModel.isDone(t)` (no `'completada'`) y `TaskModel.stageKey(t)`, que manda a la primera etapa las tareas cuyo estado ya no existe.
-- Sin clientes: `body.no-clients` y la clase `.needs-clients` en el HTML (JS `ShellView.setClientsEnabled`); las tareas y credenciales no piden cliente (`AppController.clientsEnabled()`). `Workhub.clientsEnabled` lo leen las vistas.
-- Menú «···» por columna (`ColumnView`, `TasksController.bindColumns`): editar nombre/color/límite/final, ocultar (localStorage `workhub_hidden_{proyecto}`), eliminar columna, eliminar todas las tarjetas, mover izquierda/derecha, y arrastrar la cabecera para reordenar. Cada cambio pasa por `ProjectsController.updateStages`, que convierte el proyecto en personalizado y guarda `stages` (con `limit` opcional). No hay «archivar» porque las tareas no tienen archivo.
-- **GitHub Projects** (`docs/GITHUB.md`): se crea un proyecto nuevo desde GitHub (Nuevo proyecto → «Desde GitHub», pseudo-tipo solo del diálogo) o, en Ajustes → GitHub Projects, se elige el proyecto de destino (existente, o uno nuevo). Enlaza un proyecto con un GitHub Project v2 (GraphQL, token clásico con permiso `project` guardado solo en localStorage `workhub_gh_token`). Las columnas pasan a ser las opciones de Status (clave `g`+id) y las tareas se sincronizan en ambos sentidos (`GithubSync`). La config va en el doc del proyecto (`github`; `ProjectModel.patch`), los enlaces en cada tarea (`gh*`). CSP: `connect-src` incluye api.github.com. Pendiente: probarlo con un token real (se verificó contra una API simulada).
-- **Etiquetas y PRs de GitHub**: `labels` (nombres) en cada tarea y catálogo `labels` [{name,color}] en el doc del proyecto (`Workhub.views.labels`, sincronizado con las etiquetas de los repos). `ghPrs` = pull requests vinculadas. La ficha pide la actividad a GitHub bajo demanda (`fetchDetails`, con reintento sin `ProjectV2ItemStatusChangedEvent`). Sin verificar contra la API real.
-- Los plugins reciben las etapas con `wh.statuses()` (`key`, `label`, `done`, `color`); los oficiales ya no asumen `completada`.
+- Al crear o editar un proyecto se elige el tipo (`src/models/project-templates.js`, `ProjectTemplates`):
+  - **soporte**: Pendiente, En proceso, Esperando al cliente, Completada; con clientes. Es el de siempre y el del proyecto principal (claves `pendiente`, `proceso`, `espera`, `completada`).
+  - **desarrollo**: Por hacer, En curso, Hecho; sin clientes (estilo GitHub).
+  - **kanban**: Backlog, En curso, En revisión, Hecho; sin clientes.
+  - **personalizado**: 2 a 8 etapas con nombre, color (gray, blue, orange, green, red, violet) y orden, una o varias finales, casilla "trabaja con clientes".
+  - **Desde GitHub** existe solo en el diálogo de crear (pseudo-tipo `github`): no se guarda como tipo; crea un proyecto personalizado ya enlazado.
+- Se guarda en el documento del proyecto: `tipo` (y `stages`, `clients` solo si es personalizado). Sin `tipo` = soporte, así que no hubo migración. Se copian `tipo`, `stages`, `clients` y `labels` también en `workhub_project` (localStorage) para pintar bien antes de que llegue la lista de proyectos.
+- `TaskModel.STATUS` es un único array que `TaskModel.setStages()` rellena en el sitio al abrir o editar un proyecto (`AppController.applyProjectConfig`, que solo repinta si cambió la configuración). Se usa `TaskModel.isDone(t)` (nunca `'completada'` fijo) y `TaskModel.stageKey(t)`, que manda a la primera etapa las tareas cuyo estado ya no existe (etapa borrada, copia importada de otro tipo).
+- **Sin clientes**: `body.no-clients` y la clase `.needs-clients` en el HTML (JS `ShellView.setClientsEnabled`) ocultan la sección Clientes, filtros, campos y etiquetas de cliente; tareas y credenciales no piden cliente (`AppController.clientsEnabled()`); `Workhub.clientsEnabled` lo leen las vistas. Los contactos viven en Clientes, así que desaparecen con ella.
+- `ProjectModel.patch(id, campos)` cambia campos sueltos sin perder el resto (null quita el campo); `ProjectModel.save` conserva `github` y `labels`.
+
+### Columnas del tablero
+- Cada cabecera tiene un menú «···» (`ColumnView`, `TasksController.bindColumns`): **editar detalles** (nombre, color, límite, "cuenta como terminada"), **establecer límite**, **ocultar de la vista**, **eliminar columna** (sus tarjetas pasan a la primera), **eliminar todas las tarjetas**, **mover izquierda/derecha**. También se reordenan arrastrando la cabecera (MIME propio `text/x-workhub-column`; `bindDragAndDrop` acepta `accept(ev)` para ignorar ese arrastre).
+- **Límite** opcional (`stage.limit`, 1–999; sin límite por defecto). Solo avisa: la cuenta pasa a `3/2` y se pone roja; no impide añadir.
+- Ocultar es local al navegador (localStorage `workhub_hidden_{proyectoId}`), con enlace «N columnas ocultas · Mostrar» en el resumen; siempre queda una visible.
+- Todo cambio de columnas pasa por `ProjectsController.updateStages(fn)`: convierte el proyecto en personalizado, se ve al instante y luego guarda. No hay «archivar» (las tareas no tienen archivo). Con más de 4 columnas el tablero se desplaza en horizontal en escritorio (`--cols`, `.is-many`).
+
+### Etiquetas
+- `labels` (array de nombres) en cada tarea; el catálogo del proyecto es `labels: [{name, color}]` (color hex sin #) en el documento del proyecto. `Workhub.views.labels` (`views/labels.js`) tiene el catálogo, la paleta y el HTML de las etiquetas y de los chips de pull request.
+- Se eligen o crean en el formulario de la tarea (`ProjectsController.addLabel`); se muestran en tarjetas (máx. 3 + «+N») y en la ficha; la búsqueda del tablero también mira las etiquetas. La copia de seguridad las exporta e importa.
+
+### Integración con GitHub Projects (`docs/GITHUB.md`)
+- **Conectar**: *Nuevo proyecto → Desde GitHub* (crea un proyecto nuevo) o *Ajustes → GitHub Projects* (selector de destino: proyecto existente —por defecto el abierto, avisa de que sus columnas se sustituyen— o «+ Crear un proyecto nuevo»). Cada proyecto de Workhub puede enlazarse con un GitHub Project distinto.
+- **API**: GraphQL de GitHub (Projects v2) con un **token clásico con permiso `project`**, guardado solo en `localStorage` (`workhub_gh_token`, nunca en Firestore). Los *fine-grained* no funcionan con proyectos de usuario (la app lo detecta y lo explica). Los errores distinguen: sin token, token rechazado, sin permiso `project`, token de otra cuenta, número de proyecto inexistente. Un token rechazado se borra solo y la sincronización periódica se detiene hasta que el usuario lo arregle.
+- **Modelo**: config en el doc del proyecto, campo `github` = `{type, login, number, projectId, fieldId, fieldName, title, url, pushNew, pushFrom, ignored[]}`. Cada tarea enlazada guarda `ghItemId`, `ghContentId`, `ghType` (DraftIssue | Issue | PullRequest), `ghUrl`, `ghNumber`, `ghRepo`, `ghPrs`, `ghLabels`, `ghSyncedAt` y `ghRemoteAt`. Cambio local = `updatedAt > ghSyncedAt`; cambio remoto = fecha en GitHub `> ghRemoteAt`; si cambian ambos gana el más reciente. `TaskModel.saveSynced/markSynced` escriben sin contar como cambio local.
+- **Columnas**: las opciones del campo Status son las columnas (clave `g`+id de la opción; color de GitHub → uno de los 6; final = nombre tipo done/hecho o la última). Las columnas nuevas de GitHub se añaden solas; renombrar no se propaga en ningún sentido.
+- **Qué se sincroniza**: mover, título y descripción en ambos sentidos (borradores e issues; las PR solo bajan); elementos nuevos de GitHub → tareas; tareas nuevas de Workhub → borradores del proyecto (solo las creadas después de conectar salvo que se marque enviar las existentes; opción `pushNew`); etiquetas en ambos sentidos (solo las que existen en el repo; el catálogo se alimenta de las etiquetas de los repos); pull requests vinculadas como chips (verde abierta, morada fusionada, roja cerrada); la ficha muestra la actividad de la incidencia (asignaciones, etiquetas, movimientos en el proyecto, PRs vinculadas, cierres, comentarios) pedida bajo demanda (`fetchDetails`, cache 1 min, con reintento sin `ProjectV2ItemStatusChangedEvent` por si la API no lo reconoce). **Borrar no se sincroniza**: lo borrado en Workhub se apunta en `github.ignored` (`TaskModel` emite `removed`) y no se reimporta.
+- **Cuándo**: al abrir el proyecto, al volver a la pestaña (>30 s), al recuperar conexión, cada 2 min y 2 s después de un cambio local pendiente; botón «GitHub» en la barra de Tareas, «Sincronizar ahora» en Ajustes y acción en `Ctrl K`. Límite: 2000 elementos, 8 columnas, 100 etiquetas por repo.
+- **Piezas**: `services/github-api.js`, `models/github-sync.js` (motor: `link`, `sync`, `_pull`, `_push`, `_loadRepoLabels`), `controllers/github-controller.js` (temporizadores, `createFromGithub`, `loadDetails`), `views/github-view.js`. Ojo con la carrera de `ProjectModel.loaded`: el controlador reacciona a `projects.change` con un microtask.
+- **Pendiente / sin verificar**: todo se probó contra una **API de GitHub simulada** en el navegador (fetch reemplazado), no contra la real. Hay que probar con un token clásico propio, sobre todo la consulta de actividad y `closedByPullRequestsReferences`. Y desplegar el cambio de CSP en Netlify.
 
 ### Calendario
 - **Vista mensual** con reuniones (morado, `--meet`), fechas límite de tareas y tareas vencidas (rojo).
@@ -152,7 +180,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ### Proyectos
 - **Selector** arriba en la barra lateral: avatar con iniciales y color, nombre y "Workhub". Cambia de proyecto sin recargar.
-- **Gestión:** crear, renombrar, cambiar el color y eliminar con todos sus datos (con confirmación).
+- **Gestión:** crear, renombrar, cambiar el color, elegir el **tipo** (etapas y clientes, ver más abajo) y eliminar con todos sus datos (con confirmación). Al crear también se puede elegir «Desde GitHub».
 - **"Proyecto principal"** usa la raíz de la base de datos y no se puede eliminar. El último proyecto abierto se recuerda.
 
 ### Paleta de comandos (`Ctrl K` / `⌘K`, o el botón "Buscar…" de la barra lateral)
@@ -164,16 +192,18 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Cambiar el tema: claro, oscuro o del sistema.
   - Exportar la copia de seguridad.
   - Acciones de los plugins.
+  - "Sincronizar con GitHub" (solo si el proyecto está enlazado).
 
 ### Copia de seguridad
 - **Exportar e importar** el proyecto abierto en JSON (`formatVersion`).
-- **Contenido:** tareas, notas, contactos, clientes, reuniones y contraseñas **cifradas**.
+- **Contenido:** tareas (con sus etiquetas), notas, contactos, clientes, reuniones y contraseñas **cifradas**. No incluye la configuración de etapas ni el enlace con GitHub; al importar, una tarea con una etapa que no existe en el proyecto aparece en la primera columna.
 - Al importar se conservan el puerto y dominio RDP y el orden manual.
 
 ### Ajustes (se guardan en la cuenta, `users/{uid}/settings`)
 - **Color de acento:** azul (predeterminado, #2F6BFF), lavanda/Violeta (#7C5CFF), rosa (#E0457B), menta/Verde (#16A36A), melocotón/Naranja (#EA6A1F), limón/Ámbar (#E6A310) y grafito (#18181B). Definidos en `settings-model.js` `ACCENTS`.
 - **Tema:** Sistema, Claro u Oscuro.
 - **Idioma:** Español o English.
+- **GitHub Projects:** tarjeta encima de las demás para conectar el proyecto abierto (o uno nuevo) con un GitHub Project; enlazado, muestra el estado, «Sincronizar ahora», el interruptor de enviar tareas nuevas, «Desconectar» y «Olvidar token». No se guarda en la cuenta: la config va en el proyecto y el token en el navegador.
 - **Almacenamiento:** indica si es modo local o nube.
 - En un dispositivo nuevo se adoptan los ajustes de la cuenta.
 
@@ -226,6 +256,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Sin scroll horizontal en ninguna vista (probado a 360, 390, 768, 1024, 1366, 1920 y 2560 px).
 - **Iconos:** SVG de trazo, al estilo Lucide. Los de plugins están en `src/views/plugin-icons.js`: puzzle, chart, trending, pie, timer, clock, calendar, check, list, kanban, users, briefcase, mail, message, bell, file, folder, book, database, download, link, globe, tag, wallet, target, bolt, sparkles, code, shield, star.
 - **Tarjetas:** fondo surface, borde 1px `--line`, radio lg, `shadow-sm`; al pasar el ratón, `line-strong` y `shadow`. Mismo acabado en clientes, contraseñas y plugins.
+- **Etiquetas y PRs**: `.label-chip` (color con `--lc`, mezcla con `color-mix`) y `.pr-chip` (`is-merged`, `is-closed`) en `assets/css/views/github.css`; línea de tiempo `.gh-timeline`.
+- **Barra de desplazamiento de los diálogos** (`dialogs.css`): fina, pulgar redondeado y separado de las esquinas (`::-webkit-scrollbar`); en navegadores sin soporte, `scrollbar-color` estándar (en Chrome reciente esas propiedades anularían el estilo redondeado, por eso van en `@supports not selector(::-webkit-scrollbar)`).
 - **Favicon:** SVG en línea (portapapeles con check blanco sobre `#1F2328`).
 
 ## 6. Plugins (sistema completo)
@@ -264,9 +296,10 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
     - Panel con cronómetro grande y totales por tarea y por cliente.
   - **Apariencia** (`workhub.apariencia`, icono sparkles): color libre, esquinas y densidad con vista previa. Se guarda en `storage.user`.
   - `plugins/plantilla/`: plantilla para crear plugins.
+- **Etapas variables**: `wh.statuses()` devuelve `{key, label, done, color}` del proyecto abierto; los plugins no deben asumir `pendiente`/`completada`. Los oficiales (Informe, Temporizador, plantilla) usan `done` y vuelven a pedir las etapas en el evento `project`. Crear una tarea sin `status` la deja en la primera etapa.
 - **Datos de los plugins:** instalados en `users/{uid}/plugins`; almacenamiento en `plugin_data`.
 
-## 7. Idiomas (PR #22, el último)
+## 7. Idiomas (PR #22, fusionado)
 
 - **Motor** en `src/i18n/i18n.js`:
   - La app sigue escrita en **español**. Un MutationObserver traduce el texto y los atributos `placeholder`, `title`, `aria-label`, `data-short`, `data-placeholder-text` y `alt`.
@@ -284,9 +317,10 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   2. Añádelo a `LANGS` en `i18n.js`.
   3. Pon su `<script>` en `index.html`.
   4. Añade un botón en el selector de Ajustes.
+- **Nota:** los textos con datos se traducen con claves con marcadores (`Workhub.t('hace {n} min', {n})` necesita esa clave exacta en `en.js`) o con patrones regex al final de `en.js`. En `en.js` las barras invertidas de los patrones deben escaparse bien al generarlos con scripts.
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
 
-## 8. Historial de pull requests (todos fusionados salvo #22)
+## 8. Historial de pull requests (todos fusionados salvo el último)
 
 | # | Qué |
 |---|---|
@@ -310,7 +344,9 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 19 | Rediseño de plugins con iconos en vez de emojis |
 | 20 | Plugins integrados en la app (botones, etiquetas, apariencia, segundo plano) |
 | 21 | Tarjetas de plugins minimalistas |
-| **22** | **Idioma inglés, traducciones (PENDIENTE DE FUSIONAR)** |
+| 22 | Idioma inglés, traducciones |
+| 23 | CONTEXT.md (contexto para continuar en otro chat) |
+| **pendiente** | **Rama `claude/read-context-md-df6b13` (sin PR abierto todavía)**: tipos de proyecto (soporte, desarrollo, kanban, personalizado), menú y límite de columnas, arrastrar columnas, integración con GitHub Projects (crear proyecto desde GitHub, destino en Ajustes, sincronización bidireccional), etiquetas, PRs vinculadas, actividad de la incidencia y scrollbar de los diálogos |
 
 ## 9. Cómo trabajar y probar
 
@@ -322,11 +358,16 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Emuladores de Firebase** (opcionales): `useEmulators: true` solo en local, nunca en producción.
 - **Datos de prueba:** importar `data-backup.json` desde Copia de seguridad (`#importFileInput`). Solo en local; nunca subirlo a ningún sitio.
 - **Qué comprobar:** sin errores en consola y sin scroll horizontal en móvil, en tema claro y oscuro.
+- **Sin Python ni `gh`** en el equipo Windows de esta tanda: se editó con scripts de Node (`node script.js`) y los PR se abren con el enlace `.../pull/new/{rama}`. Los ficheros del repo están en **CRLF**; los scripts de edición deben normalizar los saltos de línea. Las heredocs de bash con `\\` se pueden corromper: mejor escribir el script con la herramienta de ficheros.
+- **Servidor de pruebas local**: un servidor estático de Node que sirve `src/config/firebase-config.js` vacío (`window.WORKHUB_FIREBASE={apiKey:'',projectId:''}`) arranca el modo local sin login. Para probar GitHub sin token real se sustituye `window.fetch` en la consola del navegador por un simulador de la API GraphQL (proyecto, elementos, etiquetas, mutaciones, actividad) y se pega un token de mentira; al terminar, `localStorage.removeItem('workhub_gh_token')`.
 - **GitHub:** a veces da errores 503 o "token store unavailable". Reintenta el push en bucle y verifica con `git ls-remote`.
 - **Commits:** en español, descriptivos.
 
 ## 10. Ideas y posibles siguientes pasos (no pedidas todavía)
 
-- Fusionar el PR #22 y probar el idioma en producción (pantalla de login).
+- Abrir y fusionar el PR de la rama `claude/read-context-md-df6b13`, desplegar la CSP y **probar la integración con GitHub con un token clásico real**.
+- Renombrar columnas en GitHub desde Workhub (`updateProjectV2Field`): probar primero que conserva los ids de las opciones, si no los elementos perderían su columna.
+- Comentar desde la ficha (hoy la actividad de GitHub es solo lectura), crear etiquetas nuevas en el repositorio, borrar/renombrar etiquetas del catálogo, filtrar el tablero por etiqueta.
+- Probar el idioma en producción (pantalla de login).
 - Más idiomas (catalán, euskera…) con el mismo sistema.
 - Más plugins oficiales.

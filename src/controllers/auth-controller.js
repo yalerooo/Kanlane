@@ -81,25 +81,44 @@
           return;
         }
         this.user = user;
-        this.view.showLoading();
-        /* Solo las cuentas de la lista de acceso (firestore.rules) llegan a la
-           app. Es un aviso: quien impide leer o guardar datos es el servidor. */
-        firebase.startSession(user).then((access) => {
-          if(access === 'denied'){
-            this.view.showNoAccess(user, () => this.signOut());
-            return;
-          }
-          firebase.install(user);
-          this.view.hide();
-          this.view.showAccount(user);
-          if(this.resolveGate) this.resolveGate();
-        });
+        if(firebase.needsVerification(user)){
+          this.showVerify(user);
+          return;
+        }
+        this.enter(user);
       } else if(this.user){
         location.reload();
       } else {
         firebase.clearLocalCache();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
       }
+    }
+
+    /* Sesión válida: caché local, datos del usuario y arranque de la app. */
+    enter(user){
+      this.view.showLoading();
+      firebase.startSession().then(() => {
+        firebase.install(user);
+        this.view.hide();
+        this.view.showAccount(user);
+        if(this.resolveGate) this.resolveGate();
+      });
+    }
+
+    /* Cuenta de correo sin verificar: no llega a la app hasta que pulse el
+       enlace del correo (firestore.rules tampoco le deja leer ni guardar). */
+    showVerify(user){
+      this.view.showVerify(user.email, {
+        check: () => firebase.refreshVerification().then((ok) => {
+          if(ok) this.enter(firebase.currentUser ? firebase.currentUser() : user);
+          return ok;
+        }),
+        resend: () => firebase.sendVerification().then(() => true, (err) => {
+          this.view.showVerifyMessage(messageFor(err));
+          return false;
+        }),
+        signOut: () => this.signOut()
+      });
     }
 
     showError(err){

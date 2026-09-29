@@ -1,14 +1,14 @@
 # Seguridad del acceso a Workhub
 
-Esta guía explica qué protege Workhub desde el propio código y qué tienes que activar tú en la consola de Firebase. La parte del código ya está hecha. Los pasos de la consola, que están más abajo, se hacen **una sola vez**.
+Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus propios datos. Esta guía explica qué protege Workhub desde el propio código y qué tienes que activar tú en la consola de Firebase. La parte del código ya está hecha. Los pasos de la consola, que están más abajo, se hacen **una sola vez**.
 
 ## Lo que ya hace el código
 
 | Riesgo | Protección |
 |---|---|
-| Cualquiera puede crearse una cuenta y usar tu base de datos (y gastar la cuota gratuita) | **Lista de acceso** en `firestore.rules`: solo pueden leer o guardar algo las cuentas que tengan un documento en `allowlist/{uid}`. Esa lista solo se edita desde la consola; nadie puede añadirse desde la web. |
-| Una cuenta autorizada lee los datos de otra | Cada cuenta solo puede leer y escribir en `users/{su uid}/…`. Lo impide el servidor, no la app. |
-| Alguien se registra desde la pantalla de acceso | El botón "Crear una cuenta" está oculto (`allowSignup: false` en `src/config/firebase-config.js`). Aunque alguien lo haga por otra vía, ve la pantalla "Esta cuenta no tiene acceso" y no llega a ningún dato. |
+| Un usuario lee o modifica los datos de otro | Cada cuenta solo puede leer y escribir en `users/{su uid}/…`. Lo impide el servidor (`firestore.rules`), no la app. |
+| Cuentas en masa con correos inventados para llenar la base de datos | Quien se registra con correo y contraseña tiene que **verificar el correo** antes de leer o guardar nada. Lo exige el servidor, y la app muestra la pantalla "Verifica tu correo". Google y GitHub ya llegan verificados por el proveedor. |
+| Usar tu Firestore como almacén de cualquier cosa | Cada usuario solo puede escribir en las colecciones que usa la app (tareas, notas, clientes, contactos, reuniones, contraseñas, proyectos e imágenes). Cualquier otra ruta está cerrada. |
 | Tras cerrar sesión, los datos quedan en el ordenador | Al cerrar sesión se borra la copia local de Firestore (IndexedDB) y el último proyecto recordado. |
 | Otra web mete Workhub en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`netlify.toml`). |
 | Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Workhub y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
@@ -21,20 +21,7 @@ Esta guía explica qué protege Workhub desde el propio código y qué tienes qu
 
 ## Lo que tienes que hacer en la consola (una vez)
 
-> **Haz los pasos 1 y 2 en este orden.** Si publicas las reglas (paso 2) sin estar en la lista (paso 1), verás "Esta cuenta no tiene acceso". No se pierde nada: añade tu identificador (paso 1) y vuelve a entrar.
-
-### 1. Añadirte a la lista de acceso
-
-1. Consola de Firebase → **Authentication** → **Users**. Copia el **UID de usuario** de tu cuenta (una cadena como `JFtJpI82Rio2…`).
-2. **Firestore Database** → pestaña **Datos** → **Iniciar colección**.
-   - ID de la colección: `allowlist`
-   - ID del documento: **pega tu UID**
-   - Añade un campo cualquiera para identificarlo, por ejemplo `email` (string) = tu correo.
-   - **Guardar**.
-
-Para dar acceso a otra persona más adelante: que entre con su cuenta, verá su identificador en la pantalla "Esta cuenta no tiene acceso", y añades un documento con ese ID a `allowlist`. Para quitarle el acceso, borra su documento.
-
-### 2. Publicar las reglas nuevas
+### 1. Publicar las reglas nuevas
 
 Con la terminal, en la carpeta de Workhub:
 
@@ -42,13 +29,17 @@ Con la terminal, en la carpeta de Workhub:
 firebase deploy --only firestore:rules
 ```
 
-Sin terminal: **Firestore Database** → **Reglas**, pega el contenido de `firestore.rules` y pulsa **Publicar**.
+Sin terminal: **Firestore Database** → **Reglas**, borra el texto del editor, pega el contenido de `firestore.rules` y pulsa **Publicar**. El botón solo aparece cuando el texto cambia.
 
-### 3. Cerrar el registro de cuentas nuevas
+Si entras con correo y contraseña y nunca verificaste tu correo, la app te pedirá hacerlo una vez. Con Google o GitHub no cambia nada.
 
-**Authentication** → **Settings** → **Acciones del usuario** (*User actions*) → desmarca **Habilitar creación (registro)** (*Enable create (sign-up)*) → **Guardar**.
+### 2. Deja activado el registro
 
-Así nadie puede crear cuentas nuevas, tampoco con Google o GitHub. Tu cuenta ya existe y sigue funcionando. Si algún día quieres invitar a alguien, vuelve a marcarlo un momento.
+**Authentication** → **Settings** → **Acciones del usuario**: **Habilitar creación (registro)** debe seguir **marcado**, para que cualquiera pueda crearse una cuenta.
+
+### 3. Correo de verificación en español (opcional)
+
+**Authentication** → **Templates** → **Verificación de dirección de correo electrónico**: pulsa el lápiz y cambia el idioma de la plantilla a **Español** y el nombre del remitente a "Workhub".
 
 ### 4. Política de contraseñas
 

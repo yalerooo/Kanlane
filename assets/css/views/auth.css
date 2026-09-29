@@ -91,20 +91,10 @@ html.auth-gate #authScreen{display:flex !important;}
 .account-mail{font-size:11.5px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .account .icon-only{width:28px;height:28px;flex:none;}
 
-/* Cuenta sin acceso (no está en la lista de firestore.rules). */
-.auth-loading.is-noaccess{color:var(--ink-soft);gap:10px;line-height:1.5;}
-.auth-loading.is-noaccess strong{color:var(--ink);font-size:15px;font-weight:600;}
-.auth-uid{
-  display:block;
-  width:100%;
-  padding:8px 10px;
-  font-family:'Geist Mono', ui-monospace, monospace;
-  font-size:12.5px;
-  color:var(--ink);
-  background:var(--surface-2);
-  border:1px solid var(--line);
-  border-radius:var(--r-md);
-  word-break:break-all;
-  user-select:all;
-}
+/* Cuenta de correo pendiente de verificar. */
+.auth-loading.is-verify{flex-direction:column;align-items:flex-start;gap:10px;color:var(--ink-soft);line-height:1.5;}
+.auth-loading.is-verify strong{color:var(--ink);font-size:15px;font-weight:600;}
+.auth-verify-msg{font-size:12.5px;color:var(--danger);}
+.auth-verify-msg:empty{display:none;}
+.auth-verify-msg.is-info{color:var(--st-done);}
 .auth-noaccess-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}

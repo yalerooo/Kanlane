@@ -89,7 +89,7 @@
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.loading.hidden = false;
-      this.loading.classList.remove('is-error');
+      this.loading.classList.remove('is-error', 'is-verify');
       this.loading.innerHTML = '<span class="spinner" aria-hidden="true"></span>Cargando…';
       this.panel.hidden = true;
     }
@@ -127,39 +127,56 @@
       this.setMode('signin');
     }
 
-    /* Cuenta sin permiso (no está en la lista de acceso). Se muestra su
-       identificador para que el administrador pueda darle acceso. */
-    showNoAccess(user, onSignOut){
+    /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
+       resend() → Promise<bool>, signOut()} */
+    showVerify(email, handlers){
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.panel.hidden = true;
       this.loading.hidden = false;
-      this.loading.classList.add('is-error', 'is-noaccess');
+      this.loading.classList.remove('is-error');
+      this.loading.classList.add('is-verify');
       this.loading.textContent = '';
       const title = document.createElement('strong');
-      title.textContent = 'Esta cuenta no tiene acceso';
+      title.textContent = 'Verifica tu correo';
       const text = document.createElement('span');
-      text.textContent = 'Has entrado como ' + (user.email || 'usuario sin correo') + ', pero esta cuenta no está autorizada para usar Workhub. Si es tuya, añádela a la lista de acceso con este identificador:';
-      const uid = document.createElement('code');
-      uid.className = 'auth-uid';
-      uid.textContent = user.uid;
+      text.textContent = 'Te hemos enviado un enlace a ' + (email || 'tu correo') + '. Ábrelo para activar la cuenta y después pulsa "Ya lo he verificado". Si no lo ves, mira en la carpeta de spam.';
+      this.verifyMsg = document.createElement('span');
+      this.verifyMsg.className = 'auth-verify-msg';
+      this.verifyMsg.setAttribute('role', 'status');
       const actions = document.createElement('div');
       actions.className = 'auth-noaccess-actions';
-      const copy = document.createElement('button');
-      copy.type = 'button';
-      copy.className = 'btn btn-ghost';
-      copy.textContent = 'Copiar identificador';
-      copy.addEventListener('click', () => {
-        const done = () => { copy.textContent = 'Copiado'; };
-        if(navigator.clipboard) navigator.clipboard.writeText(user.uid).then(done, () => {});
-      });
+      const check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'btn btn-primary';
+      check.textContent = 'Ya lo he verificado';
+      const resend = document.createElement('button');
+      resend.type = 'button';
+      resend.className = 'btn btn-ghost';
+      resend.textContent = 'Reenviar correo';
       const out = document.createElement('button');
       out.type = 'button';
-      out.className = 'btn btn-primary';
-      out.textContent = 'Cerrar sesión';
-      out.addEventListener('click', onSignOut);
-      actions.append(copy, out);
-      this.loading.append(title, text, uid, actions);
+      out.className = 'btn btn-ghost';
+      out.textContent = 'Usar otra cuenta';
+      check.addEventListener('click', () => {
+        check.disabled = true;
+        handlers.check().then((ok) => {
+          if(!ok) this.showVerifyMessage('Todavía no consta como verificado. Abre el enlace del correo y vuelve a probar.');
+        }, () => this.showVerifyMessage('No se pudo comprobar. Revisa tu conexión.')).finally(() => { check.disabled = false; });
+      });
+      resend.addEventListener('click', () => {
+        resend.disabled = true;
+        handlers.resend().then((ok) => { if(ok) this.showVerifyMessage('Correo reenviado.', true); }).finally(() => { resend.disabled = false; });
+      });
+      out.addEventListener('click', handlers.signOut);
+      actions.append(check, resend, out);
+      this.loading.append(title, text, this.verifyMsg, actions);
+    }
+
+    showVerifyMessage(text, isInfo){
+      if(!this.verifyMsg) return;
+      this.verifyMsg.textContent = text;
+      this.verifyMsg.classList.toggle('is-info', !!isInfo);
     }
 
     hide(){

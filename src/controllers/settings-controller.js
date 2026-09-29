@@ -17,6 +17,13 @@
         this.render();
       });
       this.view.bindTheme((theme) => this.setTheme(theme));
+
+      /* Cambios hechos en otro dispositivo con la misma cuenta. */
+      this.model.on('change', () => {
+        this.view.applyAccent(this.model.currentAccent());
+        this.view.applyTheme(this.model.theme, true);
+        this.render();
+      });
     }
 
     /* theme: 'system' | 'light' | 'dark' */

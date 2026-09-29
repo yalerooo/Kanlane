@@ -1,4 +1,8 @@
-/* Preferencias de apariencia: color de acento y tema claro/oscuro. */
+/* Preferencias de apariencia: color de acento y tema claro/oscuro.
+   Se guardan en la cuenta del usuario (users/{uid}/settings/preferences, igual
+   en todos sus proyectos y dispositivos) y, además, en este navegador, para
+   pintarlas al instante al abrir la app (ver src/boot.js). Emite 'change'
+   cuando llegan cambios hechos en otro dispositivo. */
 (function(){
   const prefs = Workhub.services.preferences;
 
@@ -17,9 +21,13 @@
 
   const ACCENT_KEY = 'workhub_accent';
   const THEME_KEY = 'workhub_theme';
+  const DOC_PATH = 'settings/preferences';
+  const THEMES = ['system', 'light', 'dark'];
 
-  class SettingsModel {
+  class SettingsModel extends Workhub.Emitter {
     constructor(){
+      super();
+      this.ref = null;
       this.accent = this.findAccent(prefs.read(ACCENT_KEY, 'azul')).key;
       /* 'system' | 'light' | 'dark' */
       this.theme = prefs.read(THEME_KEY, 'system');
@@ -33,14 +41,48 @@
       return this.findAccent(this.accent);
     }
 
+    /* db: base de datos del usuario sin acotar a un proyecto. */
+    connect(db){
+      if(typeof this.stop === 'function') this.stop();
+      this.ref = db.doc(DOC_PATH);
+      this.stop = this.ref.onSnapshot((snap) => {
+        if(!snap.exists){
+          /* Primera vez: se sube lo elegido en este navegador. */
+          this.save();
+          return;
+        }
+        this.applyRemote(snap.data() || {});
+      }, () => {
+        /* Sin permiso (reglas antiguas) o sin conexión: se sigue con lo local. */
+      });
+    }
+
+    applyRemote(data){
+      const accent = this.findAccent(data.accent).key;
+      const theme = THEMES.indexOf(data.theme) !== -1 ? data.theme : this.theme;
+      if(accent === this.accent && theme === this.theme) return;
+      this.accent = accent;
+      this.theme = theme;
+      prefs.write(ACCENT_KEY, accent);
+      prefs.write(THEME_KEY, theme);
+      this.emit('change');
+    }
+
+    save(){
+      if(!this.ref) return;
+      this.ref.set({accent:this.accent, theme:this.theme, updatedAt:Date.now()}).catch(() => {});
+    }
+
     setAccent(key){
       this.accent = this.findAccent(key).key;
       prefs.write(ACCENT_KEY, this.accent);
+      this.save();
     }
 
     setTheme(theme){
-      this.theme = theme;
-      prefs.write(THEME_KEY, theme);
+      this.theme = THEMES.indexOf(theme) !== -1 ? theme : 'system';
+      prefs.write(THEME_KEY, this.theme);
+      this.save();
     }
   }
 

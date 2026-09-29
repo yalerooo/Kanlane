@@ -84,11 +84,35 @@
     save(id, body){
       body.updatedAt = Date.now();
       if(id) return this.update(id, body);
+      return this._create(body);
+    }
+
+    _create(body){
       body.createdAt = Date.now();
       const column = this.inStatus(body.status);
       const last = column[column.length - 1];
       body.order = Math.max(body.createdAt, last ? TaskModel.orderOf(last) + ORDER_STEP : 0);
       return this.add(body);
+    }
+
+    /* Escritura que viene de la sincronización con GitHub: la tarea queda
+       como sincronizada (updatedAt y ghSyncedAt iguales, así no cuenta como cambio local). */
+    saveSynced(id, body){
+      body.updatedAt = body.ghSyncedAt = Date.now();
+      if(id) return this.update(id, body);
+      return this._create(body);
+    }
+
+    /* Marca la tarea como sincronizada sin tocar updatedAt. at: cuándo empezó a enviarse. */
+    markSynced(id, at, patch){
+      return this.update(id, Object.assign({ghSyncedAt:at}, patch || {}));
+    }
+
+    /* Avisa de lo que se borra (la integración con GitHub no debe volver a importarlo). */
+    remove(id){
+      const t = this.find(id);
+      if(t) this.emit('removed', t);
+      return super.remove(id);
     }
 
     /* Mueve la tarea a la columna status, justo antes de beforeId

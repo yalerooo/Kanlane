@@ -1,0 +1,123 @@
+/* Cliente mínimo de la API GraphQL de GitHub para GitHub Projects (v2).
+   El token lo pega el usuario y se guarda solo en este navegador
+   (localStorage): nunca se sube a Firestore ni al repositorio. */
+(function(){
+  const ENDPOINT = 'https://api.github.com/graphql';
+  const TOKEN_KEY = 'workhub_gh_token';
+  const MAX_PAGES = 20;   /* 20 × 100 = 2000 elementos por proyecto */
+
+  class GithubError extends Error {
+    constructor(code, message){
+      super(message);
+      this.code = code;
+    }
+  }
+
+  function token(){
+    try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; }
+  }
+
+  function setToken(value){
+    try{
+      if(value) localStorage.setItem(TOKEN_KEY, value);
+      else localStorage.removeItem(TOKEN_KEY);
+    }catch(e){}
+  }
+
+  function graphql(query, variables){
+    const t = token();
+    if(!t) return Promise.reject(new GithubError('no-token', 'Falta el token de GitHub.'));
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json'},
+      body: JSON.stringify({query:query, variables:variables || {}})
+    }).catch(() => {
+      throw new GithubError('network', 'No se pudo conectar con GitHub.');
+    }).then((res) => {
+      if(res.status === 401) throw new GithubError('auth', 'GitHub no acepta el token. Puede haber caducado o estar mal copiado.');
+      if(res.status === 403 || res.status === 429) throw new GithubError('rate', 'GitHub ha limitado las peticiones. Vuelve a intentarlo dentro de unos minutos.');
+      if(!res.ok) throw new GithubError('http', 'GitHub respondió con un error (' + res.status + ').');
+      return res.json();
+    }).then((json) => {
+      const errors = json.errors || [];
+      if(errors.length && !json.data){
+        const scopes = errors.some((e) => e.type === 'INSUFFICIENT_SCOPES');
+        throw new GithubError(scopes ? 'scopes' : 'graphql',
+          scopes ? 'El token no tiene el permiso «project». Crea uno clásico con ese permiso.' : (errors[0].message || 'GitHub devolvió un error.'));
+      }
+      return json.data;
+    });
+  }
+
+  /* https://github.com/users/NOMBRE/projects/1/views/1 → {type, login, number} */
+  function parseProjectUrl(url){
+    const m = /^https:\/\/github\.com\/(users|orgs)\/([A-Za-z0-9-_.]+)\/projects\/(\d+)/.exec(String(url || '').trim());
+    return m ? {type:m[1] === 'orgs' ? 'organization' : 'user', login:m[2], number:+m[3]} : null;
+  }
+
+  const PROJECT_FIELDS = 'id title url closed fields(first:40){nodes{... on ProjectV2SingleSelectField{id name options{id name color}}}}';
+
+  /* Devuelve {id, title, url, fieldId, fieldName, options:[{id,name,color}]}. */
+  function fetchProject(ref){
+    const root = ref.type === 'organization' ? 'organization' : 'user';
+    const q = 'query($login:String!,$number:Int!){' + root + '(login:$login){projectV2(number:$number){' + PROJECT_FIELDS + '}}}';
+    return graphql(q, {login:ref.login, number:ref.number}).then((data) => {
+      const p = data[root] && data[root].projectV2;
+      if(!p) throw new GithubError('not-found', 'No se encuentra ese proyecto. Comprueba el enlace y que el token tenga acceso.');
+      const selects = (p.fields.nodes || []).filter((f) => f && f.options);
+      const field = selects.find((f) => f.name.toLowerCase() === 'status') || selects[0];
+      if(!field) throw new GithubError('no-status', 'El proyecto no tiene un campo de estado (Status) con columnas.');
+      return {id:p.id, title:p.title, url:p.url, fieldId:field.id, fieldName:field.name, options:field.options};
+    });
+  }
+
+  const ITEM_FIELDS = 'id updatedAt isArchived ' +
+    'status:fieldValueByName(name:$field){... on ProjectV2ItemFieldSingleSelectValue{optionId}} ' +
+    'content{__typename ' +
+      '... on DraftIssue{id title body updatedAt} ' +
+      '... on Issue{id title body url number state updatedAt repository{nameWithOwner}} ' +
+      '... on PullRequest{id title body url number state updatedAt repository{nameWithOwner}}}';
+
+  /* Todos los elementos del proyecto (sin archivados). */
+  function fetchItems(projectId, fieldName){
+    const q = 'query($id:ID!,$field:String!,$after:String){node(id:$id){... on ProjectV2{items(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{' + ITEM_FIELDS + '}}}}}';
+    const all = [];
+    const page = (after, n) => graphql(q, {id:projectId, field:fieldName, after:after}).then((data) => {
+      const items = data.node && data.node.items;
+      if(!items) throw new GithubError('not-found', 'No se pudieron leer los elementos del proyecto.');
+      items.nodes.forEach((it) => { if(it && !it.isArchived && it.content) all.push(it); });
+      if(items.pageInfo.hasNextPage && n < MAX_PAGES) return page(items.pageInfo.endCursor, n + 1);
+      return all;
+    });
+    return page(null, 1);
+  }
+
+  function setStatus(projectId, itemId, fieldId, optionId){
+    const q = 'mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){projectV2Item{id updatedAt}}}';
+    return graphql(q, {p:projectId, i:itemId, f:fieldId, o:optionId}).then((d) => d.updateProjectV2ItemFieldValue.projectV2Item);
+  }
+
+  /* Borrador nuevo en el proyecto. Devuelve {id (elemento), updatedAt, contentId}. */
+  function addDraft(projectId, title, body){
+    const q = 'mutation($p:ID!,$t:String!,$b:String){addProjectV2DraftIssue(input:{projectId:$p,title:$t,body:$b}){projectItem{id updatedAt content{... on DraftIssue{id}}}}}';
+    return graphql(q, {p:projectId, t:title, b:body || ''}).then((d) => {
+      const it = d.addProjectV2DraftIssue.projectItem;
+      return {id:it.id, updatedAt:it.updatedAt, contentId:it.content && it.content.id};
+    });
+  }
+
+  function updateDraft(draftId, title, body){
+    const q = 'mutation($d:ID!,$t:String!,$b:String){updateProjectV2DraftIssue(input:{draftIssueId:$d,title:$t,body:$b}){draftIssue{id updatedAt}}}';
+    return graphql(q, {d:draftId, t:title, b:body || ''}).then((d) => d.updateProjectV2DraftIssue.draftIssue);
+  }
+
+  function updateIssue(issueId, title, body){
+    const q = 'mutation($i:ID!,$t:String!,$b:String){updateIssue(input:{id:$i,title:$t,body:$b}){issue{id updatedAt}}}';
+    return graphql(q, {i:issueId, t:title, b:body || ''}).then((d) => d.updateIssue.issue);
+  }
+
+  Workhub.services.github = {
+    GithubError, token, setToken, parseProjectUrl,
+    fetchProject, fetchItems, setStatus, addDraft, updateDraft, updateIssue
+  };
+})();

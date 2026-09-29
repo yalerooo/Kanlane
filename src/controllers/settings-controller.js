@@ -27,7 +27,7 @@
     }
 
     render(){
-      this.view.render(SettingsModel.ACCENTS, this.model.accent, this.model.theme, platform.isLocal());
+      this.view.render(SettingsModel.ACCENTS, this.model.accent, this.model.theme, platform.mode());
     }
   }
 

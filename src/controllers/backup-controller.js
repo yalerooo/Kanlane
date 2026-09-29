@@ -6,6 +6,7 @@
 
   class BackupController {
     constructor(app, view){
+      this.app = app;
       this.backup = app.models.backup;
       this.view = view;
 
@@ -49,6 +50,7 @@
         }
         this.view.showStatus(msg);
         toast.success('Copia importada');
+        if(result.vaultOutcome === 'imported') this.app.controllers.vault.onImported();
         this.view.resetImport();
       }).catch(() => {
         this.view.showError('Hubo un problema importando el archivo — puede que solo se haya importado una parte.');

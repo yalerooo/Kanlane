@@ -45,7 +45,8 @@
       else if(fromUser) root.removeAttribute('data-theme');
     }
 
-    render(accents, currentAccent, currentTheme, isLocal){
+    /* mode: 'local' | 'firebase' | 'claude' */
+    render(accents, currentAccent, currentTheme, mode){
       this.swatches.innerHTML = accents.map((a) => {
         const sel = a.key === currentAccent;
         return '<button type="button" class="swatch" role="radio" aria-checked="' + (sel ? 'true' : 'false') + '" data-accent="' + a.key + '" style="--sw:' + a.solid + ';--sw-ink:' + a.ink + '">' +
@@ -54,9 +55,11 @@
       this.themeSegment.querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-theme-choice') === currentTheme ? 'true' : 'false');
       });
-      this.storageDetail.textContent = isLocal
-        ? 'En este navegador (modo local). Haz copias de seguridad de vez en cuando.'
-        : 'Sincronizado en tu espacio de Claude.';
+      this.storageDetail.textContent = {
+        local: 'En este navegador (modo local). Haz copias de seguridad de vez en cuando.',
+        firebase: 'En la nube (Firebase), sincronizado entre todos tus dispositivos.',
+        claude: 'Sincronizado en tu espacio de Claude.'
+      }[mode] || '';
     }
   }
 

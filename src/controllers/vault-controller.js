@@ -99,6 +99,12 @@
       }
     }
 
+    /* Tras importar una copia con contraseñas: la pantalla de bloqueo debe
+       pedir la contraseña maestra del archivo, no crear una nueva. */
+    onImported(){
+      if(!this.vault.unlocked) this.checkLockMode();
+    }
+
     checkLockMode(){
       if(this.vault.metaState !== null){
         this.view.setLockMode(this.vault.metaState);

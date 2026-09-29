@@ -47,6 +47,7 @@ Detalles de interfaz:
 - **Tablero**: ocupa el alto de la ventana y cada columna tiene scroll propio. Al arrastrar una tarea, las columnas y la página se desplazan solas al acercarte a un borde, y una línea marca la posición exacta donde caerá; el orden dentro de cada columna se guarda (campo `order`). El botón **+** de cada columna crea una tarea con ese estado.
 - **Proyectos**: el selector de la parte de arriba de la barra lateral cambia de proyecto al instante, sin recargar. Cada proyecto tiene sus propias tareas (con notas), reuniones, contactos, contraseñas (con su propia contraseña maestra) y clientes. Desde el mismo menú se crea un proyecto, y el lápiz de cada uno permite renombrarlo, cambiar su color o eliminarlo con todos sus datos (pide confirmación). El **proyecto principal** usa los datos de siempre, en la raíz de la base de datos, así que no hay que migrar nada y no se puede eliminar; los demás guardan todo en `projects/{id}/…`. La lista está en la colección `projects` (`ProjectModel`), y el último proyecto abierto se recuerda en el navegador. La copia de seguridad exporta e importa el proyecto abierto.
 - **Clientes y contactos**: una sola sección. A la izquierda, la lista de clientes (con cuántos contactos y tareas abiertas tiene cada uno); a la derecha, la ficha del cliente elegido con sus personas de contacto (email y teléfono se pueden pulsar para escribir o llamar), botones para ver sus tareas o sus contraseñas, y acciones para cambiar el color, renombrar o eliminar. El buscador encuentra a la vez clientes y personas (nombre, email, teléfono o notas) y resalta las coincidencias. Los contactos cuyo cliente se eliminó aparecen en "Sin cliente". Renombrar un cliente actualiza también sus tareas, reuniones, contactos y contraseñas. En móvil se ve primero la lista y, al elegir un cliente, su ficha.
+- **Plugins**: ver la sección [Plugins](#plugins) más abajo.
 - **Paleta de comandos** (`Ctrl K` / `⌘K` o el botón *Buscar…* de la barra lateral): busca tareas, contactos, reuniones y clientes, y lanza acciones (nueva tarea/reunión/contacto/credencial/cliente, nuevo proyecto o cambiar a otro, ir a una sección, cambiar el tema, exportar la copia).
 - **Atajos**: `N` crea una tarea y `/` enfoca el buscador de la sección actual (no se activan mientras escribes ni con un diálogo abierto).
 - **Avisos**: confirmación breve al crear, guardar, mover o eliminar, y aviso si algo falla.
@@ -67,6 +68,15 @@ Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión
 También se puede publicar en **Netlify** (publicación automática al fusionar en `main`), usando Firebase solo para el acceso y los datos: ver **[docs/NETLIFY.md](docs/NETLIFY.md)**.
 
 Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
+
+## Plugins
+
+Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la sección **Plugins**, aisladas en un `<iframe sandbox>`, y que solo acceden a los datos que el usuario les permite al instalarlas (nunca a las contraseñas guardadas).
+
+- **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo** y **Temporizador**. Se instalan con un clic desde la sección Plugins.
+- **De terceros:** cualquiera puede publicar el suyo en una web con https, y se instala pegando su enlace.
+
+**Guía para crear un plugin:** [docs/PLUGINS.md](docs/PLUGINS.md) (SDK, permisos, API, eventos, estilos y una [plantilla](plugins/plantilla) lista para copiar).
 
 ## Seguridad
 

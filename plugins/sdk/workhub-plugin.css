@@ -1,0 +1,49 @@
+/* Estilos base para plugins de Workhub. Usan las mismas variables que la app
+   (el SDK las rellena al conectar), así el plugin sigue el tema claro/oscuro y
+   el color de acento del usuario. Los valores de aquí son solo el respaldo. */
+:root{
+  --bg:#FAFAFA; --surface:#FFFFFF; --surface-2:#F4F4F5; --hover:rgba(24,24,27,.045);
+  --ink:#18181B; --ink-soft:#56565F; --ink-faint:#8E8E97;
+  --line:#E6E6E9; --line-strong:#D4D4D9;
+  --accent:#2457E0; --accent-solid:#2F6BFF; --accent-ink:#FFFFFF; --accent-soft:#EEF3FF;
+  --danger:#DC2626; --danger-bg:#FDEEEE;
+  --st-pend:#71717A; --st-proc:#2563EB; --st-wait:#C2690A; --st-done:#15803D;
+  --r-sm:5px; --r-md:7px; --r-lg:10px; --r-xl:12px;
+  --font:'Geist','Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'Geist Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+body{padding:20px;}
+h1,h2,h3{margin:0 0 8px;letter-spacing:-0.015em;}
+h1{font-size:18px;} h2{font-size:15px;} h3{font-size:13.5px;}
+p{margin:0 0 10px;color:var(--ink-soft);}
+a{color:var(--accent);}
+.wh-muted{color:var(--ink-faint);font-size:12.5px;}
+.wh-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;}
+.wh-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.wh-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
+.wh-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:34px;padding:0 12px;border-radius:var(--r-md);
+  font:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);
+}
+.wh-btn:hover{background:var(--hover);}
+.wh-btn.is-primary{background:var(--accent-solid);border-color:var(--accent-solid);color:var(--accent-ink);}
+.wh-btn.is-primary:hover{filter:brightness(1.06);}
+.wh-btn.is-danger{color:var(--danger);}
+.wh-btn:disabled{opacity:.55;cursor:not-allowed;}
+.wh-input,.wh-select{
+  height:34px;padding:0 10px;border-radius:var(--r-md);
+  font:inherit;font-size:13.5px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line-strong);
+}
+.wh-input:focus,.wh-select:focus{outline:none;border-color:var(--accent-solid);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-solid) 25%, transparent);}
+.wh-table{width:100%;border-collapse:collapse;font-size:13px;}
+.wh-table th{text-align:left;font-weight:500;color:var(--ink-faint);padding:6px 8px;border-bottom:1px solid var(--line);}
+.wh-table td{padding:8px;border-bottom:1px solid var(--line);}
+.wh-badge{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:var(--r-sm);font-size:11.5px;font-weight:500;background:var(--surface-2);color:var(--ink-soft);}
+.wh-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+.wh-empty{padding:28px 16px;text-align:center;color:var(--ink-faint);border:1px dashed var(--line-strong);border-radius:var(--r-lg);}
+@media (max-width:600px){ body{padding:14px;} }

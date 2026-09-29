@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="assets/css/views/calendar.css">
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/clients.css">
+  <link rel="stylesheet" href="assets/css/views/plugins.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
   <link rel="stylesheet" href="assets/css/views/auth.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
@@ -96,10 +97,11 @@
     </button>
     <nav class="tabs" aria-label="Secciones">
       <button class="tab active" id="tabTasks" data-short="Tareas" title="Tareas" data-view="tasks" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span>Tareas</span><span class="tab-count" id="countTasks"></span></button>
-      <button class="tab" id="tabCalendar" data-short="Calendario" title="Calendario" data-view="calendar" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Calendario</span><span class="tab-count" id="countCalendar"></span></button>
+      <button class="tab" id="tabCalendar" data-short="Agenda" title="Calendario" data-view="calendar" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Calendario</span><span class="tab-count" id="countCalendar"></span></button>
       <button class="tab" id="tabVault" data-short="Claves" title="Contraseñas" data-view="vault" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Contraseñas</span><span class="tab-count" id="countVault"></span></button>
       <button class="tab" id="tabClients" data-short="Clientes" title="Clientes y contactos" data-view="clients" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span>Clientes</span><span class="tab-count" id="countClients"></span></button>
       <p class="nav-label">Sistema</p>
+      <button class="tab" id="tabPlugins" data-short="Plugins" title="Plugins" data-view="plugins" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.4 11H18V7a1 1 0 0 0-1-1h-4V4.6a2.1 2.1 0 1 0-4 0V6H5a1 1 0 0 0-1 1v3.6h1.4a2.1 2.1 0 1 1 0 4H4V19a1 1 0 0 0 1 1h3.6v-1.4a2.1 2.1 0 1 1 4 0V20H17a1 1 0 0 0 1-1v-4h1.4a2.1 2.1 0 1 0 0-4Z"/></svg><span>Plugins</span></button>
       <button class="tab" id="tabData" data-short="Copia" title="Copia de seguridad" data-view="data" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M20 12c0 1.66-3.58 3-8 3s-8-1.34-8-3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg><span>Copia de seguridad</span></button>
       <button class="tab" id="tabSettings" data-short="Ajustes" title="Ajustes" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
     </nav>
@@ -262,6 +264,33 @@
       <div class="crm-detail" id="clientDetail" hidden></div>
     </div>
     <p class="hint crm-hint"><strong>No guardes contraseñas en los contactos.</strong> Usa la sección Contraseñas, donde se cifran.</p>
+  </section>
+
+  <section id="viewPlugins" hidden>
+    <div id="pluginsHome">
+      <p class="plugin-file-notice" id="pluginsFileNotice" hidden><strong>Los plugins no funcionan al abrir Workhub como archivo.</strong> El navegador no deja que una página aislada cargue archivos del disco. Abre Workhub con <code>start-workhub.bat</code> (o desde tu web publicada) para usarlos.</p>
+      <form class="plugin-add" id="formPluginUrl">
+        <input type="url" id="pluginUrl" placeholder="Pega el enlace de un plugin (https://…)" aria-label="Enlace del plugin" autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn btn-primary">Añadir</button>
+      </form>
+      <p class="plugin-url-msg" id="pluginUrlMsg" role="status" hidden></p>
+      <p class="hint">Cada plugin se ejecuta <strong>aislado</strong>: solo ve lo que le permitas al instalarlo y nunca tus contraseñas. ¿Quieres crear uno? <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Guía para crear plugins</a>.</p>
+      <h2 class="plugins-title">Instalados</h2>
+      <p class="plugins-empty" id="pluginsInstalledEmpty">Todavía no tienes plugins. Instala uno oficial o añade uno por enlace.</p>
+      <div class="plugin-grid" id="pluginsInstalled" hidden></div>
+      <h2 class="plugins-title">Plugins oficiales</h2>
+      <div class="plugin-grid" id="pluginsOfficial"></div>
+    </div>
+    <div class="plugin-stage" id="pluginStage" hidden>
+      <div class="plugin-bar">
+        <button type="button" class="icon-only" id="btnPluginBack" aria-label="Volver a los plugins" title="Volver a los plugins"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <span class="plugin-mark is-sm" id="pluginStageMark" aria-hidden="true"></span>
+        <div class="plugin-bar-text"><strong id="pluginStageName"></strong><span id="pluginStageMeta"></span></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnPluginManage">Permisos</button>
+      </div>
+      <div class="plugin-notice" id="pluginNotice" hidden></div>
+      <div class="plugin-frame-wrap" id="pluginFrameWrap"></div>
+    </div>
   </section>
 
   <section id="viewData" hidden>
@@ -478,6 +507,23 @@
     </div>
   </form>
 </dialog>
+
+<dialog id="dlgPlugin" aria-labelledby="pluginDlgTitle">
+  <div class="dlg-inner">
+    <h2 id="pluginDlgTitle">Instalar plugin</h2>
+    <div id="pluginDlgBody"></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnPluginRemove" hidden>Quitar plugin</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnPluginCancel" data-dismiss>Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnPluginConfirm">Instalar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Plugins que se cargan sin mostrarse, solo para leer su manifiesto al instalarlos. -->
+<div id="pluginProbeArea" aria-hidden="true"></div>
 
 <dialog id="dlgContact">
   <form class="dlg-inner" id="formContact" method="dialog">
@@ -740,6 +786,8 @@
 <script src="src/services/platform.js"></script>
 <script src="src/services/crypto.js"></script>
 <script src="src/services/firebase-backend.js"></script>
+<script src="src/services/plugin-host.js"></script>
+<script src="src/services/official-plugins.js"></script>
 
 <!-- Modelos: datos y persistencia -->
 <script src="src/models/collection-model.js"></script>
@@ -751,6 +799,7 @@
 <script src="src/models/settings-model.js"></script>
 <script src="src/models/backup-model.js"></script>
 <script src="src/models/project-model.js"></script>
+<script src="src/models/plugin-model.js"></script>
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
@@ -770,6 +819,7 @@
 <script src="src/views/command-palette-view.js"></script>
 <script src="src/views/auth-view.js"></script>
 <script src="src/views/project-view.js"></script>
+<script src="src/views/plugins-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -780,6 +830,7 @@
 <script src="src/controllers/vault-controller.js"></script>
 <script src="src/controllers/backup-controller.js"></script>
 <script src="src/controllers/projects-controller.js"></script>
+<script src="src/controllers/plugins-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>
 <script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>

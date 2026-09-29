@@ -21,7 +21,8 @@
         meetings: new M.MeetingModel(),
         vault: new M.VaultModel(),
         settings: new M.SettingsModel(),
-        projects: new M.ProjectModel()
+        projects: new M.ProjectModel(),
+        plugins: new M.PluginModel()
       };
       /* Base de datos sin acotar y proyecto abierto. */
       this.rootDb = null;
@@ -44,6 +45,7 @@
         backup: new C.BackupController(this, new V.BackupView())
       };
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
+      this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.projects.render();
 
@@ -91,6 +93,7 @@
       if(view === 'calendar') c.calendar.render();
       if(view === 'clients') c.clients.render();
       if(view === 'vault') c.vault.onShow();
+      if(view === 'plugins') c.plugins.onShow();
     }
 
     /* ---------- Proyectos ---------- */
@@ -133,6 +136,7 @@
       this.shell.resetFilters();
       this.connectProject();
       this.controllers.vault.onProjectChange();
+      this.controllers.plugins.onProjectChange();
       this.controllers.projects.render();
       this.updateCounts();
       if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
@@ -162,6 +166,7 @@
         this.rootDb = db;
         this.models.settings.connect(db);
         this.models.projects.connect(db);
+        this.models.plugins.connect(db);
         this.connectProject();
 
         /* "Contactos" ahora está dentro de "Clientes". */

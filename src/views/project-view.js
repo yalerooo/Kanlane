@@ -135,7 +135,7 @@
           const current = p.id === currentId;
           return '<div class="project-row' + (current ? ' is-current' : '') + '">' +
             '<button type="button" class="dd-option project-pick' + (current ? ' is-selected' : '') + '" role="menuitemradio" aria-checked="' + current + '" data-menu="pick" data-id="' + esc(p.id) + '">' +
-              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text">' + esc(p.nombre) + '</span>' + (current ? CHECK : '') +
+              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (current ? CHECK : '') +
             '</button>' +
             '<button type="button" class="icon-only project-edit" role="menuitem" data-menu="edit" data-id="' + esc(p.id) + '" aria-label="Editar ' + esc(p.nombre) + '" title="Editar proyecto">' + EDIT + '</button>' +
             '</div>';

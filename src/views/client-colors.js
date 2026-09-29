@@ -11,7 +11,7 @@
     /* Etiqueta de cliente con su color. */
     chip(name){
       const {esc} = Workhub.utils.html;
-      return '<span class="client-chip" style="--h:' + resolver(name) + '">' + esc(name) + '</span>';
+      return '<span class="client-chip" translate="no" style="--h:' + resolver(name) + '">' + esc(name) + '</span>';
     }
   };
 })();

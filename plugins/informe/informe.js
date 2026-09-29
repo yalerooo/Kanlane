@@ -13,8 +13,24 @@
   };
   var STATUS_COLORS = {pendiente:'var(--st-pend)', proceso:'var(--st-proc)', espera:'var(--st-wait)', completada:'var(--st-done)'};
 
+  var tr = WorkhubPlugin.translations({en:{
+    'Informe de trabajo':'Work report', 'Copiar resumen':'Copy summary', 'Descargar CSV':'Download CSV',
+    'tareas abiertas':'open tasks', 'vencidas':'overdue', 'para hoy':'due today', 'completadas en 7 días':'done in 7 days',
+    'Todavía no hay tareas en este proyecto.':'There are no tasks in this project yet.',
+    'Por cliente':'By client', 'Cliente':'Client', 'Total':'Total', 'Reparto':'Breakdown',
+    'Requieren atención':'Need attention', 'Vencida · {date}':'Overdue · {date}', 'Hoy':'Today', 'Sin cliente':'No client',
+    'Abiertas':'Open', 'Vencidas':'Overdue', 'Para hoy':'Due today', 'Completadas en 7 días':'Done in 7 days', 'Por cliente:':'By client:', 'Vencidas:':'Overdue:',
+    'Título':'Title', 'Estado':'Status', 'Fecha límite':'Due date', 'Contacto':'Contact', 'Descripción':'Description',
+    'Resumen copiado':'Summary copied', 'No se pudo copiar':'Could not copy', 'informe':'report',
+    'Informe':'Report', 'Ver el informe de trabajo':'View the work report', 'Ver informe de trabajo':'View work report',
+    'Conectando con Workhub…':'Connecting to Workhub…',
+    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
+    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+  }});
+
   var app = document.getElementById('app');
   var wh = null, tasks = [], statuses = [];
+  document.getElementById('status').textContent = tr('Conectando con Workhub…');
 
   function esc(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
@@ -25,7 +41,7 @@
   function fmt(date){
     if(!date) return '';
     var p = date.split('-');
-    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('es-ES', {day:'numeric', month:'short'});
+    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(WorkhubPlugin.locale, {day:'numeric', month:'short'});
   }
 
   function stats(){
@@ -38,37 +54,37 @@
     var doneWeek = tasks.filter(function(t){ return t.status === 'completada' && (t.updatedAt || 0) >= weekAgo; });
     var byClient = {};
     tasks.forEach(function(t){
-      var c = t.cliente || 'Sin cliente';
+      var c = t.cliente || tr('Sin cliente');
       var row = byClient[c] = byClient[c] || {cliente:c, total:0};
       row[t.status] = (row[t.status] || 0) + 1;
       row.total++;
     });
     var rows = Object.keys(byClient).map(function(k){ return byClient[k]; })
-      .sort(function(a, b){ return b.total - a.total || a.cliente.localeCompare(b.cliente, 'es'); });
+      .sort(function(a, b){ return b.total - a.total || a.cliente.localeCompare(b.cliente, WorkhubPlugin.lang); });
     return {open:open, overdue:overdue, dueToday:dueToday, doneWeek:doneWeek, rows:rows};
   }
 
   function render(){
     var s = stats();
     var project = (wh.context.project || {}).name || '';
-    var html = '<div class="head"><div><h1>Informe de trabajo</h1><p class="wh-muted">' + esc(project) + ' · ' +
-      new Date().toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'}) + '</p></div>' +
-      '<div class="wh-row"><button class="wh-btn" id="copy">Copiar resumen</button><button class="wh-btn is-primary" id="csv">Descargar CSV</button></div></div>';
+    var html = '<div class="head"><div><h1>' + tr('Informe de trabajo') + '</h1><p class="wh-muted">' + esc(project) + ' · ' +
+      new Date().toLocaleDateString(WorkhubPlugin.locale, {weekday:'long', day:'numeric', month:'long'}) + '</p></div>' +
+      '<div class="wh-row"><button class="wh-btn" id="copy">' + tr('Copiar resumen') + '</button><button class="wh-btn is-primary" id="csv">' + tr('Descargar CSV') + '</button></div></div>';
     html += '<div class="kpis">' +
-      kpi(s.open.length, 'tareas abiertas') +
-      kpi(s.overdue.length, 'vencidas', s.overdue.length > 0) +
-      kpi(s.dueToday.length, 'para hoy') +
-      kpi(s.doneWeek.length, 'completadas en 7 días') + '</div>';
+      kpi(s.open.length, tr('tareas abiertas')) +
+      kpi(s.overdue.length, tr('vencidas'), s.overdue.length > 0) +
+      kpi(s.dueToday.length, tr('para hoy')) +
+      kpi(s.doneWeek.length, tr('completadas en 7 días')) + '</div>';
 
     if(!tasks.length){
-      html += '<div class="wh-empty">Todavía no hay tareas en este proyecto.</div>';
+      html += '<div class="wh-empty">' + tr('Todavía no hay tareas en este proyecto.') + '</div>';
       app.innerHTML = html;
       bind();
       return;
     }
-    html += '<div class="section"><h2>Por cliente</h2><div class="table-wrap"><table class="wh-table"><thead><tr><th>Cliente</th>' +
+    html += '<div class="section"><h2>' + tr('Por cliente') + '</h2><div class="table-wrap"><table class="wh-table"><thead><tr><th>' + tr('Cliente') + '</th>' +
       statuses.map(function(st){ return '<th class="num">' + esc(st.label) + '</th>'; }).join('') +
-      '<th class="num">Total</th><th>Reparto</th></tr></thead><tbody>' +
+      '<th class="num">' + tr('Total') + '</th><th>' + tr('Reparto') + '</th></tr></thead><tbody>' +
       s.rows.map(function(r){
         return '<tr><td>' + esc(r.cliente) + '</td>' +
           statuses.map(function(st){ return '<td class="num">' + (r[st.key] || '·') + '</td>'; }).join('') +
@@ -78,12 +94,12 @@
       }).join('') + '</tbody></table></div></div>';
 
     if(s.overdue.length || s.dueToday.length){
-      html += '<div class="section"><h2>Requieren atención</h2><div class="list">' +
+      html += '<div class="section"><h2>' + tr('Requieren atención') + '</h2><div class="list">' +
         s.overdue.concat(s.dueToday).map(function(t){
           var late = t.dueDate < ymd(new Date());
           return '<button class="item" data-open="' + esc(t.id) + '"><span class="wh-dot" style="background:' + STATUS_COLORS[t.status] + '"></span>' +
             '<span class="t">' + esc(t.title) + '</span><span class="wh-muted">' + esc(t.cliente) + '</span>' +
-            '<span class="d' + (late ? ' is-late' : '') + '">' + (late ? 'Vencida · ' + fmt(t.dueDate) : 'Hoy') + '</span></button>';
+            '<span class="d' + (late ? ' is-late' : '') + '">' + (late ? tr('Vencida · {date}', {date:fmt(t.dueDate)}) : tr('Hoy')) + '</span></button>';
         }).join('') + '</div></div>';
     }
     app.innerHTML = html;
@@ -96,15 +112,15 @@
 
   function summaryText(){
     var s = stats();
-    var lines = ['Informe de trabajo — ' + ((wh.context.project || {}).name || '') + ' — ' + ymd(new Date()), '',
-      '• Abiertas: ' + s.open.length, '• Vencidas: ' + s.overdue.length, '• Para hoy: ' + s.dueToday.length,
-      '• Completadas en 7 días: ' + s.doneWeek.length, '', 'Por cliente:'];
+    var lines = [tr('Informe de trabajo') + ' — ' + ((wh.context.project || {}).name || '') + ' — ' + ymd(new Date()), '',
+      '• ' + tr('Abiertas') + ': ' + s.open.length, '• ' + tr('Vencidas') + ': ' + s.overdue.length, '• ' + tr('Para hoy') + ': ' + s.dueToday.length,
+      '• ' + tr('Completadas en 7 días') + ': ' + s.doneWeek.length, '', tr('Por cliente:')];
     s.rows.forEach(function(r){
       lines.push('- ' + r.cliente + ': ' + statuses.map(function(st){ return (r[st.key] || 0) + ' ' + st.label.toLowerCase(); }).join(', '));
     });
     if(s.overdue.length){
-      lines.push('', 'Vencidas:');
-      s.overdue.forEach(function(t){ lines.push('- ' + t.title + ' (' + (t.cliente || 'Sin cliente') + ', ' + t.dueDate + ')'); });
+      lines.push('', tr('Vencidas:'));
+      s.overdue.forEach(function(task){ lines.push('- ' + task.title + ' (' + (task.cliente || tr('Sin cliente')) + ', ' + task.dueDate + ')'); });
     }
     return lines.join('\n');
   }
@@ -113,7 +129,7 @@
     var label = {};
     statuses.forEach(function(st){ label[st.key] = st.label; });
     var cell = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-    var rows = [['Título', 'Cliente', 'Estado', 'Fecha límite', 'Contacto', 'Descripción']].concat(tasks.map(function(t){
+    var rows = [[tr('Título'), tr('Cliente'), tr('Estado'), tr('Fecha límite'), tr('Contacto'), tr('Descripción')]].concat(tasks.map(function(t){
       return [t.title, t.cliente, label[t.status] || t.status, t.dueDate, t.contacto, t.desc];
     }));
     return '﻿' + rows.map(function(r){ return r.map(cell).join(';'); }).join('\r\n');
@@ -122,13 +138,13 @@
   function bind(){
     var copy = document.getElementById('copy');
     if(copy) copy.onclick = function(){
-      navigator.clipboard.writeText(summaryText()).then(function(){ wh.ui.toast('Resumen copiado'); }, function(){ wh.ui.toast('No se pudo copiar', {type:'error'}); });
+      navigator.clipboard.writeText(summaryText()).then(function(){ wh.ui.toast(tr('Resumen copiado')); }, function(){ wh.ui.toast(tr('No se pudo copiar'), {type:'error'}); });
     };
     var dl = document.getElementById('csv');
     if(dl) dl.onclick = function(){
       var a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([csv()], {type:'text/csv;charset=utf-8'}));
-      a.download = 'informe-' + ymd(new Date()) + '.csv';
+      a.download = tr('informe') + '-' + ymd(new Date()) + '.csv';
       document.body.appendChild(a); a.click(); a.remove();
     };
     Array.prototype.forEach.call(document.querySelectorAll('[data-open]'), function(b){
@@ -137,8 +153,8 @@
   }
 
   function background(){
-    wh.ui.addButton({id:'open', location:'tasks.toolbar', label:'Informe', icon:'chart', tooltip:'Ver el informe de trabajo'});
-    wh.ui.addButton({id:'open-cmd', location:'command', label:'Ver informe de trabajo', icon:'chart'});
+    wh.ui.addButton({id:'open', location:'tasks.toolbar', label:tr('Informe'), icon:'chart', tooltip:tr('Ver el informe de trabajo')});
+    wh.ui.addButton({id:'open-cmd', location:'command', label:tr('Ver informe de trabajo'), icon:'chart'});
     wh.on('action', function(){ wh.ui.openPanel(); });
   }
 
@@ -154,7 +170,7 @@
   }).catch(function(err){
     if(err === 'background') return;
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? 'Este plugin se abre desde Workhub (sección Plugins).'
-      : 'No se pudo conectar con Workhub: ' + err.message;
+      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
+      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
   });
 })();

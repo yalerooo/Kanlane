@@ -50,6 +50,15 @@
       this.settingsAccount = $('settingsAccount');
       this.settingsAccountText = $('settingsAccountText');
 
+      /* Idioma en la pantalla de acceso (antes de entrar no hay cuenta). */
+      $('authLang').addEventListener('click', (ev) => {
+        const b = ev.target.closest('button[data-lang-choice]');
+        if(b) Workhub.i18n.setLang(b.getAttribute('data-lang-choice'));
+      });
+      $('authLang').querySelectorAll('button').forEach((b) => {
+        b.classList.toggle('is-on', b.getAttribute('data-lang-choice') === Workhub.i18n.lang);
+      });
+
       this.switchLink.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.setMode(this.mode === 'signin' ? 'signup' : 'signin');

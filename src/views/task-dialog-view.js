@@ -232,7 +232,7 @@
           const c = contacts.find((x) => x.id === id);
           if(!c) return '';
           return '<div class="linked-row" data-id="' + esc(id) + '">' +
-            '<div class="linked-main"><div class="linked-title">' + esc(c.nombre || 'Sin nombre') + '</div>' +
+            '<div class="linked-main"><div class="linked-title" translate="no">' + esc(c.nombre || 'Sin nombre') + '</div>' +
             '<div class="linked-meta">' + esc(c.email || c.cliente || '') + '</div></div>' +
             '<div class="linked-actions">' +
             '<button type="button" class="icon-btn" data-action="open-contact" data-id="' + esc(id) + '">Abrir</button>' +
@@ -263,7 +263,7 @@
             ? '<button type="button" class="icon-btn" data-action="copy-linked-vault" data-id="' + esc(id) + '">Copiar</button>'
             : '';
           return '<div class="linked-row" data-id="' + esc(id) + '">' +
-            '<div class="linked-main"><div class="linked-title">' + esc(VaultModel.titleFor(v)) + '</div>' +
+            '<div class="linked-main"><div class="linked-title" translate="no">' + esc(VaultModel.titleFor(v)) + '</div>' +
             '<div class="linked-meta">' + esc(VaultModel.typeLabel(v.tipo)) + ' · ' + esc(v.cliente || '') + '</div></div>' +
             '<div class="linked-actions">' +
             '<span class="linked-pass">' + esc(vault.passwordText(id)) + '</span>' +
@@ -292,7 +292,7 @@
     return '<div class="note-item" data-id="' + esc(d.id) + '">' +
       '<button type="button" class="note-del" data-action="delnote" data-id="' + esc(d.id) + '">Eliminar</button>' +
       '<div class="note-date">' + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (n.text ? '<div class="note-text">' + esc(n.text) + '</div>' : '') +
+      (n.text ? '<div class="note-text" translate="no">' + esc(n.text) + '</div>' : '') +
       img +
       '</div>';
   }

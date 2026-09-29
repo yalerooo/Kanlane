@@ -110,7 +110,7 @@
 
     /* {id, nombre, color} del último proyecto abierto en este navegador. */
     cachedProject(){
-      const main = {id:M.ProjectModel.MAIN_ID, nombre:'Proyecto principal'};
+      const main = {id:M.ProjectModel.MAIN_ID, nombre:Workhub.t('Proyecto principal')};
       try{
         const p = JSON.parse(prefs.read(PROJECT_PREF, 'null'));
         return p && typeof p.id === 'string' && p.id ? p : main;

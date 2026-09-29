@@ -105,6 +105,13 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Filtros:** buscador (título, cliente o contacto) y selector de cliente.
 - **Atajos:** `N` crea una tarea y `/` enfoca el buscador (no funcionan mientras escribes ni con un diálogo abierto).
 
+### Tipos de proyecto (etapas y clientes)
+- Al crear o editar un proyecto se elige el tipo (`src/models/project-templates.js`, `ProjectTemplates`): **soporte** (4 etapas, con clientes; el de siempre y el que usa el proyecto principal), **desarrollo** (Por hacer, En curso, Hecho), **kanban** (Backlog, En curso, En revisión, Hecho) y **personalizado** (2 a 8 etapas con nombre, color y orden, una o varias finales, y casilla "trabaja con clientes").
+- Se guarda en el documento del proyecto: `tipo` (y `stages`, `clients` solo si es personalizado). Sin `tipo` = soporte, así que no hay migración. Se copia también en `workhub_project` (localStorage) para pintar bien antes de que llegue la lista.
+- `TaskModel.STATUS` es un array único que `TaskModel.setStages()` rellena en el sitio al abrir/editar un proyecto (`AppController.applyProjectConfig`). Usa `TaskModel.isDone(t)` (no `'completada'`) y `TaskModel.stageKey(t)`, que manda a la primera etapa las tareas cuyo estado ya no existe.
+- Sin clientes: `body.no-clients` y la clase `.needs-clients` en el HTML (JS `ShellView.setClientsEnabled`); las tareas y credenciales no piden cliente (`AppController.clientsEnabled()`). `Workhub.clientsEnabled` lo leen las vistas.
+- Los plugins reciben las etapas con `wh.statuses()` (`key`, `label`, `done`, `color`); los oficiales ya no asumen `completada`.
+
 ### Calendario
 - **Vista mensual** con reuniones (morado, `--meet`), fechas límite de tareas y tareas vencidas (rojo).
 - **Panel lateral del día elegido**, con los botones "+ Reunión" y "Tarea en esta fecha".

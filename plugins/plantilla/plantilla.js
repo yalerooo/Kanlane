@@ -44,7 +44,10 @@ async function panel(wh){
   $('panel').hidden = false;
 
   // Leer tareas y reaccionar cuando cambien.
-  const showOpen = (tasks) => { $('open').textContent = tasks.filter((t) => t.status !== 'completada').length; };
+  // Las etapas dependen del tipo de proyecto: la marcada como final (done) es "terminada".
+  let doneKeys = (await wh.statuses()).filter((s) => s.done).map((s) => s.key);
+  wh.on('project', async () => { doneKeys = (await wh.statuses()).filter((s) => s.done).map((s) => s.key); });
+  const showOpen = (tasks) => { $('open').textContent = tasks.filter((t) => doneKeys.indexOf(t.status) === -1).length; };
   showOpen(await wh.tasks.list());
   wh.on('tasks', showOpen);
 
@@ -52,7 +55,7 @@ async function panel(wh){
   $('add').onclick = async () => {
     const title = $('title').value.trim();
     if(!title) return;
-    await wh.tasks.create({title, status: 'pendiente'});
+    await wh.tasks.create({title}); // sin estado: va a la primera etapa del proyecto
     $('title').value = '';
     wh.ui.toast('Tarea creada');
   };

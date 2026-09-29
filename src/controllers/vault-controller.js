@@ -262,7 +262,12 @@
         this.view.showFormError('El vault no está desbloqueado.');
         return;
       }
-      if(!values.meta.cliente) return;
+      if(this.app.clientsEnabled()){
+        if(!values.meta.cliente) return;
+      } else {
+        const prev = id ? this.vault.find(id) : null;
+        values.meta.cliente = prev ? (prev.cliente || '') : '';
+      }
       if(!id && !values.secret.password){
         this.view.showFormError('La contraseña es obligatoria.');
         return;

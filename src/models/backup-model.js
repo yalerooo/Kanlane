@@ -81,7 +81,7 @@
           title: t.title || '',
           desc: t.desc || '',
           cliente: t.cliente || '',
-          status: t.status || 'pendiente',
+          status: t.status || '',
           contacto: t.contacto || '',
           dueDate: t.dueDate || '',
           order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),

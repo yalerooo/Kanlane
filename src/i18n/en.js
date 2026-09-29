@@ -92,6 +92,8 @@
     'Proyectos':'Projects',
     'Cada proyecto tiene sus propias tareas, calendario, contraseñas y etapas de trabajo.':'Each project has its own tasks, calendar, passwords and work stages.',
     'Tipo de proyecto':'Project type',
+    'El token no tiene el permiso «project». Crea un token clásico con «project» (o «read:project» si solo quieres leer).':'The token lacks the "project" scope. Create a classic token with "project" (or "read:project" for read-only).',
+    'Ese es un token «fine-grained», que GitHub no permite usar con proyectos de usuario. Crea uno clásico (Tokens (classic)) con el permiso «project».':'That is a fine-grained token, which GitHub does not allow for user projects. Create a classic one (Tokens (classic)) with the "project" scope.',
     'Desde GitHub':'From GitHub',
     'Crea el proyecto con las columnas y los elementos de un GitHub Project y los mantiene sincronizados.':'Creates the project with the columns and items of a GitHub Project and keeps them in sync.',
     'Sincronizado con GitHub':'Synced with GitHub',
@@ -630,6 +632,8 @@
     'Personaliza Workhub: cualquier color de acento, esquinas rectas o redondeadas y una densidad compacta o amplia.':'Customize Workhub: any accent color, square or rounded corners and a compact or roomy density.'
   }, [
     [/^GitHub respondió con un error \((\d+)\)\.$/, 'GitHub responded with an error ($1).'],
+    [/^El token es de la cuenta «(.+)» y el proyecto es de «(.+)»\. Si el proyecto es privado, el token tiene que ser de esa cuenta\.$/, 'The token belongs to account «$1» and the project to «$2». If the project is private, the token must belong to that account.'],
+    [/^No se encuentra el proyecto (\d+) de «(.+?)»\. Comprueba el número del enlace y que el token tenga el permiso «project»(?: \(GitHub dice: (.+)\))?\.$/, 'Project $1 of «$2» was not found. Check the link number and that the token has the "project" scope.'],
     [/^Añade al menos (\d+) etapas con nombre\.$/, 'Add at least $1 named stages.'],
     [/^(\d+) columnas ocultas · Mostrar$/, '$1 hidden columns · Show'],
     [/^(\d+) tarjetas eliminadas$/, '$1 cards deleted'],

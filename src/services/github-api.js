@@ -24,7 +24,8 @@
     }catch(e){}
   }
 
-  function graphql(query, variables){
+  /* Petición cruda: devuelve el JSON completo (data y errors). */
+  function request(query, variables){
     const t = token();
     if(!t) return Promise.reject(new GithubError('no-token', 'Falta el token de GitHub.'));
     return fetch(ENDPOINT, {
@@ -38,7 +39,11 @@
       if(res.status === 403 || res.status === 429) throw new GithubError('rate', 'GitHub ha limitado las peticiones. Vuelve a intentarlo dentro de unos minutos.');
       if(!res.ok) throw new GithubError('http', 'GitHub respondió con un error (' + res.status + ').');
       return res.json();
-    }).then((json) => {
+    });
+  }
+
+  function graphql(query, variables){
+    return request(query, variables).then((json) => {
       const errors = json.errors || [];
       if(errors.length && !json.data){
         const scopes = errors.some((e) => e.type === 'INSUFFICIENT_SCOPES');
@@ -55,15 +60,32 @@
     return m ? {type:m[1] === 'orgs' ? 'organization' : 'user', login:m[2], number:+m[3]} : null;
   }
 
+  /* Explica por qué no se ha podido leer el proyecto. */
+  function notFound(ref, viewer, errors){
+    if(errors.some((e) => e.type === 'INSUFFICIENT_SCOPES')){
+      return new GithubError('scopes', 'El token no tiene el permiso «project». Crea un token clásico con «project» (o «read:project» si solo quieres leer).');
+    }
+    if(/^github_pat_/.test(token())){
+      return new GithubError('scopes', 'Ese es un token «fine-grained», que GitHub no permite usar con proyectos de usuario. Crea uno clásico (Tokens (classic)) con el permiso «project».');
+    }
+    if(viewer && ref.type === 'user' && viewer.toLowerCase() !== ref.login.toLowerCase()){
+      return new GithubError('not-found', 'El token es de la cuenta «' + viewer + '» y el proyecto es de «' + ref.login + '». Si el proyecto es privado, el token tiene que ser de esa cuenta.');
+    }
+    const detail = errors.length && errors[0].message ? ' (GitHub dice: ' + errors[0].message + ')' : '';
+    return new GithubError('not-found', 'No se encuentra el proyecto ' + ref.number + ' de «' + ref.login + '». Comprueba el número del enlace y que el token tenga el permiso «project»' + detail + '.');
+  }
+
   const PROJECT_FIELDS = 'id title url closed fields(first:40){nodes{... on ProjectV2SingleSelectField{id name options{id name color}}}}';
 
   /* Devuelve {id, title, url, fieldId, fieldName, options:[{id,name,color}]}. */
   function fetchProject(ref){
     const root = ref.type === 'organization' ? 'organization' : 'user';
-    const q = 'query($login:String!,$number:Int!){' + root + '(login:$login){projectV2(number:$number){' + PROJECT_FIELDS + '}}}';
-    return graphql(q, {login:ref.login, number:ref.number}).then((data) => {
+    const q = 'query($login:String!,$number:Int!){viewer{login} ' + root + '(login:$login){projectV2(number:$number){' + PROJECT_FIELDS + '}}}';
+    return request(q, {login:ref.login, number:ref.number}).then((json) => {
+      const data = json.data || {};
+      const errors = json.errors || [];
       const p = data[root] && data[root].projectV2;
-      if(!p) throw new GithubError('not-found', 'No se encuentra ese proyecto. Comprueba el enlace y que el token tenga acceso.');
+      if(!p) throw notFound(ref, data.viewer && data.viewer.login, errors);
       const selects = (p.fields.nodes || []).filter((f) => f && f.options);
       const field = selects.find((f) => f.name.toLowerCase() === 'status') || selects[0];
       if(!field) throw new GithubError('no-status', 'El proyecto no tiene un campo de estado (Status) con columnas.');

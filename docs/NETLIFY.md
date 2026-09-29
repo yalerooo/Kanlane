@@ -49,7 +49,8 @@ Para que el acceso funcione en cualquier navegador, haz **los tres pasos juntos*
 
 - **Publicar cambios**: fusiona la PR en `main`. Netlify publica solo; puedes ver el progreso en **Deploys**.
 - **Vistas previas**: cada PR tiene su propia URL de prueba (`deploy-preview-N--workhub-yalero.netlify.app`). En ellas no se puede iniciar sesión, porque Firebase no admite comodines en los dominios autorizados; sirven para ver el diseño.
-- **Reglas de seguridad de Firestore**: siguen subiéndose con `firebase deploy --only firestore`, pero solo si cambias `firestore.rules`, algo muy raro.
+- **Reglas de seguridad de Firestore**: siguen subiéndose con `firebase deploy --only firestore:rules` (o pegándolas en la consola), solo cuando cambia `firestore.rules`. Ver [SEGURIDAD.md](SEGURIDAD.md).
+- **Cabeceras de seguridad** (CSP, anti-marcos, HTTPS obligatorio): están en `netlify.toml` y se aplican solas en cada publicación.
 
 ## 5. ¿Y la versión de Firebase Hosting?
 

@@ -41,6 +41,7 @@
       this.switchLink = $('authSwitchLink');
       this.mode = 'signin';
       this.hasPassword = true;
+      this.allowSignup = true;
 
       this.accountBox = $('accountBox');
       this.accountAvatar = $('accountAvatar');
@@ -107,8 +108,9 @@
       this.loading.appendChild(btn);
     }
 
-    /* providers: lista de claves ('google', 'github', …, 'password'). */
-    showSignIn(providers){
+    /* providers: lista de claves ('google', 'github', …, 'password').
+       allowSignup: false oculta "Crear una cuenta". */
+    showSignIn(providers, allowSignup){
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.loading.hidden = true;
@@ -121,8 +123,43 @@
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
       this.form.hidden = !this.hasPassword;
-      this.switchWrap.hidden = !this.hasPassword;
+      this.allowSignup = allowSignup !== false;
       this.setMode('signin');
+    }
+
+    /* Cuenta sin permiso (no está en la lista de acceso). Se muestra su
+       identificador para que el administrador pueda darle acceso. */
+    showNoAccess(user, onSignOut){
+      document.body.classList.add('is-authing');
+      this.screen.hidden = false;
+      this.panel.hidden = true;
+      this.loading.hidden = false;
+      this.loading.classList.add('is-error', 'is-noaccess');
+      this.loading.textContent = '';
+      const title = document.createElement('strong');
+      title.textContent = 'Esta cuenta no tiene acceso';
+      const text = document.createElement('span');
+      text.textContent = 'Has entrado como ' + (user.email || 'usuario sin correo') + ', pero esta cuenta no está autorizada para usar Workhub. Si es tuya, añádela a la lista de acceso con este identificador:';
+      const uid = document.createElement('code');
+      uid.className = 'auth-uid';
+      uid.textContent = user.uid;
+      const actions = document.createElement('div');
+      actions.className = 'auth-noaccess-actions';
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'btn btn-ghost';
+      copy.textContent = 'Copiar identificador';
+      copy.addEventListener('click', () => {
+        const done = () => { copy.textContent = 'Copiado'; };
+        if(navigator.clipboard) navigator.clipboard.writeText(user.uid).then(done, () => {});
+      });
+      const out = document.createElement('button');
+      out.type = 'button';
+      out.className = 'btn btn-primary';
+      out.textContent = 'Cerrar sesión';
+      out.addEventListener('click', onSignOut);
+      actions.append(copy, out);
+      this.loading.append(title, text, uid, actions);
     }
 
     hide(){
@@ -146,6 +183,7 @@
       this.forgot.hidden = mode !== 'signin';
       this.providersEl.hidden = mode === 'reset' || !this.providersEl.children.length;
       this.divider.hidden = mode === 'reset' || !this.providersEl.children.length || !this.hasPassword;
+      this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
       this.clearMessage();
     }
 
@@ -170,9 +208,18 @@
       this.accountName.textContent = name;
       this.accountMail.textContent = user.email || '';
       this.accountAvatar.style.setProperty('--h', hueFor(user.uid));
-      this.accountAvatar.innerHTML = user.photoURL
-        ? '<img src="' + esc(user.photoURL) + '" alt="" referrerpolicy="no-referrer">'
-        : esc(initials(name));
+      /* La foto viene del proveedor (Google, GitHub): solo se acepta https. */
+      const photo = Workhub.utils.urls.safeUrl(user.photoURL);
+      this.accountAvatar.textContent = '';
+      if(photo && photo.indexOf('https:') === 0){
+        const img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.src = photo;
+        this.accountAvatar.appendChild(img);
+      } else {
+        this.accountAvatar.textContent = initials(name);
+      }
       this.settingsAccount.hidden = false;
       this.settingsAccountText.textContent = 'Sesión iniciada como ' + (user.email || name) + '.';
     }

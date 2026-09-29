@@ -5,7 +5,9 @@
    la página para no mezclar datos de dos usuarios. */
 (function(){
   const firebase = Workhub.services.firebase;
-  const MIN_PASSWORD = 6;
+  const MIN_PASSWORD = 8;
+  /* Datos de la sesión que se guardan en este navegador y se borran al salir. */
+  const SESSION_PREFS = ['workhub_project'];
 
   const ERRORS = {
     'auth/invalid-email': 'El correo no es válido.',
@@ -16,7 +18,9 @@
     'auth/invalid-login-credentials': 'Correo o contraseña incorrectos.',
     'auth/missing-password': 'Escribe tu contraseña.',
     'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Inicia sesión.',
-    'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+    'auth/weak-password': 'La contraseña debe tener al menos 8 caracteres.',
+    'auth/password-does-not-meet-requirements': 'La contraseña no cumple los requisitos: usa al menos 8 caracteres, con mayúsculas, minúsculas y números.',
+    'auth/admin-restricted-operation': 'Esta cuenta no tiene acceso a Workhub.',
     'auth/user-disabled': 'Esta cuenta está desactivada.',
     'auth/account-exists-with-different-credential': 'Ya tienes una cuenta con ese correo usando otro método de acceso. Entra con ese método.',
     'auth/operation-not-allowed': 'Este método de acceso no está activado en Firebase (Authentication → Sign-in method).',
@@ -77,14 +81,24 @@
           return;
         }
         this.user = user;
-        firebase.install(user);
-        this.view.hide();
-        this.view.showAccount(user);
-        if(this.resolveGate) this.resolveGate();
+        this.view.showLoading();
+        /* Solo las cuentas de la lista de acceso (firestore.rules) llegan a la
+           app. Es un aviso: quien impide leer o guardar datos es el servidor. */
+        firebase.startSession(user).then((access) => {
+          if(access === 'denied'){
+            this.view.showNoAccess(user, () => this.signOut());
+            return;
+          }
+          firebase.install(user);
+          this.view.hide();
+          this.view.showAccount(user);
+          if(this.resolveGate) this.resolveGate();
+        });
       } else if(this.user){
         location.reload();
       } else {
-        this.view.showSignIn(firebase.providers());
+        firebase.clearLocalCache();
+        this.view.showSignIn(firebase.providers(), firebase.allowSignup());
       }
     }
 
@@ -129,8 +143,11 @@
       p.finally(() => this.view.setBusy(false));
     }
 
+    /* Al salir se recarga la página (onUser) y, ya sin sesión, se borra la
+       copia local de los datos (clearLocalCache). */
     signOut(){
       if(!this.user) return;
+      SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
       firebase.signOut().catch(() => location.reload());
     }
   }

@@ -1,0 +1,114 @@
+/* ---------- Plugins ---------- */
+.plugin-file-notice{margin:0 0 14px;padding:10px 12px;font-size:13px;color:var(--ink-soft);background:var(--st-wait-bg, var(--surface-2));border:1px solid var(--line);border-radius:var(--r-md);}
+.plugin-file-notice code{font-family:var(--mono);font-size:12px;}
+.plugin-add{display:flex;gap:8px;max-width:640px;margin-bottom:6px;}
+.plugin-add input{flex:1;min-width:0;}
+.plugin-url-msg{margin:4px 0 10px;font-size:12.5px;color:var(--ink-soft);}
+.plugin-url-msg.is-error{color:var(--danger);}
+.plugins-title{font-size:13px;font-weight:600;color:var(--ink-soft);margin:22px 0 10px;}
+.plugins-empty{font-size:13px;color:var(--ink-faint);margin:0;}
+.plugin-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(290px, 1fr));gap:10px;}
+.plugin-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-sm);
+}
+.plugin-card-head{display:flex;align-items:center;gap:11px;min-width:0;}
+.plugin-card-title{flex:1;min-width:0;}
+.plugin-card-title h3{margin:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.plugin-card-title p{margin:1px 0 0;font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.plugin-desc{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5;flex:1;}
+.plugin-card-actions{display:flex;gap:8px;justify-content:flex-end;}
+.plugin-mark{
+  flex:none;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  font-size:19px;
+  line-height:1;
+  color:var(--accent);
+  background:var(--accent-soft);
+  border-radius:var(--r-lg);
+}
+.plugin-mark.is-sm{width:28px;height:28px;font-size:15px;border-radius:var(--r-md);}
+.plugin-mark.is-lg{width:46px;height:46px;font-size:23px;}
+.plugin-badge{
+  flex:none;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  max-width:140px;
+  height:22px;
+  padding:0 8px;
+  font-size:11.5px;
+  font-weight:500;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border-radius:999px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.plugin-badge svg{width:12px;height:12px;flex:none;}
+.plugin-badge.is-official{color:var(--accent);background:var(--accent-soft);}
+
+/* Plugin abierto: barra y marco hasta el final de la ventana. */
+.plugin-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;}
+.plugin-bar-text{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3;}
+.plugin-bar-text strong{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.plugin-bar-text span{font-size:12px;color:var(--ink-faint);}
+.plugin-notice{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+  padding:9px 12px;
+  font-size:13px;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+}
+.plugin-frame-wrap{
+  --stage-top:220px;
+  height:calc(100dvh - var(--stage-top));
+  min-height:360px;
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+}
+.plugin-frame{display:block;width:100%;height:100%;border:0;background:transparent;}
+#pluginProbeArea{position:absolute;width:0;height:0;overflow:hidden;}
+
+/* Diálogo de instalación y permisos */
+#dlgPlugin{width:min(480px, calc(100vw - 32px));}
+.plugin-dlg-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.plugin-dlg-head h3{margin:0;font-size:15px;font-weight:600;}
+.plugin-dlg-head p{margin:2px 0 0;font-size:12.5px;color:var(--ink-faint);}
+.plugin-source{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:14px 0 4px;
+  padding:9px 11px;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border-radius:var(--r-md);
+  overflow-wrap:anywhere;
+}
+.plugin-source svg{flex:none;color:var(--accent);}
+.plugin-perms-title{margin:16px 0 8px;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+.plugin-perms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+.plugin-perms li{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;}
+.plugin-perms svg{flex:none;margin-top:2px;color:var(--st-done);}
+.plugin-safe{margin:16px 0 0;font-size:12.5px;color:var(--ink-faint);line-height:1.5;}
+.plugin-safe strong{color:var(--ink-soft);}

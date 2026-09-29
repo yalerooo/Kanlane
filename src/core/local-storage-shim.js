@@ -72,6 +72,18 @@ if(!window.claude){
       (listeners[key] || []).slice().forEach(function(fn){ fn(); });
     }
 
+    /* Escrituras de un mismo documento en cola: update() lee y reescribe el
+       registro, así que dos seguidas no deben pisarse (Firestore las aplica
+       de forma atómica; aquí se imita haciéndolas de una en una). */
+    var writeQueues = {};
+    function queued(path, fn){
+      var prev = writeQueues[path] || Promise.resolve();
+      var next = prev.catch(function(){}).then(fn);
+      writeQueues[path] = next;
+      next.then(function(){ if(writeQueues[path] === next) delete writeQueues[path]; }, function(){ if(writeQueues[path] === next) delete writeQueues[path]; });
+      return next;
+    }
+
     function makeDocRef(collPath, id){
       var path = collPath + '/' + id;
       return {
@@ -83,16 +95,20 @@ if(!window.claude){
           });
         },
         set: function(data){
-          return idbPut(DOCS_STORE, {path:path, data:data}).then(function(){ notify(collPath); notify(path); });
+          return queued(path, function(){ return idbPut(DOCS_STORE, {path:path, data:data}); })
+            .then(function(){ notify(collPath); notify(path); });
         },
         update: function(patch){
-          return idbGet(DOCS_STORE, path).then(function(rec){
-            var merged = Object.assign({}, rec ? rec.data : {}, patch);
-            return idbPut(DOCS_STORE, {path:path, data:merged});
+          return queued(path, function(){
+            return idbGet(DOCS_STORE, path).then(function(rec){
+              var merged = Object.assign({}, rec ? rec.data : {}, patch);
+              return idbPut(DOCS_STORE, {path:path, data:merged});
+            });
           }).then(function(){ notify(collPath); notify(path); });
         },
         delete: function(){
-          return idbDelete(DOCS_STORE, path).then(function(){ notify(collPath); notify(path); });
+          return queued(path, function(){ return idbDelete(DOCS_STORE, path); })
+            .then(function(){ notify(collPath); notify(path); });
         },
         onSnapshot: function(next, err){
           function fire(){

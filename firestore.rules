@@ -20,15 +20,15 @@ service cloud.firestore {
 
     // Colecciones con los datos de un proyecto.
     function isDataCollection(col) {
-      return col in ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'vault_meta'];
+      return col in ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'vault_meta', 'plugin_data'];
     }
 
     match /users/{uid} {
       // Proyecto principal: sus datos cuelgan directamente de users/{uid}.
-      // 'settings' guarda las preferencias del usuario (color, tema), comunes
-      // a todos sus proyectos.
+      // 'settings' (color, tema) y 'plugins' (plugins instalados) son del
+      // usuario, comunes a todos sus proyectos.
       match /{col}/{docId} {
-        allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings']);
+        allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
       }
       match /tasks/{taskId}/notes/{noteId} {
         allow read, write: if canUse(uid);

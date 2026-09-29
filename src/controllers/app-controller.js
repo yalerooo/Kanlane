@@ -53,6 +53,16 @@
       const m = this.models;
       [m.tasks, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
 
+      /* Botones y etiquetas de plugins: repintar donde aparecen. */
+      V.extensions.on('change', () => {
+        V.extensions.fillSlots(document);
+        const c = this.controllers;
+        c.tasks.render();
+        c.tasks.refreshDetail();
+        c.clients.render();
+        c.calendar.fillExtensions();
+      });
+
       this.shell.bindTabClick((view) => this.navigate(view));
       this.shell.setStorageMode(platform.mode());
     }

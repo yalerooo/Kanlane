@@ -75,6 +75,14 @@
       const map = this.buckets();
       this.view.render(this.year, this.month, this.selected, map);
       this.view.renderDay(this.selected, map[this.selected]);
+      this.fillExtensions();
+    }
+
+    /* Botones de plugins de la barra: reciben el día elegido. */
+    fillExtensions(){
+      const slot = document.getElementById('calExtSlot');
+      slot.setAttribute('data-ext-context', JSON.stringify({date:this.selected}));
+      Workhub.views.extensions.fillSlots(slot.parentNode);
     }
 
     shiftMonth(delta){
@@ -94,6 +102,7 @@
       } else {
         this.view.markSelected(date);
         this.view.renderDay(date, this.buckets()[date]);
+        this.fillExtensions();
       }
       if(scroll) this.view.scrollToDay();
     }

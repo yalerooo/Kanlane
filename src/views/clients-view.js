@@ -184,7 +184,10 @@
       this.list.innerHTML = entries.map((e) => this._itemHtml(e, e.id === state.selectedId, q)).join('');
       const selected = entries.find((e) => e.id === state.selectedId);
       this.detail.hidden = !selected;
-      if(selected) this.detail.innerHTML = this._detailHtml(selected, state);
+      if(selected){
+        this.detail.innerHTML = this._detailHtml(selected, state);
+        Workhub.views.extensions.fillSlots(this.detail);
+      }
       if(state.editing){
         const input = this.detail.querySelector('[data-edit-input]');
         if(input && document.activeElement !== input){ input.focus(); input.select(); }
@@ -252,6 +255,7 @@
         '<div class="crm-shortcuts">' +
         '<button type="button" class="crm-shortcut" data-action="view-tasks">' + BOARD_ICON + '<span>Ver tareas</span><em>' + (e.stats.open || '') + '</em></button>' +
         '<button type="button" class="crm-shortcut" data-action="view-vault">' + LOCK_ICON + '<span>Ver contraseñas</span><em>' + (e.vaultCount || '') + '</em></button>' +
+        '<div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div>' +
         '</div>';
 
       const people = e.contacts.length

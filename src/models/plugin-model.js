@@ -3,7 +3,8 @@
    installedAt, updatedAt}; el id del documento es el del plugin.
 
    Los datos que guarda cada plugin (storage) van por proyecto, en
-   plugin_data/{idDelPlugin}: {values:{clave: JSON}, updatedAt}. */
+   plugin_data/{idDelPlugin}: {values:{clave: JSON}, updatedAt}; los comunes a
+   todos los proyectos (storage.user), en el propio registro: {userValues}. */
 (function(){
   const KEY_RE = /^[A-Za-z0-9_.-]{1,64}$/;
   const MAX_VALUE_BYTES = 100 * 1024;
@@ -42,54 +43,69 @@
       return this.update(id, patch);
     }
 
-    /* ---------- Datos propios de cada plugin (por proyecto) ---------- */
+    /* ---------- Datos propios de cada plugin ----------
+       Un "cajón" es {read() → Promise<values>, write(values) → Promise}:
+       - por proyecto: plugin_data/{id} → {values}
+       - por usuario (común a todos los proyectos): plugins/{id} → {userValues}
+         (el propio registro del plugin; se actualiza sin tocar el resto). */
 
-    static dataRef(db, pluginId){
-      return db.doc('plugin_data/' + pluginId);
+    static projectBucket(db, pluginId){
+      const ref = db.doc('plugin_data/' + pluginId);
+      return {
+        read: () => ref.get().then((snap) => {
+          const d = snap.exists ? snap.data() || {} : {};
+          return d.values && typeof d.values === 'object' ? d.values : {};
+        }),
+        write: (values) => ref.set({values:values, updatedAt:Date.now()})
+      };
     }
 
-    static readValues(db, pluginId){
-      return PluginModel.dataRef(db, pluginId).get().then((snap) => {
-        const d = snap.exists ? snap.data() || {} : {};
-        return d.values && typeof d.values === 'object' ? d.values : {};
-      });
+    static userBucket(rootDb, pluginId){
+      const ref = rootDb.doc('plugins/' + pluginId);
+      return {
+        read: () => ref.get().then((snap) => {
+          const d = snap.exists ? snap.data() || {} : {};
+          return d.userValues && typeof d.userValues === 'object' ? d.userValues : {};
+        }),
+        write: (values) => ref.update({userValues:values, updatedAt:Date.now()})
+      };
     }
 
-    static storageGet(db, pluginId, key){
+    static storageGet(bucket, key){
       if(!KEY_RE.test(String(key))) return Promise.reject(fail('bad-key', 'Clave no válida (letras, números, "_", "-" o ".", hasta 64).'));
-      return PluginModel.readValues(db, pluginId).then((values) => {
+      return bucket.read().then((values) => {
         if(!Object.prototype.hasOwnProperty.call(values, key)) return null;
         try{ return JSON.parse(values[key]); }catch(e){ return null; }
       });
     }
 
-    static storageKeys(db, pluginId){
-      return PluginModel.readValues(db, pluginId).then((values) => Object.keys(values).sort());
+    static storageKeys(bucket){
+      return bucket.read().then((values) => Object.keys(values).sort());
     }
 
-    static storageSet(db, pluginId, key, value){
+    static storageSet(bucket, key, value){
       if(!KEY_RE.test(String(key))) return Promise.reject(fail('bad-key', 'Clave no válida (letras, números, "_", "-" o ".", hasta 64).'));
       let json;
       try{ json = JSON.stringify(value === undefined ? null : value); }catch(e){ return Promise.reject(fail('bad-value', 'El valor no se puede guardar (tiene que ser JSON).')); }
       if(json.length > MAX_VALUE_BYTES) return Promise.reject(fail('too-large', 'El valor ocupa demasiado (máximo 100 KB por clave).'));
-      return PluginModel.readValues(db, pluginId).then((values) => {
+      return bucket.read().then((values) => {
         values[key] = json;
         const total = Object.keys(values).reduce((n, k) => n + k.length + values[k].length, 0);
-        if(total > MAX_TOTAL_BYTES) throw fail('quota', 'El plugin ha llenado su espacio (800 KB por proyecto).');
-        return PluginModel.dataRef(db, pluginId).set({values:values, updatedAt:Date.now()});
+        if(total > MAX_TOTAL_BYTES) throw fail('quota', 'El plugin ha llenado su espacio (800 KB).');
+        return bucket.write(values);
       });
     }
 
-    static storageRemove(db, pluginId, key){
-      return PluginModel.readValues(db, pluginId).then((values) => {
+    static storageRemove(bucket, key){
+      return bucket.read().then((values) => {
         if(!Object.prototype.hasOwnProperty.call(values, key)) return null;
         delete values[key];
-        return PluginModel.dataRef(db, pluginId).set({values:values, updatedAt:Date.now()});
+        return bucket.write(values);
       });
     }
 
     static clearData(db, pluginId){
-      return PluginModel.dataRef(db, pluginId).delete();
+      return db.doc('plugin_data/' + pluginId).delete();
     }
   }
 

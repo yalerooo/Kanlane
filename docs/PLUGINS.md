@@ -1,6 +1,11 @@
 # Crear plugins para Workhub
 
-Un plugin es **una página web** que Workhub abre dentro de la sección **Plugins**. Puede leer y crear tareas, consultar clientes, contactos y reuniones, guardar sus propios datos y mostrar avisos, siempre con los permisos que el usuario le da al instalarlo.
+Un plugin es **una página web** que se integra en Workhub. Siempre con los permisos que el usuario le da al instalarlo, puede:
+
+- **Tener su propio panel** en la sección **Plugins** (un informe, un cronómetro, un panel de ajustes…).
+- **Añadir botones y etiquetas dentro de Workhub**: en la barra de Tareas, en la ficha de cada tarea, en el Calendario, en la ficha de cada cliente, en la paleta de comandos (`Ctrl K`) y etiquetas en las tarjetas del tablero.
+- **Cambiar la apariencia**: color de acento, forma de las esquinas y densidad.
+- **Trabajar con los datos**: leer y crear tareas, consultar clientes, contactos y reuniones, guardar sus propios datos y mostrar avisos.
 
 Puedes publicarlo donde quieras (GitHub Pages, Netlify, tu propio servidor…) y cualquiera puede instalarlo pegando su enlace en **Plugins → Añadir**.
 
@@ -9,6 +14,7 @@ Puedes publicarlo donde quieras (GitHub Pages, Netlify, tu propio servidor…) y
 - [El manifiesto](#el-manifiesto)
 - [Permisos](#permisos)
 - [Referencia de la API](#referencia-de-la-api)
+- [Integrarse en Workhub: botones, etiquetas y apariencia](#integrarse-en-workhub-botones-etiquetas-y-apariencia)
 - [Eventos](#eventos)
 - [Estilos: que tu plugin parezca parte de Workhub](#estilos-que-tu-plugin-parezca-parte-de-workhub)
 - [Publicarlo y probarlo](#publicarlo-y-probarlo)
@@ -33,6 +39,25 @@ Puedes publicarlo donde quieras (GitHub Pages, Netlify, tu propio servidor…) y
 - Tu página se carga en un `<iframe sandbox>` **aislado**: no puede leer el DOM de Workhub, ni su sesión, cookies o almacenamiento, ni las contraseñas guardadas.
 - Se comunica con Workhub mediante **mensajes**. El SDK (`workhub-plugin.js`) te da una API sencilla basada en promesas.
 - Cada llamada se comprueba contra los **permisos** que declaraste y que el usuario aprobó.
+- **Tu plugin nunca toca el HTML de Workhub.** Para añadir cosas a la interfaz, *declaras* botones y etiquetas (texto, icono del set, ubicación) y Workhub los pinta con sus propios componentes. Así cualquier plugin se ve integrado y nadie puede suplantar botones de Workhub ni leer lo que hay en pantalla.
+
+### Dos modos: panel y segundo plano
+
+La misma página de tu plugin se carga de dos formas:
+
+| Modo | Cuándo | Para qué | `wh.isBackground` |
+|---|---|---|---|
+| **Panel** | El usuario abre el plugin en la sección Plugins. | Tu interfaz. | `false` |
+| **Segundo plano** | Siempre que Workhub está abierto, oculto. Solo si el plugin pide `ui:extend` o `appearance`. | Añadir botones y etiquetas, reaccionar a sus clics y aplicar la apariencia. | `true` |
+
+```js
+WorkhubPlugin.connect(MANIFEST).then((wh) => {
+  if(wh.isBackground) segundoPlano(wh);   // botones, etiquetas, apariencia
+  else panel(wh);                        // tu interfaz
+});
+```
+
+Las dos instancias comparten el almacenamiento. Cuando una guarda algo, la otra recibe el evento `storage` para releerlo.
 
 ## Tu primer plugin en 5 minutos
 
@@ -121,7 +146,9 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 | `contacts:read` | Leer los contactos de los clientes (nombre, email, teléfono, notas). |
 | `calendar:read` | Leer las reuniones del calendario. |
 | `calendar:write` | Crear reuniones. |
-| `storage` | Guardar datos propios del plugin (por proyecto). |
+| `storage` | Guardar datos propios del plugin, por proyecto (`wh.storage`) o comunes a todos (`wh.storage.user`). |
+| `ui:extend` | Añadir botones en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en la paleta de comandos, y etiquetas en las tarjetas. El plugin se carga en segundo plano. |
+| `appearance` | Cambiar el color de acento, las esquinas y la densidad de Workhub. El plugin se carga en segundo plano. |
 
 **No existe ningún permiso para las contraseñas guardadas:** ningún plugin puede leerlas.
 
@@ -171,13 +198,18 @@ await wh.meetings.create({title:'Revisión', date:'2026-10-02', start:'10:00', e
 
 ### Almacenamiento propio (`storage`)
 
-Cada plugin tiene su propio espacio **en cada proyecto** (hasta 800 KB), sincronizado con la cuenta del usuario.
+Cada plugin tiene su propio espacio **en cada proyecto** (hasta 800 KB) y otro **común a todos los proyectos** del usuario, ambos sincronizados con su cuenta.
 
 ```js
+// En el proyecto abierto:
 await wh.storage.set('ajustes', {modo:'compacto'})   // cualquier valor JSON, hasta 100 KB por clave
 await wh.storage.get('ajustes')                      // el valor, o null si no existe
 await wh.storage.keys()                              // ['ajustes', ...]
 await wh.storage.remove('ajustes')
+
+// Común a todos los proyectos (preferencias del usuario, por ejemplo):
+await wh.storage.user.set('tema', 'oscuro')
+await wh.storage.user.get('tema')
 ```
 
 Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Cuando el usuario quita el plugin, sus datos se borran.
@@ -188,6 +220,7 @@ Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Cuando el usuari
 await wh.ui.toast('Guardado')                  // aviso en Workhub ("Tu plugin: Guardado")
 await wh.ui.toast('Algo falló', {type:'error'})
 await wh.ui.openTask(id)                       // abre la ficha de la tarea en Workhub (tasks:read)
+await wh.ui.openPanel()                        // abre tu plugin en la sección Plugins
 ```
 
 ### Errores
@@ -201,6 +234,68 @@ await wh.ui.openTask(id)                       // abre la ficha de la tarea en W
 | `rate-limited` | Más de 60 escrituras por minuto. |
 | `not-ready` | Workhub todavía está cargando los datos. |
 | `unknown-method` | El método no existe. |
+| `background-only` | Añadir botones, etiquetas o apariencia desde el panel: hazlo en segundo plano. |
+
+## Integrarse en Workhub: botones, etiquetas y apariencia
+
+Todo esto se hace **en segundo plano** (`wh.isBackground`).
+
+### Botones (`ui:extend`)
+
+```js
+await wh.ui.addButton({
+  id: 'iniciar',                // tuyo; si repites el id, el botón se actualiza
+  location: 'task.actions',     // dónde aparece (tabla de abajo)
+  label: 'Iniciar cronómetro',  // texto (hasta 32 caracteres)
+  icon: 'timer',                // icono del set (opcional)
+  tooltip: 'Medir el tiempo',   // al pasar el ratón (opcional)
+  variant: 'primary'            // opcional: botón destacado con el color del plugin
+});
+await wh.ui.removeButton('iniciar');
+
+wh.on('action', ({id, location, context}) => {
+  if(id === 'iniciar') { /* context.taskId */ }
+});
+```
+
+| `location` | Dónde aparece | `context` que recibes al pulsarlo |
+|---|---|---|
+| `tasks.toolbar` | Barra de Tareas, junto al buscador | `{}` |
+| `task.actions` | Ficha de una tarea | `{taskId}` |
+| `calendar.toolbar` | Barra del Calendario | `{date}` (día elegido, `AAAA-MM-DD`) |
+| `client.actions` | Ficha de un cliente (Clientes y contactos) | `{clientId, cliente}` |
+| `command` | Paleta de comandos (`Ctrl K`) | `{}` |
+
+Cada botón lleva el color de tu plugin y, al pasar el ratón, su nombre. Así el usuario siempre sabe de dónde viene. Máximo 12 botones por plugin.
+
+### Etiquetas en las tarjetas de tareas (`ui:extend`)
+
+```js
+await wh.ui.setTaskBadges({
+  [idDeTarea]: {text: '1 h 20 min', icon: 'clock', tone: 'neutral'},
+  [otraTarea]: {text: 'En marcha', icon: 'timer', tone: 'accent'}
+});
+await wh.ui.setTaskBadges({});   // quitarlas todas
+```
+
+- `tone`: `neutral`, `accent`, `success`, `warning` o `danger`.
+- Texto de hasta 24 caracteres.
+- Cada llamada **sustituye** todas las etiquetas de tu plugin.
+
+### Apariencia (`appearance`)
+
+```js
+await wh.ui.setAppearance({
+  accent: '#16A36A',     // color de acento (#RRGGBB) o null para el de Ajustes
+  radius: 'round',       // 'sharp' (rectas), 'normal' o 'round' (redondeadas)
+  density: 'compact'     // 'compact', 'normal' o 'comfortable'
+});
+await wh.ui.resetAppearance();   // volver al aspecto normal
+```
+
+- **Solo esos valores, validados**, y nunca CSS libre: una hoja de estilos arbitraria podría ocultar o imitar botones, o sacar datos de la página.
+- Se aplica mientras el plugin esté instalado. Al quitarlo, Workhub vuelve a su aspecto.
+- Guarda la elección en `wh.storage.user` y aplícala al arrancar en segundo plano (mira el plugin oficial **Apariencia**).
 
 ## Eventos
 
@@ -217,6 +312,8 @@ off(); // dejar de escuchar
 | `meetings` | lista de reuniones | `calendar:read` |
 | `theme` | `{scheme, vars}`: el usuario cambió el tema o el color (el SDK ya lo aplica) | — |
 | `project` | `{id, name}`: el usuario cambió de proyecto; vuelve a leer tus datos | — |
+| `action` | `{id, location, context}`: pulsaron uno de tus botones | `ui:extend` |
+| `storage` | `{key, scope}`: la otra instancia de tu plugin (panel o segundo plano) guardó algo | `storage` |
 
 ## Estilos: que tu plugin parezca parte de Workhub
 
@@ -252,8 +349,9 @@ El atributo `data-theme` de `<html>` vale `light` o `dark` por si quieres ajusta
   - navegar la página de Workhub;
   - usar la cámara, el micrófono o la ubicación.
 - **No expongas secretos en tu plugin:** es una página pública. Si necesitas una clave de API de un servicio externo, pásala por tu propio servidor.
+- **Sin acceso al HTML de Workhub:** botones, etiquetas y apariencia son declarativos. Los textos se muestran siempre como texto (nunca HTML), los iconos salen solo del set y las ubicaciones, tonos y valores de apariencia están cerrados.
 - **Límites:**
-  - 60 escrituras por minuto;
+  - 60 escrituras por minuto (incluye añadir botones o etiquetas);
   - 100 KB por clave y 800 KB por proyecto en `storage`;
   - textos recortados a longitudes razonables (título de tarea: 200 caracteres).
 - **Uso responsable:** pide el mínimo de permisos y explica en `description` qué haces con los datos.
@@ -264,8 +362,9 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 
 | Plugin | Carpeta | Permisos |
 |---|---|---|
-| **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV | [`plugins/informe`](../plugins/informe) | `tasks:read` |
-| **Temporizador** (icono `timer`): cronómetro por tarea y tiempo total por tarea y cliente | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage` |
+| **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV. Añade el botón **Informe** a la barra de Tareas y una acción a `Ctrl K`. | [`plugins/informe`](../plugins/informe) | `tasks:read`, `ui:extend` |
+| **Temporizador** (icono `timer`): cronómetro por tarea y totales. Añade **Iniciar cronómetro** a la ficha de cada tarea, **Detener** a la barra de Tareas y a `Ctrl K` mientras cuenta, y una **etiqueta con el tiempo** en cada tarjeta. | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage`, `ui:extend` |
+| **Apariencia** (icono `sparkles`): cualquier color de acento, esquinas rectas o redondeadas y densidad compacta o amplia, iguales en todos los proyectos. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
 
 Para añadir uno oficial al repositorio:
 
@@ -287,4 +386,10 @@ No. El navegador no deja que una página aislada cargue archivos del disco. Usa 
 Publica los cambios en la misma dirección: se cargan la próxima vez que se abra. Si pides permisos nuevos, el usuario tendrá que aprobarlos.
 
 **¿Puede mi plugin funcionar en segundo plano?**
-Sigue activo mientras está abierto, aunque el usuario cambie de sección, hasta que pulse «Volver a los plugins». Así funciona el Temporizador.
+Sí. Si pide `ui:extend` o `appearance`, Workhub lo carga oculto mientras esté abierto (`wh.isBackground === true`). Además, el panel sigue activo aunque el usuario cambie de sección, hasta que pulse «Volver a los plugins».
+
+**¿Puede mi plugin cambiar cualquier parte de la interfaz o inyectar su propio HTML o CSS?**
+No, a propósito. Puede añadir botones y etiquetas en los sitios de la tabla y cambiar la apariencia con los valores permitidos, pero no insertar HTML ni CSS propios en Workhub. Si necesitas una interfaz más compleja, hazla en tu panel y ábrelo con un botón (`wh.ui.openPanel()`).
+
+**¿Necesitas otro sitio para tus botones?**
+Abre un *issue* en el repositorio proponiendo la nueva ubicación y qué contexto necesitaría.

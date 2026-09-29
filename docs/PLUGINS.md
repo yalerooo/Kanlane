@@ -62,7 +62,8 @@ El esqueleto mínimo es este:
       version: '1.0.0',
       description: 'Cuenta tus tareas abiertas.',
       author: 'Tu nombre',
-      icon: '👋',
+      icon: 'bolt',
+      color: 262,
       permissions: ['tasks:read']
     }).then(async (wh) => {
       const tasks = await wh.tasks.list();
@@ -86,8 +87,29 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 | `description` | No | Una o dos frases (hasta 200 caracteres). |
 | `author` | No | Tu nombre o el de tu empresa. |
 | `homepage` | No | Web o repositorio del plugin (https). |
-| `icon` | No | Un emoji, por ejemplo `🧩`. |
+| `icon` | No | Nombre de un icono de Workhub (lista abajo), por ejemplo `chart`. Se dibuja en blanco sobre el color del plugin. Si no existe, se usa `puzzle`. **No se admiten emojis ni imágenes**: así todos los plugins se ven coherentes y ninguno puede inyectar contenido en Workhub. |
+| `color` | No | Tono del color del icono, de `0` a `359` (rueda de color HSL: `0` rojo, `24` naranja, `145` verde, `214` azul, `262` violeta, `328` rosa). Si no lo indicas, sale uno a partir del `id`. |
 | `permissions` | No | Lista de permisos (siguiente apartado). Pide **solo** los que uses. |
+
+### Iconos disponibles
+
+| Nombre | Para… | Nombre | Para… |
+|---|---|---|---|
+| `puzzle` | genérico | `chart` | gráficos, informes |
+| `trending` | evolución, métricas | `pie` | repartos |
+| `timer` | cronómetros | `clock` | horas, turnos |
+| `calendar` | fechas, agenda | `check` | tareas hechas |
+| `list` | listas | `kanban` | tableros |
+| `users` | personas, equipos | `briefcase` | clientes, proyectos |
+| `mail` | correo | `message` | mensajes, chat |
+| `bell` | avisos | `file` | documentos |
+| `folder` | archivos | `book` | guías, notas |
+| `database` | datos | `download` | exportar |
+| `link` | enlaces | `globe` | web, idiomas |
+| `tag` | etiquetas | `wallet` | facturación, gastos |
+| `target` | objetivos | `bolt` | automatizaciones |
+| `sparkles` | IA, extras | `code` | desarrollo |
+| `shield` | seguridad | `star` | favoritos |
 
 ## Permisos
 
@@ -242,8 +264,8 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 
 | Plugin | Carpeta | Permisos |
 |---|---|---|
-| **Informe de trabajo**: resumen por cliente y estado, vencidas, copiar resumen, descargar CSV | [`plugins/informe`](../plugins/informe) | `tasks:read` |
-| **Temporizador**: cronómetro por tarea y tiempo total por tarea y cliente | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage` |
+| **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV | [`plugins/informe`](../plugins/informe) | `tasks:read` |
+| **Temporizador** (icono `timer`): cronómetro por tarea y tiempo total por tarea y cliente | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage` |
 
 Para añadir uno oficial al repositorio:
 

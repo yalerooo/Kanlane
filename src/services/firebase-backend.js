@@ -31,6 +31,16 @@
     return !!(c.apiKey && c.projectId) && /^https?:$/.test(location.protocol) && !insideClaude;
   }
 
+  /* Dominio donde se completa el inicio de sesión.
+     Si la web se sirve desde un dominio de hostingDomains (por ejemplo el de
+     Netlify, que reenvía /__/auth/* a Firebase según netlify.toml), el acceso
+     se completa en ese mismo dominio: así no depende del almacenamiento entre
+     sitios, que Chrome, Safari o Firefox bloquean cada vez más. En el resto de
+     casos (Firebase Hosting, localhost) se usa authDomain tal cual. */
+  function resolveAuthDomain(c, host){
+    return (c.hostingDomains || []).indexOf(host) !== -1 ? host : c.authDomain;
+  }
+
   function loadScript(src){
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
@@ -48,7 +58,7 @@
       fb = window.firebase;
       const c = config();
       fb.initializeApp({
-        apiKey: c.apiKey, authDomain: c.authDomain, projectId: c.projectId,
+        apiKey: c.apiKey, authDomain: resolveAuthDomain(c, location.host), projectId: c.projectId,
         storageBucket: c.storageBucket, messagingSenderId: c.messagingSenderId, appId: c.appId
       });
       auth = fb.auth();
@@ -241,7 +251,7 @@
   }
 
   Workhub.services.firebase = {
-    isEnabled, init, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
+    isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
     resetPassword, signOut, install,
     providers: () => (config().providers || ['google']).slice()
   };

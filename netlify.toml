@@ -1,0 +1,34 @@
+# Publicación en Netlify (guía: docs/NETLIFY.md).
+#
+# Se publica SOLO dist/, que scripts/build-public.js rellena con index.html,
+# assets/ y src/: data-backup.json y el resto de archivos de la carpeta nunca
+# se publican.
+
+[build]
+  command = "node scripts/build-public.js"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Inicio de sesión con Firebase desde este mismo dominio: Netlify reenvía las
+# páginas de acceso de Firebase (/__/auth/…) sin cambiar la dirección, y la app
+# usa este dominio como authDomain (hostingDomains en firebase-config.js).
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://workhub-26f50.firebaseapp.com/__/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/__/firebase/*"
+  to = "https://workhub-26f50.firebaseapp.com/__/firebase/:splat"
+  status = 200
+  force = true
+
+# Netlify ya revalida los archivos en cada visita, así que los cambios se ven al recargar.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

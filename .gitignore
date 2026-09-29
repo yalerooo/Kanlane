@@ -6,3 +6,6 @@ firestore-debug.log
 ui-debug.log
 node_modules/
 dist/
+
+# Local Netlify folder
+.netlify

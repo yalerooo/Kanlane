@@ -85,6 +85,7 @@
       const data = Object.assign({nombre:nombre, createdAt:current.createdAt || (id === MAIN_ID ? 0 : Date.now())}, config || {});
       /* La integración con GitHub sobrevive a los cambios de nombre, color y tipo. */
       if(current.github && !data.github) data.github = current.github;
+      if(current.labels && !data.labels) data.labels = current.labels;
       if(typeof color === 'number') data.color = color;
       return this.set(id, data);
     }

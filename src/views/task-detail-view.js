@@ -32,6 +32,13 @@
       this.notesCount = $('tvNotesCount');
       this.linksWrap = $('tvLinksWrap');
       this.links = $('tvLinks');
+      this.labelsWrap = $('tvLabelsWrap');
+      this.labels = $('tvLabels');
+      this.prsWrap = $('tvPrsWrap');
+      this.prs = $('tvPrs');
+      this.ghWrap = $('tvGhWrap');
+      this.timeline = $('tvTimeline');
+      this.ghShown = null;
       this.estado = $('tvEstado');
       this.btnClose = $('btnTvClose');
       this.btnEdit = $('btnTvEdit');
@@ -72,6 +79,7 @@
     isOpen(){ return this.dlg.open; }
 
     open(t, ctx){
+      this.ghShown = null;
       this.render(t, ctx);
       this.notes.innerHTML = '<p class="tv-empty">Cargando notas…</p>';
       this.notesCount.textContent = '';
@@ -81,6 +89,20 @@
     }
 
     close(){ if(this.dlg.open) this.dlg.close(); }
+
+    /* Actividad y pull requests que llegan de GitHub. data null + err → no se pudo cargar. */
+    renderGithub(taskId, data, err){
+      if(this.taskId !== taskId) return;
+      if(!data){
+        this.timeline.innerHTML = '<li class="gh-empty">' + esc(Workhub.t('No se pudo cargar la actividad de GitHub.')) + '</li>';
+        return;
+      }
+      const L = Workhub.views.labels;
+      this.prsWrap.hidden = !data.prs.length;
+      this.prs.innerHTML = L.prs(data.prs, 0, true);
+      const items = data.events.map(eventHtml).filter(Boolean);
+      this.timeline.innerHTML = items.length ? items.join('') : '<li class="gh-empty">' + esc(Workhub.t('Sin actividad todavía.')) + '</li>';
+    }
 
     /* ctx: {contacts, vault} */
     render(t, ctx){
@@ -108,6 +130,23 @@
 
       this.descWrap.hidden = !t.desc;
       this.desc.textContent = t.desc || '';
+
+      /* Etiquetas y pull requests (los datos completos de GitHub llegan después: renderGithub). */
+      const L = Workhub.views.labels;
+      const labels = Array.isArray(t.labels) ? t.labels : [];
+      this.labelsWrap.hidden = !labels.length;
+      this.labels.innerHTML = L.chips(labels);
+      if(this.ghShown !== t.id){
+        const prs = Array.isArray(t.ghPrs) ? t.ghPrs : [];
+        this.prsWrap.hidden = !prs.length;
+        this.prs.innerHTML = L.prs(prs, 0, true);
+      }
+      const linked = !!t.ghItemId && (t.ghType === 'Issue' || t.ghType === 'PullRequest');
+      this.ghWrap.hidden = !linked;
+      if(linked && this.ghShown !== t.id){
+        this.ghShown = t.id;
+        this.timeline.innerHTML = '<li class="gh-empty">Cargando actividad…</li>';
+      }
 
       const stage = TaskModel.stageKey(t);
       if(this.estado.value !== stage) this.estado.value = stage;
@@ -145,6 +184,93 @@
       ? '<a href="' + esc(t.ghUrl) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc((t.ghRepo ? t.ghRepo + ' ' : '') + '#' + t.ghNumber) + '</a>'
       : esc(Workhub.t('Borrador del proyecto'));
     return fact('gh', 'GitHub', link);
+  }
+
+  /* "hace 3 d" a partir de una fecha ISO. */
+  function ago(iso){
+    const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+    if(!isFinite(s)) return '';
+    if(s < 45) return Workhub.t('hace unos segundos');
+    const m = Math.round(s / 60);
+    if(m < 60) return Workhub.t('hace {n} min', {n:m});
+    const h = Math.round(m / 60);
+    if(h < 24) return Workhub.t('hace {n} h', {n:h});
+    const d = Math.round(h / 24);
+    if(d < 60) return Workhub.t('hace {n} d', {n:d});
+    return Workhub.t('hace {n} meses', {n:Math.round(d / 30)});
+  }
+
+  const who = (u) => '<b translate="no">' + esc((u && u.login) || 'ghost') + '</b>';
+
+  function prLink(p){
+    if(!p || !p.number) return '';
+    const text = '#' + p.number + (p.title ? ' ' + p.title : '');
+    return /^https:\/\/github\.com\//.test(p.url || '')
+      ? '<a href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(text) + '</a>'
+      : '<span translate="no">' + esc(text) + '</span>';
+  }
+
+  /* Un evento de la línea de tiempo de GitHub, como en la propia web. */
+  function eventHtml(e){
+    const t = Workhub.t;
+    const L = Workhub.views.labels;
+    const actor = who(e.actor || e.author);
+    let text = '';
+    let extra = '';
+    switch(e.__typename){
+      case 'AssignedEvent':
+        text = e.assignee && e.actor && e.assignee.login === e.actor.login
+          ? t('{actor} se autoasignó esto', {actor:actor})
+          : t('{actor} asignó a {who}', {actor:actor, who:who(e.assignee)});
+        break;
+      case 'UnassignedEvent':
+        text = t('{actor} quitó la asignación de {who}', {actor:actor, who:who(e.assignee)});
+        break;
+      case 'LabeledEvent':
+        text = t('{actor} añadió la etiqueta {label}', {actor:actor, label:e.label ? L.chip(e.label.name, e.label.color) : ''});
+        break;
+      case 'UnlabeledEvent':
+        text = t('{actor} quitó la etiqueta {label}', {actor:actor, label:e.label ? L.chip(e.label.name, e.label.color) : ''});
+        break;
+      case 'AddedToProjectV2Event':
+        text = t('{actor} añadió esto a {project}', {actor:actor, project:'<b translate="no">' + esc(e.project && e.project.title) + '</b>'});
+        break;
+      case 'ProjectV2ItemStatusChangedEvent':
+        text = t('{actor} movió esto de {from} a {to} en {project}', {
+          actor:actor,
+          from:'<b translate="no">' + esc(e.previousStatus) + '</b>',
+          to:'<b translate="no">' + esc(e.status) + '</b>',
+          project:'<b translate="no">' + esc(e.project && e.project.title) + '</b>'
+        });
+        break;
+      case 'ConnectedEvent':
+        if(!e.subject || !e.subject.number) return '';
+        text = t('{actor} vinculó la pull request {pr}', {actor:actor, pr:prLink(e.subject)});
+        break;
+      case 'CrossReferencedEvent':
+        if(!e.source || !e.source.number) return '';
+        text = e.willCloseTarget
+          ? t('{actor} vinculó una pull request que cerrará esta incidencia {pr}', {actor:actor, pr:prLink(e.source)})
+          : t('{actor} mencionó esto en {pr}', {actor:actor, pr:prLink(e.source)});
+        break;
+      case 'ClosedEvent':
+        text = e.closer && e.closer.number
+          ? t('{actor} cerró esto con {pr}', {actor:actor, pr:prLink(e.closer)})
+          : t('{actor} cerró esto', {actor:actor});
+        break;
+      case 'ReopenedEvent':
+        text = t('{actor} reabrió esto', {actor:actor});
+        break;
+      case 'IssueComment':
+        text = t('{actor} comentó', {actor:actor});
+        extra = '<div class="gh-comment" translate="no">' + esc(String(e.body || '').slice(0, 400)) + '</div>';
+        break;
+      default:
+        return '';
+    }
+    return '<li class="gh-event"><span class="gh-dot" aria-hidden="true"></span><div class="gh-event-body">' +
+      '<div class="gh-event-text">' + text + '</div>' + extra +
+      '<div class="gh-event-time">' + esc(ago(e.createdAt)) + '</div></div></li>';
   }
 
   function fact(icon, label, valueHtml){

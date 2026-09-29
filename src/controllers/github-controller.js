@@ -146,6 +146,22 @@
       });
     }
 
+    /* ¿Se puede pedir a GitHub la actividad de esta tarea? */
+    canLoadDetails(t){
+      return !!api.token() && !!t.ghContentId && (t.ghType === 'Issue' || t.ghType === 'PullRequest');
+    }
+
+    /* Actividad, etiquetas y pull requests de una incidencia (se guarda 1 minuto). */
+    loadDetails(t){
+      this.detailCache = this.detailCache || {};
+      const hit = this.detailCache[t.ghContentId];
+      if(hit && Date.now() - hit.at < 60000) return Promise.resolve(hit.data);
+      return api.fetchDetails(t.ghContentId).then((data) => {
+        this.detailCache[t.ghContentId] = {at:Date.now(), data:data};
+        return data;
+      });
+    }
+
     /* Desde el diálogo de «Nuevo proyecto → Desde GitHub»: crea el proyecto y lo abre. */
     createFromGithub(v){
       if(!api.token() && !v.token) return Promise.reject(new Error('Pega un token de GitHub.'));

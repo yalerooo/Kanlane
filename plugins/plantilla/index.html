@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi plugin · Workhub</title>
+  <!-- Estilos base: tu plugin seguirá el tema claro/oscuro y el color del usuario. -->
+  <link rel="stylesheet" href="https://workhub-project.netlify.app/plugins/sdk/workhub-plugin.css">
+</head>
+<body>
+  <h1>Mi plugin</h1>
+  <p class="wh-muted" id="status">Conectando con Workhub…</p>
+
+  <div class="wh-card" id="panel" hidden>
+    <p>Tienes <b id="open">0</b> tareas abiertas.</p>
+    <div class="wh-row">
+      <input class="wh-input" id="title" placeholder="Título de una tarea nueva">
+      <button class="wh-btn is-primary" id="add">Crear tarea</button>
+    </div>
+    <p class="wh-muted" id="visits"></p>
+  </div>
+
+  <!-- SDK de Workhub: define window.WorkhubPlugin. -->
+  <script src="https://workhub-project.netlify.app/plugins/sdk/workhub-plugin.js"></script>
+  <script src="plantilla.js"></script>
+</body>
+</html>

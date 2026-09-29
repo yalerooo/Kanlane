@@ -8,7 +8,7 @@
   const MAIN_ID = 'main';
   const MAIN_NAME = 'Proyecto principal';
   /* Colecciones de datos de un proyecto (las que se borran al eliminarlo). */
-  const DATA_COLLECTIONS = ['tasks', 'clients', 'contacts', 'meetings', 'vault'];
+  const DATA_COLLECTIONS = ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'plugin_data'];
   const VAULT_META_PATH = 'vault_meta/check';
 
   class ProjectModel extends Workhub.models.CollectionModel {

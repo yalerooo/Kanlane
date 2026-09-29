@@ -26,6 +26,11 @@ window.WORKHUB_FIREBASE = {
      Posibles: 'google', 'github', 'microsoft', 'apple', 'password'. */
   providers: ['google', 'github', 'password'],
 
+  /* false: oculta "Crear una cuenta" en la pantalla de acceso. Aun así, quien
+     no esté en la lista de acceso (colección allowlist, ver firestore.rules)
+     no puede leer ni guardar nada. Ponlo en true si vas a invitar a alguien. */
+  allowSignup: false,
+
   /* Solo para desarrollo: con true, en localhost se usan los emuladores de
      Firebase (firebase emulators:start) en lugar del proyecto real. */
   useEmulators: false

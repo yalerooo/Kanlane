@@ -98,7 +98,7 @@ Al terminar verás la dirección, por ejemplo `https://workhub-1a2b3.web.app`. �
 Qué se publica:
 
 - **Hosting**: solo la app. Antes de subir, `firebase deploy` ejecuta `scripts/build-public.js`, que copia **únicamente** `index.html`, `assets/` y `src/` a la carpeta `dist/`, y se publica esa carpeta. Así `data-backup.json`, `docs/`, el `README` o el `.bat` **nunca se publican**, aunque estén en la carpeta. El script también avisa si la configuración sigue vacía o si `useEmulators` está en `true`.
-- **Firestore**: las reglas de `firestore.rules`. Cada usuario solo puede leer y escribir en `users/{su uid}/…`; todo lo demás está cerrado.
+- **Firestore**: las reglas de `firestore.rules`. Solo entran las cuentas de la lista de acceso (colección `allowlist`), y cada una solo puede leer y escribir en `users/{su uid}/…`; todo lo demás está cerrado. **Antes de publicarlas, añade tu cuenta a la lista:** pasos en [SEGURIDAD.md](SEGURIDAD.md).
 
 Para publicar cambios más adelante, repite solo `firebase deploy --only hosting`.
 

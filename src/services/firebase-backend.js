@@ -18,6 +18,8 @@
   let fb = null;        /* espacio de nombres firebase */
   let auth = null;
   let firestore = null;
+  /* Borrado de la caché local en curso (ver clearLocalCache). */
+  let clearing = Promise.resolve();
 
   function config(){
     return window.WORKHUB_FIREBASE || {};
@@ -69,11 +71,29 @@
       if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
         auth.useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
         firestore.useEmulator('127.0.0.1', 8080);
-      } else {
-        /* Caché local: carga instantánea y funciona sin conexión un rato. */
-        firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
       }
     });
+  }
+
+  /* Sin sesión no debe quedar nada en el dispositivo: se borra la copia local
+     de Firestore (la de la última cuenta que usó este navegador). Solo se puede
+     antes de empezar a usar Firestore, por eso se hace al arrancar sin sesión y
+     no al cerrar sesión (que recarga la página). Si otra pestaña la tiene
+     abierta, falla sin más y se borrará en la próxima carga. */
+  function clearLocalCache(){
+    clearing = firestore.clearPersistence().catch(() => {});
+    return clearing;
+  }
+
+  /* Al entrar: caché local (carga instantánea y aguanta cortes de conexión)
+     y comprobación de la lista de acceso. Devuelve 'allowed', 'denied' o
+     'unknown' (sin conexión, o reglas antiguas sin lista: entonces decide
+     el servidor en cada lectura). */
+  function startSession(user){
+    return clearing.then(() => {
+      firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
+      return firestore.collection('allowlist').doc(user.uid).get({source:'server'});
+    }).then((snap) => (snap.exists ? 'allowed' : 'denied'), () => 'unknown');
   }
 
   function onAuthChange(cb){
@@ -252,7 +272,9 @@
 
   Workhub.services.firebase = {
     isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
-    resetPassword, signOut, install,
-    providers: () => (config().providers || ['google']).slice()
+    resetPassword, signOut, install, clearLocalCache, startSession,
+    providers: () => (config().providers || ['google']).slice(),
+    /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */
+    allowSignup: () => config().allowSignup !== false
   };
 })();

@@ -67,6 +67,10 @@ También se puede publicar en **Netlify** (publicación automática al fusionar 
 
 Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 
+## Seguridad
+
+Qué protege el código y qué hay que activar en la consola de Firebase (lista de acceso, cerrar el registro, política de contraseñas…): [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
+
 ## Cómo lanzarlo en local
 
 `index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).

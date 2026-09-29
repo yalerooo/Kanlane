@@ -5,6 +5,7 @@
 
   class SettingsController {
     constructor(app, view){
+      this.app = app;
       this.model = app.models.settings;
       this.view = view;
 
@@ -14,6 +15,7 @@
       this.view.bindAccent((key) => {
         this.model.setAccent(key);
         this.view.applyAccent(this.model.currentAccent());
+        this.reapplyPlugins();
         this.render();
       });
       this.view.bindTheme((theme) => this.setTheme(theme));
@@ -26,10 +28,17 @@
       });
     }
 
+    /* Un plugin con permiso de apariencia manda sobre el color elegido aquí. */
+    reapplyPlugins(){
+      const plugins = this.app.controllers && this.app.controllers.plugins;
+      if(plugins && plugins.appearance) plugins.applyAppearance();
+    }
+
     /* theme: 'system' | 'light' | 'dark' */
     setTheme(theme){
       this.model.setTheme(theme);
       this.view.applyTheme(theme, true);
+      this.reapplyPlugins();
       this.render();
     }
 

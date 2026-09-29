@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="assets/css/components/dialogs.css">
   <link rel="stylesheet" href="assets/css/components/overlays.css">
   <link rel="stylesheet" href="assets/css/components/projects.css">
+  <link rel="stylesheet" href="assets/css/components/extensions.css">
   <link rel="stylesheet" href="assets/css/views/board.css">
   <link rel="stylesheet" href="assets/css/views/task-detail.css">
   <link rel="stylesheet" href="assets/css/views/calendar.css">
@@ -129,6 +130,7 @@
     <div class="toolbar">
       <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
       <select id="filterCliente" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
       <div class="summary" id="summary" aria-live="polite"></div>
     </div>
 
@@ -147,6 +149,7 @@
         <button type="button" class="icon-btn cal-arrow" id="calNext" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <div class="cal-actions">
+        <div class="ext-slot" id="calExtSlot" data-ext-slot="calendar.toolbar" hidden></div>
         <select id="calFilterCliente" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
         <button type="button" class="btn btn-ghost" id="calToday">Hoy</button>
         <button type="button" class="btn btn-primary" id="calNewMeeting"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva reunión</button>
@@ -463,6 +466,7 @@
       <h3>Vínculos</h3>
       <div class="tv-links" id="tvLinks"></div>
     </section>
+    <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
     <div class="dlg-actions">
       <div class="tv-status-field">
         <label for="tvEstado">Estado</label>
@@ -821,6 +825,8 @@
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
+<script src="src/views/plugin-icons.js"></script>
+<script src="src/views/extensions.js"></script>
 <script src="src/views/dropdown.js"></script>
 <script src="src/views/client-select.js"></script>
 <script src="src/views/shell-view.js"></script>
@@ -837,7 +843,6 @@
 <script src="src/views/command-palette-view.js"></script>
 <script src="src/views/auth-view.js"></script>
 <script src="src/views/project-view.js"></script>
-<script src="src/views/plugin-icons.js"></script>
 <script src="src/views/plugins-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->

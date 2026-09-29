@@ -86,15 +86,37 @@
               list: function(){ return call('meetings.list'); },
               create: function(data){ return call('meetings.create', data); }
             },
+            /* Datos propios del plugin en el proyecto abierto. */
             storage: {
               get: function(key){ return call('storage.get', {key:key}); },
               set: function(key, value){ return call('storage.set', {key:key, value:value}); },
               remove: function(key){ return call('storage.remove', {key:key}); },
-              keys: function(){ return call('storage.keys'); }
+              keys: function(){ return call('storage.keys'); },
+              /* Comunes a todos los proyectos del usuario. */
+              user: {
+                get: function(key){ return call('storage.get', {key:key, scope:'user'}); },
+                set: function(key, value){ return call('storage.set', {key:key, value:value, scope:'user'}); },
+                remove: function(key){ return call('storage.remove', {key:key, scope:'user'}); },
+                keys: function(){ return call('storage.keys', {scope:'user'}); }
+              }
             },
+            /* 'panel': abierto en la sección Plugins. 'background': cargado oculto
+               al abrir Workhub (plugins con permiso ui:extend o appearance). */
+            mode: (msg.context && msg.context.mode) || 'panel',
+            isBackground: ((msg.context && msg.context.mode) || 'panel') === 'background',
             ui: {
               toast: function(message, opts){ return call('ui.toast', {message:message, type:(opts && opts.type) || 'success'}); },
-              openTask: function(id){ return call('ui.openTask', {id:id}); }
+              openTask: function(id){ return call('ui.openTask', {id:id}); },
+              openPanel: function(){ return call('ui.openPanel'); },
+              /* Solo en segundo plano (permiso ui:extend). def: {id, location,
+                 label, icon, tooltip, variant}. Si ya existe, se actualiza. */
+              addButton: function(def){ return call('ui.addButton', def); },
+              removeButton: function(id){ return call('ui.removeButton', {id:id}); },
+              /* {idDeTarea: {text, tone, icon}}: sustituye todas las etiquetas. */
+              setTaskBadges: function(badges){ return call('ui.setTaskBadges', {badges:badges}); },
+              /* Solo en segundo plano (permiso appearance). */
+              setAppearance: function(values){ return call('ui.setAppearance', values || {}); },
+              resetAppearance: function(){ return call('ui.setAppearance', {}); }
             }
           };
           resolve(client);

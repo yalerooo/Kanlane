@@ -1,0 +1,74 @@
+/* ---------- Botones y etiquetas que añaden los plugins ---------- */
+.ext-slot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.ext-slot[hidden]{display:none;}
+.ext-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  height:32px;
+  padding:0 10px;
+  font-family:inherit;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-md);
+  box-shadow:var(--shadow-sm);
+  cursor:pointer;
+  white-space:nowrap;
+  transition:border-color .12s ease, background .12s ease;
+}
+.ext-btn:hover{background:var(--hover);border-color:hsl(var(--h) 55% 55% / .7);}
+.ext-btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus);}
+/* El icono lleva el color del plugin: se ve de dónde viene el botón. */
+.ext-btn svg{flex:none;color:hsl(var(--h) 62% 50%);}
+.ext-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 65% 55%);flex:none;}
+.ext-btn.is-primary{color:#fff;background:hsl(var(--h) 65% 48%);border-color:hsl(var(--h) 65% 44%);}
+.ext-btn.is-primary svg{color:#fff;}
+.ext-btn.is-primary:hover{background:hsl(var(--h) 65% 44%);}
+:root[data-theme="dark"] .ext-btn:not(.is-primary) svg{color:hsl(var(--h) 80% 72%);}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ext-btn:not(.is-primary) svg{color:hsl(var(--h) 80% 72%);} }
+
+/* Dentro de la ficha de una tarea, encima de la barra de acciones. */
+.tv-ext{padding:12px 0 2px;border-top:1px solid var(--line);margin-top:14px;}
+
+/* Etiquetas en las tarjetas del tablero */
+.ext-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.ext-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  height:20px;
+  padding:0 7px;
+  font-size:11.5px;
+  font-weight:500;
+  border-radius:var(--r-sm);
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.ext-badge.is-accent{color:var(--accent);background:var(--accent-soft);}
+.ext-badge.is-success{color:var(--st-done);background:var(--st-done-bg);}
+.ext-badge.is-warning{color:var(--st-wait);background:var(--st-wait-bg);}
+.ext-badge.is-danger{color:var(--danger);background:var(--danger-bg);}
+
+/* ---------- Densidad (plugins con permiso "appearance") ---------- */
+:root[data-density="compact"] .card{padding:7px 10px 8px;}
+:root[data-density="compact"] .card h3{font-size:13px;}
+:root[data-density="compact"] .card .client-chip{margin-bottom:4px;}
+:root[data-density="compact"] .cards{gap:4px;}
+:root[data-density="compact"] .crm-item{padding:4px 8px;}
+:root[data-density="compact"] .person{padding:7px 8px;}
+:root[data-density="compact"] .cal-cell{min-height:84px;}
+:root[data-density="comfortable"] .card{padding:14px 15px 15px;}
+:root[data-density="comfortable"] .card h3{font-size:14px;}
+:root[data-density="comfortable"] .cards{gap:10px;}
+:root[data-density="comfortable"] .crm-item{padding:10px 10px;}
+:root[data-density="comfortable"] .person{padding:13px 8px;}
+/* La barra lateral solo en escritorio (en móvil es la navegación inferior). */
+@media (min-width:901px){
+  :root[data-density="compact"] .tab{height:29px;}
+  :root[data-density="comfortable"] .tab{height:36px;}
+}

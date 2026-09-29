@@ -22,7 +22,9 @@
     'contacts:read': 'Ver los contactos de tus clientes (nombre, email y teléfono)',
     'calendar:read': 'Ver las reuniones del calendario',
     'calendar:write': 'Crear reuniones en el calendario',
-    'storage': 'Guardar sus propios datos en tu cuenta'
+    'storage': 'Guardar sus propios datos en tu cuenta',
+    'ui:extend': 'Añadir botones y etiquetas en Tareas, Calendario, Clientes y la paleta de comandos',
+    'appearance': 'Cambiar la apariencia de Workhub (color de acento, esquinas y densidad)'
   };
 
   /* Nombre corto e icono de cada permiso (etiquetas de las tarjetas). */
@@ -33,8 +35,14 @@
     'contacts:read': {short:'Contactos', icon:'users'},
     'calendar:read': {short:'Calendario', icon:'calendar'},
     'calendar:write': {short:'Crear reuniones', icon:'calendar'},
-    'storage': {short:'Guardar datos', icon:'database'}
+    'storage': {short:'Guardar datos', icon:'database'},
+    'ui:extend': {short:'Añadir botones', icon:'kanban'},
+    'appearance': {short:'Apariencia', icon:'sparkles'}
   };
+
+  /* Permisos que hacen que el plugin se cargue oculto al abrir Workhub
+     (modo "background") para poder añadir cosas a la interfaz. */
+  const BACKGROUND_PERMISSIONS = ['ui:extend', 'appearance'];
 
   /* Permiso que exige cada método (null: ninguno). */
   const METHODS = {
@@ -51,12 +59,22 @@
     'storage.remove': 'storage',
     'storage.keys': 'storage',
     'ui.toast': null,
-    'ui.openTask': 'tasks:read'
+    'ui.openTask': 'tasks:read',
+    'ui.openPanel': null,
+    'ui.addButton': 'ui:extend',
+    'ui.removeButton': 'ui:extend',
+    'ui.setTaskBadges': 'ui:extend',
+    'ui.setAppearance': 'appearance'
   };
-  const WRITE_METHODS = ['tasks.create', 'tasks.update', 'meetings.create', 'storage.set', 'storage.remove'];
+  const WRITE_METHODS = ['tasks.create', 'tasks.update', 'meetings.create', 'storage.set', 'storage.remove',
+    'ui.addButton', 'ui.removeButton', 'ui.setTaskBadges', 'ui.setAppearance'];
+  /* Solo la instancia en segundo plano puede añadir cosas a la interfaz: así
+     no se duplican ni desaparecen al cerrar el panel del plugin. */
+  const BACKGROUND_ONLY = ['ui.addButton', 'ui.removeButton', 'ui.setTaskBadges', 'ui.setAppearance'];
 
   /* Permiso para recibir cada evento. */
-  const EVENTS = {tasks:'tasks:read', clients:'clients:read', contacts:'contacts:read', meetings:'calendar:read', theme:null, project:null};
+  const EVENTS = {tasks:'tasks:read', clients:'clients:read', contacts:'contacts:read', meetings:'calendar:read',
+    theme:null, project:null, action:'ui:extend', storage:'storage'};
 
   /* Los ids que empiezan por "workhub." son de los plugins oficiales. */
   const OFFICIAL_PREFIX = 'workhub.';
@@ -120,6 +138,8 @@
     constructor(opts){
       this.opts = opts;
       this.granted = [];
+      /* 'panel' (abierto en la sección Plugins) o 'background' (oculto). */
+      this.mode = opts.mode || 'panel';
       this.manifest = null;
       this.ready = false;
       this.writes = [];
@@ -183,6 +203,10 @@
         reply(false, {code:'unknown-method', message:'Método desconocido: ' + method});
         return;
       }
+      if(BACKGROUND_ONLY.indexOf(method) !== -1 && this.mode !== 'background'){
+        reply(false, {code:'background-only', message:'Este método solo funciona en segundo plano (context.mode === "background").'});
+        return;
+      }
       const need = METHODS[method];
       if(need && !this.has(need)){
         reply(false, {code:'permission-denied', message:'Falta el permiso "' + need + '".'});
@@ -242,7 +266,7 @@
   }
 
   Workhub.services.pluginHost = {
-    PERMISSIONS, PERMISSION_INFO, EVENTS, OFFICIAL_PREFIX,
+    PERMISSIONS, PERMISSION_INFO, BACKGROUND_PERMISSIONS, EVENTS, OFFICIAL_PREFIX,
     PluginFrame, probe, validateManifest, resolveUrl
   };
 })();

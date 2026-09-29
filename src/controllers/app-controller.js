@@ -47,6 +47,7 @@
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
+      this.controllers.github = new C.GithubController(this, new V.GithubView());
       this.controllers.projects.render();
 
       /* Contadores de la barra lateral. */
@@ -189,6 +190,7 @@
       this.controllers.projects.render();
       this.controllers.vault.onProjectChange();
       this.controllers.plugins.onProjectChange();
+      this.controllers.github.onProjectChange();
       this.updateCounts();
       if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
     }

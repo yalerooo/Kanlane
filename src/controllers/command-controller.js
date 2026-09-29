@@ -101,6 +101,9 @@
         const name = c.plugins.manifestOf(p).name || p.id;
         list.push({title:t('Abrir plugin: {name}', {name:name}), icon:ICONS.go, run:() => c.plugins.open(p.id)});
       });
+      if(c.github && c.github.sync.isLinked()){
+        list.push({title:t('Sincronizar con GitHub'), icon:ICONS.go, run:() => { app.navigate('tasks'); c.github.syncNow(false); }});
+      }
       list.push({title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()});
       list.push({title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {

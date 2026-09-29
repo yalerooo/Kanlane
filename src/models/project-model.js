@@ -83,8 +83,23 @@
     save(id, nombre, color, config){
       const current = this.get(id) || {};
       const data = Object.assign({nombre:nombre, createdAt:current.createdAt || (id === MAIN_ID ? 0 : Date.now())}, config || {});
+      /* La integración con GitHub sobrevive a los cambios de nombre, color y tipo. */
+      if(current.github && !data.github) data.github = current.github;
       if(typeof color === 'number') data.color = color;
       return this.set(id, data);
+    }
+
+    /* Cambia campos sueltos conservando el resto del documento. Un valor
+       null o undefined quita el campo. */
+    patch(id, fields){
+      const cur = Object.assign({}, this.get(id) || {});
+      delete cur.id;
+      if(id === MAIN_ID && !cur.nombre) cur.nombre = Workhub.t(MAIN_NAME);
+      Object.keys(fields).forEach((k) => {
+        if(fields[k] === null || fields[k] === undefined) delete cur[k];
+        else cur[k] = fields[k];
+      });
+      return this.set(id, cur);
     }
 
     /* Borra todos los datos del proyecto y después su entrada del registro.

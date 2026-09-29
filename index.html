@@ -25,6 +25,23 @@
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
   <link rel="stylesheet" href="assets/css/views/auth.css">
+
+  <!-- Arranque: se decide ANTES de pintar nada. Si Workhub está publicado con
+       Firebase, la app queda oculta desde el primer fotograma y solo se ve la
+       pantalla de acceso/carga hasta que hay sesión (AuthController quita la
+       clase). También se aplica ya el tema guardado, para no ver un parpadeo. -->
+  <script src="src/config/firebase-config.js"></script>
+  <script>
+    (function(){
+      var root = document.documentElement;
+      var c = window.WORKHUB_FIREBASE || {};
+      if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)) root.classList.add('auth-gate');
+      try{
+        var theme = localStorage.getItem('workhub_theme');
+        if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
+      }catch(e){}
+    })();
+  </script>
 </head>
 <body>
 
@@ -689,7 +706,6 @@
 </dialog>
 
 <!-- Núcleo, utilidades y servicios -->
-<script src="src/config/firebase-config.js"></script>
 <script src="src/core/local-storage-shim.js"></script>
 <script src="src/core/namespace.js"></script>
 <script src="src/core/emitter.js"></script>

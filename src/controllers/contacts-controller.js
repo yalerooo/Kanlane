@@ -1,4 +1,5 @@
-/* Contactos de clientes. */
+/* Alta, edición y borrado de personas de contacto (diálogo). Se listan en la
+   ficha de cada cliente: ver clients-controller.js. */
 (function(){
   const toast = Workhub.views.toast;
   class ContactsController {
@@ -7,25 +8,14 @@
       this.contacts = app.models.contacts;
       this.view = view;
 
-      this.contacts.on('change', () => this.render());
       this.contacts.on('error', (err) => {
-        this.view.showError('No se pudieron cargar los contactos (' + (err && err.code || 'error') + ').');
+        toast.error('No se pudieron cargar los contactos (' + (err && err.code || 'error') + ')');
       });
-      app.models.clients.on('change', () => {
-        this.view.cliente.populate(app.clientNames());
-        this.render();
-      });
+      app.models.clients.on('change', () => this.view.cliente.populate(app.clientNames()));
 
-      this.view.bindNew(() => this.openNew());
-      this.view.bindSearch(() => this.render());
-      this.view.bindOpen((id) => this.openEdit(id));
       this.view.bindSubmit((id, values) => this.save(id, values));
       this.view.bindDelete((id) => this.remove(id));
       this.view.cliente.bindCreate((name) => app.createClient(name));
-    }
-
-    render(){
-      this.view.render(this.contacts.search(this.view.query()), this.contacts.items.length > 0);
     }
 
     openNew(presetCliente){

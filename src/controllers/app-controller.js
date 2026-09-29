@@ -49,7 +49,7 @@
 
       /* Contadores de la barra lateral. */
       const m = this.models;
-      [m.tasks, m.contacts, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
+      [m.tasks, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
 
       this.shell.bindTabClick((view) => this.navigate(view));
       this.shell.setStorageMode(platform.mode());
@@ -77,7 +77,6 @@
       this.shell.setCounts({
         tasks: open.length,
         calendar: todayCount,
-        contacts: m.contacts.items.length,
         vault: m.vault.items.length,
         clients: m.clients.items.length
       }, {tasks: overdue});
@@ -164,7 +163,9 @@
         this.models.projects.connect(db);
         this.connectProject();
 
-        const savedTab = prefs.read(TAB_PREF, null);
+        /* "Contactos" ahora está dentro de "Clientes". */
+        let savedTab = prefs.read(TAB_PREF, null);
+        if(savedTab === 'contacts') savedTab = 'clients';
         if(savedTab && savedTab !== 'tasks' && V.ShellView.VIEWS.indexOf(savedTab) !== -1) this.navigate(savedTab);
       }).catch(() => {
         board.setMessage('No se pudo conectar al almacenamiento de tareas.');

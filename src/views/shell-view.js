@@ -3,9 +3,8 @@
   const PAGE_INFO = {
     tasks: ['Tareas', 'Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.'],
     calendar: ['Calendario', 'Fechas límite de las tareas y reuniones programadas con cada cliente.'],
-    contacts: ['Contactos', 'Personas de contacto y datos útiles de cada cliente.'],
     vault: ['Contraseñas', 'Credenciales cifradas en tu navegador con tu contraseña maestra.'],
-    clients: ['Clientes', 'Los clientes que aparecen en tareas, reuniones, contactos y contraseñas.'],
+    clients: ['Clientes y contactos', 'Cada cliente con sus personas de contacto. Busca por cliente, nombre, email o teléfono.'],
     data: ['Copia de seguridad', 'Exporta los datos del proyecto abierto a un archivo o restáuralos desde una copia.'],
     settings: ['Ajustes', 'Personaliza el aspecto de Workhub.']
   };
@@ -13,7 +12,6 @@
   const SECTION_IDS = {
     tasks: 'viewTasks',
     calendar: 'viewCalendar',
-    contacts: 'viewContacts',
     vault: 'viewVault',
     clients: 'viewClients',
     data: 'viewData',
@@ -105,7 +103,7 @@
 
     /* Al cambiar de proyecto: búsquedas vacías y todos los clientes. */
     resetFilters(){
-      ['search', 'searchContacts', 'searchVault'].forEach((id) => {
+      ['search', 'searchClients', 'searchVault'].forEach((id) => {
         const el = document.getElementById(id);
         if(!el || !el.value) return;
         el.value = '';

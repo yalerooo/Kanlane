@@ -11,7 +11,8 @@ Workhub.services.officialPlugins = [
       version: '1.0.0',
       description: 'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.',
       author: 'Workhub',
-      icon: '📊',
+      icon: 'chart',
+      color: 238,
       permissions: ['tasks:read']
     }
   },
@@ -23,7 +24,8 @@ Workhub.services.officialPlugins = [
       version: '1.0.0',
       description: 'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.',
       author: 'Workhub',
-      icon: '⏱️',
+      icon: 'timer',
+      color: 24,
       permissions: ['tasks:read', 'storage']
     }
   }

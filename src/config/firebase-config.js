@@ -18,7 +18,7 @@ window.WORKHUB_FIREBASE = {
   /* Botones de acceso que se muestran, en este orden. Cada uno debe estar
      activado en Firebase → Authentication → Sign-in method.
      Posibles: 'google', 'github', 'microsoft', 'apple', 'password'. */
-  providers: ['google', 'github', 'microsoft', 'password'],
+  providers: ['google', 'github', 'password'],
 
   /* Solo para desarrollo: con true, en localhost se usan los emuladores de
      Firebase (firebase emulators:start) en lugar del proyecto real. */

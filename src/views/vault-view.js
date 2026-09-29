@@ -467,12 +467,12 @@
     }
     const visible = vault.isVisible(v.id);
     const data = vault.revealed[v.id];
-    const notesHtml = visible && data && data.notas ? '<div class="notes">' + esc(data.notas) + '</div>' : '';
+    const notesHtml = visible && data && data.notas ? '<div class="notes" translate="no">' + esc(data.notas) + '</div>' : '';
     return '<div class="vault-card" draggable="true" data-id="' + esc(v.id) + '">' +
       '<div class="cat">' + (v.cliente ? clientColors.chip(v.cliente) : '<span></span>') + '<span class="type-badge">' + esc(VaultModel.typeLabel(tipo)) + '</span></div>' +
-      '<h3>' + esc(VaultModel.titleFor(v)) + '</h3>' +
-      lines +
-      '<div class="pass-row"><span class="pass-value">' + esc(vault.passwordText(v.id)) + '</span>' +
+      '<h3 translate="no">' + esc(VaultModel.titleFor(v)) + '</h3>' +
+      '<div translate="no">' + lines + '</div>' +
+      '<div class="pass-row"><span class="pass-value" translate="no">' + esc(vault.passwordText(v.id)) + '</span>' +
       '<button type="button" class="icon-btn" data-action="toggle" data-id="' + esc(v.id) + '">' + (visible ? 'Ocultar' : 'Mostrar') + '</button>' +
       '<button type="button" class="icon-btn" data-action="copy" data-id="' + esc(v.id) + '">Copiar</button></div>' +
       notesHtml +

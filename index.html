@@ -76,6 +76,7 @@
     </div>
   </div>
   <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+  <p class="auth-lang" id="authLang" translate="no"><button type="button" data-lang-choice="es">Español</button><span aria-hidden="true">·</span><button type="button" data-lang-choice="en">English</button></p>
 </div>
 
 <div class="app">
@@ -84,7 +85,7 @@
       <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
         <span class="project-mark" id="projectMark" aria-hidden="true">PP</span>
         <span class="project-switch-text">
-          <span class="project-switch-name" id="projectName">Proyecto principal</span>
+          <span class="project-switch-name" id="projectName" translate="no">Proyecto principal</span>
           <span class="project-switch-sub">Workhub</span>
         </span>
         <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
@@ -340,6 +341,18 @@
       </div>
       <div class="settings-row">
         <div>
+          <h3>Idioma</h3>
+          <p>Idioma de la interfaz. Tus datos no se traducen.</p>
+        </div>
+        <div>
+          <div class="segmented" id="langSegment" role="radiogroup" aria-label="Idioma">
+            <button type="button" role="radio" data-lang-choice="es" translate="no">Español</button>
+            <button type="button" role="radio" data-lang-choice="en" translate="no">English</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
           <h3>Almacenamiento</h3>
           <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
         </div>
@@ -442,11 +455,11 @@
 <dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
   <div class="dlg-inner">
     <div class="tv-top" id="tvTop"></div>
-    <h2 id="tvTitle"></h2>
+    <h2 id="tvTitle" translate="no"></h2>
     <div class="tv-facts" id="tvFacts"></div>
     <section class="tv-section" id="tvDescWrap" hidden>
       <h3>Descripción</h3>
-      <div class="tv-desc" id="tvDesc"></div>
+      <div class="tv-desc" id="tvDesc" translate="no"></div>
     </section>
     <section class="tv-section">
       <h3>Notas <span class="tv-count" id="tvNotesCount"></span></h3>
@@ -736,17 +749,17 @@
 
 <dialog id="dlgMeetingView">
   <div class="dlg-inner">
-    <div class="cat"><span id="mvCliente"></span><span class="type-badge meet-badge" id="mvPlatform"></span></div>
-    <h2 id="mvTitle"></h2>
+    <div class="cat"><span id="mvCliente" translate="no"></span><span class="type-badge meet-badge" id="mvPlatform"></span></div>
+    <h2 id="mvTitle" translate="no"></h2>
     <p class="mv-when" id="mvWhen"></p>
     <div class="mv-link" id="mvLinkWrap" hidden>
       <a class="btn btn-primary" id="mvJoin" target="_blank" rel="noopener noreferrer">Unirse a la reunión</a>
       <button type="button" class="btn btn-ghost" id="mvCopyLink">Copiar enlace</button>
-      <p class="mv-url" id="mvUrl"></p>
+      <p class="mv-url" id="mvUrl" translate="no"></p>
     </div>
     <div class="field" id="mvNotasWrap" hidden>
       <label>Notas</label>
-      <div class="view-notas" id="mvNotas"></div>
+      <div class="view-notas" id="mvNotas" translate="no"></div>
     </div>
     <div class="dlg-actions">
       <div></div>
@@ -760,13 +773,13 @@
 
 <dialog id="dlgVaultView">
   <div class="dlg-inner">
-    <div class="cat"><span id="vvCliente"></span><span class="type-badge" id="vvTipo"></span></div>
-    <h2 id="vvTitle"></h2>
+    <div class="cat"><span id="vvCliente" translate="no"></span><span class="type-badge" id="vvTipo"></span></div>
+    <h2 id="vvTitle" translate="no"></h2>
     <div class="view-rows" id="vvFields"></div>
     <div class="field">
       <label>Contraseña</label>
       <div class="pass-row">
-        <span class="pass-value" id="vvPassValue">••••••••</span>
+        <span class="pass-value" id="vvPassValue" translate="no">••••••••</span>
         <button type="button" class="icon-btn" id="btnVvToggle">Mostrar</button>
         <button type="button" class="icon-btn" id="btnVvCopy">Copiar</button>
       </div>
@@ -788,6 +801,8 @@
 <!-- Núcleo, utilidades y servicios -->
 <script src="src/core/local-storage-shim.js"></script>
 <script src="src/core/namespace.js"></script>
+<script src="src/i18n/i18n.js"></script>
+<script src="src/i18n/en.js"></script>
 <script src="src/core/emitter.js"></script>
 <script src="src/utils/html.js"></script>
 <script src="src/utils/dates.js"></script>

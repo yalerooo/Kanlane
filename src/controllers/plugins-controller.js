@@ -414,7 +414,7 @@
     }
 
     context(){
-      return {theme:this.theme(), project:this.projectInfo(), locale:'es', app:{name:'Workhub', protocol:1}};
+      return {theme:this.theme(), project:this.projectInfo(), locale:Workhub.i18n.lang, app:{name:'Workhub', protocol:1}};
     }
 
     /* Evento a todos los marcos vivos (cada uno solo lo recibe si tiene permiso). */
@@ -454,7 +454,8 @@
     api(p, method, params, frame){
       const m = this.m;
       const manifest = this.manifestOf(p);
-      const name = manifest.name || p.id;
+      /* Nombre visible (los oficiales, traducidos). */
+      const name = Workhub.t(manifest.name || p.id);
       const who = {id:p.id, name:name, hue:typeof manifest.color === 'number' ? manifest.color : null};
       switch(method){
         case 'app.statuses':

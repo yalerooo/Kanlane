@@ -163,7 +163,7 @@
       : '';
     return '<article class="tv-note">' +
       '<div class="tv-note-date">' + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (n.text ? '<div class="tv-note-text">' + esc(n.text) + '</div>' : '') +
+      (n.text ? '<div class="tv-note-text" translate="no">' + esc(n.text) + '</div>' : '') +
       img +
       '</article>';
   }
@@ -173,7 +173,7 @@
     const meta = [c.email, c.telefono].filter(Boolean).join(' · ') || c.cliente || '';
     return '<div class="tv-link">' +
       '<span class="avatar is-sm" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
-      '<div class="tv-link-main"><div class="tv-link-title">' + esc(name) + '</div><div class="tv-link-meta">' + esc(meta) + '</div></div>' +
+      '<div class="tv-link-main"><div class="tv-link-title" translate="no">' + esc(name) + '</div><div class="tv-link-meta">' + esc(meta) + '</div></div>' +
       '<div class="tv-link-actions"><button type="button" class="icon-btn" data-action="open-contact" data-id="' + esc(c.id) + '">Abrir</button></div>' +
       '</div>';
   }
@@ -186,7 +186,7 @@
       : '<button type="button" class="icon-btn" data-action="goto-vault" data-id="' + esc(v.id) + '">Desbloquear</button>';
     return '<div class="tv-link">' +
       '<span class="avatar is-sm is-lock" aria-hidden="true">' + LOCK_ICON + '</span>' +
-      '<div class="tv-link-main"><div class="tv-link-title">' + esc(VaultModel.titleFor(v)) + '</div>' +
+      '<div class="tv-link-main"><div class="tv-link-title" translate="no">' + esc(VaultModel.titleFor(v)) + '</div>' +
       '<div class="tv-link-meta">' + esc(VaultModel.typeLabel(v.tipo)) + (v.cliente ? ' · ' + esc(v.cliente) : '') + '</div></div>' +
       '<div class="tv-link-actions">' + actions + '</div>' +
       '</div>';

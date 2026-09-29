@@ -9,6 +9,14 @@
       this.swatches = $('accentSwatches');
       this.themeSegment = $('themeSegment');
       this.storageDetail = $('storageDetail');
+      this.langSegment = $('langSegment');
+    }
+
+    bindLang(handler){
+      this.langSegment.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-lang-choice]');
+        if(b) handler(b.getAttribute('data-lang-choice'));
+      });
     }
 
     bindAccent(handler){
@@ -52,6 +60,9 @@
         return '<button type="button" class="swatch" role="radio" aria-checked="' + (sel ? 'true' : 'false') + '" data-accent="' + a.key + '" style="--sw:' + a.solid + ';--sw-ink:' + a.ink + '">' +
           '<span class="swatch-dot">' + CHECK_ICON + '</span>' + esc(a.name) + '</button>';
       }).join('');
+      this.langSegment.querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
+      });
       this.themeSegment.querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-theme-choice') === currentTheme ? 'true' : 'false');
       });

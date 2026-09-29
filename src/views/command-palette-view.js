@@ -89,8 +89,8 @@
           this.items.push(it);
           html += '<div class="cmdk-item" role="option" id="cmd-o' + i + '" data-index="' + i + '" aria-selected="false">' +
             '<span class="cmdk-icon" aria-hidden="true">' + (it.icon || '') + '</span>' +
-            '<span class="cmdk-title">' + highlight(it.title, this.query) + '</span>' +
-            (it.meta ? '<span class="cmdk-meta">' + highlight(it.meta, this.query) + '</span>' : '') +
+            '<span class="cmdk-title" translate="no">' + highlight(it.title, this.query) + '</span>' +
+            (it.meta ? '<span class="cmdk-meta" translate="no">' + highlight(it.meta, this.query) + '</span>' : '') +
             '</div>';
         });
       });

@@ -19,6 +19,11 @@
         this.render();
       });
       this.view.bindTheme((theme) => this.setTheme(theme));
+      /* Cambiar de idioma recarga la app (se guarda antes en la cuenta). */
+      this.view.bindLang((lang) => {
+        if(lang === Workhub.i18n.lang) return;
+        this.model.setLang(lang).then(() => Workhub.i18n.setLang(lang));
+      });
 
       /* Cambios hechos en otro dispositivo con la misma cuenta. */
       this.model.on('change', () => {

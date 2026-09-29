@@ -2,6 +2,7 @@
    - Ctrl/⌘ K: abre o cierra la paleta (también el botón "Buscar…").
    - N: nueva tarea.   - /: buscar dentro de la sección actual. */
 (function(){
+  const t = Workhub.t;
   const TaskModel = Workhub.models.TaskModel;
   const MAX_PER_GROUP = 6;
 
@@ -86,31 +87,31 @@
       const app = this.app;
       const c = app.controllers;
       const list = [
-        {title:'Nueva tarea', meta:'N', icon:ICONS.plus, run:() => this.newTask()},
-        {title:'Nueva reunión', icon:ICONS.plus, run:() => { app.navigate('calendar'); c.calendar.openNewMeeting(); }},
-        {title:'Nuevo contacto', icon:ICONS.plus, run:() => { app.navigate('clients'); c.contacts.openNew(c.clients.selectedClientName()); }},
-        {title:'Nueva credencial', icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
-        {title:'Nuevo cliente', icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
+        {title:t('Nueva tarea'), meta:'N', icon:ICONS.plus, run:() => this.newTask()},
+        {title:t('Nueva reunión'), icon:ICONS.plus, run:() => { app.navigate('calendar'); c.calendar.openNewMeeting(); }},
+        {title:t('Nuevo contacto'), icon:ICONS.plus, run:() => { app.navigate('clients'); c.contacts.openNew(c.clients.selectedClientName()); }},
+        {title:t('Nueva credencial'), icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
+        {title:t('Nuevo cliente'), icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
       ];
       /* Acciones que añaden los plugins a la paleta. */
       Workhub.views.extensions.buttonsAt('command').forEach((b) => {
         list.push({title:b.label, meta:b.pluginName, icon:Workhub.views.pluginIcons.svg(b.icon || 'puzzle', 16), run:() => Workhub.views.extensions.trigger(b.key, {})});
       });
       app.models.plugins.list().forEach((p) => {
-        const name = (p.manifest || {}).name || p.id;
-        list.push({title:'Abrir plugin: ' + name, icon:ICONS.go, run:() => c.plugins.open(p.id)});
+        const name = c.plugins.manifestOf(p).name || p.id;
+        list.push({title:t('Abrir plugin: {name}', {name:name}), icon:ICONS.go, run:() => c.plugins.open(p.id)});
       });
-      list.push({title:'Nuevo proyecto', icon:ICONS.project, run:() => c.projects.openNew()});
-      list.push({title:'Editar proyecto actual', icon:ICONS.project, run:() => c.projects.openEdit()});
+      list.push({title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()});
+      list.push({title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {
-        list.push({title:'Ir a ' + VIEW_NAMES[v], icon:ICONS.go, run:() => app.navigate(v)});
+        list.push({title:t('Ir a {view}', {view:t(VIEW_NAMES[v])}), go:true, icon:ICONS.go, run:() => app.navigate(v)});
       });
-      [['light', 'claro'], ['dark', 'oscuro'], ['system', 'del sistema']].forEach((pair) => {
-        list.push({title:'Usar tema ' + pair[1], icon:ICONS.theme, run:() => c.settings.setTheme(pair[0])});
+      [['light', 'Usar tema claro'], ['dark', 'Usar tema oscuro'], ['system', 'Usar tema del sistema']].forEach((pair) => {
+        list.push({title:t(pair[1]), icon:ICONS.theme, run:() => c.settings.setTheme(pair[0])});
       });
-      list.push({title:'Exportar copia de seguridad', icon:ICONS.download, run:() => { app.navigate('data'); c.backup.exportData(); }});
+      list.push({title:t('Exportar copia de seguridad'), icon:ICONS.download, run:() => { app.navigate('data'); c.backup.exportData(); }});
       if(c.auth && c.auth.user){
-        list.push({title:'Cerrar sesión', meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
+        list.push({title:t('Cerrar sesión'), meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
       }
       return list;
     }
@@ -120,7 +121,7 @@
       const projects = this.app.models.projects;
       return projects.list().filter((p) => p.id !== this.app.projectId).map((p) => ({
         title: p.nombre,
-        meta: 'Cambiar de proyecto',
+        meta: t('Cambiar de proyecto'),
         icon: projectIcon(projects.hueOf(p), p.nombre),
         run: () => this.app.switchProject(p.id, true)
       }));
@@ -141,8 +142,8 @@
         .map((t) => {
           const s = TaskModel.statusOf(t.status);
           return {
-            title: t.title || 'Sin título',
-            meta: [t.cliente, s.label].filter(Boolean).join(' · '),
+            title: t.title || Workhub.t('Sin título'),
+            meta: [t.cliente, Workhub.t(s.label)].filter(Boolean).join(' · '),
             icon: '<span class="dot" style="background:' + s.dot + '"></span>',
             run: () => { this.app.navigate('tasks'); this.app.controllers.tasks.openDetail(t.id); }
           };
@@ -152,7 +153,7 @@
         .filter((ct) => has(ct.nombre, ct.email, ct.telefono, ct.cliente))
         .slice(0, MAX_PER_GROUP)
         .map((ct) => ({
-          title: ct.nombre || 'Sin nombre',
+          title: ct.nombre || Workhub.t('Sin nombre'),
           meta: [ct.email, ct.cliente].filter(Boolean).join(' · '),
           icon: ICONS.user,
           run: () => this.app.controllers.clients.showContact(ct.id)
@@ -162,7 +163,7 @@
         .filter((mt) => has(mt.title, mt.cliente))
         .slice(0, MAX_PER_GROUP)
         .map((mt) => ({
-          title: mt.title || 'Reunión',
+          title: mt.title || Workhub.t('Reunión'),
           meta: [mt.date, mt.cliente].filter(Boolean).join(' · '),
           icon: ICONS.meeting,
           run: () => {
@@ -177,7 +178,7 @@
         .slice(0, MAX_PER_GROUP)
         .map((cl) => ({
           title: cl.nombre,
-          meta: 'Ver ficha y contactos',
+          meta: Workhub.t('Ver ficha y contactos'),
           icon: clientIcon(clientColors.hueOf(cl.nombre)),
           run: () => { this.app.navigate('clients'); this.app.controllers.clients.select(cl.id, true); }
         }));
@@ -194,7 +195,7 @@
             actionFirst ? [] : [actionGroup])
         : [{label:'Acciones', items:actions.slice(0, 5)}, {label:'Tareas abiertas recientes', items:tasks},
            {label:'Proyectos', items:projects},
-           {label:'Ir a', items:actions.filter((a) => a.title.indexOf('Ir a') === 0)}];
+           {label:'Ir a', items:actions.filter((a) => a.go)}];
       this.view.render(groups);
     }
 

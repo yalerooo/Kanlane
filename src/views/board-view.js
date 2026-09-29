@@ -218,14 +218,14 @@
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
     const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';
     const meta = [
-      t.contacto ? '<span class="contact">' + iconSpan('user') + '<span>' + esc(t.contacto) + '</span></span>' : '',
+      t.contacto ? '<span class="contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
       due
     ].join('');
     return '<article class="card" draggable="true" tabindex="0" data-id="' + esc(t.id) + '">' +
       (t.cliente ? clientColors.chip(t.cliente) : '') +
-      '<h3>' + esc(t.title) + '</h3>' +
-      (t.desc ? '<p>' + esc(t.desc) + '</p>' : '') +
+      '<h3 translate="no">' + esc(t.title) + '</h3>' +
+      (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';

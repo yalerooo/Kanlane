@@ -167,11 +167,28 @@ wh.permissions          // ['tasks:read', ...] permisos concedidos
 wh.has('tasks:write')   // true / false
 wh.context.project      // {id, name} proyecto abierto
 wh.context.theme        // {scheme: 'light' | 'dark', vars: {...}}
-wh.context.locale       // 'es'
+wh.context.locale       // idioma de Workhub: 'es' o 'en' (también wh.lang)
+wh.locale               // formato de fechas: 'es-ES' o 'en-US'
 await wh.statuses()     // [{key:'pendiente', label:'Pendiente'}, {key:'proceso', ...}, {key:'espera', ...}, {key:'completada', ...}]
 ```
 
 Si la página se abre fuera de Workhub, `connect` falla con el mensaje `not-in-workhub`, así puedes mostrar una explicación.
+
+### Idiomas
+
+Workhub está en español e inglés. Para que tu plugin hable el idioma del usuario, escribe los textos en español y añade sus traducciones:
+
+```js
+const t = WorkhubPlugin.translations({
+  en: {'Informe': 'Report', 'Hola, {name}': 'Hello, {name}'}
+});
+const wh = await WorkhubPlugin.connect(manifiesto);   // a partir de aquí t() usa el idioma de Workhub
+t('Informe');                     // 'Report' si Workhub está en inglés
+t('Hola, {name}', {name: 'Ana'}); // admite datos entre llaves
+new Date().toLocaleDateString(WorkhubPlugin.locale);   // fechas en el formato del idioma
+```
+
+Si falta una traducción se muestra el texto original. El nombre y la descripción del manifiesto se muestran tal cual (los de los plugins oficiales los traduce Workhub). Cambiar de idioma recarga Workhub, así que tu plugin se vuelve a cargar con el idioma nuevo.
 
 ### Tareas
 

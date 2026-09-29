@@ -57,7 +57,25 @@
       });
     }
 
+    /* Idioma de la cuenta: en un dispositivo nuevo se adopta al entrar
+       (recargando una sola vez); después, cada dispositivo lo cambia al guardar. */
+    adoptLang(data){
+      const i18n = Workhub.i18n;
+      if(!data.lang){
+        if(this.ref) this.ref.update({lang:i18n.lang}).catch(() => {});
+        return;
+      }
+      if(data.lang === i18n.lang || !i18n.LANGS[data.lang]) return;
+      let done = false;
+      try{ done = sessionStorage.getItem('workhub_lang_adopted') === '1'; sessionStorage.setItem('workhub_lang_adopted', '1'); }catch(e){}
+      if(!done) i18n.setLang(data.lang);
+    }
+
     applyRemote(data){
+      if(!this.langChecked){
+        this.langChecked = true;
+        this.adoptLang(data);
+      }
       const accent = this.findAccent(data.accent).key;
       const theme = THEMES.indexOf(data.theme) !== -1 ? data.theme : this.theme;
       if(accent === this.accent && theme === this.theme) return;
@@ -70,13 +88,19 @@
 
     save(){
       if(!this.ref) return;
-      this.ref.set({accent:this.accent, theme:this.theme, updatedAt:Date.now()}).catch(() => {});
+      this.ref.set({accent:this.accent, theme:this.theme, lang:Workhub.i18n.lang, updatedAt:Date.now()}).catch(() => {});
     }
 
     setAccent(key){
       this.accent = this.findAccent(key).key;
       prefs.write(ACCENT_KEY, this.accent);
       this.save();
+    }
+
+    /* Guarda el idioma en la cuenta (la app se recarga después). */
+    setLang(lang){
+      if(!this.ref) return Promise.resolve();
+      return this.ref.set({accent:this.accent, theme:this.theme, lang:lang, updatedAt:Date.now()}).catch(() => {});
     }
 
     setTheme(theme){

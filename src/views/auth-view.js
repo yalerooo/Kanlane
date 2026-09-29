@@ -126,6 +126,7 @@
     }
 
     hide(){
+      document.documentElement.classList.remove('auth-gate');
       document.body.classList.remove('is-authing');
       this.screen.hidden = true;
     }

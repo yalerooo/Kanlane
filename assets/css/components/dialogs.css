@@ -126,3 +126,25 @@ dialog .dlg-inner > .cat{padding-right:40px;margin-bottom:10px;}
   padding:24px;
 }
 .lightbox img{max-width:100%;max-height:100%;border-radius:var(--r-lg);box-shadow:var(--shadow-lg);}
+
+/* ---------- Barra de desplazamiento de los diálogos ---------- */
+/* Fina, con el pulgar redondeado y separada de las esquinas del diálogo. Solo
+   se destaca al pasar el ratón o mientras se arrastra. */
+dialog::-webkit-scrollbar{width:12px;}
+dialog::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
+dialog::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb, var(--ink-faint) 38%, transparent);
+  border:3px solid transparent;
+  border-radius:999px;
+  background-clip:padding-box;
+  min-height:36px;
+  transition:background-color .15s ease;
+}
+dialog:hover::-webkit-scrollbar-thumb{background-color:color-mix(in srgb, var(--ink-faint) 60%, transparent);}
+dialog::-webkit-scrollbar-thumb:hover,
+dialog::-webkit-scrollbar-thumb:active{background-color:var(--ink-faint);}
+/* Firefox no conoce ::-webkit-scrollbar: allí se usan las propiedades estándar
+   (en Chrome reciente anularían el estilo redondeado de arriba). */
+@supports not selector(::-webkit-scrollbar){
+  dialog{scrollbar-width:thin;scrollbar-color:color-mix(in srgb, var(--ink-faint) 45%, transparent) transparent;}
+}

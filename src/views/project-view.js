@@ -3,6 +3,7 @@
 (function(){
   const {esc, closest, initials} = Workhub.utils.html;
   const PT = Workhub.models.ProjectTemplates;
+  const GITHUB_TYPE = 'github';   /* solo en el diálogo: crea el proyecto desde GitHub */
   const $ = (id) => document.getElementById(id);
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
 
@@ -47,6 +48,12 @@
       this.addStageBtn = $('pAddStage');
       this.clientsChk = $('pClients');
       this.typeNote = $('pTypeNote');
+      this.ghEl = $('pGh');
+      this.ghTokenField = $('pGhTokenField');
+      this.ghTokenSaved = $('pGhTokenSaved');
+      this.ghToken = $('pGhToken');
+      this.ghUrl = $('pGhUrl');
+      this.githubHandler = null;
 
       this.tipo = PT.DEFAULT_TYPE;
       this.stages = [];
@@ -219,6 +226,14 @@
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
         const nombre = this.nameInput.value.trim();
+        if(this.tipo === GITHUB_TYPE){
+          const url = this.ghUrl.value.trim();
+          if(!url){ this.ghUrl.focus(); this.showError('Pega el enlace de tu proyecto de GitHub.'); return; }
+          if(!Workhub.services.github.token() && !this.ghToken.value.trim()){ this.ghToken.focus(); this.showError('Pega un token de GitHub.'); return; }
+          this.error.hidden = true;
+          if(this.githubHandler) this.githubHandler({nombre:nombre, url:url, token:this.ghToken.value.trim()});
+          return;
+        }
         if(!nombre){ this.nameInput.focus(); return; }
         if(this.tipo === PT.CUSTOM_TYPE){
           const named = this.stages.filter((st) => st.label.trim());
@@ -230,6 +245,11 @@
         }
         handler(this.idInput.value || null, nombre, this.color, PT.fieldsFor(this.tipo, this.stages, this.clients));
       });
+    }
+
+    /* handler({nombre, url, token}) para el tipo «Desde GitHub». */
+    bindGithubSubmit(handler){
+      this.githubHandler = handler;
     }
 
     /* Primer clic: avisa de lo que se va a borrar. Segundo: handler(id). */
@@ -266,6 +286,8 @@
       this.nameInput.value = nombre;
       this.color = color;
       this.tipo = cfg.tipo;
+      this.ghUrl.value = '';
+      this.ghToken.value = '';
       this.stages = cfg.stages.map((st) => Object.assign({}, st));
       this.clients = cfg.clients;
       this.typeNote.hidden = !id;
@@ -308,7 +330,7 @@
       if(tipo === this.tipo) return;
       /* Al pasar un proyecto que ya existe a "personalizado" se parte de sus
          etapas actuales; uno nuevo empieza con las de la plantilla. */
-      if(tipo === PT.CUSTOM_TYPE && this.tipo !== PT.CUSTOM_TYPE){
+      if(tipo === PT.CUSTOM_TYPE && this.tipo !== PT.CUSTOM_TYPE && this.tipo !== GITHUB_TYPE){
         const from = this.idInput.value ? this.tipo : PT.CUSTOM_TYPE;
         this.stages = PT.stagesOf(from);
         this.clients = PT.template(from).clients;
@@ -320,6 +342,12 @@
     }
 
     _renderTypes(){
+      const github = this.idInput.value ? '' :
+        '<button type="button" class="type-option' + (this.tipo === GITHUB_TYPE ? ' is-selected' : '') + '" role="radio" aria-checked="' + (this.tipo === GITHUB_TYPE) + '" data-type="' + GITHUB_TYPE + '">' +
+        '<span class="type-radio" aria-hidden="true"></span>' +
+        '<span class="type-body"><span class="type-name">Desde GitHub</span>' +
+        '<span class="type-desc">Crea el proyecto con las columnas y los elementos de un GitHub Project y los mantiene sincronizados.</span>' +
+        '<span class="type-chips"><span class="type-chip is-plain">Sincronizado con GitHub</span></span></span></button>';
       this.typesEl.innerHTML = PT.TEMPLATES.map((t) => {
         const on = t.key === this.tipo;
         const chips = t.key === PT.CUSTOM_TYPE
@@ -331,10 +359,20 @@
           '<span class="type-body"><span class="type-name">' + esc(t.name) + '</span>' +
           '<span class="type-desc">' + esc(t.desc) + '</span>' +
           '<span class="type-chips">' + chips + '</span></span></button>';
-      }).join('');
+      }).join('') + github;
     }
 
     _renderCustom(){
+      const gh = this.tipo === GITHUB_TYPE;
+      this.ghEl.hidden = !gh;
+      if(gh){
+        const has = !!Workhub.services.github.token();
+        this.ghTokenField.hidden = has;
+        this.ghTokenSaved.hidden = !has;
+        this.nameInput.placeholder = 'Por defecto, el nombre del proyecto de GitHub';
+      } else {
+        this.nameInput.placeholder = 'Por ejemplo: Agencia, Freelance, Personal…';
+      }
       const custom = this.tipo === PT.CUSTOM_TYPE;
       this.customEl.hidden = !custom;
       if(!custom) return;

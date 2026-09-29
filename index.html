@@ -393,6 +393,15 @@
       <label for="fDesc">Descripción / notas</label>
       <textarea id="fDesc" maxlength="600" placeholder="Detalles, próximos pasos…"></textarea>
     </div>
+    <div class="field" id="fLabelsField">
+      <span class="field-label" id="fLabelsLabel">Etiquetas</span>
+      <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
+      <div class="label-new" id="fLabelNew" hidden>
+        <input id="fLabelName" maxlength="40" autocomplete="off" placeholder="Nombre de la etiqueta" aria-label="Nombre de la etiqueta">
+        <div class="label-colors" id="fLabelColors" role="radiogroup" aria-label="Color de la etiqueta"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="fLabelAdd">Crear</button>
+      </div>
+    </div>
     <div class="row2">
       <div class="field needs-clients">
         <label for="fCliente">Cliente / proyecto</label>
@@ -472,9 +481,21 @@
       <h3>Descripción</h3>
       <div class="tv-desc" id="tvDesc" translate="no"></div>
     </section>
+    <section class="tv-section" id="tvLabelsWrap" hidden>
+      <h3>Etiquetas</h3>
+      <div class="tv-chips" id="tvLabels"></div>
+    </section>
+    <section class="tv-section" id="tvPrsWrap" hidden>
+      <h3>Pull requests vinculadas</h3>
+      <div class="tv-chips" id="tvPrs"></div>
+    </section>
     <section class="tv-section">
       <h3>Notas <span class="tv-count" id="tvNotesCount"></span></h3>
       <div class="tv-notes" id="tvNotes"></div>
+    </section>
+    <section class="tv-section" id="tvGhWrap" hidden>
+      <h3>Actividad de GitHub</h3>
+      <ol class="gh-timeline" id="tvTimeline"></ol>
     </section>
     <section class="tv-section" id="tvLinksWrap" hidden>
       <h3>Vínculos</h3>
@@ -906,6 +927,7 @@
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
+<script src="src/views/labels.js"></script>
 <script src="src/views/plugin-icons.js"></script>
 <script src="src/views/extensions.js"></script>
 <script src="src/views/dropdown.js"></script>

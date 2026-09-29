@@ -22,6 +22,11 @@
   const NEW = '__new__';
   const BODY_MAX = 5000;
 
+  const sameNames = (a, b) => {
+    const x = (a || []).map((n) => n.toLowerCase()).sort().join('\n');
+    const y = (b || []).map((n) => n.toLowerCase()).sort().join('\n');
+    return x === y;
+  };
   const keyOf = (optionId) => 'g' + String(optionId).replace(/[^a-z0-9_-]/gi, '');
   const time = (iso) => (iso ? Date.parse(iso) || 0 : 0);
 
@@ -34,6 +39,8 @@
       this.lastResult = null;
       /* Configuración recién guardada que aún no ha llegado en la lista de proyectos. */
       this.pendingCfg = null;
+      /* Etiquetas de cada repositorio visto en la última sincronización: {repo: [{id, name, color}]} */
+      this.repoLabels = {};
       /* Tareas ya enviadas como nuevas en esta sesión (evita duplicados mientras llega su ghItemId). */
       this.sent = {};
     }
@@ -161,7 +168,9 @@
         return this._ensureColumns(proj.options, result);
       }).then(() => api.fetchItems(project.id, project.fieldName)).then((items) => {
         if(!alive()) throw new api.GithubError('changed', 'Se cambió de proyecto.');
-        return this._pull(items, cfg, result, alive).then(() => this._push(project, items, cfg, result, alive));
+        return this._loadRepoLabels(items, alive)
+          .then(() => this._pull(items, cfg, result, alive))
+          .then(() => this._push(project, items, cfg, result, alive));
       }).then(() => {
         result.at = Date.now();
         this.lastResult = result;
@@ -190,6 +199,37 @@
       });
     }
 
+    /* Etiquetas de los repositorios de los elementos; se suman al catálogo del proyecto. */
+    _loadRepoLabels(items, alive){
+      const repos = {};
+      items.forEach((it) => {
+        const c = it.content;
+        if(c.repository && c.labels) repos[c.repository.nameWithOwner] = true;
+      });
+      this.repoLabels = {};
+      let chain = Promise.resolve();
+      Object.keys(repos).forEach((repo) => {
+        chain = chain.then(() => api.fetchRepoLabels(repo).then((list) => { this.repoLabels[repo] = list; }, () => null));
+      });
+      return chain.then(() => {
+        if(!alive()) return null;
+        /* Catálogo = lo que ya había + etiquetas de los repositorios (con su color de GitHub). */
+        const current = this.app.controllers.projects.current() || {};
+        const catalog = (Array.isArray(current.labels) ? current.labels : []).map((l) => ({name:l.name, color:l.color}));
+        const seen = {};
+        catalog.forEach((l) => { seen[l.name.toLowerCase()] = l; });
+        Object.keys(this.repoLabels).forEach((repo) => {
+          this.repoLabels[repo].forEach((l) => {
+            const known = seen[l.name.toLowerCase()];
+            if(known) known.color = l.color;
+            else { const n = {name:l.name, color:l.color}; catalog.push(n); seen[l.name.toLowerCase()] = n; }
+          });
+        });
+        if(JSON.stringify(catalog) === JSON.stringify(current.labels || [])) return null;
+        return this.projects.patch(this.app.projectId, {labels:catalog.slice(0, 200)}).catch(() => null);
+      });
+    }
+
     _stageFor(item){
       const stages = TaskModel.STATUS;
       const key = item.status && item.status.optionId ? keyOf(item.status.optionId) : '';
@@ -198,12 +238,25 @@
 
     _remoteFields(item){
       const c = item.content;
+      const nodes = c.labels && c.labels.nodes;
+      const prs = c.closedByPullRequestsReferences && c.closedByPullRequestsReferences.nodes;
       return {
+        /* Solo incidencias y pull requests tienen etiquetas; los borradores no (null). */
+        labels: nodes ? nodes.map((l) => l.name) : null,
+        prs: prs ? prs.map((p) => ({n:p.number, url:p.url, state:p.state, title:String(p.title || '').slice(0, 120)})) : null,
         title: (c.title || '').slice(0, 200) || 'Sin título',
         desc: (c.body || '').slice(0, BODY_MAX),
         status: this._stageFor(item),
         remoteAt: Math.max(time(item.updatedAt), time(c.updatedAt))
       };
+    }
+
+    /* Etiquetas y pull requests que vienen de GitHub. */
+    _extraFields(r){
+      const out = {};
+      if(r.labels){ out.labels = r.labels.slice(0, 30); out.ghLabels = true; }
+      if(r.prs) out.ghPrs = r.prs;
+      return out;
     }
 
     _linkFields(item){
@@ -235,20 +288,44 @@
             return this.tasks.saveSynced(null, Object.assign({
               title: r.title, desc: r.desc, cliente: '', status: r.status, contacto: '', dueDate: '',
               ghRemoteAt: r.remoteAt
-            }, this._linkFields(item)));
+            }, this._extraFields(r), this._linkFields(item)));
           }
+          /* Tareas enlazadas antes de existir las etiquetas: se rellenan sin contar como cambio. */
+          if(r.labels && !t.ghLabels && !this._dirty(t)) this.tasks.update(t.id, this._extraFields(r));
           if(r.remoteAt <= (t.ghRemoteAt || 0)) return null;
-          const same = t.title === r.title && (t.desc || '') === r.desc && TaskModel.stageKey(t) === r.status;
-          if(same) return this.tasks.update(t.id, Object.assign({ghRemoteAt:r.remoteAt}, this._linkFields(item)));
+          const same = t.title === r.title && (t.desc || '') === r.desc && TaskModel.stageKey(t) === r.status &&
+            (!r.labels || !t.ghLabels || sameNames(t.labels, r.labels));
+          if(same) return this.tasks.update(t.id, Object.assign({ghRemoteAt:r.remoteAt}, this._extraFields(r), this._linkFields(item)));
           /* Cambiaron los dos lados: gana el más reciente. */
           if(this._dirty(t) && (t.updatedAt || 0) >= r.remoteAt) return null;
           result.updated++;
           return this.tasks.saveSynced(t.id, Object.assign({
             title: r.title, desc: r.desc, status: r.status, ghRemoteAt: r.remoteAt
-          }, this._linkFields(item)));
+          }, this._extraFields(r), this._linkFields(item)));
         });
       });
       return chain;
+    }
+
+    /* Etiquetas de una incidencia o pull request: añade y quita lo que difiere.
+       Solo se tocan las que ya existen en el repositorio. Devuelve la fecha nueva o null. */
+    _pushLabels(t, c, result){
+      if(!t.ghLabels || !Array.isArray(t.labels) || !c.labels || !c.repository) return Promise.resolve(null);
+      const remote = c.labels.nodes.map((l) => l.name);
+      const low = (a) => a.map((x) => x.toLowerCase());
+      const add = t.labels.filter((n) => low(remote).indexOf(n.toLowerCase()) === -1);
+      const rem = remote.filter((n) => low(t.labels).indexOf(n.toLowerCase()) === -1);
+      if(!add.length && !rem.length) return Promise.resolve(null);
+      const repo = this.repoLabels[c.repository.nameWithOwner] || [];
+      const ids = (names) => names.map((n) => repo.find((l) => l.name.toLowerCase() === n.toLowerCase())).filter(Boolean).map((l) => l.id);
+      const addIds = ids(add);
+      const remIds = ids(rem);
+      result.warnings += (add.length - addIds.length);
+      let at = null;
+      let chain = Promise.resolve();
+      if(addIds.length) chain = chain.then(() => api.addLabels(c.id, addIds)).then((x) => { at = x.updatedAt; });
+      if(remIds.length) chain = chain.then(() => api.removeLabels(c.id, remIds)).then((x) => { at = x.updatedAt; });
+      return chain.then(() => at);
     }
 
     /* Workhub → GitHub. */
@@ -283,6 +360,7 @@
             if(optionId && optionId !== (it.status && it.status.optionId)){
               step = step.then(() => api.setStatus(project.id, it.id, project.fieldId, optionId)).then((n) => n.updatedAt);
             }
+            step = step.then((at) => this._pushLabels(t, c, result).then((labelAt) => labelAt || at));
             return step.then((at) => {
               result.sent++;
               return this.tasks.markSynced(t.id, startedAt, {ghRemoteAt:Math.max(time(at), r.remoteAt)});

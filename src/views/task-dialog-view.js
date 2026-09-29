@@ -47,7 +47,88 @@
       this.lightbox = $('lightbox');
       this.lightboxImg = $('lightboxImg');
 
+      /* Etiquetas: las elegidas y el catálogo del proyecto. */
+      this.labelsEl = $('fLabels');
+      this.labelNew = $('fLabelNew');
+      this.labelName = $('fLabelName');
+      this.labelColors = $('fLabelColors');
+      this.labelAdd = $('fLabelAdd');
+      this.selected = [];
+      this.catalog = [];
+      this.newColor = Workhub.views.labels.PALETTE[0];
+      this.onCreateLabel = null;
+
       this._bindLocalUi();
+      this._bindLabels();
+    }
+
+    /* ---------- Etiquetas ---------- */
+
+    _bindLabels(){
+      this.labelsEl.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-label], button[data-label-new]');
+        if(!b) return;
+        if(b.hasAttribute('data-label-new')){
+          this.labelNew.hidden = !this.labelNew.hidden;
+          if(!this.labelNew.hidden) this.labelName.focus();
+          return;
+        }
+        const name = b.getAttribute('data-label');
+        const at = this.selected.findIndex((n) => n.toLowerCase() === name.toLowerCase());
+        if(at === -1) this.selected.push(name);
+        else this.selected.splice(at, 1);
+        this._renderLabels();
+      });
+      this.labelColors.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-color]');
+        if(!b) return;
+        this.newColor = b.getAttribute('data-color');
+        this._renderLabelColors();
+      });
+      const create = () => {
+        const name = this.labelName.value.trim();
+        if(!name) { this.labelName.focus(); return; }
+        if(!this.catalog.some((l) => l.name.toLowerCase() === name.toLowerCase())) this.catalog.push({name:name, color:this.newColor});
+        if(!this.selected.some((n) => n.toLowerCase() === name.toLowerCase())) this.selected.push(name);
+        if(this.onCreateLabel) this.onCreateLabel(name, this.newColor);
+        this.labelName.value = '';
+        this.labelNew.hidden = true;
+        this._renderLabels();
+      };
+      this.labelAdd.addEventListener('click', create);
+      /* Enter crea la etiqueta en vez de guardar la tarea. */
+      this.labelName.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); create(); }
+      });
+    }
+
+    /* handler(name, color): guarda la etiqueta nueva en el catálogo del proyecto. */
+    bindCreateLabel(handler){
+      this.onCreateLabel = handler;
+    }
+
+    setLabelCatalog(list){
+      this.catalog = (list || []).map((l) => ({name:l.name, color:l.color}));
+      this._renderLabels();
+    }
+
+    _renderLabels(){
+      const L = Workhub.views.labels;
+      /* Las elegidas que no estén en el catálogo (p. ej. venidas de GitHub) también se ven. */
+      const extra = this.selected.filter((n) => !this.catalog.some((l) => l.name.toLowerCase() === n.toLowerCase())).map((n) => ({name:n, color:''}));
+      this.labelsEl.innerHTML = this.catalog.concat(extra).map((l) => {
+        const on = this.selected.some((n) => n.toLowerCase() === l.name.toLowerCase());
+        return '<button type="button" class="label-chip is-toggle' + (on ? ' is-on' : '') + '" aria-pressed="' + on + '" data-label="' + esc(l.name) + '" translate="no" style="--lc:#' + L.color(l.color) + '">' + esc(l.name) + '</button>';
+      }).join('') + '<button type="button" class="label-add" data-label-new>+ Nueva etiqueta</button>';
+      this._renderLabelColors();
+    }
+
+    _renderLabelColors(){
+      const L = Workhub.views.labels;
+      this.labelColors.innerHTML = L.PALETTE.map((c) => {
+        const on = c === this.newColor;
+        return '<button type="button" class="stage-color' + (on ? ' is-selected' : '') + '" role="radio" aria-checked="' + on + '" data-color="' + c + '" style="--c:#' + c + '" aria-label="#' + c + '"></button>';
+      }).join('');
     }
 
     /* Interacciones que no tocan datos: imagen adjunta y visor de imágenes. */
@@ -147,7 +228,8 @@
         cliente: this.cliente.value() || '',
         status: this.fields.estado.value,
         contacto: this.fields.contacto.value.trim(),
-        dueDate: this.fields.fecha.value || ''
+        dueDate: this.fields.fecha.value || '',
+        labels: this.selected.slice()
       };
     }
 
@@ -155,6 +237,9 @@
       this.form.reset();
       this.resetNoteForm();
       this.fields.id.value = '';
+      this.selected = [];
+      this.labelNew.hidden = true;
+      this._renderLabels();
       this.title.textContent = 'Nueva tarea';
       this.fields.estado.value = status || Workhub.models.TaskModel.STATUS[0].key;
       this.cliente.reset(clientNames, defaultCliente);
@@ -174,6 +259,9 @@
       this.fields.estado.value = Workhub.models.TaskModel.stageKey(t);
       this.fields.contacto.value = t.contacto || '';
       this.fields.fecha.value = t.dueDate || '';
+      this.selected = Array.isArray(t.labels) ? t.labels.slice() : [];
+      this.labelNew.hidden = true;
+      this._renderLabels();
       this.cliente.reset(clientNames, t.cliente || '');
       this.btnDelete.hidden = false;
       this.notesSection.hidden = false;

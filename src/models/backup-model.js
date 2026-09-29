@@ -84,6 +84,7 @@
           status: t.status || '',
           contacto: t.contacto || '',
           dueDate: t.dueDate || '',
+          labels: Array.isArray(t.labels) ? t.labels.filter((n) => typeof n === 'string').slice(0, 30) : [],
           order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()

@@ -68,7 +68,7 @@
       return this.items.filter((t) => {
         if(cliente && (t.cliente || 'Sin cliente') !== cliente) return false;
         if(q){
-          const hay = ((t.title || '') + ' ' + (t.desc || '') + ' ' + (t.cliente || '') + ' ' + (t.contacto || '')).toLowerCase();
+          const hay = ((t.title || '') + ' ' + (t.desc || '') + ' ' + (t.cliente || '') + ' ' + (t.contacto || '') + ' ' + (Array.isArray(t.labels) ? t.labels.join(' ') : '')).toLowerCase();
           if(hay.indexOf(q) === -1) return false;
         }
         return true;

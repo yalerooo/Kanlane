@@ -163,6 +163,7 @@
       if(p.tipo) data.tipo = p.tipo;
       if(Array.isArray(p.stages)) data.stages = p.stages;
       if(typeof p.clients === 'boolean') data.clients = p.clients;
+      if(Array.isArray(p.labels)) data.labels = p.labels.slice(0, 60);
       prefs.write(PROJECT_PREF, JSON.stringify(data));
     }
 

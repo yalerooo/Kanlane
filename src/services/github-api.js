@@ -97,8 +97,9 @@
     'status:fieldValueByName(name:$field){... on ProjectV2ItemFieldSingleSelectValue{optionId}} ' +
     'content{__typename ' +
       '... on DraftIssue{id title body updatedAt} ' +
-      '... on Issue{id title body url number state updatedAt repository{nameWithOwner}} ' +
-      '... on PullRequest{id title body url number state updatedAt repository{nameWithOwner}}}';
+      '... on Issue{id title body url number state updatedAt repository{nameWithOwner} labels(first:20){nodes{name color}} ' +
+        'closedByPullRequestsReferences(first:10,includeClosedPrs:true){nodes{number url state title}}} ' +
+      '... on PullRequest{id title body url number state updatedAt repository{nameWithOwner} labels(first:20){nodes{name color}}}}';
 
   /* Todos los elementos del proyecto (sin archivados). */
   function fetchItems(projectId, fieldName){
@@ -138,7 +139,65 @@
     return graphql(q, {i:issueId, t:title, b:body || ''}).then((d) => d.updateIssue.issue);
   }
 
+  /* Etiquetas de un repositorio: [{id, name, color, description}]. */
+  function fetchRepoLabels(repo){
+    const parts = String(repo).split('/');
+    const q = 'query($o:String!,$n:String!){repository(owner:$o,name:$n){labels(first:100){nodes{id name color description}}}}';
+    return graphql(q, {o:parts[0], n:parts[1]}).then((d) => (d.repository && d.repository.labels.nodes) || []);
+  }
+
+  function changeLabels(mutation, labelableId, labelIds){
+    const q = 'mutation($i:ID!,$l:[ID!]!){' + mutation + '(input:{labelableId:$i,labelIds:$l}){labelable{... on Issue{updatedAt} ... on PullRequest{updatedAt}}}}';
+    return graphql(q, {i:labelableId, l:labelIds}).then((d) => d[mutation].labelable);
+  }
+  const addLabels = (id, labelIds) => changeLabels('addLabelsToLabelable', id, labelIds);
+  const removeLabels = (id, labelIds) => changeLabels('removeLabelsFromLabelable', id, labelIds);
+
+  /* Actividad de una incidencia o pull request (línea de tiempo). Si GitHub
+     no reconoce algún tipo de evento, se reintenta con menos. */
+  const PR = '... on PullRequest{number title url}';
+  const ACTOR = 'createdAt actor{login}';
+  const EVENTS_BASIC = [
+    '... on AssignedEvent{' + ACTOR + ' assignee{... on User{login}}}',
+    '... on UnassignedEvent{' + ACTOR + ' assignee{... on User{login}}}',
+    '... on LabeledEvent{' + ACTOR + ' label{name color}}',
+    '... on UnlabeledEvent{' + ACTOR + ' label{name color}}',
+    '... on ConnectedEvent{' + ACTOR + ' subject{' + PR + '}}',
+    '... on CrossReferencedEvent{' + ACTOR + ' willCloseTarget source{' + PR + '}}',
+    '... on ClosedEvent{' + ACTOR + ' closer{' + PR + '}}',
+    '... on ReopenedEvent{' + ACTOR + '}',
+    '... on IssueComment{createdAt author{login} body}'
+  ];
+  const EVENTS_PROJECT = [
+    '... on AddedToProjectV2Event{' + ACTOR + ' project{title}}',
+    '... on ProjectV2ItemStatusChangedEvent{' + ACTOR + ' previousStatus status project{title}}'
+  ];
+
+  function detailsQuery(events){
+    const body = 'labels(first:20){nodes{name color}} timelineItems(first:100){nodes{__typename ' + events.join(' ') + '}}';
+    return 'query($id:ID!){node(id:$id){... on Issue{' + body + ' closedByPullRequestsReferences(first:20,includeClosedPrs:true){nodes{number title url state}}} ' +
+      '... on PullRequest{' + body + '}}}';
+  }
+
+  function fetchDetails(contentId){
+    const tries = [EVENTS_BASIC.concat(EVENTS_PROJECT), EVENTS_BASIC];
+    const attempt = (i) => graphql(detailsQuery(tries[i]), {id:contentId}).catch((err) => {
+      if(err.code === 'graphql' && i + 1 < tries.length) return attempt(i + 1);
+      throw err;
+    });
+    return attempt(0).then((d) => {
+      const n = d.node;
+      if(!n) throw new GithubError('not-found', 'No se pudo leer la actividad de GitHub.');
+      return {
+        labels: (n.labels && n.labels.nodes) || [],
+        prs: (n.closedByPullRequestsReferences && n.closedByPullRequestsReferences.nodes) || [],
+        events: (n.timelineItems && n.timelineItems.nodes || []).filter((e) => e && e.__typename)
+      };
+    });
+  }
+
   Workhub.services.github = {
+    fetchRepoLabels, addLabels, removeLabels, fetchDetails,
     GithubError, token, setToken, parseProjectUrl,
     fetchProject, fetchItems, setStatus, addDraft, updateDraft, updateIssue
   };

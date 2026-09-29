@@ -89,3 +89,80 @@
   .project-mark{width:26px;height:26px;}
   .project-switch-sub{display:none;}
 }
+
+/* Tipo de proyecto y etapas del tablero */
+#dlgProject{width:min(520px, calc(100vw - 32px));}
+.type-picker{display:grid;gap:8px;}
+.type-option{
+  display:flex;
+  gap:11px;
+  align-items:flex-start;
+  width:100%;
+  padding:10px 12px;
+  text-align:left;
+  font:inherit;
+  color:inherit;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  cursor:pointer;
+  transition:border-color .12s ease, box-shadow .12s ease;
+}
+.type-option:hover{border-color:var(--line-strong);}
+.type-option:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.type-option.is-selected{border-color:var(--accent-solid);box-shadow:0 0 0 1px var(--accent-solid);}
+.type-radio{
+  flex:none;
+  width:16px;
+  height:16px;
+  margin-top:2px;
+  border-radius:50%;
+  border:1.5px solid var(--line-strong);
+  background:var(--surface);
+}
+.type-option.is-selected .type-radio{border:5px solid var(--accent-solid);}
+.type-body{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.type-name{font-size:13.5px;font-weight:600;color:var(--ink);}
+.type-desc{font-size:12.5px;line-height:1.4;color:var(--ink-soft);}
+.type-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.type-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:2px 8px;
+  font-size:11.5px;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border-radius:999px;
+}
+.type-chip i{width:6px;height:6px;border-radius:50%;flex:none;}
+.type-chip.is-plain{background:none;padding-left:0;color:var(--ink-faint);}
+.type-note{margin:-4px 0 12px;font-size:12.5px;color:var(--ink-soft);}
+
+.stage-editor{display:grid;gap:6px;}
+.stage-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto auto;gap:6px;align-items:center;}
+.stage-color{
+  width:22px;
+  height:22px;
+  padding:0;
+  border:2px solid var(--surface);
+  border-radius:50%;
+  background:var(--c);
+  box-shadow:0 0 0 1px var(--line-strong);
+  cursor:pointer;
+}
+.stage-color:hover{box-shadow:0 0 0 1px var(--ink-faint);}
+.stage-done{display:inline-flex;align-items:center;gap:5px;padding:0 4px;font-size:12px;color:var(--ink-soft);cursor:pointer;}
+.stage-btn{width:28px;height:28px;}
+.stage-btn:disabled{opacity:.35;pointer-events:none;}
+.stage-add{align-self:flex-start;margin-top:2px;}
+.check-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--ink);cursor:pointer;}
+
+@media (max-width:520px){
+  .stage-row{gap:4px;}
+  .stage-btn{width:26px;}
+}
+
+/* Proyectos sin clientes */
+.clients-off{display:none !important;}
+body.no-clients .client-chip{display:none;}

@@ -164,6 +164,15 @@
     render();
   }
 
+  /* Etapas finales del proyecto (las que cuentan como terminadas). */
+  var doneKeys = [];
+  function isDone(t){ return doneKeys.indexOf(t.status) !== -1; }
+  function loadDoneKeys(){
+    return wh.statuses().then(function(list){
+      doneKeys = list.filter(function(s){ return s.done; }).map(function(s){ return s.key; });
+    });
+  }
+
   function weekTotal(){
     var weekAgo = Date.now() - 7 * 864e5;
     return sessions.reduce(function(n, s){ return s.end >= weekAgo ? n + (s.end - Math.max(s.start, weekAgo)) : n; }, 0);
@@ -171,7 +180,7 @@
 
   function render(){
     if(running) selected = running.taskId;
-    var open = tasks.filter(function(t){ return t.status !== 'completada' || t.id === selected; })
+    var open = tasks.filter(function(t){ return !isDone(t) || t.id === selected; })
       .sort(function(a, b){ return (a.cliente || '').localeCompare(b.cliente || '', WorkhubPlugin.lang) || a.title.localeCompare(b.title, WorkhubPlugin.lang); });
     var elapsed = running ? Date.now() - running.startedAt : 0;
     var rt = running && task(running.taskId);
@@ -234,12 +243,12 @@
     wh.on('tasks', function(list){ tasks = list; render(); });
     /* Se inició o paró desde una tarea: releer. */
     wh.on('storage', function(){ load().then(render); });
-    wh.on('project', function(){ clearInterval(tick); selected = ''; wh.tasks.list().then(function(list){ tasks = list; return load(); }).then(render); });
+    wh.on('project', function(){ clearInterval(tick); selected = ''; loadDoneKeys().then(function(){ return wh.tasks.list(); }).then(function(list){ tasks = list; return load(); }).then(render); });
   }
 
   WorkhubPlugin.connect(MANIFEST).then(function(client){
     wh = client;
-    return wh.tasks.list();
+    return loadDoneKeys().then(function(){ return wh.tasks.list(); });
   }).then(function(list){
     tasks = list;
     return load();

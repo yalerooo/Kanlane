@@ -72,6 +72,42 @@
       return this.models.clients.names();
     }
 
+    clientsEnabled(){
+      return this.config ? this.config.clients : true;
+    }
+
+    /* Aplica el tipo del proyecto abierto: etapas del tablero y si hay clientes.
+       Solo repinta si algo cambió respecto a lo último aplicado. */
+    applyProjectConfig(cfg){
+      const sig = JSON.stringify(cfg);
+      if(this.configSig === sig) return;
+      const clientsChanged = !this.config || this.config.clients !== cfg.clients;
+      this.config = cfg;
+      this.configSig = sig;
+      M.TaskModel.setStages(cfg.stages);
+      this.fillStatusSelects();
+      Workhub.clientsEnabled = cfg.clients;
+      this.shell.setClientsEnabled(cfg.clients);
+      if(!cfg.clients && this.shell.isVisible('clients')) this.navigate('tasks');
+      const c = this.controllers;
+      c.tasks.render();
+      c.tasks.refreshDetail();
+      c.calendar.render();
+      if(clientsChanged) c.clients.render();
+      this.updateCounts();
+    }
+
+    /* Las opciones de estado de los formularios salen de las etapas del proyecto. */
+    fillStatusSelects(){
+      const html = M.TaskModel.STATUS.map((s) => '<option value="' + Workhub.utils.html.esc(s.key) + '">' + Workhub.utils.html.esc(s.label) + '</option>').join('');
+      ['fEstado', 'tvEstado'].forEach((id) => {
+        const el = document.getElementById(id);
+        const prev = el.value;
+        el.innerHTML = html;
+        el.value = M.TaskModel.STATUS.some((s) => s.key === prev) ? prev : M.TaskModel.STATUS[0].key;
+      });
+    }
+
     /* Crea un cliente desde cualquier formulario; false si aún no hay conexión. */
     createClient(name){
       if(!this.models.clients.isReady()) return false;
@@ -82,7 +118,7 @@
       const m = this.models;
       const TaskModel = M.TaskModel;
       const today = Workhub.utils.dates.todayYmd();
-      const open = m.tasks.items.filter((t) => t.status !== 'completada');
+      const open = m.tasks.items.filter((t) => !TaskModel.isDone(t));
       const overdue = open.some((t) => TaskModel.dueState(t) === 'overdue');
       const todayCount = m.meetings.items.filter((x) => x.date === today).length +
         open.filter((t) => t.dueDate === today).length;
@@ -122,6 +158,10 @@
     rememberProject(p){
       const data = {id:p.id, nombre:p.nombre};
       if(typeof p.color === 'number') data.color = p.color;
+      /* Tipo y etapas, para pintar bien el tablero antes de que llegue la lista. */
+      if(p.tipo) data.tipo = p.tipo;
+      if(Array.isArray(p.stages)) data.stages = p.stages;
+      if(typeof p.clients === 'boolean') data.clients = p.clients;
       prefs.write(PROJECT_PREF, JSON.stringify(data));
     }
 
@@ -145,9 +185,10 @@
       if(p.nombre) this.rememberProject(p);
       this.shell.resetFilters();
       this.connectProject();
+      /* Primero el tipo del proyecto (etapas, clientes): lo que sigue ya lo usa. */
+      this.controllers.projects.render();
       this.controllers.vault.onProjectChange();
       this.controllers.plugins.onProjectChange();
-      this.controllers.projects.render();
       this.updateCounts();
       if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
     }

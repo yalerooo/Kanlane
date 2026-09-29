@@ -91,8 +91,8 @@
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);
       this.top.innerHTML =
-        (t.cliente ? clientColors.chip(t.cliente) : '<span class="tv-muted">Sin cliente</span>') +
-        '<span class="status-pill" style="--st:' + s.fg + ';--st-bg:' + s.bg + '"><span class="dot" style="background:' + s.dot + '"></span>' + esc(s.label) + '</span>';
+        (Workhub.clientsEnabled === false ? '' : (t.cliente ? clientColors.chip(t.cliente) : '<span class="tv-muted">Sin cliente</span>')) +
+        '<span class="status-pill" style="--st:' + s.fg + ';--st-bg:' + s.bg + '"><span class="dot" style="background:' + s.dot + '"></span>' + '<span translate="no">' + esc(s.label) + '</span></span>';
       this.title.textContent = t.title || 'Sin título';
       /* La fecha límite siempre; el resto solo si tiene valor (las tareas
          importadas de copias antiguas no traen fechas reales de creación). */
@@ -107,7 +107,8 @@
       this.descWrap.hidden = !t.desc;
       this.desc.textContent = t.desc || '';
 
-      if(this.estado.value !== (t.status || 'pendiente')) this.estado.value = t.status || 'pendiente';
+      const stage = TaskModel.stageKey(t);
+      if(this.estado.value !== stage) this.estado.value = stage;
       this.renderLinks(t, ctx);
     }
 

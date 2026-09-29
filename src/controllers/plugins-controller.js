@@ -30,7 +30,7 @@
   const sameSet = (a, b) => a.length === b.length && a.every((x) => b.indexOf(x) !== -1);
 
   /* Copias limpias de los datos: nada de ids de vínculos a contraseñas. */
-  const cleanTask = (t) => ({id:t.id, title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', status:t.status || 'pendiente',
+  const cleanTask = (t) => ({id:t.id, title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', status:TaskModel.stageKey(t),
     dueDate:t.dueDate || '', contacto:t.contacto || '', createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
   const cleanClient = (c) => ({id:c.id, nombre:c.nombre || '', color:typeof c.color === 'number' ? c.color : null});
   const cleanContact = (c) => ({id:c.id, cliente:c.cliente || '', nombre:c.nombre || '', email:c.email || '', telefono:c.telefono || '', notas:c.notas || ''});
@@ -459,7 +459,7 @@
       const who = {id:p.id, name:name, hue:typeof manifest.color === 'number' ? manifest.color : null};
       switch(method){
         case 'app.statuses':
-          return TaskModel.STATUS.map((s) => ({key:s.key, label:s.label}));
+          return TaskModel.STATUS.map((s) => ({key:s.key, label:Workhub.t(s.label), done:s.done, color:s.color}));
         case 'tasks.list':
           return m.tasks.items.map(cleanTask);
         case 'tasks.create': return this.createTask(params);
@@ -514,7 +514,7 @@
       if(!tasks.isReady()) throw fail('not-ready', 'Los datos todavía se están cargando.');
       const title = str(params.title, 200);
       if(!title) throw fail('bad-params', 'La tarea necesita un título.');
-      const status = TaskModel.STATUS.some((s) => s.key === params.status) ? params.status : 'pendiente';
+      const status = TaskModel.STATUS.some((s) => s.key === params.status) ? params.status : TaskModel.STATUS[0].key;
       const dueDate = YMD.test(params.dueDate || '') ? params.dueDate : '';
       return tasks.save(null, {
         title: title,
@@ -546,7 +546,7 @@
       const status = typeof src.status === 'string' ? src.status : null;
       if(status && !TaskModel.STATUS.some((s) => s.key === status)) throw fail('bad-params', 'Estado desconocido.');
       const work = [];
-      if(status && status !== t.status) work.push(Promise.resolve(tasks.move(t.id, status)));
+      if(status && status !== TaskModel.stageKey(t)) work.push(Promise.resolve(tasks.move(t.id, status)));
       if(Object.keys(patch).length) work.push(tasks.save(t.id, patch));
       return Promise.all(work).then(() => true);
     }

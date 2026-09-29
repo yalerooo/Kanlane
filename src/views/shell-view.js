@@ -10,6 +10,12 @@
     settings: ['Ajustes', 'Personaliza el aspecto de Workhub.']
   };
 
+  /* Textos de los proyectos sin clientes. */
+  const PAGE_INFO_NO_CLIENTS = {
+    tasks: ['Tareas', 'Organiza las tareas por etapa. Arrastra las tarjetas para moverlas entre columnas.'],
+    calendar: ['Calendario', 'Fechas límite de las tareas y reuniones programadas.']
+  };
+
   const SECTION_IDS = {
     tasks: 'viewTasks',
     calendar: 'viewCalendar',
@@ -28,6 +34,8 @@
       this.pageDesc = document.getElementById('pageDesc');
       this.btnNewTask = document.getElementById('btnNew');
       this.storageLabel = document.getElementById('storageLabel');
+      this.clientsOn = true;
+      this.currentView = 'tasks';
       this.sections = {};
       Object.keys(SECTION_IDS).forEach((k) => { this.sections[k] = document.getElementById(SECTION_IDS[k]); });
     }
@@ -59,9 +67,38 @@
       });
       Object.keys(this.sections).forEach((k) => { this.sections[k].hidden = k !== view; });
       this.btnNewTask.hidden = view !== 'tasks';
-      const info = PAGE_INFO[view] || PAGE_INFO.tasks;
+      this.currentView = view;
+      this._renderInfo();
+    }
+
+    _renderInfo(){
+      const view = this.currentView;
+      const info = (!this.clientsOn && PAGE_INFO_NO_CLIENTS[view]) || PAGE_INFO[view] || PAGE_INFO.tasks;
       this.pageTitle.textContent = info[0];
       this.pageDesc.textContent = info[1];
+    }
+
+    /* Proyectos sin clientes: se ocultan la sección Clientes y todo lo que
+       depende de ellos (filtros, campos de formulario, etiquetas). */
+    setClientsEnabled(on){
+      this.clientsOn = on;
+      document.body.classList.toggle('no-clients', !on);
+      document.querySelectorAll('.needs-clients').forEach((el) => {
+        el.classList.toggle('clients-off', !on);
+        const wrap = el.closest('.dd');
+        if(wrap) wrap.classList.toggle('clients-off', !on);
+      });
+      const holders = {
+        search: ['Buscar por título, cliente o contacto…', 'Buscar por título o contacto…'],
+        searchVault: ['Buscar por cliente, correo, web o IP…', 'Buscar por nombre, correo, web o IP…']
+      };
+      Object.keys(holders).forEach((id) => {
+        const el = document.getElementById(id);
+        if(el) el.setAttribute('placeholder', holders[id][on ? 0 : 1]);
+      });
+      const vCliente = document.getElementById('vCliente');
+      if(vCliente) vCliente.required = on;
+      this._renderInfo();
     }
 
     /* En móvil la barra de secciones es horizontal y desplazable. */

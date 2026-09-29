@@ -2,12 +2,14 @@
 (function(){
   const {todayYmd} = Workhub.utils.dates;
 
-  const STATUS = [
-    {key:'pendiente', label:'Pendiente', dot:'var(--st-pend)', bg:'var(--st-pend-bg)', fg:'var(--st-pend)'},
-    {key:'proceso', label:'En proceso', dot:'var(--st-proc)', bg:'var(--st-proc-bg)', fg:'var(--st-proc)'},
-    {key:'espera', label:'Esperando al cliente', dot:'var(--st-wait)', bg:'var(--st-wait-bg)', fg:'var(--st-wait)'},
-    {key:'completada', label:'Completada', dot:'var(--st-done)', bg:'var(--st-done-bg)', fg:'var(--st-done)'}
-  ];
+  /* Etapas del proyecto abierto. Es un único array que se rellena en el sitio
+     (setStages), así todos los que lo leen ven siempre las etapas actuales. */
+  const STATUS = [];
+
+  const stageView = (s) => {
+    const c = Workhub.models.ProjectTemplates.colorOf(s.color);
+    return {key:s.key, label:s.label, done:!!s.done, color:c.key, dot:c.dot, bg:c.bg, fg:c.fg};
+  };
 
   const ORDER_STEP = 1024;
 
@@ -16,14 +18,30 @@
       super('tasks');
     }
 
+    /* Cambia las etapas del tablero (al abrir otro proyecto o editar el actual). */
+    static setStages(stages){
+      STATUS.length = 0;
+      stages.forEach((s) => STATUS.push(stageView(s)));
+    }
+
     static statusOf(key){
       return STATUS.find((s) => s.key === key) || STATUS[0];
+    }
+
+    /* Etapa de la tarea; si su estado ya no existe (etapa eliminada, copia de
+       otro tipo de proyecto) cae en la primera para que nunca desaparezca. */
+    static stageKey(t){
+      return TaskModel.statusOf(t && t.status).key;
+    }
+
+    static isDone(t){
+      return !!TaskModel.statusOf(t && t.status).done;
     }
 
     /* '' (sin fecha) | 'done' | 'overdue' | 'today' | 'future' */
     static dueState(t){
       if(!t.dueDate) return '';
-      if(t.status === 'completada') return 'done';
+      if(TaskModel.isDone(t)) return 'done';
       const today = todayYmd();
       if(t.dueDate < today) return 'overdue';
       if(t.dueDate === today) return 'today';
@@ -42,7 +60,7 @@
     }
 
     inStatus(status){
-      return this.items.filter((t) => t.status === status).sort(TaskModel.byOrder);
+      return this.items.filter((t) => TaskModel.stageKey(t) === status).sort(TaskModel.byOrder);
     }
 
     filter(query, cliente){
@@ -59,7 +77,7 @@
 
     statsByClient(name){
       const own = this.items.filter((t) => t.cliente === name);
-      return {total:own.length, open:own.filter((t) => t.status !== 'completada').length};
+      return {total:own.length, open:own.filter((t) => !TaskModel.isDone(t)).length};
     }
 
     /* Las tareas nuevas van al final de su columna. */
@@ -85,7 +103,7 @@
       const prev = column[idx - 1];
       const next = column[idx];
       /* Soltada en el mismo sitio: nada que hacer. */
-      if(t.status === status && this.inStatus(status).indexOf(t) === idx) return;
+      if(TaskModel.stageKey(t) === status && this.inStatus(status).indexOf(t) === idx) return;
 
       let order;
       if(prev && next) order = (TaskModel.orderOf(prev) + TaskModel.orderOf(next)) / 2;
@@ -152,5 +170,6 @@
   }
 
   TaskModel.STATUS = STATUS;
+  TaskModel.setStages(Workhub.models.ProjectTemplates.stagesOf(Workhub.models.ProjectTemplates.DEFAULT_TYPE));
   Workhub.models.TaskModel = TaskModel;
 })();

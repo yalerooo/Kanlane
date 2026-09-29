@@ -21,7 +21,7 @@
         edit: (id) => this.openEdit(id),
         create: () => this.openNew()
       });
-      this.view.bindSubmit((id, nombre, color) => this.save(id, nombre, color));
+      this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
       this.view.bindDelete((id) => this.remove(id));
     }
 
@@ -39,6 +39,7 @@
     render(){
       const p = this.current();
       this.view.renderCurrent(p, this.projects.hueOf(p));
+      this.app.applyProjectConfig(this.projects.configOf(p));
       document.title = this.projects.list().length > 1 ? p.nombre + ' · Workhub' : 'Workhub';
     }
 
@@ -63,16 +64,16 @@
 
     openEdit(id){
       const p = this.projects.get(id || this.app.projectId);
-      if(p) this.view.openEdit(p, p.id !== ProjectModel.MAIN_ID);
+      if(p) this.view.openEdit(p, p.id !== ProjectModel.MAIN_ID, this.projects.configOf(p));
     }
 
-    save(id, nombre, color){
+    save(id, nombre, color, config){
       if(!this.projects.isReady()) return;
       this.view.setBusy(true);
       if(!id){
-        this.projects.create(nombre, color).then((ref) => {
+        this.projects.create(nombre, color, config).then((ref) => {
           this.justCreated = ref.id;
-          this.app.rememberProject({id:ref.id, nombre:nombre, color:color});
+          this.app.rememberProject(Object.assign({id:ref.id, nombre:nombre, color:color}, config));
           this.view.closeDialog();
           this.app.switchProject(ref.id, false);
           toast.success('Proyecto «' + nombre + '» creado');
@@ -82,7 +83,7 @@
         });
         return;
       }
-      this.projects.save(id, nombre, color).then(() => {
+      this.projects.save(id, nombre, color, config).then(() => {
         this.view.closeDialog();
         this.render();
         toast.success('Proyecto guardado');

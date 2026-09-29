@@ -103,8 +103,9 @@
       });
     }
 
-    setStorageMode(isLocal){
-      this.storageLabel.textContent = isLocal ? 'Modo local' : 'Sincronizado';
+    /* mode: 'local' | 'firebase' | 'claude' (ver services/platform.js) */
+    setStorageMode(mode){
+      this.storageLabel.textContent = mode === 'local' ? 'Modo local' : mode === 'firebase' ? 'En la nube' : 'Sincronizado';
     }
   }
 

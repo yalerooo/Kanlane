@@ -1,13 +1,21 @@
-/* Acceso a las capacidades del entorno (window.claude real en claude.ai o el
-   almacén local de src/core/local-storage-shim.js): base de datos, imágenes
-   subidas y descargas de archivos. */
+/* Acceso a las capacidades del entorno: base de datos, imágenes subidas y
+   descargas de archivos. Tres modos posibles:
+   - 'claude':   dentro de un Artifact de claude.ai (window.claude real);
+   - 'firebase': publicado en la web con cuenta de usuario (services/firebase-backend.js);
+   - 'local':    sin nada de lo anterior, en IndexedDB del navegador
+                 (core/local-storage-shim.js). */
 (function(){
   function isAvailable(){
     return !!(window.claude && window.claude.use);
   }
 
+  function mode(){
+    if(window.__workhubBackend) return window.__workhubBackend;
+    return window.__usingLocalStorageShim ? 'local' : 'claude';
+  }
+
   function isLocal(){
-    return !!window.__usingLocalStorageShim;
+    return mode() === 'local';
   }
 
   function use(name){
@@ -35,16 +43,18 @@
   }
 
   function assetSrc(assetId){
-    return isLocal() ? '' : ('/_blob/' + assetId);
+    return mode() === 'claude' ? ('/_blob/' + assetId) : '';
   }
 
-  /* En modo local las imágenes viven en IndexedDB: se resuelven a URLs blob. */
+  /* En modo local y en la nube las imágenes se resuelven a URLs al pintarlas. */
   function hydrateAssetImages(container){
-    if(!isLocal()) return;
+    if(mode() === 'claude') return;
+    const resolve = window.__assetUrl || window.__localAssetUrl;
+    if(!resolve) return;
     container.querySelectorAll('img[data-asset-id]').forEach((img) => {
       const id = img.getAttribute('data-asset-id');
       if(!id) return;
-      window.__localAssetUrl(id).then((url) => { if(url) img.src = url; });
+      resolve(id).then((url) => { if(url) img.src = url; }).catch(() => {});
     });
   }
 
@@ -57,5 +67,5 @@
     }
   }
 
-  Workhub.services.platform = {isAvailable, isLocal, connectDb, uploadAsset, download, assetSrc, hydrateAssetImages, whenReady};
+  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, uploadAsset, download, assetSrc, hydrateAssetImages, whenReady};
 })();

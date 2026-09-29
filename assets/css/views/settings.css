@@ -71,3 +71,5 @@
 .segmented button:hover{color:var(--ink);}
 .segmented button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow), 0 0 0 1px var(--line);}
 .storage-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);}
+.storage-block{display:flex;flex-direction:column;gap:12px;}
+.settings-account{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);}

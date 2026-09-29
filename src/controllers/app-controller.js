@@ -43,7 +43,7 @@
       [m.tasks, m.contacts, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
 
       this.shell.bindTabClick((view) => this.navigate(view));
-      this.shell.setStorageMode(platform.isLocal());
+      this.shell.setStorageMode(platform.mode());
     }
 
     /* Nombres de cliente ordenados, para los desplegables. */
@@ -87,6 +87,7 @@
 
     start(){
       const board = this.controllers.tasks.board;
+      this.shell.setStorageMode(platform.mode());
       if(!platform.isAvailable()){
         board.setMessage('Esta vista no admite el tablero interactivo.');
         return;

@@ -50,7 +50,11 @@
     }
 
     gate(){
-      if(!this.isEnabled()) return Promise.resolve();
+      if(!this.isEnabled()){
+        /* Sin Firebase (p. ej. dentro de claude.ai): la app se muestra ya. */
+        document.documentElement.classList.remove('auth-gate');
+        return Promise.resolve();
+      }
       return new Promise((resolve) => {
         this.resolveGate = resolve;
         this.boot();

@@ -13,6 +13,10 @@
   overflow-y:auto;
 }
 body.is-authing .app{display:none;}
+/* Mientras se comprueba la sesión (clase puesta en el <head>): nunca se ve la
+   app, y la pantalla de acceso se muestra desde el primer fotograma. */
+html.auth-gate .app{display:none !important;}
+html.auth-gate #authScreen{display:flex !important;}
 .auth-card{
   width:min(380px, 100%);
   background:var(--surface);

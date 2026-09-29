@@ -72,6 +72,16 @@ Consola → **Authentication** → **Comenzar** → pestaña **Sign-in method**.
 
 > **Una cuenta por correo.** Por defecto Firebase no deja tener dos cuentas con el mismo correo usando métodos distintos. Si alguien entró con Google y luego prueba con GitHub usando el mismo correo, Workhub le dirá que entre con el método original.
 
+### El acceso se completa en tu propia web
+
+Para que el inicio de sesión funcione aunque el navegador bloquee el almacenamiento entre sitios (Chrome, Safari y Firefox lo hacen cada vez más), Workhub completa el acceso en el mismo dominio desde el que se sirve (`TU-PROYECTO.web.app`) en lugar de `TU-PROYECTO.firebaseapp.com`. Firebase Hosting ya sirve esa ruta; solo hay que autorizarla en cada proveedor:
+
+- **Google**: <https://console.cloud.google.com/apis/credentials> (con tu proyecto seleccionado) → *IDs de clientes de OAuth 2.0* → **Web client (auto created by Google Service)** → en **URIs de redireccionamiento autorizados** añade `https://TU-PROYECTO.web.app/__/auth/handler` → Guardar.
+- **GitHub**: en tu OAuth App, añade esa misma URL como segunda *Redirect URI*.
+- **Microsoft**: en el registro de Azure → **Autenticación** → añade esa URL como otro URI de redirección web.
+
+Si más adelante usas un dominio propio, añádelo en `hostingDomains` de `src/config/firebase-config.js` y autoriza también `https://tu-dominio/__/auth/handler` en cada proveedor.
+
 ### Dominios autorizados
 En **Authentication** → **Settings** → **Authorized domains** ya están `localhost`, `TU-PROYECTO.web.app` y `TU-PROYECTO.firebaseapp.com`. Si usas un dominio propio (paso 7), añádelo aquí.
 

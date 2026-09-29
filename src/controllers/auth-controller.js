@@ -92,7 +92,15 @@
     signInWith(key){
       this.view.clearMessage();
       this.view.setBusy(true);
-      firebase.signInWith(key).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
+      /* Si la ventana de acceso se cierra sin resultado, algunos navegadores no
+         dejan saberlo (Cross-Origin-Opener-Policy): al volver a esta pestaña, se
+         reactivan los botones tras un momento para poder reintentar. */
+      const onFocus = () => setTimeout(() => { if(!this.user) this.view.setBusy(false); }, 1500);
+      window.addEventListener('focus', onFocus, {once:true});
+      firebase.signInWith(key).catch((err) => this.showError(err)).finally(() => {
+        window.removeEventListener('focus', onFocus);
+        this.view.setBusy(false);
+      });
     }
 
     submitEmail(mode, v){

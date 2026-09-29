@@ -31,6 +31,17 @@
     return !!(c.apiKey && c.projectId) && /^https?:$/.test(location.protocol) && !insideClaude;
   }
 
+  /* Dominio donde se completa el inicio de sesión. Si la web se sirve desde
+     Firebase Hosting (…web.app, …firebaseapp.com o un dominio propio listado en
+     hostingDomains), se usa ese mismo dominio: así el acceso ocurre en la propia
+     web y no depende del almacenamiento entre sitios, que Chrome, Safari o
+     Firefox bloquean cada vez más (el botón se quedaba "cargando" sin volver).
+     En localhost u otros sitios se usa authDomain tal cual. */
+  function resolveAuthDomain(c, host){
+    const own = [c.projectId + '.web.app', c.projectId + '.firebaseapp.com'].concat(c.hostingDomains || []);
+    return own.indexOf(host) !== -1 ? host : c.authDomain;
+  }
+
   function loadScript(src){
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
@@ -48,7 +59,7 @@
       fb = window.firebase;
       const c = config();
       fb.initializeApp({
-        apiKey: c.apiKey, authDomain: c.authDomain, projectId: c.projectId,
+        apiKey: c.apiKey, authDomain: resolveAuthDomain(c, location.host), projectId: c.projectId,
         storageBucket: c.storageBucket, messagingSenderId: c.messagingSenderId, appId: c.appId
       });
       auth = fb.auth();
@@ -241,7 +252,7 @@
   }
 
   Workhub.services.firebase = {
-    isEnabled, init, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
+    isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
     resetPassword, signOut, install,
     providers: () => (config().providers || ['google']).slice()
   };

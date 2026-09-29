@@ -15,6 +15,11 @@ window.WORKHUB_FIREBASE = {
   messagingSenderId: '1056897810807',
   appId: '1:1056897810807:web:dacc47f0a05651f91c6172',
 
+  /* Dominios propios desde los que se sirve la web (además de
+     workhub-26f50.web.app y .firebaseapp.com, que ya se reconocen solos).
+     Ejemplo: ['workhub.midominio.com']. Ver docs/FIREBASE.md, paso 7. */
+  hostingDomains: [],
+
   /* Botones de acceso que se muestran, en este orden. Cada uno debe estar
      activado en Firebase → Authentication → Sign-in method.
      Posibles: 'google', 'github', 'microsoft', 'apple', 'password'. */

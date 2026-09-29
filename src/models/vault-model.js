@@ -173,6 +173,14 @@
       });
     }
 
+    /* Cada proyecto tiene su propio gestor: al cambiar, se bloquea y se vuelve
+       a comprobar si tiene contraseña maestra. */
+    connect(db){
+      this.lock();
+      this.metaState = null;
+      super.connect(db);
+    }
+
     lock(){
       this.key = null;
       this.unlocked = false;

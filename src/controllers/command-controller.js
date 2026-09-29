@@ -12,8 +12,10 @@
     user: svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
     meeting: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>'),
     theme: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    project: svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'),
     download: svg('<path d="M12 4v12M6 10l6 6 6-6M5 20h14"/>')
   };
+  const projectIcon = (hue, name) => '<span class="project-mark is-xs" style="--h:' + hue + '">' + Workhub.utils.html.esc(Workhub.utils.html.initials(name)) + '</span>';
   const clientIcon = (hue) => '<span class="dot" style="border-radius:2px;background:hsl(' + hue + ' 62% 52%)"></span>';
 
   const VIEW_NAMES = {tasks:'Tareas', calendar:'Calendario', contacts:'Contactos', vault:'Contraseñas', clients:'Clientes', data:'Copia de seguridad', settings:'Ajustes'};
@@ -90,6 +92,8 @@
         {title:'Nueva credencial', icon:ICONS.plus, run:() => { app.navigate('vault'); if(app.models.vault.unlocked) c.vault.openNew(); }},
         {title:'Nuevo cliente', icon:ICONS.plus, run:() => { app.navigate('clients'); const el = document.getElementById('newClientName'); if(el) el.focus(); }}
       ];
+      list.push({title:'Nuevo proyecto', icon:ICONS.project, run:() => c.projects.openNew()});
+      list.push({title:'Editar proyecto actual', icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {
         list.push({title:'Ir a ' + VIEW_NAMES[v], icon:ICONS.go, run:() => app.navigate(v)});
       });
@@ -101,6 +105,17 @@
         list.push({title:'Cerrar sesión', meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
       }
       return list;
+    }
+
+    /* Cambiar a cualquier otro proyecto. */
+    projectItems(){
+      const projects = this.app.models.projects;
+      return projects.list().filter((p) => p.id !== this.app.projectId).map((p) => ({
+        title: p.nombre,
+        meta: 'Cambiar de proyecto',
+        icon: projectIcon(projects.hueOf(p), p.nombre),
+        run: () => this.app.switchProject(p.id, true)
+      }));
     }
 
     search(query){
@@ -159,15 +174,18 @@
           run: () => this.showClientTasks(cl.nombre)
         }));
 
+      const projects = this.projectItems().filter((p) => !q || has(p.title, 'proyecto')).slice(0, MAX_PER_GROUP);
+
       /* Si lo escrito es el principio de una acción ("nueva…", "ir a…"), las acciones van primero. */
       const actionFirst = actions.some((a) => a.title.toLowerCase().indexOf(q) === 0);
       const actionGroup = {label:'Acciones', items:actions.slice(0, MAX_PER_GROUP)};
       const groups = q
         ? (actionFirst ? [actionGroup] : []).concat(
             [{label:'Tareas', items:tasks}, {label:'Contactos', items:contacts}, {label:'Reuniones', items:meetings},
-             {label:'Clientes', items:clients}],
+             {label:'Clientes', items:clients}, {label:'Proyectos', items:projects}],
             actionFirst ? [] : [actionGroup])
         : [{label:'Acciones', items:actions.slice(0, 5)}, {label:'Tareas abiertas recientes', items:tasks},
+           {label:'Proyectos', items:projects},
            {label:'Ir a', items:actions.filter((a) => a.title.indexOf('Ir a') === 0)}];
       this.view.render(groups);
     }

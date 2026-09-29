@@ -20,7 +20,7 @@
         return;
       }
       this.view.setExporting(true);
-      this.backup.build().then((result) => {
+      this.backup.build(this.app.controllers.projects.current().nombre).then((result) => {
         return platform.download(result.filename, result.json).then(() => {
           const c = result.counts;
           toast.success('Copia de seguridad descargada');

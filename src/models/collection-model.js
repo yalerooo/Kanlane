@@ -7,19 +7,37 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     this.items = [];
     this.col = null;
     this.db = null;
+    this.stop = null;
+    /* Sube en cada conexión: descarta lo que llegue de una escucha anterior. */
+    this.generation = 0;
   }
 
   connect(db){
+    this.disconnect();
+    const gen = ++this.generation;
     this.db = db;
     this.col = db.collection(this.name);
-    this.col.onSnapshot((snap) => {
+    this.stop = this.col.onSnapshot((snap) => {
+      if(gen !== this.generation) return;
       this.items = snap.docs.map((d) => {
         const data = d.data() || {};
         data.id = d.id;
         return data;
       });
       this.emit('change');
-    }, (err) => this.emit('error', err));
+    }, (err) => { if(gen === this.generation) this.emit('error', err); });
+  }
+
+  /* Deja de escuchar y vacía los datos (al cambiar de proyecto). */
+  disconnect(){
+    if(!this.col) return;
+    this.generation++;
+    if(typeof this.stop === 'function') this.stop();
+    this.stop = null;
+    this.col = null;
+    this.db = null;
+    this.items = [];
+    this.emit('change');
   }
 
   isReady(){

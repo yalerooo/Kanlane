@@ -12,6 +12,8 @@ https://claude.ai/artifact/Dq9bYTctaT6ykhXeEVmwW5
 - `src/` — el código JavaScript, organizado en MVC (ver abajo).
 - `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
 - `start-workhub.bat` — doble clic y ya está (ver abajo).
+- `firebase.json`, `firestore.rules`, `firestore.indexes.json` y `src/config/firebase-config.js` — publicación en la web con inicio de sesión (ver abajo).
+- `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
 
 ## Arquitectura (MVC)
 
@@ -24,7 +26,9 @@ src/
   core/         namespace global, emisor de eventos y almacén local (IndexedDB) sin Claude
   utils/        HTML/iconos, fechas, URLs, ayudas de interfaz (copiar, arrastrar y soltar)
                 y desplazamiento automático al arrastrar
-  services/     acceso a la plataforma (db, imágenes, descargas), cifrado y preferencias
+  config/       configuración de Firebase (vacía = modo local)
+  services/     acceso a la plataforma (db, imágenes, descargas), backend de Firebase,
+                cifrado y preferencias
   models/       datos y reglas de negocio: tareas, clientes, contactos, reuniones,
                 contraseñas (cifrado y recuperación), ajustes y copia de seguridad
   views/        solo DOM: pintan el estado y avisan de las acciones del usuario
@@ -48,6 +52,16 @@ Detalles de interfaz:
 - **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.
 
 Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Workhub`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.
+
+## Publicarlo en la web con inicio de sesión (Firebase)
+
+Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión (Google, GitHub, Microsoft y correo) y los datos de cada usuario en Firestore, con el plan gratuito de Firebase, que no se pausa por inactividad. Sigue **[docs/FIREBASE.md](docs/FIREBASE.md)**; en resumen:
+
+1. Crea el proyecto en la consola de Firebase y copia su configuración en `src/config/firebase-config.js`.
+2. Activa los métodos de acceso (Authentication → Sign-in method) y crea la base de datos Firestore.
+3. `firebase deploy --only hosting,firestore`.
+
+Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 
 ## Cómo lanzarlo en local
 

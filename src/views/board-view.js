@@ -322,6 +322,8 @@
       (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
       '<h3 translate="no">' + esc(t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
+      (Array.isArray(t.labels) && t.labels.length ? '<div class="card-labels">' + Workhub.views.labels.chips(t.labels, 3) + '</div>' : '') +
+      (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';

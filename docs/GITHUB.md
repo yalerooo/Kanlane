@@ -26,6 +26,9 @@ Cada proyecto de Workhub puede enlazarse con un proyecto de GitHub distinto. El 
 | Elemento nuevo en GitHub | Aparece como tarea en Workhub |
 | Tarea nueva en Workhub | Se crea en GitHub como **borrador** del proyecto (si está activado *Enviar a GitHub las tareas nuevas*) |
 | Columna nueva en GitHub | Se añade una columna en Workhub |
+| **Etiquetas** de una incidencia o pull request | Se sincronizan en los dos sentidos. En Workhub se eligen en el formulario de la tarea (con el catálogo de etiquetas de los repositorios de GitHub, con sus colores) y también se pueden crear etiquetas propias. Al enviar a GitHub solo se aplican las que ya existen en el repositorio; las demás se quedan en Workhub. Los borradores del proyecto no tienen etiquetas en GitHub |
+| **Pull requests vinculadas** | Aparecen como chips en la tarjeta (verde abierta, morada fusionada, roja cerrada) y con enlace en la ficha. Solo se leen |
+| **Actividad** de la incidencia | La ficha de la tarea muestra su línea de tiempo de GitHub (asignaciones, etiquetas, movimientos en el proyecto, pull requests vinculadas, cierres, reaperturas y comentarios). Solo se lee; no se puede comentar desde Workhub |
 | Cambian los dos lados a la vez | Gana el cambio más reciente |
 | Borrar | **No se sincroniza.** Lo borrado en Workhub no vuelve a importarse; lo borrado en GitHub se queda en Workhub |
 

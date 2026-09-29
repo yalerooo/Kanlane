@@ -51,6 +51,7 @@
       const p = this.current();
       this.view.renderCurrent(p, this.projects.hueOf(p));
       this.app.applyProjectConfig(this.projects.configOf(p));
+      this.applyLabels(p);
       document.title = this.projects.list().length > 1 ? p.nombre + ' · Workhub' : 'Workhub';
     }
 
@@ -66,6 +67,31 @@
       const p = this.current();
       if(p.id === id) this.app.rememberProject(p);
       this.render();
+    }
+
+    /* Catálogo de etiquetas del proyecto abierto; repinta si cambia. */
+    labels(){
+      const p = this.current();
+      return p && Array.isArray(p.labels) ? p.labels : [];
+    }
+
+    applyLabels(p){
+      const list = Array.isArray(p.labels) ? p.labels : [];
+      const sig = JSON.stringify(list);
+      if(sig === this.labelsSig) return;
+      this.labelsSig = sig;
+      Workhub.views.labels.setCatalog(list);
+      const t = this.app.controllers.tasks;
+      if(t){ t.render(); t.refreshDetail(); t.dialog.setLabelCatalog(list); }
+    }
+
+    /* Etiqueta nueva desde el formulario de tarea. */
+    addLabel(name, color){
+      const p = this.current();
+      if(!p || !this.projects.isReady()) return Promise.resolve(false);
+      const list = this.labels();
+      if(list.some((l) => l.name.toLowerCase() === name.toLowerCase())) return Promise.resolve(true);
+      return this.projects.patch(p.id, {labels:list.concat({name:name, color:color}).slice(0, 200)}).then(() => true, () => false);
     }
 
     /* Cambia las etapas del proyecto abierto desde el tablero (renombrar, color,

@@ -15,6 +15,12 @@ window.WORKHUB_FIREBASE = {
   messagingSenderId: '1056897810807',
   appId: '1:1056897810807:web:dacc47f0a05651f91c6172',
 
+  /* Dominios desde los que se sirve la web FUERA de Firebase Hosting y que
+     reenvían /__/auth/* a Firebase (Netlify lo hace con netlify.toml).
+     En ellos el inicio de sesión se completa en el propio dominio.
+     Ejemplo: ['workhub.netlify.app']. Ver docs/NETLIFY.md. */
+  hostingDomains: [],
+
   /* Botones de acceso que se muestran, en este orden. Cada uno debe estar
      activado en Firebase → Authentication → Sign-in method.
      Posibles: 'google', 'github', 'microsoft', 'apple', 'password'. */

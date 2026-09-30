@@ -20,11 +20,11 @@ const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
 const ROOT = path.resolve(__dirname, '..');
 /* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
-const SERVED = ['index.html', 'assets', 'src', 'plugins'];
+const SERVED = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.txt': 'text/plain; charset=utf-8'
+  '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8'
 };
 
 /* Recarga automática: la página se suscribe a /__dev/events y recarga al recibir "reload". */

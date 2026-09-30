@@ -1,10 +1,10 @@
-/* Prepara dist/: la carpeta que publica Cloudflare Pages (y Firebase Hosting).
+/* Prepara dist/: la carpeta que publica Cloudflare (y Firebase Hosting).
    Copia SOLO lo que forma la app (lista blanca), para que nunca se publiquen
    por error datos o archivos privados de la carpeta (data-backup.json, etc.).
    Además genera dist/_headers con las cabeceras de seguridad: es la ÚNICA
    fuente de la CSP y del resto de cabeceras (guía: docs/CLOUDFLARE.md).
-   Cloudflare Pages ejecuta este script en cada publicación
-   (build command: node scripts/build-public.js, output directory: dist).
+   Cloudflare ejecuta este script en cada publicación (Build command:
+   node scripts/build-public.js; wrangler.jsonc publica la carpeta dist).
    Firebase Hosting lo ejecuta antes de "firebase deploy" (predeploy). */
 const fs = require('fs');
 const path = require('path');
@@ -54,7 +54,7 @@ const PAGE = {
   'Content-Security-Policy': CSP
 };
 
-/* Formato de _headers de Cloudflare Pages: una ruta y, debajo, sus cabeceras
+/* Formato de _headers de Cloudflare: una ruta y, debajo, sus cabeceras
    con sangría. Si varias rutas coinciden, se suman. */
 function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';

@@ -16,8 +16,8 @@ window.WORKHUB_FIREBASE = {
   appId: '1:1056897810807:web:dacc47f0a05651f91c6172',
 
   /* Dominios desde los que se sirve la web FUERA de Firebase Hosting y que
-     reenvían /__/auth/* a Firebase (Cloudflare Pages lo hace con
-     functions/__/[[path]].js). En ellos el inicio de sesión se completa en el
+     reenvían /__/auth/* a Firebase (Cloudflare lo hace con
+     worker/index.js). En ellos el inicio de sesión se completa en el
      propio dominio. El de Netlify es el sitio antiguo: quítalo cuando lo borres.
      Ver docs/CLOUDFLARE.md. */
   hostingDomains: ['workhub.yalero.net', 'workhub-project.netlify.app'],

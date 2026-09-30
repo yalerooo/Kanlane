@@ -16,7 +16,7 @@ https://workhub.yalero.net/
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
 - `docs/EQUIPOS.md` — proyectos de equipo: miembros, roles, invitaciones y asignación de tareas.
 - `tests/rules/` — pruebas de `firestore.rules` contra el emulador.
-- `scripts/build-public.js`, `functions/` y `docs/CLOUDFLARE.md` — publicación en Cloudflare Pages (la web se publica sola al fusionar en `main`).
+- `scripts/build-public.js`, `wrangler.jsonc`, `worker/` y `docs/CLOUDFLARE.md` — publicación en Cloudflare (la web se publica sola al fusionar en `main`).
 
 ## Arquitectura (MVC)
 
@@ -73,7 +73,7 @@ Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión
 2. Activa los métodos de acceso (Authentication → Sign-in method) y crea la base de datos Firestore.
 3. `firebase deploy --only hosting,firestore`.
 
-La web de producción se publica en **Cloudflare Pages** (publicación automática al fusionar en `main`, sin ningún ordenador encendido), usando Firebase solo para el acceso y los datos: ver **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
+La web de producción se publica en **Cloudflare** (Workers con recursos estáticos; publicación automática al fusionar en `main`, sin ningún ordenador encendido), usando Firebase solo para el acceso y los datos: ver **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
 
 Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 

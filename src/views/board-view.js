@@ -16,6 +16,7 @@
     constructor(){
       this.board = document.getElementById('board');
       this.stateMsg = document.getElementById('stateMsg');
+      this.skeleton = document.getElementById('boardSkeleton');
       this.summary = document.getElementById('summary');
       this.search = document.getElementById('search');
       this.filterCliente = document.getElementById('filterCliente');
@@ -240,19 +241,25 @@
       Workhub.views.ClientSelect.populateFilter(this.filterCliente, names);
     }
 
+    /* Mensaje en lugar del tablero (no hay almacenamiento, error…). */
     setMessage(msg){
+      this.stateMsg.hidden = false;
+      this.board.hidden = true;
+      this.skeleton.hidden = true;
       this.stateMsg.textContent = msg;
+      window.__hideBootSkeleton();
     }
 
     showError(msg){
-      this.stateMsg.hidden = false;
-      this.board.hidden = true;
-      this.stateMsg.textContent = msg;
+      this.setMessage(msg);
     }
 
+    /* Llegaron las tareas: fuera el esqueleto (el de la página y el de las columnas). */
     showLoaded(){
       this.stateMsg.hidden = true;
+      this.skeleton.hidden = true;
       this.board.hidden = false;
+      window.__hideBootSkeleton();
     }
 
     /* El tablero llega justo hasta el final de la ventana (sin scroll de página

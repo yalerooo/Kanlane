@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components/skeleton.css">
   <link rel="stylesheet" href="assets/css/components/buttons.css">
   <link rel="stylesheet" href="assets/css/components/forms.css">
   <link rel="stylesheet" href="assets/css/components/dropdown.css">
@@ -46,30 +47,32 @@
 <body>
 
 <!-- Pantalla de acceso (solo cuando Workhub está publicado con Firebase) -->
+<div class="app-skel" id="appSkeleton" role="status" aria-live="polite">
+  <span class="sr-only">Cargando…</span>
+  <aside class="app-skel-side" aria-hidden="true">
+    <div class="ask-project"><span class="sk ask-mark"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span></div>
+    <span class="sk ask-search"></span>
+    <div class="ask-nav"><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:44%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:62%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:58%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:50%"></span></span></div>
+    <span class="sk ask-label"></span>
+    <div class="ask-nav"><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:48%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:72%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:46%"></span></span></div>
+    <div class="ask-foot"><span class="sk ask-avatar"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span></div>
+  </aside>
+  <div class="app-skel-main" aria-hidden="true">
+    <div class="ask-topbar"><span class="sk ask-mark"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span><span class="sk ask-round"></span></div>
+    <div class="ask-head"><div class="ask-titles"><span class="sk ask-title"></span><span class="sk ask-sub"></span></div><span class="sk ask-cta"></span></div>
+    <div class="ask-toolbar"><span class="sk ask-tsearch"></span><span class="sk ask-tselect"></span></div>
+    <div class="bsk" aria-hidden="true"><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:80px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:62%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:78%"></span><span class="sk l2" style="width:50%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:86%"></span><span class="sk l2" style="width:70%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:96px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:84%"></span><span class="sk l2" style="width:58%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:120px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:92%"></span><span class="sk l2" style="width:66%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:70%"></span><span class="sk l2" style="width:48%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:88%"></span><span class="sk l2" style="width:60%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:84px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:80%"></span><span class="sk l2" style="width:54%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:64%"></span></div></div></div>
+  </div>
+  <div class="ask-tabbar" aria-hidden="true"><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span></div>
+</div>
+
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-card">
     <div class="auth-brand">
       <img class="brand-logo" src="assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
       <span class="brand-name">Workhub</span>
     </div>
-    <div id="authLoading" class="auth-loading is-skeleton" role="status" aria-live="polite">
-      <span class="sr-only">Cargando…</span>
-      <div class="sk-stack" aria-hidden="true">
-        <span class="sk sk-title"></span>
-        <span class="sk sk-sub"></span>
-        <span class="sk sk-btn sk-first"></span>
-        <span class="sk sk-btn"></span>
-        <span class="sk sk-divider"></span>
-        <span class="sk sk-label"></span>
-        <span class="sk sk-input"></span>
-        <span class="sk sk-label"></span>
-        <span class="sk sk-input"></span>
-        <span class="sk sk-btn is-primary"></span>
-        <span class="sk sk-line"></span>
-        <span class="sk sk-divider"></span>
-        <span class="sk sk-btn"></span>
-      </div>
-    </div>
+    <div id="authLoading" class="auth-loading" role="status" hidden></div>
     <div id="authPanel" hidden>
       <h1 id="authTitle">Inicia sesión</h1>
       <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
@@ -174,7 +177,8 @@
     </div>
 
     <div id="boardWrap">
-      <div class="state-msg" id="stateMsg">Cargando tareas…</div>
+      <div class="state-msg" id="stateMsg" hidden></div>
+      <div class="bsk" id="boardSkeleton" aria-hidden="true"><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:80px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:62%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:78%"></span><span class="sk l2" style="width:50%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:86%"></span><span class="sk l2" style="width:70%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:96px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:84%"></span><span class="sk l2" style="width:58%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:120px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:92%"></span><span class="sk l2" style="width:66%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:70%"></span><span class="sk l2" style="width:48%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:88%"></span><span class="sk l2" style="width:60%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:84px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:80%"></span><span class="sk l2" style="width:54%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:64%"></span></div></div></div>
       <div class="board-tabs" id="boardTabs" role="tablist" aria-label="Columnas del tablero"></div>
       <div class="board" id="board" hidden></div>
     </div>

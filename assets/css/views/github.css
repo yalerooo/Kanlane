@@ -8,6 +8,8 @@
 .gh-note.is-warn{color:var(--ink);background:var(--surface-2,var(--bg));border:1px solid var(--line);border-radius:var(--r-md,7px);padding:10px 12px;margin-bottom:8px;}
 .gh-token-missing{display:grid;gap:8px;}
 .gh-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.gh-connected{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--st-done, var(--ink-soft));}
+.gh-connected span{color:var(--ink-soft);}
 .gh-oauth{display:grid;gap:6px;justify-items:start;}
 .gh-oauth .btn{display:inline-flex;align-items:center;gap:8px;}
 .gh-oauth .field-help{margin:0;}

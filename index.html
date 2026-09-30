@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/clients.css">
   <link rel="stylesheet" href="assets/css/views/github.css">
+  <link rel="stylesheet" href="assets/css/components/plugin-form.css">
   <link rel="stylesheet" href="assets/css/views/team.css">
   <link rel="stylesheet" href="assets/css/views/plugins.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
@@ -728,6 +729,23 @@
   </div>
 </dialog>
 
+<dialog id="dlgPluginForm" aria-labelledby="pfTitle">
+  <form class="dlg-inner" id="formPluginForm" method="dialog" novalidate>
+    <div class="pf-who" id="pfWho"></div>
+    <h2 id="pfTitle" translate="no"></h2>
+    <p class="pf-sub" id="pfSub" translate="no" hidden></p>
+    <p class="pf-intro" id="pfIntro" translate="no" hidden></p>
+    <div id="pfBody"></div>
+    <p class="lock-error" id="pfError" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="pfCancel" data-dismiss>Omitir</button>
+        <button type="submit" class="btn btn-primary" id="pfSubmit">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgPlugin" aria-labelledby="pluginDlgTitle">
   <div class="dlg-inner">
     <h2 id="pluginDlgTitle">Instalar plugin</h2>
@@ -1051,6 +1069,7 @@
 <script src="src/views/auth-view.js"></script>
 <script src="src/views/project-view.js"></script>
 <script src="src/views/plugins-view.js"></script>
+<script src="src/views/plugin-form-view.js"></script>
 <script src="src/views/github-view.js"></script>
 <script src="src/views/share-view.js"></script>
 

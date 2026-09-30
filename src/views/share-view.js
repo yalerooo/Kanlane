@@ -35,6 +35,8 @@
         if(this.handlers.invite) this.handlers.invite(email, this.role.value);
       });
       this.email.addEventListener('input', () => { this.error.hidden = true; });
+      /* «Cerrar» (y la X, que lo pulsa: ver ShellView.addDialogCloseButtons). */
+      $('btnShareClose').addEventListener('click', () => this.close());
       this.btnConvert.addEventListener('click', () => this.handlers.convert && this.handlers.convert());
       this.btnLeave.addEventListener('click', () => this.handlers.leave && this.handlers.leave());
       this.members.addEventListener('change', (ev) => {

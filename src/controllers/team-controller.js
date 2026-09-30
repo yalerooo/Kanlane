@@ -27,6 +27,8 @@
       });
 
       this.pendingOpen = null;
+      /* Al cerrar el diálogo (Cerrar, X o Esc) se deja de escuchar las invitaciones enviadas. */
+      this.view.dlg.addEventListener('close', () => { if(!this.view.isOpen()) this.team.stopSent(); });
       this.projects.on('change', () => this.refresh());
       this.team.sent.on('change', () => this.refresh());
     }

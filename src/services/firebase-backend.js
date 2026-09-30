@@ -35,7 +35,7 @@
 
   /* Dominio donde se completa el inicio de sesión.
      Si la web se sirve desde un dominio de hostingDomains (por ejemplo el de
-     Netlify, que reenvía /__/auth/* a Firebase según netlify.toml), el acceso
+     Cloudflare Pages, que reenvía /__/auth/* a Firebase con functions/__/[[path]].js), el acceso
      se completa en ese mismo dominio: así no depende del almacenamiento entre
      sitios, que Chrome, Safari o Firefox bloquean cada vez más. En el resto de
      casos (Firebase Hosting, localhost) se usa authDomain tal cual. */

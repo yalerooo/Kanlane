@@ -3,7 +3,7 @@
 Gestor de trabajo por cliente: tareas, calendario con reuniones, contactos, contraseñas cifradas y clientes (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.). En Ajustes se puede elegir el color de acento, el tema claro/oscuro y el idioma (español o inglés).
 
 **Versión en vivo:**
-https://workhub-project.netlify.app/ 
+https://workhub.yalero.net/
 
 ## Qué hay en esta carpeta
 
@@ -16,7 +16,7 @@ https://workhub-project.netlify.app/
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
 - `docs/EQUIPOS.md` — proyectos de equipo: miembros, roles, invitaciones y asignación de tareas.
 - `tests/rules/` — pruebas de `firestore.rules` contra el emulador.
-- `netlify.toml` y `docs/NETLIFY.md` — publicación en Netlify.
+- `scripts/build-public.js`, `functions/` y `docs/CLOUDFLARE.md` — publicación en Cloudflare Pages (la web se publica sola al fusionar en `main`).
 
 ## Arquitectura (MVC)
 
@@ -73,7 +73,7 @@ Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión
 2. Activa los métodos de acceso (Authentication → Sign-in method) y crea la base de datos Firestore.
 3. `firebase deploy --only hosting,firestore`.
 
-También se puede publicar en **Netlify** (publicación automática al fusionar en `main`), usando Firebase solo para el acceso y los datos: ver **[docs/NETLIFY.md](docs/NETLIFY.md)**.
+La web de producción se publica en **Cloudflare Pages** (publicación automática al fusionar en `main`, sin ningún ordenador encendido), usando Firebase solo para el acceso y los datos: ver **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
 
 Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 

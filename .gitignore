@@ -7,5 +7,6 @@ ui-debug.log
 node_modules/
 dist/
 
-# Local Netlify folder
+# Carpetas locales de despliegue (Netlify antiguo y Cloudflare Wrangler)
 .netlify
+.wrangler

@@ -68,7 +68,7 @@
   .pf-day{height:36px;}
 }
 
-/* Aviso del plugin (p. ej. «ese día ya está completo»): bajo la introducción, con un borde rojo a la izquierda. */
+/* Aviso del plugin (p. ej. «ese día ya está completo»): bajo la introducción, bloque plano con borde fino. */
 #pfError{
   margin:0 0 14px;
   padding:10px 12px;
@@ -76,7 +76,7 @@
   line-height:1.45;
   color:var(--ink);
   background:var(--danger-bg);
+  border:1px solid var(--danger);
   border:1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-  border-left:3px solid var(--danger);
   border-radius:var(--r-md);
 }

@@ -79,7 +79,7 @@
 }
 .crm-item[aria-selected="true"] .crm-badge{color:var(--accent);background:var(--surface);border-color:transparent;}
 .crm-item.is-orphan{margin-top:6px;border-top:1px dashed var(--line);border-radius:0 0 var(--r-md) var(--r-md);}
-.crm mark{background:color-mix(in srgb, var(--accent-solid) 22%, transparent);color:inherit;border-radius:3px;padding:0 1px;}
+.crm mark{background:var(--accent-soft);background:color-mix(in srgb, var(--accent-solid) 22%, transparent);color:inherit;border-radius:3px;padding:0 1px;}
 
 /* Ficha del cliente */
 .crm-detail{

@@ -114,6 +114,7 @@
     gap:0;
     height:var(--nav-h);
     padding:4px 4px env(safe-area-inset-bottom, 0px);
+    background:var(--sidebar);
     background:color-mix(in srgb, var(--sidebar) 92%, transparent);
     backdrop-filter:saturate(1.4) blur(14px);
     -webkit-backdrop-filter:saturate(1.4) blur(14px);

@@ -37,6 +37,14 @@
       });
       this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
       this.view.bindDelete((id) => this.remove(id));
+      /* «Conectar con GitHub» sin pegar un token. */
+      this.view.bindGithubOAuth(() => {
+        const g = this.app.controllers.github;
+        g.connectOAuth().then((ok) => {
+          if(ok) this.view.refreshGithub();
+          else if(g.connectError) this.view.showError(g.connectError);
+        });
+      });
       /* «Desde GitHub»: crea el proyecto con las columnas y los elementos de un GitHub Project. */
       this.view.bindGithubSubmit((v) => {
         if(!this.projects.isReady()) return;

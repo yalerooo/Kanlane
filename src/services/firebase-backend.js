@@ -157,6 +157,47 @@
     });
   }
 
+  /* Token de GitHub para la integración con GitHub Projects, sin que el usuario
+     tenga que crearlo ni pegarlo: se abre el inicio de sesión de GitHub pidiendo
+     el permiso «project» y se recoge el token de acceso que devuelve.
+
+     Se hace con una segunda instancia de Firebase (con su propia sesión), para no
+     tocar la cuenta con la que se ha entrado: no cambia sus métodos de acceso ni
+     choca si esa cuenta usa otro proveedor con el mismo correo. La sesión temporal
+     se cierra al terminar (y si era una cuenta nueva, se borra). El token no lo
+     guarda Firebase; lo guarda la app solo en este navegador. */
+  function githubToken(){
+    return init().then(() => {
+      const c = config();
+      const NAME = 'gh-oauth';
+      let app2 = fb.apps.find((a) => a.name === NAME);
+      if(!app2){
+        app2 = fb.initializeApp({apiKey:c.apiKey, authDomain:resolveAuthDomain(c, location.host), projectId:c.projectId, appId:c.appId}, NAME);
+        if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
+          app2.auth().useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
+        }
+      }
+      const auth2 = app2.auth();
+      auth2.languageCode = 'es';
+      const provider = new fb.auth.GithubAuthProvider();
+      provider.addScope('project');
+      return auth2.setPersistence(fb.auth.Auth.Persistence.NONE).catch(() => {}).then(() => auth2.signInWithPopup(provider)).then((res) => {
+        const token = res.credential && res.credential.accessToken;
+        const isNew = res.additionalUserInfo && res.additionalUserInfo.isNewUser && res.user;
+        return Promise.resolve(isNew ? res.user.delete() : auth2.signOut()).catch(() => {}).then(() => {
+          if(!token) throw new Error('no-token');
+          return token;
+        });
+      }, (err) => {
+        /* El correo de GitHub ya tiene cuenta con otro método: aun así GitHub ha dado su token. */
+        if(err && err.code === 'auth/account-exists-with-different-credential' && err.credential && err.credential.accessToken){
+          return err.credential.accessToken;
+        }
+        throw err;
+      });
+    });
+  }
+
   function signInWithEmail(email, password){
     return auth.signInWithEmailAndPassword(email, password);
   }
@@ -336,7 +377,7 @@
   }
 
   Workhub.services.firebase = {
-    isEnabled, init, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
+    isEnabled, init, githubToken, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
     resetPassword, signOut, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
     currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),

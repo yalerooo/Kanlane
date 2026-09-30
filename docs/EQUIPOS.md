@@ -26,7 +26,7 @@ Cualquiera que no sea propietario puede **salir del equipo** (Compartir → *Sal
 ## Qué no se comparte (todavía)
 
 - **Las contraseñas guardadas.** En un proyecto de equipo no hay gestor de contraseñas, y al convertir un proyecto no se copian. Compartirlas exige un diseño criptográfico aparte (ver más abajo).
-- **La integración con GitHub Projects** se puede usar en un equipo, pero el token es de cada persona y solo está en su navegador.
+- **El acceso a GitHub.** La integración con GitHub Projects funciona en un equipo, y al convertir un proyecto enlazado el enlace pasa al equipo (el original deja de sincronizar). Pero el acceso a GitHub es de cada persona y solo está en su navegador: cada miembro conecta su cuenta con *Conectar con GitHub* (sin token) o pegando uno. Detalles en [GITHUB.md](GITHUB.md#en-un-proyecto-de-equipo).
 
 ## Cómo está guardado
 

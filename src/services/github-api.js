@@ -17,6 +17,16 @@
     try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; }
   }
 
+  /* ¿Se puede conectar con GitHub sin pegar un token? Hace falta la cuenta (Firebase) con GitHub activado. */
+  function canOAuth(){
+    const f = Workhub.services.firebase;
+    return !!(f && Workhub.services.platform.mode() === 'firebase' && f.providers().indexOf('github') !== -1);
+  }
+
+  function oauth(){
+    return Workhub.services.firebase.githubToken();
+  }
+
   function setToken(value){
     try{
       if(value) localStorage.setItem(TOKEN_KEY, value);
@@ -198,7 +208,7 @@
 
   Workhub.services.github = {
     fetchRepoLabels, addLabels, removeLabels, fetchDetails,
-    GithubError, token, setToken, parseProjectUrl,
+    GithubError, token, setToken, canOAuth, oauth, parseProjectUrl,
     fetchProject, fetchItems, setStatus, addDraft, updateDraft, updateIssue
   };
 })();

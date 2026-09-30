@@ -182,10 +182,11 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Filtros por cliente y por tipo.
 
 ### Clientes y contactos (una sola sección)
-- **Diseño:** lista de clientes a la izquierda (cada uno con número de contactos y tareas abiertas) y ficha a la derecha.
+- **Diseño:** lista de clientes a la izquierda (etiqueta «Clientes N», avatar, nº de contactos y una **insignia con las tareas abiertas**; el elegido lleva una barra de acento) y ficha a la derecha.
 - **Ficha del cliente:**
-  - Personas de contacto: email y teléfono se pueden pulsar.
-  - Botones para ver sus tareas o sus contraseñas.
+  - Cabecera con avatar grande (clic = color), nombre y «N tareas en total».
+  - **Tres tarjetas de cifras** (`.crm-stats`): Contactos, Tareas abiertas y Contraseñas; las dos últimas son botones que llevan a esa sección (`view-tasks` / `view-vault`). Los botones de plugins (`client.actions`) van debajo y el bloque solo se ve si hay alguno.
+  - Personas de contacto como **tarjetas** en cuadrícula (`.people`, una columna en móvil): email y teléfono se pueden pulsar, las notas van separadas con línea discontinua y el lápiz aparece al pasar el ratón. Con contador en la cabecera y, si no hay ninguna, un cuadro vacío con «Añadir contacto».
   - Acciones para cambiar el color, renombrar o eliminar (con confirmación).
 - **Edición:** al editar un cliente se editan ahí mismo sus personas de contacto.
 - **Buscador:** busca a la vez clientes y personas (nombre, email, teléfono o notas) y resalta las coincidencias.

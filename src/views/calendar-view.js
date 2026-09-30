@@ -21,6 +21,8 @@
       this.btnToday = $('calToday');
       this.btnNewMeeting = $('calNewMeeting');
       this.filterCliente = $('calFilterCliente');
+      this.modeBar = $('calMode');
+      this.section = this.grid.closest('section');
 
       /* Formulario de reunión */
       this.dlg = $('dlgMeeting');
@@ -80,6 +82,21 @@
       this.btnToday.addEventListener('click', handlers.today);
       this.btnNewMeeting.addEventListener('click', handlers.newMeeting);
       this.filterCliente.addEventListener('change', handlers.filter);
+      this.modeBar.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-cal-mode]');
+        if(b && handlers.mode) handlers.mode(b.getAttribute('data-cal-mode'));
+      });
+    }
+
+    /* Mes, semana o día: marca el botón y ajusta el diseño y las etiquetas de las flechas. */
+    setMode(mode){
+      this.mode = mode;
+      this.modeBar.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', b.getAttribute('data-cal-mode') === mode ? 'true' : 'false'));
+      this.section.classList.toggle('cal-mode-week', mode === 'week');
+      this.section.classList.toggle('cal-mode-day', mode === 'day');
+      const unit = {month:['Mes anterior', 'Mes siguiente'], week:['Semana anterior', 'Semana siguiente'], day:['Día anterior', 'Día siguiente']}[mode];
+      this.btnPrev.setAttribute('aria-label', unit[0]);
+      this.btnNext.setAttribute('aria-label', unit[1]);
     }
 
     /* handlers: {openItem(kind, id), selectDate(date), newMeetingOn(date), move(kind, id, date)} */
@@ -167,33 +184,54 @@
     }
 
     /* buckets: {'AAAA-MM-DD': {tasks, meetings}} */
-    render(year, month, selected, buckets){
+    render(year, month, selected, buckets, mode){
+      mode = mode || 'month';
+      const loc = Workhub.i18n.locale;
       const first = new Date(year, month, 1);
-      this.monthLabel.textContent = capitalize(first.toLocaleDateString(Workhub.i18n.locale, {month:'long', year:'numeric'}));
-      const offset = (first.getDay() + 6) % 7;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+      let start, totalCells;
+      if(mode === 'month'){
+        this.monthLabel.textContent = capitalize(first.toLocaleDateString(loc, {month:'long', year:'numeric'}));
+        const offset = (first.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+        start = new Date(year, month, 1 - offset);
+      } else {
+        /* Semana (lunes a domingo) que contiene el día elegido. */
+        const sel = parseYmd(selected);
+        start = new Date(sel.getFullYear(), sel.getMonth(), sel.getDate() - ((sel.getDay() + 6) % 7));
+        totalCells = 7;
+        if(mode === 'day'){
+          this.monthLabel.textContent = longDay(sel, true);
+        } else {
+          const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+          const short = {day:'numeric', month:'short'};
+          this.monthLabel.textContent = start.toLocaleDateString(loc, short) + ' – ' + end.toLocaleDateString(loc, Object.assign({year:'numeric'}, short));
+        }
+      }
+      this.grid.classList.toggle('is-week', mode === 'week');
+      const maxChips = mode === 'month' ? MAX_CHIPS : Infinity;
       const today = todayYmd();
       let html = '';
       for(let i = 0; i < totalCells; i++){
-        const d = new Date(year, month, 1 - offset + i);
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
         const key = ymd(d);
         const b = buckets[key] || EMPTY_BUCKET;
         const chips = b.meetings.map(meetingChipHtml).concat(b.tasks.map(taskChipHtml));
-        const extra = chips.length > MAX_CHIPS ? '<span class="cal-more">+' + (chips.length - MAX_CHIPS) + ' más</span>' : '';
+        const extra = chips.length > maxChips ? '<span class="cal-more">+' + (chips.length - maxChips) + ' más</span>' : '';
         const dots = b.meetings.slice(0, MAX_CHIPS).map(() => '<i class="cal-dot is-meeting"></i>')
           .concat(b.tasks.slice(0, MAX_CHIPS).map((t) => {
             return '<i class="cal-dot' + (TaskModel.dueState(t) === 'overdue' ? ' is-overdue' : '') + '"></i>';
           })).join('');
         const cls = 'cal-cell' +
-          (d.getMonth() !== month ? ' is-other' : '') +
+          (mode === 'month' && d.getMonth() !== month ? ' is-other' : '') +
           (key === today ? ' is-today' : '') +
           (key === selected ? ' is-selected' : '');
         const count = b.meetings.length + b.tasks.length;
         const aria = longDay(d) + (count ? ', ' + count + (count === 1 ? ' elemento' : ' elementos') : '');
         html += '<div class="' + cls + '" data-date="' + key + '" role="button" tabindex="0" aria-label="' + esc(aria) + '">' +
           '<span class="cal-num">' + d.getDate() + '</span>' +
-          '<div class="cal-items">' + chips.slice(0, MAX_CHIPS).join('') + extra + '</div>' +
+          (mode === 'week' ? '<span class="cal-wd" aria-hidden="true">' + esc(capitalize(d.toLocaleDateString(loc, {weekday:'long'}))) + '</span>' : '') +
+          '<div class="cal-items">' + chips.slice(0, maxChips).join('') + extra + '</div>' +
           '<div class="cal-dots">' + dots + '</div>' +
           '</div>';
       }

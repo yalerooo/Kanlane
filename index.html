@@ -195,6 +195,11 @@
       </div>
       <div class="cal-actions">
         <div class="ext-slot" id="calExtSlot" data-ext-slot="calendar.toolbar" hidden></div>
+        <div class="segmented" id="calMode" role="radiogroup" aria-label="Vista del calendario">
+          <button type="button" role="radio" data-cal-mode="month" aria-checked="true">Mes</button>
+          <button type="button" role="radio" data-cal-mode="week" aria-checked="false">Semana</button>
+          <button type="button" role="radio" data-cal-mode="day" aria-checked="false">Día</button>
+        </div>
         <select id="calFilterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
         <button type="button" class="btn btn-ghost" id="calToday">Hoy</button>
         <button type="button" class="btn btn-primary" id="calNewMeeting"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva reunión</button>
@@ -207,7 +212,7 @@
       <span class="cal-hint">Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
     </div>
     <div class="cal-layout">
-      <div>
+      <div id="calGridWrap">
         <div class="cal-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
@@ -407,6 +412,40 @@
       </div>
       <div class="settings-row">
         <div>
+          <h3>Recordatorios</h3>
+          <p>Avisos de las tareas que vencen y de las reuniones que están a punto de empezar, mientras Workhub esté abierto.</p>
+        </div>
+        <div class="remind-block">
+          <div class="segmented" id="remindSegment" role="radiogroup" aria-label="Recordatorios">
+            <button type="button" role="radio" data-remind="on">Activados</button>
+            <button type="button" role="radio" data-remind="off">Desactivados</button>
+          </div>
+          <div class="remind-options" id="remindOptions">
+            <label class="remind-field"><span>Tareas</span>
+              <select id="remindTaskLead">
+                <option value="0">El mismo día</option>
+                <option value="1">Un día antes</option>
+                <option value="2">Dos días antes</option>
+              </select>
+            </label>
+            <label class="remind-field"><span>Reuniones</span>
+              <select id="remindMeetLead">
+                <option value="5">5 minutos antes</option>
+                <option value="10">10 minutos antes</option>
+                <option value="15">15 minutos antes</option>
+                <option value="30">30 minutos antes</option>
+                <option value="60">1 hora antes</option>
+              </select>
+            </label>
+            <div class="remind-notify">
+              <button type="button" class="btn btn-ghost btn-sm" id="btnRemindNotify">Activar notificaciones del navegador</button>
+              <p id="remindNotifyState"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
           <h3>Almacenamiento</h3>
           <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
         </div>
@@ -482,6 +521,26 @@
         <input id="fFecha" type="date">
       </div>
     </div>
+    <div class="field" id="fRepeatField">
+      <label for="fRepeat">Repetir</label>
+      <select id="fRepeat">
+        <option value="">No se repite</option>
+        <option value="daily">Cada día</option>
+        <option value="weekly">Cada semana</option>
+        <option value="biweekly">Cada 2 semanas</option>
+        <option value="monthly">Cada mes</option>
+        <option value="yearly">Cada año</option>
+      </select>
+      <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
+    </div>
+    <div class="field" id="fChecklistField">
+      <span class="field-label" id="fChecklistLabel">Subtareas</span>
+      <div class="check-edit" id="fChecklist" role="group" aria-labelledby="fChecklistLabel"></div>
+      <div class="check-add">
+        <input id="fCheckNew" maxlength="120" autocomplete="off" placeholder="Añadir una subtarea" aria-label="Nueva subtarea">
+        <button type="button" class="btn btn-ghost btn-sm" id="fCheckAdd">Añadir</button>
+      </div>
+    </div>
     <div class="field" id="taskNotesSection" hidden>
       <label>Notas</label>
       <div class="notes-list" id="taskNotesList"></div>
@@ -531,6 +590,10 @@
     <section class="tv-section" id="tvDescWrap" hidden>
       <h3>Descripción</h3>
       <div class="tv-desc" id="tvDesc" translate="no"></div>
+    </section>
+    <section class="tv-section" id="tvChecklistWrap" hidden>
+      <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
+      <ul class="tv-checks" id="tvChecklist"></ul>
     </section>
     <section class="tv-section" id="tvLabelsWrap" hidden>
       <h3>Etiquetas</h3>
@@ -1074,6 +1137,7 @@
 <script src="src/views/plugin-form-view.js"></script>
 <script src="src/views/github-view.js"></script>
 <script src="src/views/share-view.js"></script>
+<script src="src/views/reminders-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -1087,6 +1151,7 @@
 <script src="src/controllers/plugins-clean.js"></script>
 <script src="src/controllers/plugins-controller.js"></script>
 <script src="src/controllers/plugins-data-api.js"></script>
+<script src="src/controllers/reminders-controller.js"></script>
 <script src="src/controllers/github-controller.js"></script>
 <script src="src/controllers/team-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>

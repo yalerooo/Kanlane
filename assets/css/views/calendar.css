@@ -151,3 +151,24 @@
 .agenda-title{font-size:13.5px;font-weight:500;line-height:1.35;overflow-wrap:anywhere;}
 .agenda-item.is-done .agenda-title{text-decoration:line-through;color:var(--ink-faint);}
 .agenda-meta{font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Vista de semana y de día */
+.cal-actions .segmented{flex:none;}
+.cal-grid.is-week .cal-cell{min-height:320px;}
+#viewCalendar.cal-mode-day #calGridWrap{display:none;}
+#viewCalendar.cal-mode-day .cal-layout{grid-template-columns:minmax(0,1fr);}
+#viewCalendar.cal-mode-day .cal-day{max-width:760px;}
+#viewCalendar.cal-mode-day .cal-hint{display:none;}
+@media (max-width:640px){
+  .cal-grid.is-week{grid-template-columns:1fr;}
+  #viewCalendar.cal-mode-week .cal-weekdays{display:none;}
+  .cal-grid.is-week .cal-cell{min-height:0;align-items:stretch;padding:10px 12px;}
+  .cal-grid.is-week .cal-items{display:flex;}
+  .cal-grid.is-week .cal-dots{display:none;}
+  .cal-grid.is-week .cal-cell .cal-num{align-self:flex-start;}
+}
+.cal-wd{display:none;}
+@media (max-width:640px){
+  .cal-grid.is-week .cal-cell{position:relative;}
+  .cal-grid.is-week .cal-wd{display:block;position:absolute;top:12px;left:46px;font-size:12.5px;color:var(--ink-soft);}
+}

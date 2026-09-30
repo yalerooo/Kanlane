@@ -19,8 +19,14 @@
         desc: $('fDesc'),
         estado: $('fEstado'),
         contacto: $('fContacto'),
-        fecha: $('fFecha')
+        fecha: $('fFecha'),
+        repeat: $('fRepeat')
       };
+      /* Subtareas: [{id, text, done}]. */
+      this.checklist = [];
+      this.checkList = $('fChecklist');
+      this.checkNew = $('fCheckNew');
+      this._bindChecklist();
       this.cliente = new Workhub.views.ClientSelect('f');
       this.btnCancel = $('btnCancel');
       this.btnDelete = $('btnDelete');
@@ -243,6 +249,54 @@
       this.linkedVaultList.addEventListener('click', delegate);
     }
 
+    /* ---------- Subtareas ---------- */
+
+    _bindChecklist(){
+      const add = () => {
+        const text = this.checkNew.value.trim();
+        if(!text) return;
+        this.checklist.push({id:'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text:text, done:false});
+        this.checkNew.value = '';
+        this._renderChecklist();
+        this.checkNew.focus();
+      };
+      $('fCheckAdd').addEventListener('click', add);
+      this.checkNew.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); add(); }
+      });
+      const find = (el) => {
+        const row = el.closest('[data-cid]');
+        return row ? this.checklist.find((c) => c.id === row.getAttribute('data-cid')) : null;
+      };
+      this.checkList.addEventListener('change', (ev) => {
+        const c = find(ev.target);
+        if(c && ev.target.matches('input[type=checkbox]')) c.done = ev.target.checked;
+      });
+      this.checkList.addEventListener('input', (ev) => {
+        const c = find(ev.target);
+        if(c && ev.target.matches('input[type=text]')) c.text = ev.target.value;
+      });
+      this.checkList.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter' && ev.target.matches('input[type=text]')){ ev.preventDefault(); this.checkNew.focus(); }
+      });
+      this.checkList.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-act="check-del"]');
+        const c = btn && find(btn);
+        if(!c) return;
+        this.checklist = this.checklist.filter((x) => x !== c);
+        this._renderChecklist();
+      });
+    }
+
+    _renderChecklist(){
+      this.checkList.innerHTML = this.checklist.map((c) =>
+        '<div class="check-row" data-cid="' + esc(c.id) + '">' +
+        '<input type="checkbox"' + (c.done ? ' checked' : '') + ' aria-label="Hecha">' +
+        '<input type="text" maxlength="120" value="' + esc(c.text) + '" aria-label="Subtarea" translate="no" autocomplete="off">' +
+        '<button type="button" class="icon-btn check-del" data-act="check-del" aria-label="Quitar subtarea" title="Quitar">' + Workhub.utils.html.iconSpan('close') + '</button>' +
+        '</div>').join('');
+    }
+
     /* ---------- Estado del formulario ---------- */
 
     values(){
@@ -253,6 +307,9 @@
         status: this.fields.estado.value,
         contacto: this.fields.contacto.value.trim(),
         dueDate: this.fields.fecha.value || '',
+        /* Repetir necesita una fecha de la que partir. */
+        repeat: this.fields.fecha.value ? (this.fields.repeat.value || '') : '',
+        checklist: this.checklist.filter((c) => c.text.trim()).map((c) => ({id:c.id, text:c.text.trim(), done:!!c.done})),
         labels: this.selected.slice(),
         /* Fuera de un equipo no se toca el campo. */
         assignees: Workhub.views.team.enabled() ? this.assigned.slice() : undefined
@@ -263,6 +320,8 @@
       this.form.reset();
       this.resetNoteForm();
       this.fields.id.value = '';
+      this.checklist = [];
+      this._renderChecklist();
       this.selected = [];
       this.assigned = [];
       this._renderAssignees();
@@ -287,6 +346,9 @@
       this.fields.estado.value = Workhub.models.TaskModel.stageKey(t);
       this.fields.contacto.value = t.contacto || '';
       this.fields.fecha.value = t.dueDate || '';
+      this.fields.repeat.value = t.repeat || '';
+      this.checklist = (Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text || '', done:!!c.done}));
+      this._renderChecklist();
       this.selected = Array.isArray(t.labels) ? t.labels.slice() : [];
       this.assigned = Workhub.views.team.assigned(t);
       this._renderAssignees();

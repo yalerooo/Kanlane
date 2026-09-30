@@ -169,7 +169,8 @@
       }).catch((err) => {
         this.view.setBusy(false);
         this.view.setProgress('');
-        this.view.showError(Workhub.t('No se pudo crear el proyecto de equipo.') + reason(err));
+        const where = err && err.phase ? ' ' + Workhub.t('Falló al {phase}.', {phase:Workhub.t(err.phase)}) : '';
+        this.view.showError(Workhub.t('No se pudo crear el proyecto de equipo.') + where + reason(err));
       });
     }
   }

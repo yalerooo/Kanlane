@@ -95,7 +95,7 @@
 
     _form(s){
       const tokenField = s.hasToken
-        ? '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button></p>'
+        ? '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>'
         : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
           '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
@@ -167,6 +167,7 @@
           '<div class="gh-actions">' +
           (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
           '<button type="button" class="btn btn-ghost" data-gh="unlink">Desconectar</button>' +
+          (s.hasToken && s.canOAuth ? '<button type="button" class="btn btn-ghost" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
           (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">Olvidar token</button>' : '') +
           '</div>')) +
         '</div>';

@@ -167,7 +167,7 @@
       /* El correo ya tiene cuenta con otro método: se explica cómo unirlos. */
       if(err && err.code === 'auth/account-exists-with-different-credential' && err.email){
         const provider = PROVIDER_NAMES[err.credential && err.credential.providerId] || Workhub.t('el nuevo método');
-        this.view.showMessage(Workhub.t('Ya existe una cuenta con {email}. Entra ahora con el método que usaste al crearla y se unirá {provider} a esa misma cuenta.', {email:err.email, provider:provider}), true);
+        this.view.showLinkNotice(err.email, provider);
         return;
       }
       this.view.showMessage(messageFor(err));

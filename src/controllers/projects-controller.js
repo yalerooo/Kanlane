@@ -9,7 +9,11 @@
       this.projects = app.models.projects;
       this.view = view;
 
-      this.projects.on('change', () => this.onProjectsChange());
+      this.projects.on('change', () => {
+        this.onProjectsChange();
+        /* Un instante después: ProjectModel marca "loaded" en su propio listener, que va detrás de este. */
+        Promise.resolve().then(() => this.checkFirstRun());
+      });
 
       this.view.bindMenuSource(() => ({
         projects: this.projects.list(),
@@ -34,6 +38,33 @@
           this.view.showError((err && err.message) || 'No se pudo conectar con GitHub.');
         });
       });
+    }
+
+    /* Cuenta nueva: sin proyectos y sin datos en la raíz. No se crea ninguno por
+       defecto: se obliga a crear el primero, con el nombre y el tipo que elija.
+       Ese primero ocupa el sitio del proyecto principal (la raíz de la base de
+       datos), así que las cuentas que ya tienen datos no cambian nada. */
+    checkFirstRun(){
+      if(this.firstRunChecked || !this.projects.loaded || !this.app.rootDb) return;
+      this.firstRunChecked = true;
+      if(this.projects.items.length) return;
+      const db = this.app.rootDb;
+      const empty = ['tasks', 'clients', 'contacts', 'meetings', 'vault'].map((name) =>
+        db.collection(name).get().then((snap) => !snap.docs.length));
+      Promise.all(empty).then((flags) => {
+        if(!flags.every(Boolean) || this.projects.items.length) return;
+        this.firstRun = true;
+        document.body.classList.add('is-onboarding');
+        this.view.openOnboarding();
+      }).catch(() => { this.firstRunChecked = false; });
+    }
+
+    finishFirstRun(){
+      this.firstRun = false;
+      document.body.classList.remove('is-onboarding');
+      this.view.endOnboarding();
+      this.view.closeDialog();
+      this.app.navigate('tasks');
     }
 
     /* Mientras llega la lista (o justo tras crear uno) se usa la copia que
@@ -139,6 +170,18 @@
     save(id, nombre, color, config){
       if(!this.projects.isReady()) return;
       this.view.setBusy(true);
+      if(!id && this.firstRun){
+        /* El primero es el proyecto principal, con lo que haya elegido el usuario. */
+        this.projects.save(ProjectModel.MAIN_ID, nombre, color, config).then(() => {
+          this.finishFirstRun();
+          this.render();
+          toast.success('Proyecto «' + nombre + '» creado');
+        }).catch(() => {
+          this.view.setBusy(false);
+          this.view.showError('No se pudo crear el proyecto. Inténtalo de nuevo.');
+        });
+        return;
+      }
       if(!id){
         this.createAndOpen(nombre, color, config).then(() => {
           this.view.closeDialog();

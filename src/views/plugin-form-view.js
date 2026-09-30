@@ -58,9 +58,19 @@
         this.error.hidden = true;
         this.body.innerHTML = spec.fields.map((f) => this._field(f)).join('');
         spec.fields.forEach((f) => { if(f.type === 'dates') this._renderDates(f); });
+        /* Los desplegables usan el componente de la app (no el nativo del navegador). */
+        Workhub.views.Dropdown.enhanceAll(this.body);
+        spec.fields.forEach((f) => {
+          /* Sin opciones, solo «añadir nuevo»: se oculta el desplegable y se ve el nombre. */
+          if(f.type === 'select' && f.allowNew && !f.options.length){
+            const wrap = $('pf_' + f.key).closest('.dd');
+            if(wrap) wrap.hidden = true;
+          }
+        });
         this.dlg.showModal();
-        const first = this.body.querySelector('input:not([type="hidden"]), select');
-        if(first) first.focus();
+        /* Al primer campo de escritura, con su contenido seleccionado para escribir encima. */
+        const first = this.body.querySelector('input[type="number"], input[type="text"]:not([hidden])');
+        if(first && first.offsetParent !== null){ first.focus(); first.select(); }
       });
     }
 
@@ -205,8 +215,8 @@
           const raw = $(id).value.trim();
           const n = raw === '' ? NaN : parseFloat(raw.replace(',', '.'));
           if(isNaN(n)){ if(f.required){ missing(); return; } values[f.key] = null; continue; }
-          if(f.min != null && n < f.min){ this._fail(Workhub.t('{campo}: mínimo {n}', {campo:f.label, n:f.min})); return; }
-          if(f.max != null && n > f.max){ this._fail(Workhub.t('{campo}: máximo {n}', {campo:f.label, n:f.max})); return; }
+          if(f.min != null && n < f.min){ this._fail(Workhub.t('{campo}: mínimo {n}', {campo:f.label, n:f.min.toLocaleString(Workhub.i18n.locale)})); return; }
+          if(f.max != null && n > f.max){ this._fail(Workhub.t('{campo}: máximo {n}', {campo:f.label, n:f.max.toLocaleString(Workhub.i18n.locale)})); return; }
           values[f.key] = n;
         } else if(f.type === 'text'){
           const t = $(id).value.trim();

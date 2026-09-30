@@ -13,7 +13,7 @@
      log-AAAA-MM [{id, date, hours, project, task, title}]   (uno por día y tarea)
      logged     {idTarea: true}    tareas ya registradas u omitidas
      taskhours  {idTarea: horas}   total por tarea (para la etiqueta de la tarjeta)
-     prefs      {hours, project}   lo último que se usó */
+     prefs      {project}          el último proyecto usado (las horas siempre empiezan en 0) */
 (function(){
   'use strict';
 
@@ -159,7 +159,7 @@
   /* ---------- Formularios (los dibuja Workhub) ---------- */
 
   function hoursField(value){
-    return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: 0.25, max: 500, step: 0.25, value: value || 1};
+    return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: 0.25, max: 500, step: 0.25, value: value != null ? value : 0};
   }
   function projectField(value){
     return {
@@ -174,7 +174,7 @@
     /* Si el cliente de la tarea se llama igual que un proyecto, ese; si no, el último usado. */
     var byClient = task && task.cliente ? st.projects.filter(function(p){ return p.name.toLowerCase() === task.cliente.toLowerCase(); })[0] : null;
     var fields = [
-      hoursField(st.prefs.hours),
+      hoursField(0),                       /* siempre empieza en 0: cada tarea tiene sus horas */
       {key: 'days', type: 'dates', label: tr('Días trabajados'), value: dates && dates.length ? dates : [today()], hint: tr('Las horas se reparten a partes iguales entre los días.')},
       projectField(byClient ? byClient.id : st.prefs.project)
     ];
@@ -195,7 +195,7 @@
         });
         return addEntries(entries).then(function(){
           if(task) st.logged[task.id] = true;
-          st.prefs = {hours: v.hours, project: pid};
+          st.prefs = {project: pid};
           return Promise.all([set('logged', st.logged), set('prefs', st.prefs)]);
         }).then(function(){
           wh.ui.toast(tr('{h} h registradas en {p}', {h: fmt(v.hours), p: projectName(pid)}));

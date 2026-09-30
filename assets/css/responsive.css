@@ -266,3 +266,12 @@
   .board-tabs{margin:0 -12px 10px;padding:0 12px 2px;}
   .tab{font-size:9.5px;}
 }
+
+/* Dedos: botones pequeños un poco más grandes (mínimo ~36 px de alto). */
+@media (max-width:640px), (pointer:coarse){
+  .segmented button{min-height:34px;padding-top:0;padding-bottom:0;}
+  .cal-arrow{width:38px;height:38px;}
+  .col-add,.col-menu{min-width:36px;min-height:36px;}
+  .btn-sm{min-height:36px;}
+  .check-row input[type="checkbox"],.tv-checks input{width:18px;height:18px;}
+}

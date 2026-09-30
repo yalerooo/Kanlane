@@ -16,6 +16,7 @@
       this.sync = new Workhub.models.GithubSync(app);
       this.connecting = false;
       this.connectError = '';
+      this.tokenError = '';
       this.timer = 0;
       this.pushTimer = 0;
 
@@ -24,6 +25,7 @@
         sync: () => this.syncNow(),
         unlink: () => this.unlink(),
         forget: () => { api.setToken(''); this.render(); },
+        saveToken: (v) => this.saveToken(v),
         pushNew: (on) => this.sync.setPushNew(on)
       });
 
@@ -56,7 +58,8 @@
         projects: this.app.models.projects.list().map((p) => ({id:p.id, nombre:p.nombre, linked:!!p.github})),
         currentId: this.app.projectId,
         connecting: this.connecting,
-        connectError: this.connectError
+        connectError: this.connectError,
+        tokenError: this.tokenError
       });
     }
 
@@ -107,13 +110,45 @@
 
     /* quiet: no avisa con un mensaje cuando todo va bien. */
     syncNow(quiet){
-      if(!api.token() || !this.sync.isLinked()) return Promise.resolve();
+      if(!this.sync.isLinked()) return Promise.resolve();
+      if(!api.token()){
+        /* Sin token en este navegador: se lleva al usuario a donde puede pegarlo. */
+        if(!quiet){
+          this.app.navigate('settings');
+          toast.error('Añade el token de GitHub en este navegador para sincronizar.');
+        }
+        return Promise.resolve();
+      }
       /* Con un token rechazado no se reintenta solo: lo arregla el usuario desde Ajustes. */
       const e = this.sync.error;
       if(quiet && e && (e.code === 'auth' || e.code === 'scopes')) return Promise.resolve();
       return this.sync.sync().then((r) => {
         if(!quiet && r && !this.sync.error) toast.success('Sincronizado con GitHub');
         if(!quiet && this.sync.error) toast.error(this.sync.error.message);
+      });
+    }
+
+    /* Proyecto ya enlazado desde otro navegador: guarda el token aquí y sincroniza. */
+    saveToken(value){
+      this.tokenError = '';
+      if(!value){
+        this.tokenError = 'Pega un token de GitHub.';
+        this.render();
+        return Promise.resolve();
+      }
+      api.setToken(value);
+      this.sync.error = null;
+      this.render();
+      return this.syncNow(true).then(() => {
+        const e = this.sync.error;
+        if(e && (e.code === 'auth' || e.code === 'scopes')){
+          api.setToken('');
+          this.tokenError = e.message;
+          this.sync.error = null;
+        } else if(!e){
+          toast.success('Token guardado. Sincronizado con GitHub');
+        }
+        this.render();
       });
     }
 

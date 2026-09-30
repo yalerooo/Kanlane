@@ -27,6 +27,15 @@
     return Workhub.services.firebase.githubToken();
   }
 
+  /* De dónde viene el acceso guardado: 'oauth' (con «Conectar con GitHub», los
+     tokens de acceso de una aplicación OAuth empiezan por gho_), 'token' (pegado a
+     mano) o '' si no hay ninguno. */
+  function tokenKind(){
+    const t = token();
+    if(!t) return '';
+    return /^gho_/.test(t) ? 'oauth' : 'token';
+  }
+
   function setToken(value){
     try{
       if(value) localStorage.setItem(TOKEN_KEY, value);
@@ -208,7 +217,7 @@
 
   Workhub.services.github = {
     fetchRepoLabels, addLabels, removeLabels, fetchDetails,
-    GithubError, token, setToken, canOAuth, oauth, parseProjectUrl,
+    GithubError, token, tokenKind, setToken, canOAuth, oauth, parseProjectUrl,
     fetchProject, fetchItems, setStatus, addDraft, updateDraft, updateIssue
   };
 })();

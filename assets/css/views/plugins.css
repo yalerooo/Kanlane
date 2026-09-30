@@ -159,3 +159,7 @@
 
 /* Con un plugin abierto la sección es la del propio plugin: sin la cabecera «Plugins». */
 .main-inner:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])) > .page-head{display:none;}
+
+/* El plugin ocupa todo el ancho, hasta el borde de la ventana, como una pestaña propia. */
+.main-inner:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])){max-width:none;}
+#pluginStage .plugin-frame-wrap{margin-inline:calc(-1 * var(--main-px, 0px));}

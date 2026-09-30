@@ -22,7 +22,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Web en producción:** https://workhub-project.netlify.app (Netlify).
 - **Repositorio:** `yalerooo/Workhub` (GitHub), rama principal `main`.
 - **Ramas de trabajo de Claude:** se trabaja en un worktree con su propia rama y se sube ahí; después se abre (o el usuario abre) el pull request contra `main`.
-  - La rama más reciente es **`claude/context-docs-review-985e75`** (PR #31–#40, todos fusionados; el último cambio, los nombres de los botones de GitHub, va en el siguiente PR). Antes: `claude/read-context-md-df6b13` (PR #25–#30) y `claude/sleepy-brown-tdi6yq`.
+  - Ramas usadas hasta ahora: `claude/sleepy-brown-tdi6yq`, `claude/read-context-md-df6b13` (PR #24–#30) y `claude/context-docs-review-985e75` (PR #31–#45). **Todos los PR hasta el #45 están fusionados en `main`** y no hay trabajo pendiente en ninguna rama. La última sesión (30-sep-2026) solo puso el worktree `claude/read-context-md-df6b13` al día con `main` (fast-forward) y actualizó este documento.
   - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main` (`git checkout -B <rama> origin/main`) o se hace `git merge origin/main`.
   - **En el equipo Windows del usuario no hay `gh`**: no se pueden abrir PR desde aquí. Se sube la rama y se da el enlace `https://github.com/yalerooo/Workhub/pull/new/<rama>` (el usuario lo abre y lo fusiona él).
 - **Estado del despliegue (30-sep-2026):** Netlify se quedó **sin créditos de build** (los despliegues de producción salen «Skipped» y hay un aviso de «operational credits»); la web publicada sigue viva pero con código antiguo hasta el siguiente ciclo de facturación o hasta mejorar el plan. Alternativa ya configurada: **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos): `firebase login` y `firebase deploy --only hosting` desde `main` (el `predeploy` ejecuta `scripts/build-public.js`). Se habló de Vercel/Cloudflare Pages solo como entorno de pruebas; no se ha montado (haría falta `vercel.json` con las cabeceras y las redirecciones de `/__/auth/*`, y autorizar el dominio en Firebase, Google y GitHub).
@@ -112,7 +112,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 ## 4. Funcionalidades (estado actual)
 
 ### Tareas (tablero)
-- **Estados**, en `task-model.js` `STATUSES`: `pendiente` (Pendiente), `proceso` (En proceso), `espera` (Esperando al cliente), `completada` (Completada).
+- **Estados (etapas)**: dependen del tipo de proyecto (ver «Tipos de proyecto»); `TaskModel.STATUS` se rellena con `setStages()`. Las del tipo *soporte* son `pendiente` (Pendiente), `proceso` (En proceso), `espera` (Esperando al cliente) y `completada` (Completada).
 - **Campos de la tarea:** `title`, `desc`, `cliente`, `status`, `contacto`, `dueDate` (YYYY-MM-DD), `order`, `createdAt`, `updatedAt`, `labels`, contactos y contraseñas vinculados, `assignees` (uids, solo en equipos) y notas en una subcolección (`text`, `imageAssetId`, `createdAt`).
 - **Tablero:**
   - Ocupa el alto de la ventana y cada columna tiene su propio scroll.
@@ -363,7 +363,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Nota:** los textos con datos se traducen con claves con marcadores (`Workhub.t('hace {n} min', {n})` necesita esa clave exacta en `en.js`) o con patrones regex al final de `en.js`. En `en.js` las barras invertidas de los patrones deben escaparse bien al generarlos con scripts.
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
 
-## 8. Historial de pull requests (todos fusionados salvo el último)
+## 8. Historial de pull requests (todos fusionados)
 
 | # | Qué |
 |---|---|
@@ -400,7 +400,12 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 38 | GitHub en equipos: el enlace viaja con el equipo, «Conectar con GitHub» sin token (OAuth), solo el propietario crea al cruzar, lectores sin sincronizar, errores de conversión claros |
 | 39 | Convertir a equipo: copiar de una en una en vez de en lotes (límite de reglas de Firestore) |
 | 40 | GitHub: con la cuenta conectada no se ofrece «Olvidar token» ni «Conectar en su lugar» (`tokenKind`) |
-| **pendiente** | Rama `claude/context-docs-review-985e75`, sin PR abierto todavía: «Desvincular proyecto» / «Quitar mi acceso a GitHub» (nombres distintos y con ayuda) y esta actualización de CONTEXT.md |
+| 41 | «Desvincular proyecto» / «Quitar mi acceso a GitHub» (nombres distintos y con ayuda) y CONTEXT.md con invitado, primer proyecto, equipos, GitHub sin token, límite de lotes y recetas de prueba |
+| 42 | Clientes: lista con insignia de tareas abiertas, ficha con tarjetas de cifras y contactos en tarjetas (sin raya de acento en el cliente elegido) |
+| 43 | Logo simbólico: pila de tarjetas con check sobre degradado azul, y favicon nuevo |
+| 44–45 | Pantalla de acceso: esqueleto de carga con la forma del formulario en lugar de «Cargando…» con círculo (y un retoque) |
+
+**No hay PR pendiente.** Lo siguiente que se abra empezará en el #46.
 
 ## 9. Cómo trabajar y probar
 
@@ -422,11 +427,14 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ## 10. Ideas y posibles siguientes pasos (no pedidas todavía)
 
-- **Desplegar** lo fusionado (Netlify sin créditos → `firebase deploy --only hosting`, o esperar al ciclo) y **publicar `firestore.rules`** (sin ellas, «Compartir» falla con permission-denied). Después **probar con Firebase real**: equipos (crear, convertir, invitar con otra cuenta de Google, asignar, roles), primer proyecto y modo invitado.
-- **Probar «Conectar con GitHub» y la sincronización con GitHub real** (OAuth devuelve `gho_…`; proyectos de organización; actividad de la incidencia).
+- **Hecho (30-sep-2026):** las reglas de Firestore publicadas en la consola **coinciden con `firestore.rules` de `main`** (el usuario las pegó y se compararon función por función; solo cambian los comentarios), así que «Compartir» ya no debe fallar por reglas. La CSP de `netlify.toml` ya incluye `api.github.com`.
+- **Pendiente real 1 — desplegar** lo fusionado: no consta que se haya hecho (Netlify sin créditos → `firebase deploy --only hosting` desde `main`, o esperar al ciclo). Preguntar al usuario si ya está.
+- **Pendiente real 2 — probar con servicios reales** (hasta ahora solo emuladores y una API de GitHub simulada): equipos con Firebase real (crear, convertir, invitar con otra cuenta de Google, asignar, roles), primer proyecto y modo invitado.
+- **Pendiente real 3 — probar «Conectar con GitHub» y la sincronización con GitHub real** (OAuth devuelve `gho_…`; proyectos de organización; actividad de la incidencia y `closedByPullRequestsReferences`).
 - **Contraseñas compartidas** en equipos con cifrado extremo a extremo por miembro (ver `docs/EQUIPOS.md`), y después comentarios, actividad y notificaciones de equipo.
 - Pulir equipos: renombrar/etiquetar la copia al convertir, avisar al propietario cuando se acepta una invitación, «Mis tareas» en el calendario, asignar también reuniones.
 - Si Netlify sigue sin créditos, decidir alojamiento definitivo (Firebase Hosting ya está configurado; Cloudflare Pages/Vercel requieren rehacer cabeceras y redirecciones).
+- **Ideas que se comprobó (en `main`) que NO están implementadas:** renombrar columnas en GitHub, comentar desde la ficha, crear etiquetas en el repositorio, borrar/renombrar etiquetas del catálogo y filtrar el tablero por etiqueta.
 - Renombrar columnas en GitHub desde Workhub (`updateProjectV2Field`): probar primero que conserva los ids de las opciones, si no los elementos perderían su columna.
 - Comentar desde la ficha (hoy la actividad de GitHub es solo lectura), crear etiquetas nuevas en el repositorio, borrar/renombrar etiquetas del catálogo, filtrar el tablero por etiqueta.
 - Probar el idioma en producción (pantalla de login y los textos nuevos de equipos y GitHub).

@@ -56,6 +56,7 @@
         error: this.sync.error,
         last: this.sync.lastResult,
         hasToken: !!api.token(),
+        tokenKind: api.tokenKind(),
         projects: this.app.models.projects.list().map((p) => ({id:p.id, nombre:p.nombre, linked:!!p.github})),
         currentId: this.app.projectId,
         connecting: this.connecting,

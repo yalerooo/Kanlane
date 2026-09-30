@@ -468,6 +468,9 @@
         const has = !!Workhub.services.github.token();
         this.ghTokenField.hidden = has;
         this.ghTokenSaved.hidden = !has;
+        this.ghTokenSaved.textContent = Workhub.t(Workhub.services.github.tokenKind() === 'oauth'
+          ? 'Se usará tu cuenta de GitHub conectada en este navegador.'
+          : 'Se usará el token de GitHub guardado en este navegador.');
         this.ghOauthBox.hidden = has || !Workhub.services.github.canOAuth();
         this.nameInput.placeholder = 'Por defecto, el nombre del proyecto de GitHub';
       } else {

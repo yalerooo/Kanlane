@@ -17,6 +17,8 @@
     return Workhub.t('hace {n} d', {n:Math.round(h / 24)});
   }
 
+  const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
   /* «Conectar con GitHub»: autorizar sin crear ni pegar ningún token. */
   function oauthBlock(s){
     if(!s.canOAuth) return '';
@@ -95,7 +97,9 @@
 
     _form(s){
       const tokenField = s.hasToken
-        ? '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>'
+        ? (s.tokenKind === 'oauth'
+          ? '<p class="gh-note gh-connected">' + CHECK + '<span>' + esc(Workhub.t('Conectado con tu cuenta de GitHub en este navegador.')) + '</span> <button type="button" class="link-btn" data-gh="forget">' + esc(Workhub.t('Desconectar cuenta')) + '</button></p>'
+          : '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>')
         : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
           '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
@@ -167,8 +171,8 @@
           '<div class="gh-actions">' +
           (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
           '<button type="button" class="btn btn-ghost" data-gh="unlink">Desconectar</button>' +
-          (s.hasToken && s.canOAuth ? '<button type="button" class="btn btn-ghost" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
-          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">Olvidar token</button>' : '') +
+          (s.hasToken && s.tokenKind !== 'oauth' && s.canOAuth ? '<button type="button" class="btn btn-ghost" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
+          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">' + esc(Workhub.t(s.tokenKind === 'oauth' ? 'Desconectar cuenta' : 'Olvidar token')) + '</button>' : '') +
           '</div>')) +
         '</div>';
     }

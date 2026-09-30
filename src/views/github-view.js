@@ -17,6 +17,13 @@
     return Workhub.t('hace {n} d', {n:Math.round(h / 24)});
   }
 
+  /* «Conectar con GitHub»: autorizar sin crear ni pegar ningún token. */
+  function oauthBlock(s){
+    if(!s.canOAuth) return '';
+    return '<div class="gh-oauth"><button type="button" class="btn btn-primary" data-gh="oauth">' + MARK + '<span>Conectar con GitHub</span></button>' +
+      '<p class="field-help">Se abre GitHub para que autorices Workhub (permiso sobre tus proyectos). No tienes que copiar ningún token.</p></div>';
+  }
+
   class GithubView {
     constructor(){
       this.body = $('ghBody');
@@ -39,6 +46,7 @@
         else if(act === 'sync') this.handlers.sync();
         else if(act === 'unlink') this.handlers.unlink();
         else if(act === 'forget') this.handlers.forget();
+        else if(act === 'oauth') this.handlers.oauth();
         else if(act === 'saveToken') this.handlers.saveToken($('ghToken') ? $('ghToken').value.trim() : '');
       });
       this.body.addEventListener('change', (ev) => {
@@ -66,8 +74,8 @@
     render(s){
       this.last = s;
       /* Botón de la barra de Tareas. */
-      this.button.hidden = !s.linked;
-      if(s.linked){
+      this.button.hidden = !s.linked || s.canSync === false;
+      if(s.linked && s.canSync !== false){
         this.button.classList.toggle('is-busy', s.busy);
         this.button.classList.toggle('is-error', !!s.error);
         this.button.disabled = s.busy;
@@ -88,7 +96,7 @@
     _form(s){
       const tokenField = s.hasToken
         ? '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button></p>'
-        : '<div class="field"><label for="ghToken">Token de GitHub</label>' +
+        : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
           '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
       /* Destino: uno de los proyectos de Workhub o uno nuevo. */
@@ -141,22 +149,27 @@
         if(parts.length) detail = '<p class="gh-note">' + esc(parts.join(' · ')) + '</p>';
       }
       /* Enlazado desde otro navegador: el token no viaja con la cuenta y hay que pegarlo aquí. */
-      const tokenBlock = s.hasToken ? '' :
-        '<div class="field gh-token-missing"><label for="ghToken">Token de GitHub</label>' +
-        '<p class="gh-note is-warn">Este proyecto está enlazado con GitHub, pero este navegador no tiene el token (se guarda solo en cada navegador y no viaja con tu cuenta). Pégalo para volver a sincronizar.</p>' +
+      const readOnly = s.canSync === false;
+      const tokenBlock = s.hasToken || readOnly ? '' :
+        '<div class="field gh-token-missing">' +
+        '<p class="gh-note is-warn">Este proyecto está enlazado con GitHub, pero este navegador no tiene acceso a tu cuenta de GitHub (se guarda solo en cada navegador y no viaja con tu cuenta). ' + (s.canOAuth ? 'Conéctala con un clic o pega un token.' : 'Pega un token para volver a sincronizar.') + '</p>' +
+        oauthBlock(s) +
+        '<label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
         '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
         (s.tokenError ? '<p class="lock-error">' + esc(s.tokenError) + '</p>' : '') +
-        '<div class="gh-actions"><button type="button" class="btn btn-primary" data-gh="saveToken"' + (s.busy ? ' disabled' : '') + '>Guardar token y sincronizar</button></div></div>';
+        '<div class="gh-actions"><button type="button" class="btn ' + (s.canOAuth ? 'btn-ghost' : 'btn-primary') + '" data-gh="saveToken"' + (s.busy ? ' disabled' : '') + '>Guardar token y sincronizar</button></div></div>';
       return '<div class="gh-linked">' +
         '<div class="gh-project">' + MARK + '<div><a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(c.title) + '</a>' +
         '<div>' + state + '</div></div></div>' + tokenBlock + detail +
-        '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Workhub (como borradores)</label>' +
-        '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
-        '<div class="gh-actions">' +
-        (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
-        '<button type="button" class="btn btn-ghost" data-gh="unlink">Desconectar</button>' +
-        (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">Olvidar token</button>' : '') +
-        '</div></div>';
+        (readOnly ? '<p class="gh-note">' + esc(Workhub.t('Eres lector de este proyecto: no puedes sincronizar con GitHub.')) + '</p>' : (
+          '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Workhub (como borradores)</label>' +
+          '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
+          '<div class="gh-actions">' +
+          (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
+          '<button type="button" class="btn btn-ghost" data-gh="unlink">Desconectar</button>' +
+          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">Olvidar token</button>' : '') +
+          '</div>')) +
+        '</div>';
     }
   }
 

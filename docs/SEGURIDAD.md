@@ -18,7 +18,7 @@ Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus 
 | Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas y para la contraseña maestra de las contraseñas. |
 | Adivinar si un correo tiene cuenta | "Recuperar contraseña" responde lo mismo exista o no la cuenta. |
 | Fuerza bruta contra el inicio de sesión | Firebase bloquea temporalmente tras muchos intentos (`auth/too-many-requests`). |
-| Token de GitHub (integración con GitHub Projects) | Se guarda solo en el navegador (`localStorage`), nunca en Firestore ni en el repositorio. Ver [GITHUB.md](GITHUB.md#seguridad). |
+| Token de GitHub (integración con GitHub Projects) | Se guarda solo en el navegador (`localStorage`), nunca en Firestore ni en el repositorio, tanto si se pega como si se obtiene con «Conectar con GitHub» (que usa el inicio de sesión de GitHub y no toca tu cuenta). Ver [GITHUB.md](GITHUB.md#seguridad). |
 | Alguien entra en un proyecto de equipo sin permiso | Un equipo (`teams/{id}`) solo lo lee quien está en su lista de miembros, y solo propietarios y editores escriben datos. Para entrar hace falta una invitación dirigida a tu correo **verificado**, con el rol que te dieron; nadie puede darse un rol mayor ni meter a otros. Las invitaciones las crea solo el propietario y las lee solo su destinatario. Ver [EQUIPOS.md](EQUIPOS.md). |
 | Robo de la base de datos | Las contraseñas guardadas van cifradas en tu navegador (AES-256 + PBKDF2) antes de subir. En Firestore solo hay texto cifrado. |
 

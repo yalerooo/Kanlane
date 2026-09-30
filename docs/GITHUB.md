@@ -9,6 +9,17 @@ Workhub puede enlazar un proyecto suyo con un **GitHub Project** (los tableros n
 
 ## Conectar
 
+### Con un clic (sin token)
+
+Si Workhub tiene la cuenta activada y el acceso con GitHub habilitado en Firebase, aparece el botón **Conectar con GitHub** (en Ajustes, en *Nuevo proyecto → Desde GitHub* y donde falte el acceso). Se abre la ventana de GitHub para que autorices Workhub con el permiso `project` y Workhub guarda el acceso **solo en este navegador**, sin que tengas que crear ni copiar ningún token.
+
+- Se hace con una segunda instancia de Firebase, con su propia sesión: **no cambia los métodos de acceso de tu cuenta** ni choca con que uses Google u otro proveedor con el mismo correo. La sesión temporal se cierra (y se borra si era una cuenta nueva) nada más recibir el acceso.
+- Firebase no guarda ese acceso; lo guarda la app en `localStorage` (`workhub_gh_token`), como el token pegado a mano.
+- Si el proyecto está en una **organización**, esa organización tiene que permitir la aplicación OAuth de Workhub (GitHub lo pide en la ventana de autorización).
+- Requisito de configuración: el proveedor **GitHub** activado en Firebase (Authentication → Sign-in method) y `'github'` en `providers` de `firebase-config.js`. Ver [FIREBASE.md](FIREBASE.md).
+
+### Con un token
+
 1. En GitHub: **Settings → Developer settings → Personal access tokens → Tokens (classic)** → *Generate new token (classic)* y marca el permiso **`project`** (o `read:project` si solo quieres leer). Los tokens *fine-grained* no funcionan con proyectos de usuario.
 2. En Workhub: *Nuevo proyecto → Desde GitHub*, o **Ajustes → GitHub Projects** (ver arriba).
 3. Pega el token y el enlace del proyecto de GitHub, por ejemplo `https://github.com/users/yalerooo/projects/1/views/1` (también valen los de organización: `https://github.com/orgs/…`).
@@ -35,6 +46,14 @@ Cada proyecto de Workhub puede enlazarse con un proyecto de GitHub distinto. El 
 Las tareas enlazadas muestran una marca de GitHub en la tarjeta y un enlace al elemento en su ficha. Los datos de Workhub que GitHub no tiene (cliente, contacto, fecha límite, notas, contraseñas vinculadas) se quedan solo en Workhub.
 
 Se sincroniza al abrir el proyecto, al volver a la pestaña, cada 2 minutos y unos segundos después de cambiar algo en Workhub. También con el botón **GitHub** de la barra de Tareas o **Sincronizar ahora** en Ajustes.
+
+## En un proyecto de equipo
+
+Un proyecto enlazado con GitHub se puede convertir en **proyecto de equipo** (ver [EQUIPOS.md](EQUIPOS.md)). El enlace (`github`, sin ningún token) pasa al equipo y el original deja de sincronizar, para no tener dos proyectos con el mismo tablero.
+
+- **Cada miembro conecta su propia cuenta de GitHub** (botón *Conectar con GitHub* o token): el acceso no se comparte ni viaja con la cuenta. Sin él, el proyecto muestra «Añadir token de GitHub» y no sincroniza en ese navegador.
+- Varias personas pueden sincronizar a la vez. Lo que ya existe (mover, título, descripción, etiquetas) se sincroniza desde cualquiera. Lo que **crea** algo al cruzar (un elemento nuevo de GitHub → tarea, una tarea nueva → borrador en GitHub) lo hace solo el **propietario**, para no duplicar: si el propietario no está conectado, esos elementos nuevos esperan a que lo esté.
+- Los **lectores** no sincronizan con GitHub.
 
 ## Límites
 

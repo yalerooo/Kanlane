@@ -153,7 +153,7 @@
         <div class="account-text"><span class="account-name" id="accountName"></span><span class="account-mail" id="accountMail"></span></div>
         <button type="button" class="icon-only" id="btnSignOut" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
       </div>
-      <div class="storage-status" id="storageStatus" data-mode="firebase"><span class="storage-ic" id="storageIcon" aria-hidden="true"></span><span class="storage-text" id="storageLabel">Sincronizado</span><span class="status-dot" aria-hidden="true"></span></div>
+      <div class="storage-status" id="storageStatus" data-mode="firebase"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
     </div>
   </aside>
 
@@ -409,19 +409,13 @@
           <h3>Almacenamiento</h3>
           <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
         </div>
-        <div class="storage-card" id="storageCard" data-mode="firebase">
-          <div class="storage-card-main">
-            <span class="storage-card-ic" id="storageCardIcon" aria-hidden="true"></span>
-            <div class="storage-card-text">
-              <div class="storage-card-title"><strong id="storageTitle"></strong><span class="storage-badge" id="storageBadge"></span></div>
-              <p id="storageDesc"></p>
-            </div>
-          </div>
-          <div class="storage-card-account settings-account" id="settingsAccount" hidden>
-            <span class="avatar is-xs" id="settingsAvatar" aria-hidden="true"></span>
-            <div class="storage-card-who">
-              <span class="storage-card-label" id="settingsAccountLabel"></span>
-              <span class="storage-card-mail" id="settingsAccountMail" translate="no"></span>
+        <div class="storage-block" id="storageCard" data-mode="firebase">
+          <div class="storage-line"><span class="status-dot"></span><span id="storageTitle"></span></div>
+          <p class="storage-desc" id="storageDesc"></p>
+          <div class="settings-account" id="settingsAccount" hidden>
+            <div class="settings-account-who">
+              <span class="settings-account-label" id="settingsAccountLabel"></span>
+              <span class="settings-account-mail" id="settingsAccountMail" translate="no"></span>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
           </div>

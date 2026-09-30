@@ -82,6 +82,8 @@
     'Escribe tu nombre.':'Enter your name.',
     'Entrar como invitado':'Enter as guest',
     'Invitado':'Guest',
+    'Volver':'Back',
+    'Solo necesitas un nombre. No hace falta cuenta.':'You only need a name. No account required.',
     'Salir del modo invitado':'Leave guest mode',
     'Modo invitado: tus datos se guardan solo en este navegador.':'Guest mode: your data is stored only in this browser.',
     'Este navegador no permite guardar datos, así que no se puede usar el modo invitado.':'This browser does not allow saving data, so guest mode cannot be used.',

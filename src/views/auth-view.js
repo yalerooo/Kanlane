@@ -68,10 +68,8 @@
         ev.preventDefault();
         this.setMode(this.mode === 'signin' ? 'signup' : 'signin');
       });
-      this.guestBtn.addEventListener('click', () => {
-        this.guestForm.hidden = !this.guestForm.hidden;
-        if(!this.guestForm.hidden) this.guestName.focus();
-      });
+      this.guestBtn.addEventListener('click', () => this.setGuestStep(true));
+      $('authGuestBack').addEventListener('click', () => this.setGuestStep(false));
       this.forgot.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.setMode('reset');
@@ -157,6 +155,7 @@
       this.divider.hidden = !social.length || !this.hasPassword;
       this.form.hidden = !this.hasPassword;
       this.allowSignup = allowSignup !== false;
+      this.setGuestStep(false);
       this.setMode('signin');
     }
 
@@ -216,6 +215,20 @@
       document.documentElement.classList.remove('auth-gate');
       document.body.classList.remove('is-authing');
       this.screen.hidden = true;
+    }
+
+    /* Paso «invitado»: solo el nombre; sustituye al resto del formulario de acceso. */
+    setGuestStep(on){
+      this.panel.classList.toggle('is-guest', on);
+      this.guestForm.hidden = !on;
+      this.guestMsg.hidden = true;
+      if(on){
+        this.title.textContent = Workhub.t('Entrar como invitado');
+        this.sub.textContent = Workhub.t('Solo necesitas un nombre. No hace falta cuenta.');
+        this.guestName.focus();
+      } else {
+        this.setMode(this.mode);
+      }
     }
 
     setMode(mode){

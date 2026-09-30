@@ -35,6 +35,7 @@
       this.pass = $('authPass');
       this.forgot = $('authForgot');
       this.msg = $('authMsg');
+      this.notice = $('authNotice');
       this.submit = $('authSubmit');
       this.switchWrap = $('authSwitch');
       this.switchText = $('authSwitchText');
@@ -268,7 +269,28 @@
       this.msg.hidden = false;
     }
 
-    clearMessage(){ this.msg.hidden = true; }
+    clearMessage(){
+      this.msg.hidden = true;
+      this.notice.hidden = true;
+    }
+
+    /* El correo ya tiene cuenta con otro método: aviso con la explicación y los dos pasos. */
+    showLinkNotice(email, provider){
+      const t = Workhub.t;
+      const pill = '<span class="auth-notice-mail" translate="no">' + esc(email) + '</span>';
+      this.notice.innerHTML =
+        '<div class="auth-notice-head">' +
+          '<span class="auth-notice-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>' +
+          '<strong>' + esc(t('Esta cuenta ya existe')) + '</strong>' +
+        '</div>' +
+        '<p>' + t('{email} ya tiene una cuenta con otro método de acceso.', {email:pill}) + '</p>' +
+        '<ol class="auth-notice-steps">' +
+          '<li><span class="auth-notice-n">1</span>' + esc(t('Entra con el método que usaste al crearla')) + '</li>' +
+          '<li><span class="auth-notice-n">2</span>' + esc(t('{provider} se une a esa misma cuenta', {provider:provider})) + '</li>' +
+        '</ol>';
+      this.notice.hidden = false;
+      this.msg.hidden = true;
+    }
 
     /* ---------- Cuenta ---------- */
 

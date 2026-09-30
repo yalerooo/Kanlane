@@ -56,7 +56,6 @@
       this.settingsAccount = $('settingsAccount');
       this.settingsAccountLabel = $('settingsAccountLabel');
       this.settingsAccountMail = $('settingsAccountMail');
-      this.settingsAvatar = $('settingsAvatar');
 
       /* Idioma en la pantalla de acceso (antes de entrar no hay cuenta). */
       $('authLang').addEventListener('click', (ev) => {
@@ -301,10 +300,8 @@
       this.accountBox.hidden = false;
       this.accountName.textContent = name;
       this.accountMail.textContent = Workhub.t('Invitado');
-      [this.accountAvatar, this.settingsAvatar].forEach((a) => {
-        a.style.setProperty('--h', hueFor(name));
-        a.textContent = initials(name);
-      });
+      this.accountAvatar.style.setProperty('--h', hueFor(name));
+      this.accountAvatar.textContent = initials(name);
       this.settingsAccount.hidden = false;
       this.settingsAccountLabel.textContent = Workhub.t('Modo invitado');
       this.settingsAccountMail.textContent = name;
@@ -319,19 +316,17 @@
       this.accountMail.textContent = user.email || '';
       /* La foto viene del proveedor (Google, GitHub): solo se acepta https. */
       const photo = Workhub.utils.urls.safeUrl(user.photoURL);
-      [this.accountAvatar, this.settingsAvatar].forEach((a) => {
-        a.style.setProperty('--h', hueFor(user.uid));
-        a.textContent = '';
-        if(photo && photo.indexOf('https:') === 0){
-          const img = document.createElement('img');
-          img.alt = '';
-          img.referrerPolicy = 'no-referrer';
-          img.src = photo;
-          a.appendChild(img);
-        } else {
-          a.textContent = initials(name);
-        }
-      });
+      this.accountAvatar.style.setProperty('--h', hueFor(user.uid));
+      this.accountAvatar.textContent = '';
+      if(photo && photo.indexOf('https:') === 0){
+        const img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.src = photo;
+        this.accountAvatar.appendChild(img);
+      } else {
+        this.accountAvatar.textContent = initials(name);
+      }
       this.settingsAccount.hidden = false;
       this.settingsAccountLabel.textContent = Workhub.t('Sesión iniciada como');
       this.settingsAccountMail.textContent = user.email || name;

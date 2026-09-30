@@ -70,7 +70,7 @@ Consola → **Authentication** → **Comenzar** → pestaña **Sign-in method**.
 4. **Certificados y secretos** → **Nuevo secreto de cliente** → copia el **Valor** (solo se muestra una vez).
 5. En Firebase pega el Id. de aplicación y el secreto → Guardar.
 
-> **Una cuenta por correo.** Por defecto Firebase no deja tener dos cuentas con el mismo correo usando métodos distintos. Si alguien entró con Google y luego prueba con GitHub usando el mismo correo, Workhub le dirá que entre con el método original.
+> **Una cuenta por correo, y se pueden unir.** Firebase no deja tener dos cuentas con el mismo correo. Si alguien entró con Google y luego prueba con GitHub usando el mismo correo, Workhub le explica que entre ahora con el método original (Google, o correo y contraseña); al hacerlo, GitHub se une **a esa misma cuenta** (mismo usuario, mismos datos) y desde entonces puede entrar con cualquiera de los dos. Solo se une si el correo coincide y después de entrar con la cuenta original, así nadie puede apoderarse de una cuenta ajena. Si la segunda vez que intenta entrar cierra la página antes de hacerlo, tendrá que repetir el intento con GitHub.
 
 ### Dominios autorizados
 En **Authentication** → **Settings** → **Authorized domains** ya están `localhost`, `TU-PROYECTO.web.app` y `TU-PROYECTO.firebaseapp.com`. Si usas un dominio propio (paso 7), añádelo aquí.

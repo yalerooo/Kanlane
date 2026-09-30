@@ -40,6 +40,7 @@
     'auth/too-many-requests': 'Demasiados intentos seguidos. Espera un momento.',
     'auth/popup-blocked': 'El navegador bloqueó la ventana de acceso. Permite las ventanas emergentes para este sitio.'
   };
+  const PROVIDER_NAMES = {'github.com':'GitHub', 'google.com':'Google', 'microsoft.com':'Microsoft', 'apple.com':'Apple'};
   /* Cerrar la ventana de acceso no es un error. */
   const SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
 
@@ -163,13 +164,26 @@
 
     showError(err){
       if(err && SILENT.indexOf(err.code) !== -1) return;
+      /* El correo ya tiene cuenta con otro método: se explica cómo unirlos. */
+      if(err && err.code === 'auth/account-exists-with-different-credential' && err.email){
+        const provider = PROVIDER_NAMES[err.credential && err.credential.providerId] || Workhub.t('el nuevo método');
+        this.view.showMessage(Workhub.t('Ya existe una cuenta con {email}. Entra ahora con el método que usaste al crearla y se unirá {provider} a esa misma cuenta.', {email:err.email, provider:provider}), true);
+        return;
+      }
       this.view.showMessage(messageFor(err));
+    }
+
+    /* Aviso de que un acceso nuevo (p. ej. GitHub) se unió a la cuenta. */
+    linkedNotice(res){
+      if(!res || !res.linked) return;
+      const provider = PROVIDER_NAMES[res.linked] || Workhub.t('el nuevo método');
+      try{ Workhub.views.toast.success(Workhub.t('Listo: ahora también puedes entrar con {provider}.', {provider:provider})); }catch(e){}
     }
 
     signInWith(key){
       this.view.clearMessage();
       this.view.setBusy(true);
-      firebase.signInWith(key).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
+      firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
     }
 
     submitEmail(mode, v){
@@ -196,7 +210,7 @@
           if(this.user && cred && cred.user) this.view.showAccount(cred.user);
         }).catch((err) => this.showError(err));
       } else {
-        p = firebase.signInWithEmail(v.email, v.password).catch((err) => this.showError(err));
+        p = firebase.signInWithEmail(v.email, v.password).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err));
       }
       this.view.setBusy(true);
       p.finally(() => this.view.setBusy(false));

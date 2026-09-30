@@ -52,7 +52,24 @@
       <img class="brand-logo" src="assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
       <span class="brand-name">Workhub</span>
     </div>
-    <div id="authLoading" class="auth-loading" role="status"><span class="spinner" aria-hidden="true"></span>Cargando…</div>
+    <div id="authLoading" class="auth-loading is-skeleton" role="status" aria-live="polite">
+      <span class="sr-only">Cargando…</span>
+      <div class="sk-stack" aria-hidden="true">
+        <span class="sk sk-title"></span>
+        <span class="sk sk-sub"></span>
+        <span class="sk sk-btn sk-first"></span>
+        <span class="sk sk-btn"></span>
+        <span class="sk sk-divider"></span>
+        <span class="sk sk-label"></span>
+        <span class="sk sk-input"></span>
+        <span class="sk sk-label"></span>
+        <span class="sk sk-input"></span>
+        <span class="sk sk-btn is-primary"></span>
+        <span class="sk sk-line"></span>
+        <span class="sk sk-divider"></span>
+        <span class="sk sk-btn"></span>
+      </div>
+    </div>
     <div id="authPanel" hidden>
       <h1 id="authTitle">Inicia sesión</h1>
       <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>

@@ -85,15 +85,28 @@ html.auth-gate #authScreen{display:flex !important;}
 .auth-foot{margin:0;font-size:12px;color:var(--ink-faint);text-align:center;max-width:380px;}
 .auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;padding:8px 0 4px;}
 .auth-loading.is-error{color:var(--danger);align-items:flex-start;flex-direction:column;}
-.spinner{
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  border:2px solid var(--line-strong);
-  border-top-color:var(--accent-solid);
-  animation:spin .7s linear infinite;
+/* Esqueleto de la pantalla de acceso (mientras se comprueba la sesión). */
+.auth-loading.is-skeleton{display:block;padding:0;}
+.sk-stack{display:flex;flex-direction:column;gap:10px;}
+.sk{
+  display:block;
+  border-radius:var(--r-md);
+  background:linear-gradient(90deg, var(--surface-2) 0%, var(--hover) 50%, var(--surface-2) 100%);
+  background-size:220% 100%;
+  animation:sk-shimmer 1.5s ease-in-out infinite;
 }
-@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes sk-shimmer{from{background-position:120% 0;}to{background-position:-120% 0;}}
+.sk-title{width:46%;height:22px;margin-top:4px;}
+.sk-sub{width:72%;height:13px;margin-bottom:12px;}
+.sk-btn{height:38px;}
+.sk-btn.sk-first{margin-top:0;}
+.sk-divider{width:100%;height:1px;margin:10px 0 4px;border-radius:0;animation:none;background:var(--line);}
+.sk-label{width:34%;height:11px;margin-top:6px;}
+.sk-input{height:38px;}
+.sk-btn.is-primary{margin-top:8px;}
+.sk-line{width:44%;height:12px;margin:12px auto 4px;}
+.sk-line + .sk-divider{margin:12px 0 8px;}
+@media (prefers-reduced-motion:reduce){.sk{animation:none;}}
 
 /* Cuenta en la barra lateral */
 .account{display:flex;align-items:center;gap:9px;padding:8px;margin:0 -2px 6px;border-radius:var(--r-md);}

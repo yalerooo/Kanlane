@@ -59,6 +59,20 @@
       return !!this.config();
     }
 
+    /* En un equipo, los lectores no escriben (ni en Workhub ni en GitHub). */
+    canSync(){
+      const p = this.app.controllers.projects.current();
+      return !(p && p.team && p.role === 'viewer');
+    }
+
+    /* Crear cosas al cruzar (elemento nuevo de GitHub → tarea, tarea nueva → borrador)
+       no se puede repetir sin duplicar. En un equipo, donde varios sincronizan a la
+       vez, lo hace solo el propietario; el resto sincroniza lo que ya existe. */
+    canCreate(){
+      const p = this.app.controllers.projects.current();
+      return !(p && p.team && p.role !== 'owner');
+    }
+
     /* Etapas de Workhub a partir de las opciones del campo Status. */
     static stagesFromOptions(options){
       const list = options.map((o) => ({key:keyOf(o.id), label:o.name, color:COLORS[o.color] || 'gray', done:false}));
@@ -146,14 +160,14 @@
     }
 
     _isNew(t, cfg){
-      return !!cfg.pushNew && !t.ghItemId && !this.sent[t.id] && (t.createdAt || 0) >= (cfg.pushFrom || 0);
+      return !!cfg.pushNew && this.canCreate() && !t.ghItemId && !this.sent[t.id] && (t.createdAt || 0) >= (cfg.pushFrom || 0);
     }
 
     /* ---------- Sincronizar ---------- */
 
     sync(){
       const cfg = this.config();
-      if(!cfg || this.busy || !this.tasks.isReady()) return Promise.resolve(null);
+      if(!cfg || this.busy || !this.tasks.isReady() || !this.canSync()) return Promise.resolve(null);
       const pid = this.app.projectId;
       const gen = this.tasks.generation;
       /* Si se cambia de proyecto a mitad, no se escribe nada más. */
@@ -284,6 +298,7 @@
           const r = this._remoteFields(item);
           const t = byItem[item.id];
           if(!t){
+            if(!this.canCreate()) return null;
             result.created++;
             return this.tasks.saveSynced(null, Object.assign({
               title: r.title, desc: r.desc, cliente: '', status: r.status, contacto: '', dueDate: '',

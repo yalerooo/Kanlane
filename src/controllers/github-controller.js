@@ -26,6 +26,7 @@
         unlink: () => this.unlink(),
         forget: () => { api.setToken(''); this.render(); },
         saveToken: (v) => this.saveToken(v),
+        oauth: () => this.connectOAuth(),
         pushNew: (on) => this.sync.setPushNew(on)
       });
 
@@ -59,7 +60,9 @@
         currentId: this.app.projectId,
         connecting: this.connecting,
         connectError: this.connectError,
-        tokenError: this.tokenError
+        tokenError: this.tokenError,
+        canOAuth: api.canOAuth(),
+        canSync: this.sync.canSync()
       });
     }
 
@@ -110,7 +113,7 @@
 
     /* quiet: no avisa con un mensaje cuando todo va bien. */
     syncNow(quiet){
-      if(!this.sync.isLinked()) return Promise.resolve();
+      if(!this.sync.isLinked() || !this.sync.canSync()) return Promise.resolve();
       if(!api.token()){
         /* Sin token en este navegador: se lleva al usuario a donde puede pegarlo. */
         if(!quiet){
@@ -125,6 +128,28 @@
       return this.sync.sync().then((r) => {
         if(!quiet && r && !this.sync.error) toast.success('Sincronizado con GitHub');
         if(!quiet && this.sync.error) toast.error(this.sync.error.message);
+      });
+    }
+
+    /* «Conectar con GitHub»: abre el inicio de sesión de GitHub y guarda el token que
+       devuelve, sin que el usuario tenga que crear ni pegar nada. */
+    connectOAuth(){
+      this.tokenError = '';
+      this.connectError = '';
+      const fail = (text) => { this.tokenError = text; this.connectError = text; this.render(); return false; };
+      return api.oauth().then((token) => {
+        if(this.sync.isLinked()) return this.saveToken(token).then(() => true);
+        api.setToken(token);
+        this.render();
+        toast.success('GitHub conectado');
+        return true;
+      }, (err) => {
+        const code = err && err.code;
+        if(code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return false;
+        if(code === 'auth/popup-blocked') return fail('El navegador bloqueó la ventana de GitHub. Permite las ventanas emergentes para este sitio.');
+        if(code === 'auth/operation-not-allowed') return fail('El acceso con GitHub no está activado en Firebase (Authentication → Sign-in method).');
+        if(code === 'auth/unauthorized-domain') return fail('Este dominio no está autorizado en Firebase (Authentication → Settings → Authorized domains).');
+        return fail('No se pudo conectar con GitHub. Inténtalo de nuevo, o pega un token.');
       });
     }
 

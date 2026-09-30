@@ -4,6 +4,15 @@
 (function(){
   const toast = Workhub.views.toast;
 
+  /* Por qué falla una operación con Firestore, en cristiano. */
+  function reason(err){
+    const code = err && err.code;
+    if(code === 'permission-denied') return ' ' + Workhub.t('Firestore ha rechazado la operación (permission-denied): comprueba que has publicado las reglas nuevas de firestore.rules (ver docs/EQUIPOS.md) y que tu correo está verificado.');
+    if(code === 'unavailable' || code === 'deadline-exceeded') return ' ' + Workhub.t('Parece un problema de conexión; inténtalo de nuevo.');
+    if(code === 'resource-exhausted') return ' ' + Workhub.t('Se ha superado la cuota de Firestore por hoy.');
+    return code ? ' (' + code + ')' : '';
+  }
+
   const ERRORS = {
     'bad-email': 'Escribe un correo válido.',
     'already-member': 'Esa persona ya está en el equipo.'
@@ -150,15 +159,17 @@
         this.view.close();
         const pc = this.app.controllers.projects;
         pc.justCreated = t.id;
+        /* El enlace con GitHub pasa al equipo: el original deja de sincronizar el mismo tablero. */
+        if(p.github) this.projects.patch(p.id, {github:null}).catch(() => {});
         this.app.rememberProject({id:t.id, nombre:p.nombre, color:p.color, tipo:p.tipo, stages:p.stages, clients:p.clients, labels:p.labels});
         this.app.switchProject(t.id, false);
         toast.success(Workhub.t('«{name}» ya es un proyecto de equipo. El original sigue como estaba.', {name:p.nombre}));
         this.pendingOpen = t.id;
         this.refresh();
-      }).catch(() => {
+      }).catch((err) => {
         this.view.setBusy(false);
         this.view.setProgress('');
-        this.view.showError('No se pudo crear el proyecto de equipo. Inténtalo de nuevo.');
+        this.view.showError(Workhub.t('No se pudo crear el proyecto de equipo.') + reason(err));
       });
     }
   }

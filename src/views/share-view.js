@@ -24,6 +24,7 @@
       this.error = $('shError');
       this.progress = $('shProgress');
       this.btnConvert = $('shConvert');
+      this.githubNote = $('shGithubNote');
       this.btnLeave = $('shLeave');
       this.handlers = {};
 
@@ -67,6 +68,7 @@
       this.title.textContent = Workhub.t('Compartir «{name}»', {name:project.nombre});
       this.lead.textContent = 'Este proyecto es personal, solo tú lo ves. Para trabajar con otras personas y repartir tareas hay que convertirlo en un proyecto de equipo.';
       this.personal.hidden = false;
+      this.githubNote.hidden = !project.github;
       this.teamEl.hidden = true;
       this.btnLeave.hidden = true;
       this.setBusy(false);

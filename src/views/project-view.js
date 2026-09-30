@@ -69,6 +69,9 @@
       this.ghTokenSaved = $('pGhTokenSaved');
       this.ghToken = $('pGhToken');
       this.ghUrl = $('pGhUrl');
+      this.ghOauthBox = $('pGhOauthBox');
+      this.oauthHandler = null;
+      $('pGhOauth').addEventListener('click', () => { if(this.oauthHandler) this.oauthHandler(); });
       this.githubHandler = null;
 
       this.tipo = PT.DEFAULT_TYPE;
@@ -307,6 +310,16 @@
       });
     }
 
+    /* «Conectar con GitHub» (sin token) en el tipo «Desde GitHub». */
+    bindGithubOAuth(handler){
+      this.oauthHandler = handler;
+    }
+
+    /* Repinta el bloque de GitHub (p. ej. tras conectar la cuenta). */
+    refreshGithub(){
+      this._renderCustom();
+    }
+
     /* handler({nombre, url, token}) para el tipo «Desde GitHub». */
     bindGithubSubmit(handler){
       this.githubHandler = handler;
@@ -455,6 +468,7 @@
         const has = !!Workhub.services.github.token();
         this.ghTokenField.hidden = has;
         this.ghTokenSaved.hidden = !has;
+        this.ghOauthBox.hidden = has || !Workhub.services.github.canOAuth();
         this.nameInput.placeholder = 'Por defecto, el nombre del proyecto de GitHub';
       } else {
         this.nameInput.placeholder = 'Por ejemplo: Agencia, Freelance, Personal…';

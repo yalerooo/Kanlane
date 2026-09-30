@@ -70,7 +70,30 @@
     }).catch(() => {});
   }
 
+  /* La barra de estado del móvil / de la ventana instalada toma el color de fondo de la app
+     (claro u oscuro, según el tema elegido), no el azul de acento. */
+  function syncThemeColor(){
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if(!bg) return;
+    let meta = document.querySelector('meta[name="theme-color"][data-live]');
+    if(!meta){
+      document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.setAttribute('data-live', '1');
+      document.head.appendChild(meta);
+    }
+    meta.content = bg;
+  }
+
+  function watchThemeColor(){
+    syncThemeColor();
+    new MutationObserver(syncThemeColor).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+    if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncThemeColor);
+  }
+
   function start(){
+    watchThemeColor();
     const btn = document.getElementById('btnInstallApp');
     if(btn) btn.addEventListener('click', install);
     renderInstall();

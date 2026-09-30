@@ -79,6 +79,10 @@ Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código 
 - **Netlify** ya no se usa: el fichero `netlify.toml` se eliminó. El sitio antiguo (`workhub-project.netlify.app`) sigue en `hostingDomains` para que, mientras exista, el acceso siga funcionando ahí; quítalo cuando lo borres, y bórralo también de los dominios autorizados.
 - **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue configurado en `firebase.json` como alternativa de emergencia: `firebase deploy --only hosting`. **No lleva las cabeceras de seguridad** de `_headers`, que son propias de Cloudflare.
 
+## Registros y trazas
+
+`wrangler.jsonc` incluye el bloque `observability`: registros, trazas e incidencias del Worker (el reenvío del login), que se ven en el Worker → **Observabilidad**. Cloudflare avisa con «Update your Wrangler configuration…» cuando lo que hay activado en el panel no coincide con este fichero; se copia aquí para que los despliegues no lo cambien. Si algún día cambias esos interruptores en el panel y sale ese aviso, copia el bloque que te propone. Está `redact_query_string` en `true` para que los registros no guarden los parámetros de las URL del login.
+
 ## Si algo falla
 
 - **La compilación dice que el Worker no coincide**: el nombre del proyecto en Cloudflare tiene que ser igual a `"name"` en `wrangler.jsonc` (`workhub`).

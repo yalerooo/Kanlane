@@ -413,7 +413,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ## 9. Cómo trabajar y probar
 
-- **En local:** `python3 -m http.server 5500` en la raíz y abrir `http://localhost:5500/`.
+- **En local (preferido, sin Python):** `node scripts/dev.js` (o doble clic en `start-dev.bat`) sirve la app en `http://localhost:5500` **y recarga el navegador solo al guardar** un fichero de `index.html`, `assets/`, `src/` o `plugins/` (SSE en `/__dev/events`). Por defecto va en **modo local** (le sirve un `firebase-config.js` vacío: sin login, datos solo en el navegador); `--nube` usa el Firebase real (¡los cambios se guardan de verdad!); `--puerto N` cambia el puerto. Solo sirve la lista blanca de `build-public.js`. No reproduce lo de Cloudflare (`worker/` ni `_headers`). Lo creó el usuario al quejarse de esperar los despliegues de Cloudflare para ver cambios; `start-workhub.bat` (necesita Python) sigue existiendo.
+- **En local con Python:** `python3 -m http.server 5500` en la raíz y abrir `http://localhost:5500/`.
   - Si `firebase-config.js` tiene `apiKey`, pedirá login.
   - Para probar sin login: abrir `file:///…/index.html`, o en Playwright interceptar `**/src/config/firebase-config.js` con `window.WORKHUB_FIREBASE={apiKey:'',projectId:''};`.
 - **Playwright:** usa el Chromium de `/opt/pw-browsers` (`executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`); no ejecutes `playwright install`.

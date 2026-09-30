@@ -195,10 +195,16 @@
       this.home.hidden = false;
     }
 
+    /* body.plugin-open: hay un plugin abierto y se está viendo (oculta la cabecera de la sección). */
+    syncOpenClass(){
+      document.body.classList.toggle('plugin-open', !this.stage.hidden && !document.getElementById('viewPlugins').hidden);
+    }
+
     showStage(plugin){
       const m = plugin.manifest || {};
       this.home.hidden = true;
       this.stage.hidden = false;
+      this.syncOpenClass();
       this.stageTile.outerHTML = tileHtml(m, 'is-sm', 16).replace('<span class="plugin-tile', '<span id="pluginStageTile" class="plugin-tile');
       this.stageTile = $('pluginStageTile');
       this.stageName.innerHTML = esc(m.name) + (plugin.official ? VERIFIED : '');

@@ -79,6 +79,7 @@
       Object.keys(this.sections).forEach((k) => { this.sections[k].hidden = k !== view; });
       this.btnNewTask.hidden = view !== 'tasks';
       this.currentView = view;
+      document.body.classList.toggle('plugin-open', view === 'plugins' && !document.getElementById('pluginStage').hidden);
       this._renderInfo();
     }
 

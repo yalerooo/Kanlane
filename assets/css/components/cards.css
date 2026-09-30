@@ -149,7 +149,7 @@ dialog .dlg-inner > .cat{
 .client-card.is-color-open .client-card-actions{opacity:1;}
 @media (hover:none){ .client-card-actions{opacity:1;} }
 .client-card.is-color-open{border-color:var(--line-strong);box-shadow:var(--shadow);}
-.client-card.is-pending-delete{border-color:color-mix(in srgb, var(--danger) 40%, var(--line));}
+.client-card.is-pending-delete{border-color:var(--line-strong);border-color:color-mix(in srgb, var(--danger) 40%, var(--line));}
 .icon-only{
   display:grid;
   place-items:center;

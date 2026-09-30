@@ -23,6 +23,7 @@
   --accent-solid:var(--acc-solid-l);
   --accent-ink:var(--acc-ink-l);
   --accent-soft:var(--acc-soft-l);
+  --focus:var(--accent-soft);
   --focus:color-mix(in srgb, var(--accent-solid) 28%, transparent);
 
   --st-pend:#71717A;  --st-pend-bg:#F1F1F3;

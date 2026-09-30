@@ -258,6 +258,15 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - Buscador a partir de 8 opciones y manejo con teclado.
 - El `<select>` real sigue existiendo oculto, y es el que leen los controladores.
 
+### Mejoras de uso diario (oct-2026)
+
+- **Deshacer al borrar** (`toast.undoable`, 8 s): tarea, tarjetas de una columna, cliente (con sus tareas), credencial, contacto y reunión. `CollectionModel.snapshot(ids)` copia los documentos y `restore(snap)` los vuelve a escribir con su mismo id (las notas de una tarea están en una subcolección, que Firestore no borra, así que reaparecen solas). Si se cambia de proyecto entre medias, no restaura.
+- **Búsqueda global (Ctrl K)**: además de título/cliente/descripción, busca en el texto de las subtareas, las **notas de las tareas** (se leen una vez con `tasks.withNotes()` y se guardan 60 s), notas de contactos y reuniones y, con las contraseñas desbloqueadas, en título/usuario/cliente (**nunca** el secreto). Ordena por relevancia (título que empieza por lo escrito > lo contiene > el resto) y, si la coincidencia no está en el título, enseña un trocito del texto. Cada resultado abre directamente su ficha.
+- **Subtareas** (`checklist: [{id, text, done}]` en la tarea): se editan en el formulario, se marcan desde la ficha (`TaskModel.toggleCheck`) y la tarjeta enseña «hechas/total».
+- **Tareas repetidas** (`repeat`: `daily|weekly|biweekly|monthly|yearly`, necesita `dueDate`): al pasar a una etapa final (`move` o `save`) `TaskModel.spawnNext` crea la siguiente en la primera etapa, con la próxima fecha que no esté en el pasado (`nextDue`; en meses conserva el día recortado al último del mes), subtareas sin marcar, y marca la original con `repeatSpawned` para no duplicar. Emite `recurred` (aviso «Próxima repetición…»).
+- **Calendario**: botones Mes / Semana / Día (`calMode`, se recuerda en `workhub_cal_mode`). La semana usa la misma cuadrícula sin límite de chips (y arrastrar y soltar entre días sigue funcionando; en móvil pasa a lista); el día muestra solo la agenda. Las flechas mueven un mes, una semana o un día.
+- **Recordatorios** (`reminders-controller.js`, `reminders-view.js`; Ajustes → Recordatorios; preferencias por navegador en `workhub_reminders`): cada minuto (y al volver a la pestaña) avisa una sola vez de tareas vencidas, que vencen hoy o dentro de 1-2 días, y de reuniones que empiezan en 5-60 min. Aviso dentro de la app con «Ver» y, si el usuario permite las notificaciones y la pestaña está en segundo plano, notificación del navegador. Con 4 o más avisos a la vez se agrupan en un resumen. Lo ya avisado se guarda en `workhub_reminded` (10 días). **Solo funciona con Workhub abierto** y mira el proyecto abierto. **Pendiente (no hecho):** avisos por correo con la app cerrada; hace falta un Worker programado (Cron Trigger de Cloudflare) con acceso a Firestore y un servicio de envío de correo (Resend, MailChannels…), con sus claves como secretos.
+
 ## 5. Diseño (sistema visual)
 
 - **Tipografía:** Geist y Geist Mono (Google Fonts).

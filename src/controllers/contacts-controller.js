@@ -41,8 +41,9 @@
 
     remove(id){
       if(!id || !this.contacts.isReady()) return;
+      const snap = this.contacts.snapshot(id);
       this.contacts.remove(id).then(() => {
-        toast.success('Contacto eliminado');
+        toast.undoable('Contacto eliminado', () => this.contacts.restore(snap), 'Contacto restaurado');
         this.view.close();
       }, () => {
         toast.error('No se pudo eliminar el contacto');

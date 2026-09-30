@@ -52,6 +52,7 @@
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
+      this.controllers.reminders = new C.RemindersController(this, new V.RemindersView());
       this.controllers.projects.render();
 
       /* Contadores de la barra lateral. */

@@ -337,6 +337,9 @@
       const dueTxt = ds === 'overdue' ? 'Vencida · ' + fmtDate(t.dueDate) : (ds === 'today' ? 'Hoy' : fmtDate(t.dueDate));
       due = '<span class="' + dueCls + '">' + iconSpan('calendar') + esc(dueTxt) + '</span>';
     }
+    const prog = TaskModel.checklistProgress(t);
+    const check = prog.total ? '<span class="check-badge' + (prog.done === prog.total ? ' is-complete' : '') + '" title="Subtareas">' + iconSpan('check') + prog.done + '/' + prog.total + '</span>' : '';
+    const repeat = t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '';
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
     const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';
     const gh = t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '';
@@ -346,6 +349,8 @@
       gh,
       t.contacto ? '<span class="contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
+      check,
+      repeat,
       due,
       who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');

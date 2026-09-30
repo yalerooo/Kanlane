@@ -8,7 +8,11 @@
     constructor(){
       this.swatches = $('accentSwatches');
       this.themeSegment = $('themeSegment');
-      this.storageDetail = $('storageDetail');
+      this.storageCard = $('storageCard');
+      this.storageCardIcon = $('storageCardIcon');
+      this.storageTitle = $('storageTitle');
+      this.storageBadge = $('storageBadge');
+      this.storageDesc = $('storageDesc');
       this.langSegment = $('langSegment');
     }
 
@@ -66,11 +70,12 @@
       this.themeSegment.querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-theme-choice') === currentTheme ? 'true' : 'false');
       });
-      this.storageDetail.textContent = {
-        local: 'En este navegador (modo local). Haz copias de seguridad de vez en cuando.',
-        firebase: 'En la nube (Firebase), sincronizado entre todos tus dispositivos.',
-        claude: 'Sincronizado en tu espacio de Claude.'
-      }[mode] || '';
+      const info = Workhub.views.storageInfo(mode);
+      this.storageCard.setAttribute('data-mode', info.mode);
+      this.storageCardIcon.innerHTML = info.icon;
+      this.storageTitle.textContent = info.title;
+      this.storageBadge.textContent = info.badge;
+      this.storageDesc.textContent = info.desc;
     }
   }
 

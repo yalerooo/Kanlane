@@ -54,7 +54,9 @@
       this.accountName = $('accountName');
       this.accountMail = $('accountMail');
       this.settingsAccount = $('settingsAccount');
-      this.settingsAccountText = $('settingsAccountText');
+      this.settingsAccountLabel = $('settingsAccountLabel');
+      this.settingsAccountMail = $('settingsAccountMail');
+      this.settingsAvatar = $('settingsAvatar');
 
       /* Idioma en la pantalla de acceso (antes de entrar no hay cuenta). */
       $('authLang').addEventListener('click', (ev) => {
@@ -299,10 +301,13 @@
       this.accountBox.hidden = false;
       this.accountName.textContent = name;
       this.accountMail.textContent = Workhub.t('Invitado');
-      this.accountAvatar.style.setProperty('--h', hueFor(name));
-      this.accountAvatar.textContent = initials(name);
+      [this.accountAvatar, this.settingsAvatar].forEach((a) => {
+        a.style.setProperty('--h', hueFor(name));
+        a.textContent = initials(name);
+      });
       this.settingsAccount.hidden = false;
-      this.settingsAccountText.textContent = Workhub.t('Modo invitado: tus datos se guardan solo en este navegador.');
+      this.settingsAccountLabel.textContent = Workhub.t('Modo invitado');
+      this.settingsAccountMail.textContent = name;
       $('btnSignOut').title = Workhub.t('Salir del modo invitado');
       $('btnSignOutSettings').textContent = Workhub.t('Salir del modo invitado');
     }
@@ -312,21 +317,24 @@
       this.accountBox.hidden = false;
       this.accountName.textContent = name;
       this.accountMail.textContent = user.email || '';
-      this.accountAvatar.style.setProperty('--h', hueFor(user.uid));
       /* La foto viene del proveedor (Google, GitHub): solo se acepta https. */
       const photo = Workhub.utils.urls.safeUrl(user.photoURL);
-      this.accountAvatar.textContent = '';
-      if(photo && photo.indexOf('https:') === 0){
-        const img = document.createElement('img');
-        img.alt = '';
-        img.referrerPolicy = 'no-referrer';
-        img.src = photo;
-        this.accountAvatar.appendChild(img);
-      } else {
-        this.accountAvatar.textContent = initials(name);
-      }
+      [this.accountAvatar, this.settingsAvatar].forEach((a) => {
+        a.style.setProperty('--h', hueFor(user.uid));
+        a.textContent = '';
+        if(photo && photo.indexOf('https:') === 0){
+          const img = document.createElement('img');
+          img.alt = '';
+          img.referrerPolicy = 'no-referrer';
+          img.src = photo;
+          a.appendChild(img);
+        } else {
+          a.textContent = initials(name);
+        }
+      });
       this.settingsAccount.hidden = false;
-      this.settingsAccountText.textContent = 'Sesión iniciada como ' + (user.email || name) + '.';
+      this.settingsAccountLabel.textContent = Workhub.t('Sesión iniciada como');
+      this.settingsAccountMail.textContent = user.email || name;
     }
   }
 

@@ -26,6 +26,19 @@
     settings: 'viewSettings'
   };
 
+  /* Cómo se presenta cada modo de almacenamiento (barra lateral y Ajustes). */
+  const svg = (d) => '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const CLOUD = svg('<path d="M17.5 19a4.5 4.5 0 1 0-1.2-8.83A6 6 0 0 0 4.7 12.3 3.5 3.5 0 0 0 6.5 19h11Z"/>');
+  const DEVICE = svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>');
+  Workhub.views.storageInfo = function(mode){
+    if(mode === 'firebase') return {mode:'firebase', icon:CLOUD, side:'En la nube', title:'En la nube', badge:'Sincronizado',
+      desc:'Firebase: tus datos se sincronizan entre todos tus dispositivos.', hint:'Tus datos están en la nube y se sincronizan entre tus dispositivos.'};
+    if(mode === 'local') return {mode:'local', icon:DEVICE, side:'Modo local', title:'En este navegador', badge:'Solo local',
+      desc:'Los datos no salen de este dispositivo. Haz copias de seguridad de vez en cuando.', hint:'Tus datos se guardan solo en este navegador.'};
+    return {mode:'claude', icon:CLOUD, side:'Sincronizado', title:'En tu espacio de Claude', badge:'Sincronizado',
+      desc:'Se sincroniza con tu cuenta de Claude.', hint:'Tus datos se sincronizan con tu espacio de Claude.'};
+  };
+
   class ShellView {
     constructor(){
       this.nav = document.querySelector('.tabs');
@@ -34,6 +47,8 @@
       this.pageDesc = document.getElementById('pageDesc');
       this.btnNewTask = document.getElementById('btnNew');
       this.storageLabel = document.getElementById('storageLabel');
+      this.storageStatus = document.getElementById('storageStatus');
+      this.storageIcon = document.getElementById('storageIcon');
       this.clientsOn = true;
       this.currentView = 'tasks';
       this.sections = {};
@@ -168,7 +183,11 @@
 
     /* mode: 'local' | 'firebase' | 'claude' (ver services/platform.js) */
     setStorageMode(mode){
-      this.storageLabel.textContent = mode === 'local' ? 'Modo local' : mode === 'firebase' ? 'En la nube' : 'Sincronizado';
+      const info = Workhub.views.storageInfo(mode);
+      this.storageLabel.textContent = info.side;
+      this.storageIcon.innerHTML = info.icon;
+      this.storageStatus.setAttribute('data-mode', info.mode);
+      this.storageStatus.setAttribute('title', info.hint);
     }
   }
 

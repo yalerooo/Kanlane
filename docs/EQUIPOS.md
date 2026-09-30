@@ -47,6 +47,10 @@ invites/{idDelEquipo}_{correo}  ← invitación pendiente: {teamId, teamName, em
 
 Código: `src/models/project-model.js` (equipos en la lista), `src/models/team-model.js` (invitaciones, miembros, conversión), `src/controllers/team-controller.js` y `src/views/share-view.js` (diálogo de compartir), `src/views/team-ui.js` (contexto de equipo para las vistas) y `src/services/firebase-backend.js` (`db.team(id)` y `db.teams`).
 
+## Una limitación de Firestore que hay que respetar
+
+Las reglas de un equipo consultan el documento del equipo (`get()`) para saber quién eres. Firestore limita esas consultas a **10 por operación suelta y a 20 por lote entero (`batch`)**. Por eso **en un equipo no se pueden escribir muchos documentos con un lote**: hay que escribirlos uno a uno (así lo hace `TeamModel.convert`, con 12 a la vez). **El emulador no aplica el límite de los lotes**, así que una prueba local con un lote grande pasa y en producción falla con `permission-denied`. Si se añade en el futuro algo que escriba muchos documentos de un equipo, hay que hacerlo igual.
+
 ## Reglas de Firestore (hay que publicarlas)
 
 Los equipos **no funcionan hasta que se publican las reglas nuevas** (`firestore.rules`): `firebase deploy --only firestore:rules`, o pegar el contenido en *Firestore Database → Reglas*. Lo que aplican:

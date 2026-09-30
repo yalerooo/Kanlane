@@ -13,7 +13,40 @@
   const COPY_COLLECTIONS = ['clients', 'contacts', 'meetings', 'plugin_data', 'tasks'];
   /* 'github' lleva el enlace con el GitHub Project (sin ningún token): cada miembro conecta su cuenta. */
   const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels', 'github'];
-  const BATCH_SIZE = 400;
+  /* Escrituras a la vez al copiar. No se usan lotes (batch): las reglas consultan el
+     documento del equipo en cada escritura y Firestore limita esas consultas a unas
+     20 por lote entero, así que un proyecto con más de unas pocas tareas fallaba con
+     permission-denied. De una en una el límite es por operación y no se alcanza. */
+  const WRITE_CONCURRENCY = 12;
+
+  /* Ejecuta worker(item) sobre todos los elementos, con como mucho `limit` a la vez.
+     Se detiene en el primer error. onDone(n) recibe cuántos van. */
+  function runPool(items, limit, worker, onDone){
+    return new Promise((resolve, reject) => {
+      let next = 0;
+      let active = 0;
+      let done = 0;
+      let failed = false;
+      const pump = () => {
+        if(failed) return;
+        if(next >= items.length && active === 0){ resolve(); return; }
+        while(active < limit && next < items.length){
+          const item = items[next++];
+          active++;
+          worker(item).then(() => {
+            active--;
+            done++;
+            if(onDone) onDone(done);
+            pump();
+          }, (err) => {
+            failed = true;
+            reject(err);
+          });
+        }
+      };
+      pump();
+    });
+  }
 
   /* Invitaciones: las que ha recibido mi correo, o las que envié desde un equipo. */
   class InviteModel extends Workhub.models.CollectionModel {
@@ -142,9 +175,14 @@
       CONFIG_KEYS.forEach((k) => { if(project[k] !== undefined) config[k] = project[k]; });
       const ops = [];   /* [ref, data] */
       const step = (text) => { if(onProgress) onProgress(text); };
+      /* En qué paso está, para decir cuál falló. */
+      let phase = 'crear el equipo';
+      let created = false;
 
       step('Creando el equipo…');
       return this.projects.createTeam(project.nombre, typeof project.color === 'number' ? project.color : null, config, tid).then(() => {
+        created = true;
+        phase = 'leer los datos del proyecto';
         step('Leyendo los datos…');
         return Promise.all(COPY_COLLECTIONS.map((name) => src.collection(name).get().then((snap) => ({name:name, docs:snap.docs}))));
       }).then((groups) => {
@@ -172,18 +210,16 @@
           if(snap.exists) ops.push([dst.collection('assets').doc(id), snap.data()]);
         }).catch(() => null)));
       }).then(() => {
-        let done = 0;
-        const chunks = [];
-        for(let i = 0; i < ops.length; i += BATCH_SIZE) chunks.push(ops.slice(i, i + BATCH_SIZE));
-        return chunks.reduce((p, chunk) => p.then(() => {
-          const batch = db.teams.batch();
-          chunk.forEach((op) => batch.set(op[0], op[1]));
-          return batch.commit().then(() => {
-            done += chunk.length;
-            step('Copiando… ' + done + ' de ' + ops.length);
-          });
-        }), Promise.resolve());
-      }).then(() => ({id: PM.teamKey(tid), teamId: tid}));
+        phase = 'copiar los datos al equipo';
+        return runPool(ops, WRITE_CONCURRENCY, (op) => op[0].set(op[1]), (n) => step('Copiando… ' + n + ' de ' + ops.length));
+      }).then(() => ({id: PM.teamKey(tid), teamId: tid}), (err) => {
+        /* A medias no sirve de nada: se deshace lo que se hubiera creado. */
+        const undo = created ? this.projects.removeProject(PM.teamKey(tid), db, null).catch(() => null) : Promise.resolve();
+        return undo.then(() => {
+          if(err && typeof err === 'object') err.phase = phase;
+          throw err;
+        });
+      });
     }
   }
 

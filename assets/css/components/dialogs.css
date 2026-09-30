@@ -137,6 +137,7 @@ dialog .dlg-inner > .cat{padding-right:40px;margin-bottom:10px;}
 dialog::-webkit-scrollbar{width:12px;}
 dialog::-webkit-scrollbar-track{background:transparent;margin:14px 0;}
 dialog::-webkit-scrollbar-thumb{
+  background:var(--line-strong);
   background:color-mix(in srgb, var(--ink-faint) 38%, transparent);
   border:3px solid transparent;
   border-radius:999px;
@@ -144,11 +145,11 @@ dialog::-webkit-scrollbar-thumb{
   min-height:36px;
   transition:background-color .15s ease;
 }
-dialog:hover::-webkit-scrollbar-thumb{background-color:color-mix(in srgb, var(--ink-faint) 60%, transparent);}
+dialog:hover::-webkit-scrollbar-thumb{background-color:var(--ink-faint);background-color:color-mix(in srgb, var(--ink-faint) 60%, transparent);}
 dialog::-webkit-scrollbar-thumb:hover,
 dialog::-webkit-scrollbar-thumb:active{background-color:var(--ink-faint);}
 /* Firefox no conoce ::-webkit-scrollbar: allí se usan las propiedades estándar
    (en Chrome reciente anularían el estilo redondeado de arriba). */
 @supports not selector(::-webkit-scrollbar){
-  dialog{scrollbar-width:thin;scrollbar-color:color-mix(in srgb, var(--ink-faint) 45%, transparent) transparent;}
+  dialog{scrollbar-width:thin;scrollbar-color:var(--ink-faint) transparent;scrollbar-color:color-mix(in srgb, var(--ink-faint) 45%, transparent) transparent;}
 }

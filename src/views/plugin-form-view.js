@@ -55,7 +55,9 @@
         this.intro.hidden = !spec.intro;
         this.btnOk.textContent = spec.submit || Workhub.t('Guardar');
         this.btnCancel.textContent = spec.cancel || Workhub.t('Omitir');
-        this.error.hidden = true;
+        /* Aviso del plugin (p. ej. «ese día ya está completo»): sale en rojo hasta que se escribe. */
+        this.error.textContent = spec.notice || '';
+        this.error.hidden = !spec.notice;
         this.body.innerHTML = spec.fields.map((f) => this._field(f)).join('');
         spec.fields.forEach((f) => { if(f.type === 'dates') this._renderDates(f); });
         /* Los desplegables usan el componente de la app (no el nativo del navegador). */
@@ -98,13 +100,14 @@
       }
       if(f.type === 'select'){
         const onlyNew = f.allowNew && !f.options.length;
-        const opts = f.options.map((o) => '<option value="' + esc(o.value) + '"' + (o.value === f.value ? ' selected' : '') + ' translate="no">' + esc(o.label) + '</option>').join('') +
-          (f.allowNew ? '<option value="' + NEW + '"' + (onlyNew ? ' selected' : '') + '>' + esc(f.newLabel) + '</option>' : '');
-        const color = PALETTE[0];
+        const startNew = f.allowNew && (onlyNew || f.value === NEW);
+        const opts = f.options.map((o) => '<option value="' + esc(o.value) + '"' + (!startNew && o.value === f.value ? ' selected' : '') + ' translate="no">' + esc(o.label) + '</option>').join('') +
+          (f.allowNew ? '<option value="' + NEW + '"' + (startNew ? ' selected' : '') + '>' + esc(f.newLabel) + '</option>' : '');
+        const color = PALETTE.indexOf(f.newColorValue) !== -1 ? f.newColorValue : PALETTE[0];
         this.state[f.key] = {color:color};
-        const swatches = PALETTE.map((c, i) => '<button type="button" class="pf-swatch' + (i === 0 ? ' is-selected' : '') + '" data-pf-color="' + c + '" data-pf-key="' + f.key + '" style="--c:' + c + '" role="radio" aria-checked="' + (i === 0) + '" aria-label="' + c + '"></button>').join('');
+        const swatches = PALETTE.map((c) => '<button type="button" class="pf-swatch' + (c === color ? ' is-selected' : '') + '" data-pf-color="' + c + '" data-pf-key="' + f.key + '" style="--c:' + c + '" role="radio" aria-checked="' + (c === color) + '" aria-label="' + c + '"></button>').join('');
         return '<div class="field">' + label + '<select id="' + id + '"' + (onlyNew ? ' hidden' : '') + ' data-pf-select="' + f.key + '">' + opts + '</select>' +
-          (f.allowNew ? '<div class="pf-new" id="pfNew_' + f.key + '"' + (onlyNew ? '' : ' hidden') + '><input type="text" id="pfNewName_' + f.key + '" maxlength="60" placeholder="' + esc(f.newPlaceholder) + '" autocomplete="off" translate="no">' +
+          (f.allowNew ? '<div class="pf-new" id="pfNew_' + f.key + '"' + (startNew ? '' : ' hidden') + '><input type="text" id="pfNewName_' + f.key + '" maxlength="60" value="' + esc(f.newName || '') + '" placeholder="' + esc(f.newPlaceholder) + '" autocomplete="off" translate="no">' +
             (f.newColor ? '<div class="pf-swatches" role="radiogroup">' + swatches + '</div>' : '') + '</div>' : '') + hint + '</div>';
       }
       /* dates */

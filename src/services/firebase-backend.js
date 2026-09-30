@@ -20,6 +20,8 @@
   let firestore = null;
   /* Borrado de la caché local en curso (ver clearLocalCache). */
   let clearing = Promise.resolve();
+  /* Acceso pendiente de unir a una cuenta: {credential, email}. Ver rememberPending. */
+  let pendingLink = null;
 
   function config(){
     return window.WORKHUB_FIREBASE || {};
@@ -146,6 +148,33 @@
     }
   }
 
+  /* Unir dos formas de entrar a la MISMA cuenta (mismo uid, mismos datos).
+     Firebase solo permite una cuenta por correo: si entras con GitHub y ese
+     correo ya tiene cuenta de Google, falla con account-exists-with-different-
+     credential. En ese caso se guarda la credencial de GitHub (rememberPending)
+     y, cuando la persona entre con su método original (y así demuestre que la
+     cuenta es suya), se une a ella (finishLink). Después ya puede entrar con
+     cualquiera de los dos. Solo se une si el correo coincide. */
+  function rememberPending(err){
+    if(err && err.code === 'auth/account-exists-with-different-credential' && err.credential && err.email){
+      pendingLink = {credential:err.credential, email:String(err.email).toLowerCase()};
+    }
+  }
+
+  /* Tras un inicio de sesión correcto: si había un acceso pendiente y es la
+     cuenta de ese correo, se une. Devuelve el resultado con linked = proveedor unido. */
+  function finishLink(res){
+    const pending = pendingLink;
+    const user = res && res.user;
+    if(!pending || !user) return res;
+    pendingLink = null;
+    if(!user.email || user.email.toLowerCase() !== pending.email) return res;
+    return user.linkWithCredential(pending.credential).then(
+      () => Object.assign({}, res, {linked:pending.credential.providerId || 'unknown'}),
+      () => res
+    );
+  }
+
   /* Ventana emergente; si el navegador la bloquea, redirección. */
   function signInWith(key){
     const provider = providerFor(key);
@@ -153,6 +182,9 @@
       if(err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')){
         return auth.signInWithRedirect(provider);
       }
+      throw err;
+    }).then(finishLink, (err) => {
+      rememberPending(err);
       throw err;
     });
   }
@@ -199,7 +231,7 @@
   }
 
   function signInWithEmail(email, password){
-    return auth.signInWithEmailAndPassword(email, password);
+    return auth.signInWithEmailAndPassword(email, password).then(finishLink);
   }
 
   function signUpWithEmail(email, password, name){

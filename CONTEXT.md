@@ -182,6 +182,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 ### Proyectos
 - **Selector** arriba en la barra lateral: avatar con iniciales y color, nombre y "Workhub". Cambia de proyecto sin recargar.
 - **Gestión:** crear, renombrar, cambiar el color, elegir el **tipo** (etapas y clientes, ver más abajo) y eliminar con todos sus datos (con confirmación). Al crear también se puede elegir «Desde GitHub».
+- **Primer proyecto (cuentas nuevas)**: si el registro de proyectos está vacío y la raíz no tiene tareas, clientes, contactos, reuniones ni contraseñas, `ProjectsController.checkFirstRun` abre el diálogo de proyecto en modo `onboarding` (`ProjectView.openOnboarding`): sin tipo preelegido, sin «Desde GitHub», sin cerrar (ni Esc ni X) y con `body.is-onboarding` ocultando la app. Al guardar se escribe el documento `projects/main` con lo elegido: el primer proyecto **es** el principal (misma raíz), no se crea ningún otro. Las cuentas con datos o proyectos no lo ven.
 - **"Proyecto principal"** usa la raíz de la base de datos y no se puede eliminar. El último proyecto abierto se recuerda.
 
 ### Paleta de comandos (`Ctrl K` / `⌘K`, o el botón "Buscar…" de la barra lateral)

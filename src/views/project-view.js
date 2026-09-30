@@ -34,6 +34,9 @@
       this.dlg = $('dlgProject');
       this.form = $('formProject');
       this.title = $('dlgProjectTitle');
+      this.lead = $('pLead');
+      this.leadText = this.lead.textContent;
+      this.onboarding = false;
       this.idInput = $('pId');
       this.nameInput = $('pNombre');
       this.colors = $('pColors');
@@ -113,7 +116,12 @@
       });
       this.clientsChk.addEventListener('change', () => { this.clients = this.clientsChk.checked; });
       this.btnCancel.addEventListener('click', () => this.closeDialog());
-      this.dlg.addEventListener('close', () => this._resetDelete());
+      this.dlg.addEventListener('close', () => {
+        this._resetDelete();
+        /* Primer proyecto: el diálogo no se puede cerrar hasta crearlo. */
+        if(this.onboarding && !this.dlg.open) this.dlg.showModal();
+      });
+      this.dlg.addEventListener('cancel', (ev) => { if(this.onboarding) ev.preventDefault(); });
     }
 
     /* ---------- Botón de la barra lateral ---------- */
@@ -235,6 +243,7 @@
           return;
         }
         if(!nombre){ this.nameInput.focus(); return; }
+        if(!this.tipo){ this.showError('Elige un tipo de proyecto.'); return; }
         if(this.tipo === PT.CUSTOM_TYPE){
           const named = this.stages.filter((st) => st.label.trim());
           if(named.length < PT.MIN_STAGES){
@@ -273,6 +282,25 @@
       this.btnSave.textContent = 'Crear proyecto';
     }
 
+    /* Cuenta nueva: no hay ningún proyecto y hay que crear el primero. Sin tipo
+       elegido de antemano, sin GitHub y sin poder cerrar el diálogo. */
+    openOnboarding(){
+      this.onboarding = true;
+      this._open(null, '', null, PT.resolve(null));
+      this.title.textContent = 'Crea tu primer proyecto';
+      this.lead.textContent = 'Elige para qué lo vas a usar: el tipo define las etapas del tablero y si trabajas con clientes. Podrás cambiarlo más tarde y crear más proyectos.';
+      this.btnSave.textContent = 'Crear proyecto';
+      this.btnCancel.hidden = true;
+      this.dlg.classList.add('is-onboarding');
+    }
+
+    endOnboarding(){
+      this.onboarding = false;
+      this.dlg.classList.remove('is-onboarding');
+      this.btnCancel.hidden = false;
+      this.lead.textContent = this.leadText;
+    }
+
     /* canDelete: false para el proyecto principal. cfg: ProjectTemplates.resolve(project). */
     openEdit(project, canDelete, cfg){
       this._open(project.id, project.nombre, typeof project.color === 'number' ? project.color : null, cfg);
@@ -285,7 +313,8 @@
       this.idInput.value = id || '';
       this.nameInput.value = nombre;
       this.color = color;
-      this.tipo = cfg.tipo;
+      /* En el primer proyecto no hay tipo preelegido: lo elige el usuario. */
+      this.tipo = this.onboarding ? null : cfg.tipo;
       this.ghUrl.value = '';
       this.ghToken.value = '';
       this.stages = cfg.stages.map((st) => Object.assign({}, st));
@@ -316,6 +345,8 @@
     showError(msg){
       this.error.textContent = msg;
       this.error.hidden = false;
+      /* El diálogo tiene scroll: que el error no quede fuera de la vista. */
+      this.error.scrollIntoView({block:'nearest'});
     }
 
     _resetDelete(){
@@ -342,7 +373,7 @@
     }
 
     _renderTypes(){
-      const github = this.idInput.value ? '' :
+      const github = this.idInput.value || this.onboarding ? '' :
         '<button type="button" class="type-option' + (this.tipo === GITHUB_TYPE ? ' is-selected' : '') + '" role="radio" aria-checked="' + (this.tipo === GITHUB_TYPE) + '" data-type="' + GITHUB_TYPE + '">' +
         '<span class="type-radio" aria-hidden="true"></span>' +
         '<span class="type-body"><span class="type-name">Desde GitHub</span>' +

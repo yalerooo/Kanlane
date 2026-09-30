@@ -47,6 +47,18 @@
       this.lightbox = $('lightbox');
       this.lightboxImg = $('lightboxImg');
 
+      /* Asignadas a (solo en equipos): uids de los miembros elegidos. */
+      this.assigneesEl = $('fAssignees');
+      this.assigned = [];
+      this.assigneesEl.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-uid]');
+        if(!b) return;
+        const uid = b.getAttribute('data-uid');
+        const at = this.assigned.indexOf(uid);
+        if(at === -1) this.assigned.push(uid); else this.assigned.splice(at, 1);
+        this._renderAssignees();
+      });
+
       /* Etiquetas: las elegidas y el catálogo del proyecto. */
       this.labelsEl = $('fLabels');
       this.labelNew = $('fLabelNew');
@@ -60,6 +72,18 @@
 
       this._bindLocalUi();
       this._bindLabels();
+    }
+
+    /* ---------- Asignaciones ---------- */
+
+    _renderAssignees(){
+      const T = Workhub.views.team;
+      this.assigneesEl.innerHTML = T.members().map((m) => {
+        const on = this.assigned.indexOf(m.uid) !== -1;
+        const you = m.uid === T.meUid();
+        return '<button type="button" class="assignee-chip' + (on ? ' is-on' : '') + '" aria-pressed="' + on + '" data-uid="' + esc(m.uid) + '" translate="no">' +
+          T.avatar(m, 'is-mini') + '<span>' + esc(m.name) + (you ? ' (' + esc(Workhub.t('yo')) + ')' : '') + '</span></button>';
+      }).join('');
     }
 
     /* ---------- Etiquetas ---------- */
@@ -229,7 +253,9 @@
         status: this.fields.estado.value,
         contacto: this.fields.contacto.value.trim(),
         dueDate: this.fields.fecha.value || '',
-        labels: this.selected.slice()
+        labels: this.selected.slice(),
+        /* Fuera de un equipo no se toca el campo. */
+        assignees: Workhub.views.team.enabled() ? this.assigned.slice() : undefined
       };
     }
 
@@ -238,6 +264,8 @@
       this.resetNoteForm();
       this.fields.id.value = '';
       this.selected = [];
+      this.assigned = [];
+      this._renderAssignees();
       this.labelNew.hidden = true;
       this._renderLabels();
       this.title.textContent = 'Nueva tarea';
@@ -260,6 +288,8 @@
       this.fields.contacto.value = t.contacto || '';
       this.fields.fecha.value = t.dueDate || '';
       this.selected = Array.isArray(t.labels) ? t.labels.slice() : [];
+      this.assigned = Workhub.views.team.assigned(t);
+      this._renderAssignees();
       this.labelNew.hidden = true;
       this._renderLabels();
       this.cliente.reset(clientNames, t.cliente || '');

@@ -28,11 +28,14 @@
       this.rootDb = null;
       this.projectId = this.cachedProject().id;
       this.models.backup = new M.BackupModel(this.models);
+      this.models.team = new M.TeamModel(this.models.projects);
 
       V.clientColors.setResolver((name) => this.models.clients.hueOf(name));
       this.shell = new V.ShellView();
       V.Dropdown.enhanceAll(document);
       this.shell.addDialogCloseButtons();
+      /* Hasta abrir un proyecto de equipo, lo que es solo de equipos queda oculto. */
+      this.shell.setTeamMode(false);
 
       /* Ajustes primero: aplica acento y tema antes de pintar nada más. */
       this.controllers = {
@@ -45,6 +48,7 @@
         backup: new C.BackupController(this, new V.BackupView())
       };
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
+      this.controllers.team = new C.TeamController(this, new V.ShareView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
@@ -168,6 +172,8 @@
     }
 
     connectProject(){
+      /* Las imágenes de un proyecto de equipo se guardan con el equipo (ver firebase-backend). */
+      window.__teamId = M.ProjectModel.isTeam(this.projectId) ? M.ProjectModel.teamId(this.projectId) : '';
       const db = M.ProjectModel.scope(this.rootDb, this.projectId);
       PROJECT_MODELS.forEach((name) => this.models[name].connect(db));
     }
@@ -224,6 +230,7 @@
         this.rootDb = db;
         this.models.settings.connect(db);
         this.models.projects.connect(db);
+        this.models.team.connect();
         this.models.plugins.connect(db);
         this.connectProject();
 

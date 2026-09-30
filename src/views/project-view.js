@@ -15,6 +15,18 @@
   const TRASH = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
   const PLUS = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 
+  const SHARE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  const TEAM_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
+  /* Una invitación con sus botones (en el menú o en el diálogo del primer proyecto). */
+  function inviteRow(i, kind){
+    const attr = kind === 'menu' ? 'data-menu' : 'data-invite';
+    return '<div class="invite-row-item"><div class="invite-text"><strong translate="no">' + esc(i.teamName) + '</strong>' +
+      '<span>' + esc(Workhub.t('{who} te invita como {role}', {who:i.invitedByName || i.email, role:Workhub.t(i.role === 'editor' ? 'editor' : 'lector')})) + '</span></div>' +
+      '<div class="invite-btns"><button type="button" class="btn btn-primary btn-sm" ' + attr + '="accept" data-id="' + esc(i.id) + '">' + esc(Workhub.t('Aceptar')) + '</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" ' + attr + '="decline" data-id="' + esc(i.id) + '">' + esc(Workhub.t('Rechazar')) + '</button></div></div>';
+  }
+
   /* Cuadrado con las iniciales en el color del proyecto. */
   function markHtml(project, hue, cls){
     return '<span class="project-mark' + (cls ? ' ' + cls : '') + '" style="--h:' + hue + '" aria-hidden="true">' + esc(initials(project.nombre)) + '</span>';
@@ -34,6 +46,7 @@
       this.dlg = $('dlgProject');
       this.form = $('formProject');
       this.title = $('dlgProjectTitle');
+      this.invitesBox = $('pInvites');
       this.lead = $('pLead');
       this.leadText = this.lead.textContent;
       this.onboarding = false;
@@ -135,7 +148,7 @@
 
     /* ---------- Menú ---------- */
 
-    /* handlers: {pick(id), edit(id), create()} */
+    /* handlers: {pick(id), edit(id), create(), share(), accept(id), decline(id)} */
     bindMenu(handlers){
       this.menu.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-menu]');
@@ -146,8 +159,38 @@
           case 'pick': handlers.pick(id); break;
           case 'edit': handlers.edit(id); break;
           case 'new': handlers.create(); break;
+          case 'share': handlers.share(); break;
+          case 'accept': handlers.accept(id); break;
+          case 'decline': handlers.decline(id); break;
         }
       });
+    }
+
+    /* Punto en el botón del proyecto cuando hay invitaciones esperando. */
+    setInviteBadge(n){
+      this.trigger.classList.toggle('has-invites', n > 0);
+    }
+
+    /* Invitaciones en el diálogo del primer proyecto (aceptar una evita crear otro). */
+    bindInviteActions(handlers){
+      this.invitesBox.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-invite]');
+        if(!b) return;
+        const id = b.getAttribute('data-id');
+        if(b.getAttribute('data-invite') === 'accept') handlers.accept(id);
+        else handlers.decline(id);
+      });
+    }
+
+    renderInvites(list){
+      if(!this.onboarding || !list.length){
+        this.invitesBox.hidden = true;
+        this.invitesBox.innerHTML = '';
+        return;
+      }
+      this.invitesBox.hidden = false;
+      this.invitesBox.innerHTML = '<p class="invite-box-title">' + esc(Workhub.t('Tienes invitaciones')) + '</p>' + list.map((i) => inviteRow(i, 'invite')).join('') +
+        '<p class="invite-box-or">' + esc(Workhub.t('O crea tu propio proyecto:')) + '</p>';
     }
 
     /* Se llama antes de abrir el menú para pintarlo con los datos del momento. */
@@ -166,7 +209,7 @@
 
     openMenu(){
       const data = this.menuSource ? this.menuSource() : {projects:[], currentId:null, hueOf:() => 0};
-      this.renderMenu(data.projects, data.currentId, data.hueOf);
+      this.renderMenu(data.projects, data.currentId, data.hueOf, data);
       if(supportsPopover) this.menu.showPopover();
       else { this.menu.hidden = false; this.trigger.setAttribute('aria-expanded', 'true'); }
       this._position();
@@ -180,20 +223,28 @@
       else { this.menu.hidden = true; this.trigger.setAttribute('aria-expanded', 'false'); }
     }
 
-    renderMenu(projects, currentId, hueOf){
-      this.menu.innerHTML = '<p class="project-menu-label">Proyectos</p>' +
+    renderMenu(projects, currentId, hueOf, extra){
+      extra = extra || {};
+      const invites = (extra.invites || []).length
+        ? '<p class="project-menu-label">' + esc(Workhub.t('Invitaciones')) + '</p><div class="project-invites">' +
+          extra.invites.map((i) => inviteRow(i, 'menu')).join('') + '</div><div class="dd-sep"></div>'
+        : '';
+      const share = extra.canShare
+        ? '<button type="button" class="dd-option is-action" role="menuitem" data-menu="share">' + SHARE + '<span class="dd-text">' + esc(Workhub.t('Compartir este proyecto')) + '</span></button>'
+        : '';
+      this.menu.innerHTML = invites + '<p class="project-menu-label">Proyectos</p>' +
         '<div class="project-menu-list">' +
         projects.map((p) => {
           const current = p.id === currentId;
           return '<div class="project-row' + (current ? ' is-current' : '') + '">' +
             '<button type="button" class="dd-option project-pick' + (current ? ' is-selected' : '') + '" role="menuitemradio" aria-checked="' + current + '" data-menu="pick" data-id="' + esc(p.id) + '">' +
-              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (current ? CHECK : '') +
+              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (p.team ? '<span class="project-team" title="' + esc(Workhub.t('Proyecto de equipo')) + '">' + TEAM_ICON + '</span>' : '') + (current ? CHECK : '') +
             '</button>' +
             '<button type="button" class="icon-only project-edit" role="menuitem" data-menu="edit" data-id="' + esc(p.id) + '" aria-label="Editar ' + esc(p.nombre) + '" title="Editar proyecto">' + EDIT + '</button>' +
             '</div>';
         }).join('') +
         '</div><div class="dd-sep"></div>' +
-        '<button type="button" class="dd-option is-action" role="menuitem" data-menu="new">' + PLUS + '<span class="dd-text">Nuevo proyecto</span></button>';
+        '<button type="button" class="dd-option is-action" role="menuitem" data-menu="new">' + PLUS + '<span class="dd-text">Nuevo proyecto</span></button>' + share;
     }
 
     /* Debajo del botón; en móvil, pegado a su borde izquierdo y sin salirse. */
@@ -298,6 +349,8 @@
 
     endOnboarding(){
       this.onboarding = false;
+      this.invitesBox.hidden = true;
+      this.invitesBox.innerHTML = '';
       this.dlg.classList.remove('is-onboarding');
       this.btnCancel.hidden = false;
       this.lead.textContent = this.leadText;

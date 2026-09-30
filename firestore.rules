@@ -8,7 +8,12 @@ rules_version = '2';
 //    ya llegan con la identidad comprobada por el proveedor.
 // 2. Cada cuenta solo puede leer y escribir en users/{su uid}/…, y solo en
 //    las colecciones que usa la app: nada de guardar datos arbitrarios.
-// 3. Todo lo demás está cerrado.
+// 3. Proyectos de equipo: viven en teams/{id}. Solo entran los miembros
+//    (memberIds), con un rol: owner (todo), editor (datos del proyecto) o
+//    viewer (solo lectura). Se entra por invitación (invites/{id}), dirigida
+//    a un correo verificado. Las contraseñas del gestor no se comparten
+//    todavía, así que vault y vault_meta no están permitidos en equipos.
+// 4. Todo lo demás está cerrado.
 service cloud.firestore {
   match /databases/{database}/documents {
     function canUse(uid) {
@@ -16,6 +21,35 @@ service cloud.firestore {
         && request.auth.uid == uid
         && (request.auth.token.firebase.sign_in_provider != 'password'
             || request.auth.token.email_verified == true);
+    }
+
+    // Cualquier cuenta con la identidad comprobada (correo verificado si es de
+    // correo y contraseña).
+    function verified() {
+      return request.auth != null
+        && (request.auth.token.firebase.sign_in_provider != 'password'
+            || request.auth.token.email_verified == true);
+    }
+
+    // Colecciones de datos de un proyecto de equipo (sin el gestor de contraseñas).
+    function isTeamCollection(col) {
+      return col in ['tasks', 'clients', 'contacts', 'meetings', 'plugin_data', 'assets'];
+    }
+
+    function team(tid) {
+      return get(/databases/$(database)/documents/teams/$(tid)).data;
+    }
+
+    function isMember(tid) {
+      return verified() && request.auth.uid in team(tid).memberIds;
+    }
+
+    function canEdit(tid) {
+      return isMember(tid) && team(tid).members[request.auth.uid].role in ['owner', 'editor'];
+    }
+
+    function isOwner(tid) {
+      return isMember(tid) && team(tid).members[request.auth.uid].role == 'owner';
     }
 
     // Colecciones con los datos de un proyecto.
@@ -41,6 +75,77 @@ service cloud.firestore {
       match /projects/{projectId}/tasks/{taskId}/notes/{noteId} {
         allow read, write: if canUse(uid);
       }
+    }
+
+    // ---------- Proyectos de equipo ----------
+    match /teams/{tid} {
+      allow read: if verified() && request.auth.uid in resource.data.memberIds;
+
+      // El que lo crea es su único miembro y su propietario.
+      allow create: if verified()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid]
+        && request.resource.data.members.keys().hasOnly([request.auth.uid])
+        && request.resource.data.members[request.auth.uid].role == 'owner';
+
+      allow update: if verified() && (
+        // El propietario cambia lo que quiera, menos quién es el propietario.
+        (resource.data.members[request.auth.uid].role == 'owner'
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.ownerUid in request.resource.data.memberIds)
+        // Un editor cambia la configuración del proyecto, no los miembros.
+        || (request.auth.uid in resource.data.memberIds
+          && resource.data.members[request.auth.uid].role == 'editor'
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.memberIds == resource.data.memberIds
+          && request.resource.data.members == resource.data.members)
+        // Cualquiera que no sea el propietario puede salir del equipo.
+        || (request.auth.uid in resource.data.memberIds
+          && resource.data.members[request.auth.uid].role != 'owner'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'members'])
+          && request.resource.data.memberIds == resource.data.memberIds.removeAll([request.auth.uid])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+          && !(request.auth.uid in request.resource.data.members))
+        // Entrar con una invitación hecha a tu correo, con el rol invitado.
+        || (!(request.auth.uid in resource.data.memberIds)
+          && request.auth.token.email_verified == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'members'])
+          && request.resource.data.memberIds == resource.data.memberIds.concat([request.auth.uid])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.members[request.auth.uid].role ==
+             get(/databases/$(database)/documents/invites/$(tid + '_' + request.auth.token.email.lower())).data.role)
+      );
+
+      allow delete: if verified() && resource.data.members[request.auth.uid].role == 'owner';
+    }
+
+    match /teams/{tid}/{col}/{docId} {
+      allow read: if isTeamCollection(col) && isMember(tid);
+      allow write: if isTeamCollection(col) && canEdit(tid);
+    }
+    match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
+      allow read: if isMember(tid);
+      allow write: if canEdit(tid);
+    }
+
+    // Invitaciones: id = {idDelEquipo}_{correo en minúsculas}. Las lee y
+    // rechaza quien las recibe, y las crea y revoca el propietario.
+    match /invites/{inviteId} {
+      allow read: if verified()
+        && (resource.data.invitedByUid == request.auth.uid
+            || (request.auth.token.email_verified == true
+                && resource.data.email == request.auth.token.email.lower()));
+      allow create, update: if verified()
+        && request.resource.data.invitedByUid == request.auth.uid
+        && isOwner(request.resource.data.teamId)
+        && inviteId == request.resource.data.teamId + '_' + request.resource.data.email
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.role in ['editor', 'viewer'];
+      allow delete: if verified()
+        && (resource.data.invitedByUid == request.auth.uid
+            || isOwner(resource.data.teamId)
+            || (request.auth.token.email_verified == true
+                && resource.data.email == request.auth.token.email.lower()));
     }
   }
 }

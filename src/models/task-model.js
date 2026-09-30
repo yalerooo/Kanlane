@@ -63,12 +63,20 @@
       return this.items.filter((t) => TaskModel.stageKey(t) === status).sort(TaskModel.byOrder);
     }
 
-    filter(query, cliente){
+    /* assignee (solo en equipos): '' todas, 'me' las mías, 'none' sin asignar o el uid de un miembro. */
+    filter(query, cliente, assignee){
       const q = (query || '').trim().toLowerCase();
+      const T = Workhub.views.team;
       return this.items.filter((t) => {
         if(cliente && (t.cliente || 'Sin cliente') !== cliente) return false;
+        if(assignee && T.enabled()){
+          const who = T.assigned(t);
+          if(assignee === 'none'){ if(who.length) return false; }
+          else if(who.indexOf(assignee === 'me' ? T.meUid() : assignee) === -1) return false;
+        }
         if(q){
-          const hay = ((t.title || '') + ' ' + (t.desc || '') + ' ' + (t.cliente || '') + ' ' + (t.contacto || '') + ' ' + (Array.isArray(t.labels) ? t.labels.join(' ') : '')).toLowerCase();
+          const names = T.enabled() ? T.assigned(t).map((u) => T.name(u)).join(' ') : '';
+          const hay = ((t.title || '') + ' ' + (t.desc || '') + ' ' + (t.cliente || '') + ' ' + (t.contacto || '') + ' ' + names + ' ' + (Array.isArray(t.labels) ? t.labels.join(' ') : '')).toLowerCase();
           if(hay.indexOf(q) === -1) return false;
         }
         return true;

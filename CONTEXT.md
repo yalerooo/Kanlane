@@ -21,30 +21,35 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 - **Web en producción:** https://workhub-project.netlify.app (Netlify).
 - **Repositorio:** `yalerooo/Workhub` (GitHub), rama principal `main`.
-- **Rama de trabajo de Claude:** `claude/sleepy-brown-tdi6yq`.
-  - Siempre se trabaja y se sube aquí, y después se abre un pull request contra `main`.
-  - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main`: `git checkout -B claude/sleepy-brown-tdi6yq origin/main`.
-  - Excepción: la última tanda (tipos de proyecto, columnas, GitHub, etiquetas) se hizo en un worktree, en la rama **`claude/read-context-md-df6b13`**, ya subida; **su pull request contra `main` está pendiente de abrir** (en ese equipo no había `gh`; enlace: https://github.com/yalerooo/Workhub/pull/new/claude/read-context-md-df6b13).
+- **Ramas de trabajo de Claude:** se trabaja en un worktree con su propia rama y se sube ahí; después se abre (o el usuario abre) el pull request contra `main`.
+  - La rama más reciente es **`claude/context-docs-review-985e75`** (PR #31–#40, todos fusionados; el último cambio, los nombres de los botones de GitHub, va en el siguiente PR). Antes: `claude/read-context-md-df6b13` (PR #25–#30) y `claude/sleepy-brown-tdi6yq`.
+  - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main` (`git checkout -B <rama> origin/main`) o se hace `git merge origin/main`.
+  - **En el equipo Windows del usuario no hay `gh`**: no se pueden abrir PR desde aquí. Se sube la rama y se da el enlace `https://github.com/yalerooo/Workhub/pull/new/<rama>` (el usuario lo abre y lo fusiona él).
+- **Estado del despliegue (30-sep-2026):** Netlify se quedó **sin créditos de build** (los despliegues de producción salen «Skipped» y hay un aviso de «operational credits»); la web publicada sigue viva pero con código antiguo hasta el siguiente ciclo de facturación o hasta mejorar el plan. Alternativa ya configurada: **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos): `firebase login` y `firebase deploy --only hosting` desde `main` (el `predeploy` ejecuta `scripts/build-public.js`). Se habló de Vercel/Cloudflare Pages solo como entorno de pruebas; no se ha montado (haría falta `vercel.json` con las cabeceras y las redirecciones de `/__/auth/*`, y autorizar el dominio en Firebase, Google y GitHub).
 - **Firebase:** proyecto `workhub-26f50` (Auth + Firestore).
 - **Correo del usuario:** yaleros2@gmail.com.
 
 ## 2. Preferencias y reglas del usuario (importante)
 
 - Todo **en español**: conversación, commits y pull requests.
-- **Crea los pull requests tú mismo** siempre que termines algo, en español y con explicaciones claras (secciones *Qué cambia*, *Cómo funciona*, *Pruebas*). No hace falta preguntar. Si GitHub falla, reintenta; el usuario llegó a decir "haz tú el pull request".
+- **Crea los pull requests tú mismo** siempre que termines algo, en español y con explicaciones claras (secciones *Qué cambia*, *Cómo funciona*, *Pruebas*). No hace falta preguntar. Si GitHub falla, reintenta; el usuario llegó a decir "haz tú el pull request". Sin `gh` (caso actual), sube la rama y da el enlace `pull/new/{rama}`; el usuario los fusiona.
 - El cuerpo del pull request termina con "🤖 Generated with [Claude Code](https://claude.com/claude-code)".
 - **Solo Netlify.** claude.ai ya no se usa como alojamiento. El código aún soporta ese modo, pero no es prioritario.
 - **NUNCA publiques ni pegues `data-backup.json`.** Contiene datos reales de clientes.
   - Está en el repositorio, pero `scripts/build-public.js` usa una lista blanca y solo publica `index.html`, `assets`, `src` y `plugins`.
 - **NUNCA pegues ni subas el client secret de GitHub OAuth.** Solo va en la consola de Firebase.
-- **Tokens:** el token de GitHub de la integración no se guarda en ningún fichero ni en Firestore, solo en el navegador. Si el usuario pega un token en el chat, no se usa; se le recuerda que no lo haga (aunque diga que ya lo borró).
+- **Tokens:** el acceso a GitHub de la integración no se guarda en ningún fichero ni en Firestore, solo en el navegador. Si el usuario pega un token en el chat, no se usa; se le recuerda que no lo haga (aunque diga que ya lo borró). **Prefiere no pegar tokens nunca**: hay «Conectar con GitHub» (OAuth) y hay que seguir ese criterio en cualquier integración futura.
+- **Cuentas nuevas sin proyecto por defecto:** el usuario no quiere que se cree ningún proyecto por su cuenta; hay que elegir nombre y tipo (ver «Primer proyecto»). Y quiere poder **borrar también el primero**.
+- **Nombres de botones claros:** si dos acciones se parecen («Desconectar» / «Desconectar cuenta»), el usuario se confunde; usar verbos distintos y una ayuda al pasar el ratón.
+- **Cuando el usuario pega un error, mira el texto exacto y no lo des por explicado**: un `permission-denied` de Firestore parecía «reglas sin publicar» y era el límite de los lotes (ver §9). Los mensajes de error deben decir el paso que falló.
 - El usuario pide cambios de forma directa y con libertad de diseño; cuando algo no puede verificarse contra un servicio real (GitHub, Firebase), hay que decirlo claramente en el resumen.
 - La visibilidad de producción en Netlify debe seguir en **Public**.
 - Cualquiera puede **crearse una cuenta**, no solo el usuario. El correo tiene que verificarse.
 - Estética: **minimalista**, estilo Linear/Vercel, **sin emojis**. Usa iconos SVG.
 - Todo debe ser **responsive**: pantallas grandes, portátil, tablet y móvil.
 - El usuario da libertad de diseño ("hazlo como tú veas").
-- Si el usuario pide las reglas de Firestore, pégalas en el chat, porque las publica él a mano en la consola. Solo tiene permisos para "desarrollar y probar" en algunos sitios.
+- Si el usuario pide las reglas de Firestore, pégalas en el chat (versión sin comentarios), porque las publica él a mano en la consola. Solo tiene permisos para "desarrollar y probar" en algunos sitios. **Cada cambio de `firestore.rules` hay que recordárselo**: sin publicarlas, los equipos no funcionan.
+- Entra con **Google** (a veces también prueba en incógnito). Trabaja con varios navegadores/dispositivos: por eso pide que el enlace con GitHub y los accesos funcionen «en cada navegador» sin fricción.
 
 ## 3. Arquitectura técnica
 
@@ -73,15 +78,19 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Netlify redirige `/__/auth/*` y `/__/firebase/*` a `workhub-26f50.firebaseapp.com`, así el login se completa en el propio dominio.
   - El login usa popup y, si falla, redirect.
   - Al cerrar sesión se ejecuta `clearPersistence` (se borra la caché local).
-- **Ficheros nuevos de esta tanda** (todos cargados con `<script>` en `index.html`, en este orden relativo): `models/project-templates.js` (antes de `task-model.js`), `models/github-sync.js`, `services/github-api.js`, `views/labels.js`, `views/column-view.js`, `views/github-view.js`, `controllers/github-controller.js`, y `assets/css/views/github.css`.
+- **Ficheros de las últimas tandas** (todos con `<script>`/`<link>` en `index.html`, en este orden relativo): `models/project-templates.js` (antes de `task-model.js`), `models/github-sync.js`, `models/team-model.js` (después de `project-model.js`), `services/github-api.js`, `views/labels.js`, `views/team-ui.js` (justo después de `labels.js`), `views/column-view.js`, `views/github-view.js`, `views/share-view.js`, `controllers/github-controller.js`, `controllers/team-controller.js`, `assets/css/views/github.css` y `assets/css/views/team.css`. Fuera de `src`: `docs/EQUIPOS.md` y `tests/rules/`.
 - **Estructura en Firestore:**
   - Proyecto principal: `users/{uid}/{tasks|clients|contacts|meetings|vault|vault_meta|plugin_data}/…`.
   - Notas de cada tarea: `users/{uid}/tasks/{id}/notes/{id}`.
-  - Otros proyectos: `users/{uid}/projects/{projectId}/{misma colección}/…`.
-  - Del usuario, comunes a todos sus proyectos: `users/{uid}/projects` (lista), `assets` (imágenes de notas), `settings` (acento, tema e idioma), `plugins` (instalados).
-- **Reglas** (`firestore.rules`):
-  - `canUse(uid)` exige `auth.uid == uid`, y además correo verificado si el proveedor es `password`.
+  - Otros proyectos personales: `users/{uid}/projects/{projectId}/{misma colección}/…`.
+  - Del usuario, comunes a todos sus proyectos: `users/{uid}/projects` (lista; el documento `main` guarda nombre/tipo del principal o `deleted:true`), `assets` (imágenes de notas), `settings` (acento, tema e idioma), `plugins` (instalados).
+  - **Proyectos de equipo** (compartidos): `teams/{id}` (documento con la config del proyecto + `ownerUid`, `memberIds[]`, `members{uid:{role,name,email,photo}}`) y debajo `tasks` (con `notes`), `clients`, `contacts`, `meetings`, `plugin_data`, `assets`. **Sin `vault`**.
+  - **Invitaciones**: `invites/{idEquipo}_{correo en minúsculas}` = `{teamId, teamName, email, role, invitedByUid, invitedByName, createdAt}`.
+- **Reglas** (`firestore.rules`, **se publican a mano en la consola**):
+  - `canUse(uid)` exige `auth.uid == uid`, y además correo verificado si el proveedor es `password`; `verified()` es lo mismo sin uid.
   - Solo se permiten las colecciones de la lista blanca. Todo lo demás está cerrado.
+  - Equipos: lee quien está en `memberIds`; escriben datos propietario y editor; el propietario cambia todo menos `ownerUid`; un editor no toca `memberIds/members`; entrar exige una invitación a tu correo verificado con el rol invitado y sin cambiar nada más; cualquiera que no sea propietario puede salir; invitar/cancelar solo el propietario; leer/rechazar una invitación solo su destinatario.
+  - Probadas con `tests/rules` (59 casos contra el emulador; ver §9).
 - **Publicación en Netlify** (`netlify.toml`):
   - Build: `node scripts/build-public.js`, publica `dist/`.
   - Cabeceras de seguridad:
@@ -95,13 +104,15 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - `docs/FIREBASE.md`, `docs/NETLIFY.md`.
   - `docs/SEGURIDAD.md`: pasos en la consola, como publicar reglas, política de contraseñas, protección contra la enumeración de correos, dominios autorizados y restringir la API key.
   - `docs/PLUGINS.md`: guía completa para crear plugins.
-  - `docs/GITHUB.md`: integración con GitHub Projects (conectar, qué se sincroniza, límites, seguridad, estructura interna).
+  - `docs/GITHUB.md`: integración con GitHub Projects (conectar con un clic o con token, qué se sincroniza, en equipos, límites, seguridad, estructura interna).
+  - `docs/EQUIPOS.md`: trabajo en equipo (uso, roles, cómo se guarda, límite de lotes de Firestore, reglas, diseño de la fase de contraseñas compartidas).
+  - `tests/rules/`: pruebas de las reglas con el emulador (`README.md`, `package.json`, `rules-test.js`).
 
 ## 4. Funcionalidades (estado actual)
 
 ### Tareas (tablero)
 - **Estados**, en `task-model.js` `STATUSES`: `pendiente` (Pendiente), `proceso` (En proceso), `espera` (Esperando al cliente), `completada` (Completada).
-- **Campos de la tarea:** `title`, `desc`, `cliente`, `status`, `contacto`, `dueDate` (YYYY-MM-DD), `order`, `createdAt`, `updatedAt`, contactos y contraseñas vinculados, y notas en una subcolección (`text`, `imageAssetId`, `createdAt`).
+- **Campos de la tarea:** `title`, `desc`, `cliente`, `status`, `contacto`, `dueDate` (YYYY-MM-DD), `order`, `createdAt`, `updatedAt`, `labels`, contactos y contraseñas vinculados, `assignees` (uids, solo en equipos) y notas en una subcolección (`text`, `imageAssetId`, `createdAt`).
 - **Tablero:**
   - Ocupa el alto de la ventana y cada columna tiene su propio scroll.
   - Arrastrar y soltar con autoscroll y una línea que marca dónde caerá la tarea. El orden se guarda en `order`.
@@ -109,7 +120,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Ficha de tarea** (solo lectura, al hacer clic):
   - Muestra estado, cliente, fecha límite con "Faltan N días / Venció hace N días", contacto, descripción, notas con imágenes y vínculos.
   - Botón **Editar tarea**; al guardar o cancelar se vuelve a la ficha.
-- **Filtros:** buscador (título, cliente o contacto) y selector de cliente.
+- **Filtros:** buscador (título, cliente, contacto, etiquetas y nombres de asignados), selector de cliente y, en equipos, selector de miembro (*Todos los miembros*, *Asignadas a mí*, *Sin asignar*, una persona; `TaskModel.filter(query, cliente, assignee)`).
 - **Atajos:** `N` crea una tarea y `/` enfoca el buscador (no funcionan mientras escribes ni con un diálogo abierto).
 
 ### Tipos de proyecto (etapas y clientes)
@@ -136,13 +147,17 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ### Integración con GitHub Projects (`docs/GITHUB.md`)
 - **Conectar**: *Nuevo proyecto → Desde GitHub* (crea un proyecto nuevo) o *Ajustes → GitHub Projects* (selector de destino: proyecto existente —por defecto el abierto, avisa de que sus columnas se sustituyen— o «+ Crear un proyecto nuevo»). Cada proyecto de Workhub puede enlazarse con un GitHub Project distinto.
-- **API**: GraphQL de GitHub (Projects v2) con un **token clásico con permiso `project`**, guardado solo en `localStorage` (`workhub_gh_token`, nunca en Firestore). Los *fine-grained* no funcionan con proyectos de usuario (la app lo detecta y lo explica). Los errores distinguen: sin token, token rechazado, sin permiso `project`, token de otra cuenta, número de proyecto inexistente. Un token rechazado se borra solo y la sincronización periódica se detiene hasta que el usuario lo arregle.
+- **API**: GraphQL de GitHub (Projects v2) con un acceso con permiso `project`, guardado solo en `localStorage` (`workhub_gh_token`, nunca en Firestore, **cada navegador el suyo**). Dos formas de obtenerlo: **(a) «Conectar con GitHub»** (OAuth, sin token; ver más abajo) o **(b) un token clásico pegado**. Los *fine-grained* no funcionan con proyectos de usuario (la app lo detecta y lo explica). `api.tokenKind()` distingue `'oauth'` (empieza por `gho_`) de `'token'` (`ghp_…`) para pintar la interfaz. Los errores distinguen: sin token, token rechazado, sin permiso `project`, token de otra cuenta, número de proyecto inexistente. Un token rechazado se borra solo y la sincronización periódica se detiene hasta que el usuario lo arregle.
 - **Modelo**: config en el doc del proyecto, campo `github` = `{type, login, number, projectId, fieldId, fieldName, title, url, pushNew, pushFrom, ignored[]}`. Cada tarea enlazada guarda `ghItemId`, `ghContentId`, `ghType` (DraftIssue | Issue | PullRequest), `ghUrl`, `ghNumber`, `ghRepo`, `ghPrs`, `ghLabels`, `ghSyncedAt` y `ghRemoteAt`. Cambio local = `updatedAt > ghSyncedAt`; cambio remoto = fecha en GitHub `> ghRemoteAt`; si cambian ambos gana el más reciente. `TaskModel.saveSynced/markSynced` escriben sin contar como cambio local.
 - **Columnas**: las opciones del campo Status son las columnas (clave `g`+id de la opción; color de GitHub → uno de los 6; final = nombre tipo done/hecho o la última). Las columnas nuevas de GitHub se añaden solas; renombrar no se propaga en ningún sentido.
 - **Qué se sincroniza**: mover, título y descripción en ambos sentidos (borradores e issues; las PR solo bajan); elementos nuevos de GitHub → tareas; tareas nuevas de Workhub → borradores del proyecto (solo las creadas después de conectar salvo que se marque enviar las existentes; opción `pushNew`); etiquetas en ambos sentidos (solo las que existen en el repo; el catálogo se alimenta de las etiquetas de los repos); pull requests vinculadas como chips (verde abierta, morada fusionada, roja cerrada); la ficha muestra la actividad de la incidencia (asignaciones, etiquetas, movimientos en el proyecto, PRs vinculadas, cierres, comentarios) pedida bajo demanda (`fetchDetails`, cache 1 min, con reintento sin `ProjectV2ItemStatusChangedEvent` por si la API no lo reconoce). **Borrar no se sincroniza**: lo borrado en Workhub se apunta en `github.ignored` (`TaskModel` emite `removed`) y no se reimporta.
 - **Cuándo**: al abrir el proyecto, al volver a la pestaña (>30 s), al recuperar conexión, cada 2 min y 2 s después de un cambio local pendiente; botón «GitHub» en la barra de Tareas, «Sincronizar ahora» en Ajustes y acción en `Ctrl K`. Límite: 2000 elementos, 8 columnas, 100 etiquetas por repo.
-- **Piezas**: `services/github-api.js`, `models/github-sync.js` (motor: `link`, `sync`, `_pull`, `_push`, `_loadRepoLabels`), `controllers/github-controller.js` (temporizadores, `createFromGithub`, `loadDetails`), `views/github-view.js`. Ojo con la carrera de `ProjectModel.loaded`: el controlador reacciona a `projects.change` con un microtask.
-- **Pendiente / sin verificar**: todo se probó contra una **API de GitHub simulada** en el navegador (fetch reemplazado), no contra la real. Hay que probar con un token clásico propio, sobre todo la consulta de actividad y `closedByPullRequestsReferences`. Y desplegar el cambio de CSP en Netlify.
+- **Piezas**: `services/github-api.js`, `models/github-sync.js` (motor: `link`, `sync`, `_pull`, `_push`, `_loadRepoLabels`, `canSync`, `canCreate`), `controllers/github-controller.js` (temporizadores, `createFromGithub`, `loadDetails`, `saveToken`, `connectOAuth`), `views/github-view.js`. Ojo con la carrera de `ProjectModel.loaded`: el controlador reacciona a `projects.change` con un microtask.
+- **Enlazado pero sin acceso en este navegador** (p. ej. entras desde otro navegador o eres un miembro nuevo del equipo): la tarjeta de Ajustes muestra un aviso, el botón «Conectar con GitHub» (si hay OAuth) y un campo para pegar un token; el botón de la barra de Tareas pasa a «Añadir token de GitHub» (en rojo) y, sin acceso, «Sincronizar» lleva a Ajustes. Ya no se queda mudo.
+- **Conectar con GitHub sin token (OAuth)**: `firebase.githubToken()` (en `firebase-backend.js`) abre el popup de GitHub con `addScope('project')` en una **segunda instancia de Firebase** (`gh-oauth`, sin persistencia) para no tocar la cuenta con la que se entró (evita `account-exists-with-different-credential`; si aun así salta ese error se usa `err.credential.accessToken`), recoge `credential.accessToken`, cierra la sesión temporal (o la borra si era una cuenta nueva) y `connectOAuth()` lo guarda en `workhub_gh_token`. Solo se ofrece si `Workhub.services.github.canOAuth()`: **backend en modo `firebase`** (ojo: `firebase.isEnabled()` devuelve falso una vez iniciada la sesión, por eso se comprueba `platform.mode()`) y `'github'` en `providers`. Requiere el proveedor GitHub activado en Firebase; si el proyecto es de una organización, esta tiene que aprobar la aplicación OAuth.
+- **Botones** (Ajustes, proyecto enlazado): «Sincronizar ahora»; **«Desvincular proyecto»** (quita el enlace con el GitHub Project, no borra tareas); **«Olvidar token»** (token pegado) o **«Quitar mi acceso a GitHub»** (acceso OAuth): ambos quitan el acceso de este navegador y el proyecto sigue enlazado; «Conectar con GitHub en su lugar» solo si el acceso es un token pegado. Con OAuth conectado se muestra «Conectado con tu cuenta de GitHub en este navegador».
+- **En equipos** (ver «Trabajo en equipo»): `convert()` copia `github` (sin token) al equipo y desenlaza el original; cada miembro conecta su cuenta; **solo el propietario crea al cruzar** (elemento nuevo de GitHub → tarea, tarea nueva → borrador) para no duplicar cuando varios sincronizan; mover/editar/etiquetas se sincronizan desde cualquiera (idempotente); los **lectores no sincronizan**.
+- **Pendiente / sin verificar**: la sincronización se probó contra una **API de GitHub simulada** (fetch reemplazado), no contra la real; y el OAuth solo hasta la petición del popup con el emulador de Auth (URL con `appName=gh-oauth&scopes=project`). Hay que probar con GitHub real: sincronización (actividad, `closedByPullRequestsReferences`) y «Conectar con GitHub» (que devuelva de verdad un `gho_…` con acceso a los Projects, sobre todo con proyectos de organización).
 
 ### Calendario
 - **Vista mensual** con reuniones (morado, `--meet`), fechas límite de tareas y tareas vencidas (rojo).
@@ -179,12 +194,30 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Color del cliente:** tono HSL en el campo `color`; "Auto" lo deriva del nombre. Se usa en etiquetas, avatares y desplegables.
 - **En móvil** se ve primero la lista y, al elegir un cliente, su ficha.
 
+### Acceso (login) y modo invitado
+- Pantalla de acceso: proveedores (Google, GitHub), correo y contraseña, **«Continuar como invitado»**, e idioma. Al pulsar invitado se muestra **solo ese paso** (título «Entrar como invitado», campo «Tu nombre», aviso de que todo queda en el navegador, «Entrar como invitado» y «Volver»); antes se apilaba debajo de todo y la tarjeta se cortaba por arriba.
+- El contenedor `.auth-screen` centra con `margin:auto` en los hijos (no `justify-content:center`): si la tarjeta no cabe, se puede desplazar hasta arriba.
+- **Modo invitado**: solo un nombre; sin cuenta y sin Firebase (ni se descarga su SDK); datos en IndexedDB (mismo almacén que el modo local). Se recuerda en `localStorage['workhub_guest']` = `{name}`; `AuthController.gate()` salta Firebase si existe. «Salir del modo invitado» borra la marca pero **deja los datos** del navegador (al volver a entrar como invitado siguen). Un solo invitado por navegador. No puede usar equipos ni «Conectar con GitHub».
+- El usuario que entra con cuenta y el invitado comparten navegador pero no datos (Firestore vs IndexedDB).
+
 ### Proyectos
-- **Selector** arriba en la barra lateral: avatar con iniciales y color, nombre y "Workhub". Cambia de proyecto sin recargar.
-- **Gestión:** crear, renombrar, cambiar el color, elegir el **tipo** (etapas y clientes, ver más abajo) y eliminar con todos sus datos (con confirmación). Al crear también se puede elegir «Desde GitHub».
-- **Primer proyecto (cuentas nuevas)**: si el registro de proyectos está vacío y la raíz no tiene tareas, clientes, contactos, reuniones ni contraseñas, `ProjectsController.checkFirstRun` abre el diálogo de proyecto en modo `onboarding` (`ProjectView.openOnboarding`): sin tipo preelegido, sin «Desde GitHub», sin cerrar (ni Esc ni X) y con `body.is-onboarding` ocultando la app. Al guardar se escribe el documento `projects/main` con lo elegido: el primer proyecto **es** el principal (misma raíz), no se crea ningún otro. Las cuentas con datos o proyectos no lo ven.
-- **Equipos** (`docs/EQUIPOS.md`): un proyecto de equipo vive en `teams/{id}` (documento con `ownerUid`, `memberIds[]`, `members{uid:{role,name,email,photo}}` y la config del proyecto) con las colecciones tasks, clients, contacts, meetings, plugin_data y assets debajo; **sin vault**. Invitaciones en `invites/{teamId}_{correo}`. En el cliente el id es `t:{id}` (`ProjectModel.isTeam/teamId/teamKey`); `ProjectModel.list()` mezcla personales y equipos (`team:true`, `role`); `loaded` espera a los dos. `ProjectModel.set` de un equipo solo manda los campos que cambian y **nunca** `ownerUid/memberIds/members`. Roles: owner (todo), editor (datos), viewer (lectura; `body.is-readonly`). `TeamModel` (`models/team-model.js`): invitar/aceptar/rechazar, roles, quitar, salir y `convert()` (copia un proyecto personal a un equipo, sin contraseñas, el original queda). `Workhub.views.team` (`views/team-ui.js`) guarda el contexto (miembros, mi rol) que leen tarjetas, ficha y formulario; lo fija `ProjectsController.applyTeam`. Tareas: `assignees:[uid]`. Imágenes de un equipo: `window.__teamId` hace que `firebase-backend` use `teams/{id}/assets`. Una cuenta nueva que acepta una invitación en el diálogo de primer proyecto deja `projects/main` con `deleted:true`. **Las reglas de `firestore.rules` hay que publicarlas a mano**; `tests/rules` las prueba (59 casos, emulador + Java 11). **GitHub y equipos**: `convert()` copia `github` (sin token) al equipo y desenlaza el original; cada miembro conecta su cuenta; `GithubSync.canCreate()` (solo propietario crea al cruzar) y `canSync()` (lectores no) evitan duplicados y escrituras rechazadas. **Conectar con GitHub sin token**: `firebase.githubToken()` abre el popup de GitHub (`addScope('project')`) en una segunda app de Firebase (`gh-oauth`, sesión temporal que se cierra o borra) y devuelve `credential.accessToken`, que se guarda en `workhub_gh_token`; `Workhub.services.github.canOAuth()` (modo firebase + `'github'` en `providers`). Solo probado hasta la petición al popup con el emulador; **falta probar con GitHub real**. **Pendiente**: contraseñas compartidas con cifrado por miembro (diseño en `docs/EQUIPOS.md`), comentarios en tareas, actividad, notificaciones, probar con Firebase real.
-- **"Proyecto principal"** usa la raíz de la base de datos. **Sí se puede eliminar** (`ProjectModel.removeProject` vacía la raíz y deja `projects/main` = {deleted:true, createdAt:0}; `list()` lo oculta). Al borrar el abierto se pasa al primero que quede; si no queda ninguno, `checkFirstRun` reabre el diálogo de primer proyecto (que reescribe `projects/main` sin `deleted`). El último proyecto abierto se recuerda.
+- **Selector** arriba en la barra lateral: avatar con iniciales y color, nombre y "Workhub". Cambia de proyecto sin recargar. Los de equipo llevan un icono de personas; hay un punto en el botón si tienes invitaciones pendientes.
+- **Menú del selector**: invitaciones recibidas (Aceptar/Rechazar), lista de proyectos con lápiz, «Nuevo proyecto» y «Compartir este proyecto» (solo con cuenta).
+- **Gestión:** crear, renombrar, cambiar el color, elegir el **tipo** (etapas y clientes, ver más arriba) y eliminar con todos sus datos (con confirmación en dos pasos). Al crear también se puede elegir «Desde GitHub».
+- **Primer proyecto (cuentas nuevas)**: si el registro de proyectos (personales y de equipo) está vacío y la raíz no tiene tareas, clientes, contactos, reuniones ni contraseñas, `ProjectsController.checkFirstRun` abre el diálogo de proyecto en modo `onboarding` (`ProjectView.openOnboarding`, «Crea tu primer proyecto»): **sin tipo preelegido** (hay que elegir uno, si no error «Elige un tipo de proyecto.»), sin «Desde GitHub», sin cerrar (ni Esc ni X ni Cancelar) y con `body.is-onboarding` ocultando la app. Al guardar se escribe `projects/main` con lo elegido: **el primer proyecto ES el principal** (misma raíz), no se crea ningún otro. Las cuentas con datos o proyectos no lo ven. Si la cuenta nueva tiene **invitaciones pendientes**, aparecen dentro de este diálogo; aceptar una lleva al equipo y deja `projects/main` = `{deleted:true}` (no se queda con un proyecto vacío por defecto).
+- **"Proyecto principal"** usa la raíz de la base de datos. **Sí se puede eliminar** (`ProjectModel.removeProject` vacía la raíz y deja `projects/main` = `{deleted:true, createdAt:0}`; `list()` lo oculta). Al borrar el abierto se pasa al primero que quede; si no queda ninguno, `checkFirstRun` reabre «Crea tu primer proyecto» (que reescribe `projects/main` sin `deleted`). El último proyecto abierto se recuerda (`workhub_project`).
+
+### Trabajo en equipo (`docs/EQUIPOS.md`)
+- **Qué es**: un proyecto compartido con otras cuentas; todos ven el mismo tablero en tiempo real y las tareas se asignan. Requiere cuenta (Firebase); invitado y modo local no tienen equipos (`TeamModel.enabled()` = `db.teams && db.me`).
+- **Roles**: *owner* (todo: invitar, roles, quitar, config, borrar; solo uno), *editor* (datos y config, no miembros), *viewer* (solo lectura: `body.is-readonly` oculta `#btnNew`, `.col-add`, editar; tarjetas no arrastrables; el servidor rechaza escrituras). Quien no es propietario puede salir; el propietario tiene que eliminar el proyecto.
+- **Flujo**: menú de proyectos → «Compartir este proyecto» (o `Ctrl K` → «Compartir proyecto»). Si es personal, **«Convertir en proyecto de equipo»**; si ya es de equipo, lista de miembros + invitar por correo con rol + invitaciones pendientes (+ «Salir del equipo»). La persona invitada tiene que entrar con **ese correo, verificado**; ve la invitación en el menú (o en «Crea tu primer proyecto» si es cuenta nueva).
+- **Convertir** (`TeamModel.convert(project, onProgress)`): crea `teams/{id}` con la config (`tipo, stages, clients, labels, github`), copia tareas (con notas), clientes, contactos, reuniones, `plugin_data` y las imágenes de las notas al equipo; **no copia las contraseñas** (se quitan los `linkedVault` de las tareas); **el original queda intacto** salvo que su enlace con GitHub se quita (`patch({github:null})`). Copia **de una en una, 12 a la vez** (`runPool`), nunca con `batch`; si algo falla se deshace el equipo a medias y el error dice el paso (`err.phase`: crear el equipo / leer los datos / copiar los datos). El equipo se abre y se ofrece invitar.
+- **Cliente**: id `t:{id}` (`ProjectModel.isTeam/teamId/teamKey`); `ProjectModel.list()` mezcla personales y equipos (`team:true`, `role`, `members`) y `loaded` espera a los dos; `ProjectModel.scope(db, 't:…')` → `db.team(id)` (backend: `userDb` añade `db.me`, `db.team(tid)` y `db.teams` con `query/doc/newId/invitesForMe/invitesFrom/invite/batch/FieldValue`). **`ProjectModel.set` de un equipo manda solo los campos que cambian y nunca `ownerUid/memberIds/members`** (para no pisar a quien acaba de entrar). Imágenes: `window.__teamId` (lo fija `AppController.connectProject`) hace que `firebase-backend` guarde/lea en `teams/{id}/assets`.
+- **Contexto para las vistas**: `Workhub.views.team` (`views/team-ui.js`: `enabled/role/canEdit/members/meUid/assigned(t)/avatar/stack`); lo fija `ProjectsController.applyTeam` (también `body.team-project`, que oculta la pestaña Contraseñas, y `ShellView.setTeamMode` que muestra/oculta los `.team-only`; los `<select>` con `Dropdown` necesitan ocultar también su envoltorio `.dd`).
+- **Asignar**: formulario de tarea («Asignada a», chips de miembros), ficha («Asignada a» con avatares y **«Asignármela» / «Quitar mi asignación»**, `TasksController.toggleMine`), avatares en la tarjeta, filtro por miembro y `Ctrl K` → «Mis tareas» (`showMine`). Si un miembro sale, su asignación se ignora al pintar (`assigned()` filtra).
+- **Piezas**: `models/project-model.js` (equipos en la lista, `createTeam`, `roleOf`, `membersOf`, `removeProject` de equipos), `models/team-model.js` (`TeamModel`, `InviteModel`: invite/revoke/accept/decline/setRole/removeMember/leave/convert), `controllers/team-controller.js` + `views/share-view.js` (diálogo `#dlgShare`; ojo: «Cerrar» y la X necesitan un listener propio, `data-dismiss` no hace nada solo), `controllers/projects-controller.js` (`applyTeam`, invitaciones en menú/primer proyecto, `pendingSwitch`), `views/project-view.js`.
+- **Sin probar con Firebase real**: solo con los emuladores de Auth y Firestore (dos cuentas: crear, convertir, invitar, aceptar, asignar, cambiar rol a lector, expulsar, salir, eliminar). Hay que probarlo en producción tras publicar las reglas y desplegar.
+- **Pendiente**: **contraseñas compartidas con cifrado extremo a extremo por miembro** (acordado; diseño en `docs/EQUIPOS.md`: par de claves por persona, clave de proyecto AES cifrada una vez por miembro en `teams/{id}/keys/{uid}`, rotación al expulsar), comentarios en tareas, registro de actividad, notificaciones, foto/nombre de miembro que se actualice si cambia en su cuenta, avisar al propietario de una invitación aceptada, nombre distinto para la copia al convertir (hoy el equipo y el original se llaman igual y solo los distingue un icono).
 
 ### Paleta de comandos (`Ctrl K` / `⌘K`, o el botón "Buscar…" de la barra lateral)
 - **Busca** tareas, contactos, reuniones y clientes.
@@ -196,6 +229,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Exportar la copia de seguridad.
   - Acciones de los plugins.
   - "Sincronizar con GitHub" (solo si el proyecto está enlazado).
+  - En proyectos de equipo: "Mis tareas". Con cuenta: "Compartir proyecto".
 
 ### Copia de seguridad
 - **Exportar e importar** el proyecto abierto en JSON (`formatVersion`).
@@ -260,6 +294,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Iconos:** SVG de trazo, al estilo Lucide. Los de plugins están en `src/views/plugin-icons.js`: puzzle, chart, trending, pie, timer, clock, calendar, check, list, kanban, users, briefcase, mail, message, bell, file, folder, book, database, download, link, globe, tag, wallet, target, bolt, sparkles, code, shield, star.
 - **Tarjetas:** fondo surface, borde 1px `--line`, radio lg, `shadow-sm`; al pasar el ratón, `line-strong` y `shadow`. Mismo acabado en clientes, contraseñas y plugins.
 - **Etiquetas y PRs**: `.label-chip` (color con `--lc`, mezcla con `color-mix`) y `.pr-chip` (`is-merged`, `is-closed`) en `assets/css/views/github.css`; línea de tiempo `.gh-timeline`.
+- **Equipos** (`assets/css/views/team.css`): `.team-off` (oculta lo de equipo fuera de equipos), `.avatar.is-mini` (20 px, foto o iniciales) y `.avatar-stack` (solapados, «+N»), `.assignee-chip` / `.assignee-picker` (asignar), `.card-assignees`, `.member-list` / `.member-row` (diálogo de compartir), `.invite-box` / `.invite-row-item` (invitaciones), punto `#btnProject.has-invites`, `body.is-readonly`.
+- **Login** (`assets/css/views/auth.css`): `.auth-guest` y `#authPanel.is-guest` (paso «invitado»: oculta proveedores, correo y cambio de modo).
 - **Barra de desplazamiento de los diálogos** (`dialogs.css`): fina, pulgar redondeado y separado de las esquinas (`::-webkit-scrollbar`); en navegadores sin soporte, `scrollbar-color` estándar (en Chrome reciente esas propiedades anularían el estilo redondeado, por eso van en `@supports not selector(::-webkit-scrollbar)`).
 - **Favicon:** SVG en línea (portapapeles con check blanco sobre `#1F2328`).
 
@@ -349,7 +385,18 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 21 | Tarjetas de plugins minimalistas |
 | 22 | Idioma inglés, traducciones |
 | 23 | CONTEXT.md (contexto para continuar en otro chat) |
-| **pendiente** | **Rama `claude/read-context-md-df6b13` (sin PR abierto todavía)**: tipos de proyecto (soporte, desarrollo, kanban, personalizado), menú y límite de columnas, arrastrar columnas, integración con GitHub Projects (crear proyecto desde GitHub, destino en Ajustes, sincronización bidireccional), etiquetas, PRs vinculadas, actividad de la incidencia y scrollbar de los diálogos |
+| 24–30 | Rama `claude/read-context-md-df6b13`: tipos de proyecto (soporte, desarrollo, kanban, personalizado), menú y límite de columnas, arrastrar columnas, integración con GitHub Projects (crear proyecto desde GitHub, destino en Ajustes, sincronización bidireccional), etiquetas, PRs vinculadas, actividad de la incidencia, scrollbar de los diálogos y CONTEXT.md (en varios PR; el #30 cierra la tanda) |
+| 31 | GitHub: pedir el token cuando el proyecto está enlazado pero el navegador no lo tiene (antes «Sincronizar ahora» no hacía nada) |
+| 32 | Acceso como invitado (solo un nombre, todo en el navegador, sin Firebase) |
+| 33 | Login: el paso de invitado ocupa solo su pantalla y la tarjeta ya no se corta por arriba |
+| 34 | Cuentas nuevas: obligar a crear el primer proyecto (nombre y tipo a elegir), sin proyecto por defecto |
+| 35 | Permitir eliminar el primer proyecto; al eliminar el último vuelve a pedir crear uno |
+| 36 | **Trabajo en equipo**: proyectos compartidos (`teams/`), invitaciones por correo, roles, asignación de tareas, reglas de Firestore nuevas y `tests/rules` |
+| 37 | Compartir: los botones Cerrar y X no cerraban el diálogo |
+| 38 | GitHub en equipos: el enlace viaja con el equipo, «Conectar con GitHub» sin token (OAuth), solo el propietario crea al cruzar, lectores sin sincronizar, errores de conversión claros |
+| 39 | Convertir a equipo: copiar de una en una en vez de en lotes (límite de reglas de Firestore) |
+| 40 | GitHub: con la cuenta conectada no se ofrece «Olvidar token» ni «Conectar en su lugar» (`tokenKind`) |
+| **pendiente** | Rama `claude/context-docs-review-985e75`, sin PR abierto todavía: «Desvincular proyecto» / «Quitar mi acceso a GitHub» (nombres distintos y con ayuda) y esta actualización de CONTEXT.md |
 
 ## 9. Cómo trabajar y probar
 
@@ -358,19 +405,26 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Para probar sin login: abrir `file:///…/index.html`, o en Playwright interceptar `**/src/config/firebase-config.js` con `window.WORKHUB_FIREBASE={apiKey:'',projectId:''};`.
 - **Playwright:** usa el Chromium de `/opt/pw-browsers` (`executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`); no ejecutes `playwright install`.
 - **Idioma en las pruebas:** Chromium sin interfaz arranca en inglés, así que pon `locale: 'es-ES'` en `newContext` para probar en español, o `localStorage.workhub_lang='en'` para inglés.
-- **Emuladores de Firebase** (opcionales): `useEmulators: true` solo en local, nunca en producción.
+- **Emuladores de Firebase** (opcionales): `useEmulators: true` solo en local, nunca en producción. Receta que funcionó en el equipo Windows (Java 11): instalar **`firebase-tools@13`** (las 14+ piden Java 21) y `@firebase/rules-unit-testing@3` + `firebase@10` **fuera del repo** (una carpeta temporal); `firebase emulators:start --only auth,firestore --project demo-workhub` con un `firebase.json` que apunte a `firestore.rules`; un servidor estático de Node que sirva `firebase-config.js` con `{apiKey:'fake-key', projectId:'demo-workhub', providers:['password','github'], useEmulators:true}` (solo entonces la app usa `127.0.0.1:9099/8080`); crear las cuentas por REST (`accounts:signUp` → `sendOobCode VERIFY_EMAIL` → leer `/emulator/v1/projects/demo-workhub/oobCodes` → `accounts:update` con el `oobCode`) para que salgan **verificadas** (las reglas lo exigen para `password`). **Dos sesiones a la vez**: dos pestañas con **orígenes distintos** (`http://localhost:PUERTO` y `http://127.0.0.1:PUERTO`), porque Firebase Auth guarda la sesión por origen. Ojo con dejar `workhub_guest` en `localStorage` de un origen: esa pestaña arranca en modo invitado aunque haya Firebase. Para parar todo: matar los procesos que escuchan en 8080, 9099, 4400, 4500, 9150 y los puertos de los servidores.
+- **Pruebas de las reglas** (`tests/rules`): `cd tests/rules && npm install` y `npx firebase emulators:exec --only firestore --project demo-workhub --config ../../firebase.json "node rules-test.js"` → «59 correctas, 0 fallidas». Los `PERMISSION_DENIED` que salen por el camino son lo que **debe** rechazarse.
+- **TRAMPA: límite de lotes con reglas que consultan otro documento.** Las reglas de un equipo hacen `get()` del documento del equipo en cada escritura; Firestore limita esas consultas a **10 por operación suelta y 20 por lote (`batch`) entero**. Un lote grande de escrituras a un equipo falla en producción con `permission-denied` (**y el emulador NO lo aplica, así que en local pasa**). Regla: en equipos, escribir de una en una (con concurrencia limitada), nunca con `batch`. Los lotes pequeños de 2 operaciones (aceptar una invitación) están bien.
 - **Datos de prueba:** importar `data-backup.json` desde Copia de seguridad (`#importFileInput`). Solo en local; nunca subirlo a ningún sitio.
 - **Qué comprobar:** sin errores en consola y sin scroll horizontal en móvil, en tema claro y oscuro.
-- **Sin Python ni `gh`** en el equipo Windows de esta tanda: se editó con scripts de Node (`node script.js`) y los PR se abren con el enlace `.../pull/new/{rama}`. Los ficheros del repo están en **CRLF**; los scripts de edición deben normalizar los saltos de línea. Las heredocs de bash con `\\` se pueden corromper: mejor escribir el script con la herramienta de ficheros.
+- **Sin Python ni `gh`** en el equipo Windows: se edita con scripts de Node (`node script.js`) y los PR se abren con el enlace `.../pull/new/{rama}`. Los ficheros del repo están en **CRLF**; los scripts de edición deben normalizar los saltos de línea (leer, `replace(/\r\n/g,'\n')`, editar, volver a CRLF si lo tenía). Las heredocs de bash con comillas o `\\` se corrompen: escribir el script con la herramienta de ficheros y ejecutarlo. Las rutas `/c/Users/…` de Git Bash no las entiende `node` en Windows: usar PowerShell (o rutas `C:/…`) para esos casos. **`git push` funciona desde Bash pero no desde PowerShell** (allí no hay credenciales: «could not read Username»).
+- **Verificar la interfaz sin Firebase real**: con el navegador integrado, servir la app con Node en un puerto y llamar a las vistas/controladores desde `javascript_tool` (`Workhub.app.controllers…`); para estados visuales, `view.render({...})` con un estado inventado. Para móvil, `resize_window` a `mobile` (y volver a `desktop`). Cuidado con simular clics sobre listas que se repintan (los nodos se sustituyen): volver a consultar en cada paso.
 - **Servidor de pruebas local**: un servidor estático de Node que sirve `src/config/firebase-config.js` vacío (`window.WORKHUB_FIREBASE={apiKey:'',projectId:''}`) arranca el modo local sin login. Para probar GitHub sin token real se sustituye `window.fetch` en la consola del navegador por un simulador de la API GraphQL (proyecto, elementos, etiquetas, mutaciones, actividad) y se pega un token de mentira; al terminar, `localStorage.removeItem('workhub_gh_token')`.
 - **GitHub:** a veces da errores 503 o "token store unavailable". Reintenta el push en bucle y verifica con `git ls-remote`.
 - **Commits:** en español, descriptivos.
 
 ## 10. Ideas y posibles siguientes pasos (no pedidas todavía)
 
-- Abrir y fusionar el PR de la rama `claude/read-context-md-df6b13`, desplegar la CSP y **probar la integración con GitHub con un token clásico real**.
+- **Desplegar** lo fusionado (Netlify sin créditos → `firebase deploy --only hosting`, o esperar al ciclo) y **publicar `firestore.rules`** (sin ellas, «Compartir» falla con permission-denied). Después **probar con Firebase real**: equipos (crear, convertir, invitar con otra cuenta de Google, asignar, roles), primer proyecto y modo invitado.
+- **Probar «Conectar con GitHub» y la sincronización con GitHub real** (OAuth devuelve `gho_…`; proyectos de organización; actividad de la incidencia).
+- **Contraseñas compartidas** en equipos con cifrado extremo a extremo por miembro (ver `docs/EQUIPOS.md`), y después comentarios, actividad y notificaciones de equipo.
+- Pulir equipos: renombrar/etiquetar la copia al convertir, avisar al propietario cuando se acepta una invitación, «Mis tareas» en el calendario, asignar también reuniones.
+- Si Netlify sigue sin créditos, decidir alojamiento definitivo (Firebase Hosting ya está configurado; Cloudflare Pages/Vercel requieren rehacer cabeceras y redirecciones).
 - Renombrar columnas en GitHub desde Workhub (`updateProjectV2Field`): probar primero que conserva los ids de las opciones, si no los elementos perderían su columna.
 - Comentar desde la ficha (hoy la actividad de GitHub es solo lectura), crear etiquetas nuevas en el repositorio, borrar/renombrar etiquetas del catálogo, filtrar el tablero por etiqueta.
-- Probar el idioma en producción (pantalla de login).
+- Probar el idioma en producción (pantalla de login y los textos nuevos de equipos y GitHub).
 - Más idiomas (catalán, euskera…) con el mismo sistema.
 - Más plugins oficiales.

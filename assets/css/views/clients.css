@@ -1,8 +1,8 @@
 /* ---------- Clientes y contactos ---------- */
 .crm{
   display:grid;
-  grid-template-columns:minmax(240px, 300px) minmax(0, 1fr);
-  gap:14px;
+  grid-template-columns:minmax(250px, 300px) minmax(0, 1fr);
+  gap:16px;
   align-items:start;
 }
 
@@ -20,16 +20,30 @@
   box-shadow:var(--shadow-sm);
   overflow:hidden;
 }
-.crm-new{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--line);}
+.crm-new{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line);}
 .crm-new input{flex:1;min-width:0;}
 .crm-list-pane .state-msg{margin:10px;}
-.crm-list{overflow-y:auto;padding:4px;overscroll-behavior:contain;}
+.crm-list-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:0;
+  padding:12px 16px 4px;
+  font-size:11.5px;
+  font-weight:600;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+}
+.crm-list-label[hidden]{display:none;}
+.crm-list-label em{font-style:normal;font-weight:500;font-variant-numeric:tabular-nums;}
+.crm-list{overflow-y:auto;padding:4px 6px 6px;overscroll-behavior:contain;}
 .crm-item{
   display:flex;
   align-items:center;
   gap:10px;
   width:100%;
-  padding:7px 8px;
+  padding:8px 10px;
   border:none;
   border-radius:var(--r-md);
   background:transparent;
@@ -37,16 +51,35 @@
   font-family:inherit;
   text-align:left;
   cursor:pointer;
-  transition:background .1s ease;
+  transition:background .1s ease, box-shadow .1s ease;
 }
+.crm-item + .crm-item{margin-top:1px;}
 .crm-item:hover{background:var(--hover);}
 .crm-item:focus-visible{outline:none;box-shadow:0 0 0 2px var(--focus);}
-.crm-item[aria-selected="true"]{background:var(--accent-soft);}
+.crm-item[aria-selected="true"]{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent);}
+.crm-item[aria-selected="true"]:focus-visible{box-shadow:inset 2px 0 0 var(--accent), 0 0 0 2px var(--focus);}
 .crm-item[aria-selected="true"] .crm-item-name{color:var(--accent);}
 .crm-item-text{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.3;}
 .crm-item-name{font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .crm-item-meta{font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.crm-item.is-orphan{margin-top:4px;border-top:1px dashed var(--line);border-radius:0 0 var(--r-md) var(--r-md);}
+/* Tareas abiertas del cliente, a la vista sin abrir la ficha. */
+.crm-badge{
+  flex:none;
+  display:grid;
+  place-items:center;
+  min-width:22px;
+  height:20px;
+  padding:0 7px;
+  border-radius:999px;
+  font-size:11.5px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border:1px solid var(--line);
+}
+.crm-item[aria-selected="true"] .crm-badge{color:var(--accent);background:var(--surface);border-color:transparent;}
+.crm-item.is-orphan{margin-top:6px;border-top:1px dashed var(--line);border-radius:0 0 var(--r-md) var(--r-md);}
 .crm mark{background:color-mix(in srgb, var(--accent-solid) 22%, transparent);color:inherit;border-radius:3px;padding:0 1px;}
 
 /* Ficha del cliente */
@@ -55,20 +88,20 @@
   border:1px solid var(--line);
   border-radius:var(--r-lg);
   box-shadow:var(--shadow-sm);
-  padding:18px 18px 8px;
+  padding:22px 22px 20px;
   min-width:0;
 }
-.crm-head{display:flex;align-items:center;gap:12px;min-width:0;}
-.crm-head .avatar{width:44px;height:44px;font-size:15px;}
+.crm-head{display:flex;align-items:center;gap:14px;min-width:0;}
+.crm-head .avatar{width:52px;height:52px;font-size:17px;}
 .crm-title{flex:1;min-width:0;}
-.crm-title h2{margin:0;font-size:17px;font-weight:600;letter-spacing:-0.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.crm-title p{margin:2px 0 0;font-size:12.5px;color:var(--ink-faint);}
+.crm-title h2{margin:0;font-size:19px;font-weight:600;letter-spacing:-0.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.crm-title p{margin:3px 0 0;font-size:12.5px;color:var(--ink-faint);}
 .crm-head-actions{display:flex;gap:2px;flex:none;}
 .crm-back{display:none !important;}
 .crm-head .client-edit-row{flex:1;}
 .crm-colors{margin-top:14px;}
 .crm-confirm{
-  margin-top:14px;
+  margin-top:16px;
   padding:12px 14px;
   border-radius:var(--r-md);
   background:var(--danger-bg);
@@ -79,54 +112,77 @@
 .crm-confirm strong{color:var(--danger);}
 .crm-confirm-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 
-.crm-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
-.crm-shortcut{
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  height:32px;
-  padding:0 10px;
+/* Cifras del cliente: contactos, tareas abiertas y contraseñas. Las dos últimas llevan a su sección. */
+.crm-stats{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;margin-top:20px;}
+.crm-stat{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+  padding:12px 14px;
   font-family:inherit;
-  font-size:13px;
-  font-weight:500;
-  color:var(--ink-soft);
+  text-align:left;
+  color:var(--ink);
   background:var(--surface-2);
   border:1px solid var(--line);
-  border-radius:var(--r-md);
-  cursor:pointer;
-  transition:border-color .12s ease, color .12s ease;
+  border-radius:var(--r-lg);
 }
-.crm-shortcut:hover{border-color:var(--line-strong);color:var(--ink);}
-.crm-shortcut svg{color:var(--ink-faint);}
-.crm-shortcut em{font-style:normal;font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
-.crm-shortcut em:empty{display:none;}
+.crm-stat-top{display:flex;align-items:center;justify-content:space-between;color:var(--ink-faint);}
+.crm-stat b{margin-top:6px;font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
+.crm-stat-label{font-size:12px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.crm-stat-go{display:inline-flex;opacity:0;transform:translate(-2px, 2px);transition:opacity .12s ease, transform .12s ease;}
+.crm-stat.is-link{cursor:pointer;transition:border-color .12s ease, background .12s ease, box-shadow .12s ease;}
+.crm-stat.is-link:hover{background:var(--surface);border-color:var(--line-strong);box-shadow:var(--shadow-sm);}
+.crm-stat.is-link:hover .crm-stat-go,.crm-stat.is-link:focus-visible .crm-stat-go{opacity:1;transform:none;}
+.crm-stat.is-link:focus-visible{outline:none;box-shadow:0 0 0 2px var(--focus);}
+@media (hover:none){.crm-stat-go{opacity:.7;transform:none;}}
 
-.crm-section{margin-top:20px;border-top:1px solid var(--line);padding-top:14px;}
-.crm-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
-.crm-section-head h3{margin:0;font-size:13px;font-weight:600;color:var(--ink-soft);}
+/* Botones que añaden los plugins (solo se ve el bloque si hay alguno). */
+.crm-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.crm-shortcuts:not(:has(.ext-slot:not([hidden]))){display:none;}
+
+.crm-section{margin-top:26px;}
+.crm-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.crm-section-head h3{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;font-weight:600;color:var(--ink-soft);}
 .crm-section-head .btn svg{margin-right:2px;}
+.crm-count{
+  display:inline-grid;
+  place-items:center;
+  min-width:20px;
+  height:18px;
+  padding:0 6px;
+  border-radius:999px;
+  font-size:11.5px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink-faint);
+  background:var(--surface-2);
+  border:1px solid var(--line);
+}
 
-.people{display:flex;flex-direction:column;margin:0 -8px;}
+/* Personas de contacto: tarjetas */
+.people{display:grid;grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));gap:10px;}
 .person{
+  position:relative;
   display:flex;
   align-items:flex-start;
-  gap:11px;
-  padding:10px 8px;
-  border-radius:var(--r-md);
+  gap:12px;
+  padding:14px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
   cursor:pointer;
-  transition:background .1s ease;
+  transition:border-color .12s ease, box-shadow .12s ease;
 }
-.person + .person{border-top:1px solid var(--line);}
-.person:hover{background:var(--hover);}
-.person:hover + .person,.person:focus-visible + .person{border-top-color:transparent;}
+.person:hover{border-color:var(--line-strong);box-shadow:var(--shadow-sm);}
 .person:focus-visible{outline:none;box-shadow:0 0 0 2px var(--focus);}
-.person-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
-.person-main strong{font-size:13.5px;font-weight:600;}
-.person-lines{display:flex;flex-wrap:wrap;gap:4px 14px;}
+.person-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.person-main strong{font-size:14px;font-weight:600;padding-right:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.person-lines{display:flex;flex-direction:column;gap:5px;}
 .person-line{
   display:inline-flex;
   align-items:center;
-  gap:6px;
+  gap:7px;
   min-width:0;
   font-size:13px;
   color:var(--ink-soft);
@@ -135,11 +191,23 @@
 }
 .person-line svg{flex:none;color:var(--ink-faint);}
 a.person-line:hover{color:var(--accent);text-decoration:underline;text-underline-offset:2px;}
-.person-notes{margin:2px 0 0;font-size:12.5px;color:var(--ink-faint);white-space:pre-wrap;overflow-wrap:anywhere;}
-.person-edit{flex:none;color:var(--ink-faint);opacity:0;padding-top:4px;transition:opacity .1s ease;}
+.person-notes{margin:4px 0 0;padding-top:9px;border-top:1px dashed var(--line);font-size:12.5px;line-height:1.5;color:var(--ink-faint);white-space:pre-wrap;overflow-wrap:anywhere;}
+.person-edit{position:absolute;top:12px;right:12px;color:var(--ink-faint);opacity:0;transition:opacity .1s ease;}
 .person:hover .person-edit,.person:focus-visible .person-edit{opacity:1;}
 @media (hover:none){.person-edit{opacity:1;}}
-.people-empty{padding:14px 0 16px;font-size:13px;color:var(--ink-faint);}
+.people-empty{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  padding:26px 16px;
+  text-align:center;
+  font-size:13px;
+  color:var(--ink-faint);
+  border:1px dashed var(--line-strong);
+  border-radius:var(--r-lg);
+}
+.people-empty p{margin:0;}
 .crm-hint{margin-top:14px;}
 
 @media (max-width:760px){
@@ -148,5 +216,12 @@ a.person-line:hover{color:var(--accent);text-decoration:underline;text-underline
   .crm.is-detail .crm-list-pane{display:none;}
   .crm:not(.is-detail) .crm-detail{display:none;}
   .crm-back{display:grid !important;margin-left:-6px;}
-  .crm-detail{padding:14px 14px 6px;}
+  .crm-detail{padding:16px 14px 14px;}
+  .crm-head .avatar{width:44px;height:44px;font-size:15px;}
+  .crm-title h2{font-size:17px;white-space:normal;overflow-wrap:anywhere;}
+  .crm-stats{gap:8px;}
+  .crm-stat{padding:10px 11px;}
+  .crm-stat b{font-size:19px;}
+  .crm-stat-label{white-space:normal;}
+  .people{grid-template-columns:minmax(0, 1fr);}
 }

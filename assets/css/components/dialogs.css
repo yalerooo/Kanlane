@@ -35,6 +35,10 @@ dialog[open]::backdrop{animation:fade-in .16s ease;}
   transition:background .12s ease, color .12s ease;
 }
 .dlg-close:hover{background:var(--hover);color:var(--ink);}
+/* Primer proyecto: no se puede cerrar el diálogo. */
+dialog.is-onboarding .dlg-close{display:none;}
+/* Y la app queda oculta hasta que exista el proyecto. */
+body.is-onboarding .app{visibility:hidden;}
 .dlg-actions{
   display:flex;
   justify-content:space-between;

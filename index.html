@@ -74,6 +74,19 @@
         <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
       </form>
       <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
+      <div class="auth-guest" id="authGuest">
+        <div class="auth-divider"><span>o sin cuenta</span></div>
+        <button type="button" class="auth-provider" id="authGuestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Continuar como invitado</span></button>
+        <form id="authGuestForm" class="auth-form" hidden novalidate>
+          <div class="field">
+            <label for="authGuestName">Tu nombre</label>
+            <input id="authGuestName" autocomplete="name" maxlength="40">
+          </div>
+          <p class="auth-msg" id="authGuestMsg" role="alert" hidden></p>
+          <p class="auth-guest-note">Sin cuenta ni conexión con la base de datos: todo se guarda solo en este navegador. Si borras los datos del navegador o entras desde otro, no lo encontrarás. Usa la copia de seguridad para llevarte tus datos.</p>
+          <button type="submit" class="btn btn-primary auth-submit">Entrar como invitado</button>
+        </form>
+      </div>
     </div>
   </div>
   <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>

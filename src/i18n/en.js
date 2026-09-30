@@ -855,7 +855,17 @@
     '1 por vencer o próxima':'1 upcoming',
     '{n} por vencer o próximas':'{n} upcoming',
     'Tienes {n} recordatorios: {detalle}':'You have {n} reminders: {detalle}',
-    'Ver':'View'
+    'Ver':'View',
+    /* Aplicación instalable */
+    'Aplicación':'App',
+    'Instala Workhub como una aplicación: se abre en su propia ventana y funciona sin conexión con tus últimos datos.':'Install Workhub as an app: it opens in its own window and works offline with your latest data.',
+    'Instalar Workhub':'Install Workhub',
+    'En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».':'In Safari, tap Share and then “Add to Home Screen”.',
+    'Sin conexión: verás los últimos datos guardados.':'You\'re offline: you\'ll see the latest saved data.',
+    'Sin conexión: verás los últimos datos guardados y los cambios se enviarán al volver.':'You\'re offline: you\'ll see the latest saved data and your changes will be sent when you\'re back.',
+    'De nuevo en línea':'Back online',
+    'Hay una versión nueva de Workhub':'There\'s a new version of Workhub',
+    'Recargar':'Reload'
   }, [
     [/^GitHub respondió con un error \((\d+)\)\.$/, 'GitHub responded with an error ($1).'],
     [/^El token es de la cuenta «(.+)» y el proyecto es de «(.+)»\. Si el proyecto es privado, el token tiene que ser de esa cuenta\.$/, 'The token belongs to account «$1» and the project to «$2». If the project is private, the token must belong to that account.'],

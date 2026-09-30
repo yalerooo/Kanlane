@@ -38,7 +38,7 @@
   height:32px;
   border-radius:50%;
   background:var(--sw);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.1);
+  box-shadow:inset 0 0 0 1px var(--line-strong);
   display:grid;
   place-items:center;
   color:var(--sw-ink);
@@ -46,7 +46,7 @@
 }
 .swatch:hover .swatch-dot{box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong);}
 .swatch[aria-checked="true"]{color:var(--ink);}
-.swatch[aria-checked="true"] .swatch-dot{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--sw);}
+.swatch[aria-checked="true"] .swatch-dot{box-shadow:inset 0 0 0 1px var(--line-strong), 0 0 0 2px var(--surface), 0 0 0 4px var(--sw);}
 .swatch .check{opacity:0;}
 .swatch[aria-checked="true"] .check{opacity:1;}
 .segmented{
@@ -87,3 +87,5 @@
 .remind-notify{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
 .remind-notify p{margin:0;font-size:12.5px;color:var(--ink-faint);}
 .remind-notify p:empty{display:none;}
+
+.install-hint{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5;}

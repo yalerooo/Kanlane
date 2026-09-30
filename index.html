@@ -7,6 +7,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <meta name="theme-color" content="#2F6BFF">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Workhub">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Workhub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -442,6 +447,16 @@
               <p id="remindNotifyState"></p>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="settings-row" id="installRow" hidden>
+        <div>
+          <h3>Aplicación</h3>
+          <p>Instala Workhub como una aplicación: se abre en su propia ventana y funciona sin conexión con tus últimos datos.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" id="btnInstallApp" hidden>Instalar Workhub</button>
+          <p class="install-hint" id="installHint" hidden>En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».</p>
         </div>
       </div>
       <div class="settings-row">
@@ -1157,6 +1172,8 @@
 <script src="src/controllers/command-controller.js"></script>
 <script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>
+
+<script src="src/services/pwa.js"></script>
 
 <!-- Arranque -->
 <script src="src/main.js"></script>

@@ -1,6 +1,6 @@
 /* SDK de plugins de Workhub (protocolo v1).
    Inclúyelo en la página de tu plugin:
-     <script src="https://workhub-project.netlify.app/plugins/sdk/workhub-plugin.js"></script>
+     <script src="https://workhub.yalero.net/plugins/sdk/workhub-plugin.js"></script>
    y conéctate con:
      const wh = await WorkhubPlugin.connect({id:'com.tu-nombre.mi-plugin', name:'Mi plugin', ...});
 

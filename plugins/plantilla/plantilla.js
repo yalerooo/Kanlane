@@ -1,5 +1,5 @@
 /* Plantilla de plugin para Workhub. Cópiala, cambia el manifiesto y publica la
-   carpeta en cualquier web con https (GitHub Pages, Netlify…). Guía completa:
+   carpeta en cualquier web con https (GitHub Pages, Cloudflare Pages…). Guía completa:
    https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md
 
    La misma página se carga de dos formas:

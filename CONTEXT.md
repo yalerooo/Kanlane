@@ -19,13 +19,13 @@ Secciones:
 
 Encima de todo va el selector de **proyectos**: cada proyecto es un tablero independiente con sus propios datos.
 
-- **Web en producción:** https://workhub-project.netlify.app (Netlify).
+- **Web en producción:** **https://workhub.yalero.net** en **Cloudflare Pages** (dominio `yalero.net` en Cloudflare). El sitio antiguo de Netlify (`workhub-project.netlify.app`) queda como respaldo hasta que se borre. **Cambio hecho pero sin desplegar ni verificar**: ver «Estado del despliegue».
 - **Repositorio:** `yalerooo/Workhub` (GitHub), rama principal `main`.
 - **Ramas de trabajo de Claude:** se trabaja en un worktree con su propia rama y se sube ahí; después se abre (o el usuario abre) el pull request contra `main`.
   - Ramas usadas hasta ahora: `claude/sleepy-brown-tdi6yq`, `claude/read-context-md-df6b13` (PR #24–#30) y `claude/context-docs-review-985e75` (PR #31–#45). **Todos los PR hasta el #45 están fusionados en `main`** y no hay trabajo pendiente en ninguna rama. La última sesión (30-sep-2026) solo puso el worktree `claude/read-context-md-df6b13` al día con `main` (fast-forward) y actualizó este documento.
   - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main` (`git checkout -B <rama> origin/main`) o se hace `git merge origin/main`.
   - **En el equipo Windows del usuario no hay `gh`**: no se pueden abrir PR desde aquí. Se sube la rama y se da el enlace `https://github.com/yalerooo/Workhub/pull/new/<rama>` (el usuario lo abre y lo fusiona él).
-- **Estado del despliegue (30-sep-2026):** Netlify se quedó **sin créditos de build** (los despliegues de producción salen «Skipped» y hay un aviso de «operational credits»); la web publicada sigue viva pero con código antiguo hasta el siguiente ciclo de facturación o hasta mejorar el plan. Alternativa ya configurada: **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos): `firebase login` y `firebase deploy --only hosting` desde `main` (el `predeploy` ejecuta `scripts/build-public.js`). Se habló de Vercel/Cloudflare Pages solo como entorno de pruebas; no se ha montado (haría falta `vercel.json` con las cabeceras y las redirecciones de `/__/auth/*`, y autorizar el dominio en Firebase, Google y GitHub).
+- **Estado del despliegue (1-oct-2026):** Netlify se quedó **sin créditos de build** y se decidió **migrar a Cloudflare Pages** (sin depender de ningún PC encendido: se publica solo al fusionar en `main`). El código de la migración está hecho (ver «Publicación en Cloudflare Pages» en §3 y `docs/CLOUDFLARE.md`) pero **el usuario todavía tiene que hacer los pasos del panel**: crear el proyecto de Pages conectado al repo, enlazar `workhub.yalero.net`, y autorizar el dominio en Firebase Auth, en el cliente OAuth de Google y en la OAuth App de GitHub. Hasta entonces la web publicada es el sitio antiguo de Netlify con código viejo. **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue configurado como alternativa de emergencia (`firebase deploy --only hosting`), pero sin las cabeceras de seguridad de `_headers`.
 - **Firebase:** proyecto `workhub-26f50` (Auth + Firestore).
 - **Correo del usuario:** yaleros2@gmail.com.
 
@@ -34,7 +34,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - Todo **en español**: conversación, commits y pull requests.
 - **Crea los pull requests tú mismo** siempre que termines algo, en español y con explicaciones claras (secciones *Qué cambia*, *Cómo funciona*, *Pruebas*). No hace falta preguntar. Si GitHub falla, reintenta; el usuario llegó a decir "haz tú el pull request". Sin `gh` (caso actual), sube la rama y da el enlace `pull/new/{rama}`; el usuario los fusiona.
 - El cuerpo del pull request termina con "🤖 Generated with [Claude Code](https://claude.com/claude-code)".
-- **Solo Netlify.** claude.ai ya no se usa como alojamiento. El código aún soporta ese modo, pero no es prioritario.
+- **Alojamiento: solo Cloudflare Pages** (antes Netlify). claude.ai ya no se usa como alojamiento. El código aún soporta ese modo, pero no es prioritario.
 - **NUNCA publiques ni pegues `data-backup.json`.** Contiene datos reales de clientes.
   - Está en el repositorio, pero `scripts/build-public.js` usa una lista blanca y solo publica `index.html`, `assets`, `src` y `plugins`.
 - **NUNCA pegues ni subas el client secret de GitHub OAuth.** Solo va en la consola de Firebase.
@@ -44,7 +44,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Nombres de botones claros:** si dos acciones se parecen («Desconectar» / «Desconectar cuenta»), el usuario se confunde; usar verbos distintos y una ayuda al pasar el ratón.
 - **Cuando el usuario pega un error, mira el texto exacto y no lo des por explicado**: un `permission-denied` de Firestore parecía «reglas sin publicar» y era el límite de los lotes (ver §9). Los mensajes de error deben decir el paso que falló.
 - El usuario pide cambios de forma directa y con libertad de diseño; cuando algo no puede verificarse contra un servicio real (GitHub, Firebase), hay que decirlo claramente en el resumen.
-- La visibilidad de producción en Netlify debe seguir en **Public**.
+- El proyecto de Cloudflare Pages y su dominio deben ser públicos (cualquiera puede crearse una cuenta).
 - Cualquiera puede **crearse una cuenta**, no solo el usuario. El correo tiene que verificarse.
 - Estética: **minimalista**, estilo Linear/Vercel, **sin emojis**. Usa iconos SVG.
 - Todo debe ser **responsive**: pantallas grandes, portátil, tablet y móvil.
@@ -73,10 +73,10 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Sin `apiKey`, la app funciona en **modo local** con IndexedDB, sin login ("Modo local" abajo en la barra lateral).
   - `start-workhub.bat` lanza el modo local en Windows.
 - **Firebase** (`src/config/firebase-config.js`):
-  - `hostingDomains: ['workhub-project.netlify.app']`.
+  - `hostingDomains: ['workhub.yalero.net', 'workhub-project.netlify.app']` (el segundo es el sitio antiguo; se quitará al borrarlo).
   - `providers: ['google','github','password']` (Microsoft se quitó).
   - `allowSignup: true`, `useEmulators: false`.
-  - Netlify redirige `/__/auth/*` y `/__/firebase/*` a `workhub-26f50.firebaseapp.com`, así el login se completa en el propio dominio.
+  - Una Pages Function de Cloudflare (`functions/__/[[path]].js`) reenvía `/__/auth/*` y `/__/firebase/*` a `workhub-26f50.firebaseapp.com` sin cambiar la dirección (solo esas rutas, sin cookies, sin `..`), así el login se completa en el propio dominio.
   - El login usa popup y, si falla, redirect.
   - Al cerrar sesión se ejecuta `clearPersistence` (se borra la caché local).
 - **Ficheros de las últimas tandas** (todos con `<script>`/`<link>` en `index.html`, en este orden relativo): `models/project-templates.js` (antes de `task-model.js`), `models/github-sync.js`, `models/team-model.js` (después de `project-model.js`), `services/github-api.js`, `views/labels.js`, `views/team-ui.js` (justo después de `labels.js`), `views/column-view.js`, `views/github-view.js`, `views/share-view.js`, `controllers/github-controller.js`, `controllers/team-controller.js`, `assets/css/views/github.css` y `assets/css/views/team.css`. Fuera de `src`: `docs/EQUIPOS.md` y `tests/rules/`.
@@ -92,17 +92,19 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Solo se permiten las colecciones de la lista blanca. Todo lo demás está cerrado.
   - Equipos: lee quien está en `memberIds`; escriben datos propietario y editor; el propietario cambia todo menos `ownerUid`; un editor no toca `memberIds/members`; entrar exige una invitación a tu correo verificado con el rol invitado y sin cambiar nada más; cualquiera que no sea propietario puede salir; invitar/cancelar solo el propietario; leer/rechazar una invitación solo su destinatario.
   - Probadas con `tests/rules` (59 casos contra el emulador; ver §9).
-- **Publicación en Netlify** (`netlify.toml`):
-  - Build: `node scripts/build-public.js`, publica `dist/`.
-  - Cabeceras de seguridad:
+- **Publicación en Cloudflare Pages** (`docs/CLOUDFLARE.md`; `netlify.toml` y `docs/NETLIFY.md` se eliminaron):
+  - Build: `node scripts/build-public.js` (comando de compilación de Pages), publica `dist/` (directorio de salida). Copia solo `index.html`, `assets`, `src` y `plugins` y **genera `dist/_headers`**; esa constante (`ALL`, `PAGE`, `CSP` en el script) es la única fuente de las cabeceras. Las Functions de `functions/` no se sirven por `_headers`.
+  - Cabeceras de seguridad (`_headers`):
     - `X-Frame-Options: DENY`, HSTS, `nosniff` y `Permissions-Policy`.
     - **CSP estricta**: sin scripts en línea; `script-src` solo el propio dominio más gstatic y apis.google.
     - `frame-src 'self' https: http://localhost:* http://127.0.0.1:*`, para los plugins.
-    - `connect-src` incluye `https://api.github.com` (integración con GitHub Projects) en las dos cabeceras de `netlify.toml`.
-  - Si añades un servicio externo, añade su dominio a la CSP.
+    - `connect-src` incluye `https://api.github.com` (integración con GitHub Projects).
+    - La CSP y `X-Frame-Options` van solo en `/` y `/index.html`; el resto del sitio lleva HSTS, `nosniff`, `Referrer-Policy` y `Permissions-Policy`.
+  - Si añades un servicio externo, añade su dominio a `CSP` en `scripts/build-public.js`.
+  - Pages: 500 compilaciones/mes, ancho de banda ilimitado, Functions 100 000 peticiones/día (gratis). Cada PR tiene una vista previa `*.pages.dev` en la que no se puede iniciar sesión.
 - **Documentación:**
   - `README.md`: todo el funcionamiento, sección Plugins y sección Idiomas.
-  - `docs/FIREBASE.md`, `docs/NETLIFY.md`.
+  - `docs/FIREBASE.md`, `docs/CLOUDFLARE.md` (publicación: proyecto de Pages, dominio, autorizar en Firebase/Google/GitHub, comprobaciones, recomendaciones y qué hacer si falla).
   - `docs/SEGURIDAD.md`: pasos en la consola, como publicar reglas, política de contraseñas, protección contra la enumeración de correos, dominios autorizados y restringir la API key.
   - `docs/PLUGINS.md`: guía completa para crear plugins.
   - `docs/GITHUB.md`: integración con GitHub Projects (conectar con un clic o con token, qué se sincroniza, en equipos, límites, seguridad, estructura interna).
@@ -363,7 +365,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Nota:** los textos con datos se traducen con claves con marcadores (`Workhub.t('hace {n} min', {n})` necesita esa clave exacta en `en.js`) o con patrones regex al final de `en.js`. En `en.js` las barras invertidas de los patrones deben escaparse bien al generarlos con scripts.
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
 
-## 8. Historial de pull requests (todos fusionados)
+## 8. Historial de pull requests (todos fusionados salvo el último)
 
 | # | Qué |
 |---|---|
@@ -376,7 +378,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 6 | Rediseño completo, paleta de comandos, atajos, avisos |
 | 7 | Firebase: login y datos en la nube |
 | 8 | Quita Microsoft del login |
-| 9–11 | Publicación en Netlify y login en workhub-project.netlify.app |
+| 9–11 | Publicación en Netlify y login en workhub-project.netlify.app (sustituido después por Cloudflare Pages) |
 | 12 | No mostrar la app antes del login |
 | 13 | Proyectos |
 | 14 | Seguridad: registro abierto con verificación, CSP, limpieza al cerrar sesión |
@@ -404,8 +406,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 42 | Clientes: lista con insignia de tareas abiertas, ficha con tarjetas de cifras y contactos en tarjetas (sin raya de acento en el cliente elegido) |
 | 43 | Logo simbólico: pila de tarjetas con check sobre degradado azul, y favicon nuevo |
 | 44–45 | Pantalla de acceso: esqueleto de carga con la forma del formulario en lugar de «Cargando…» con círculo (y un retoque) |
-
-**No hay PR pendiente.** Lo siguiente que se abra empezará en el #46.
+| **pendiente** | Rama `claude/read-context-md-df6b13`, sin PR abierto todavía: **migración a Cloudflare Pages** (`functions/__/[[path]].js`, `_headers` generado por `scripts/build-public.js`, `docs/CLOUDFLARE.md`, `hostingDomains` con `workhub.yalero.net`, eliminados `netlify.toml` y `docs/NETLIFY.md`) |
 
 ## 9. Cómo trabajar y probar
 
@@ -427,13 +428,13 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ## 10. Ideas y posibles siguientes pasos (no pedidas todavía)
 
-- **Hecho (30-sep-2026):** las reglas de Firestore publicadas en la consola **coinciden con `firestore.rules` de `main`** (el usuario las pegó y se compararon función por función; solo cambian los comentarios), así que «Compartir» ya no debe fallar por reglas. La CSP de `netlify.toml` ya incluye `api.github.com`.
-- **Pendiente real 1 — desplegar** lo fusionado: no consta que se haya hecho (Netlify sin créditos → `firebase deploy --only hosting` desde `main`, o esperar al ciclo). Preguntar al usuario si ya está.
+- **Hecho (30-sep-2026):** las reglas de Firestore publicadas en la consola **coinciden con `firestore.rules` de `main`** (el usuario las pegó y se compararon función por función; solo cambian los comentarios), así que «Compartir» ya no debe fallar por reglas. La CSP (ahora en `scripts/build-public.js`) ya incluye `api.github.com`.
+- **Pendiente real 1 — poner en marcha Cloudflare Pages** (pasos del panel en `docs/CLOUDFLARE.md`) y comprobar que el login con Google y GitHub funciona en `workhub.yalero.net` (también en Safari/Firefox). El código está listo y la función de reenvío se probó en Node con un `fetch` simulado, no en Cloudflare real.
 - **Pendiente real 2 — probar con servicios reales** (hasta ahora solo emuladores y una API de GitHub simulada): equipos con Firebase real (crear, convertir, invitar con otra cuenta de Google, asignar, roles), primer proyecto y modo invitado.
 - **Pendiente real 3 — probar «Conectar con GitHub» y la sincronización con GitHub real** (OAuth devuelve `gho_…`; proyectos de organización; actividad de la incidencia y `closedByPullRequestsReferences`).
 - **Contraseñas compartidas** en equipos con cifrado extremo a extremo por miembro (ver `docs/EQUIPOS.md`), y después comentarios, actividad y notificaciones de equipo.
 - Pulir equipos: renombrar/etiquetar la copia al convertir, avisar al propietario cuando se acepta una invitación, «Mis tareas» en el calendario, asignar también reuniones.
-- Si Netlify sigue sin créditos, decidir alojamiento definitivo (Firebase Hosting ya está configurado; Cloudflare Pages/Vercel requieren rehacer cabeceras y redirecciones).
+- Cuando Cloudflare funcione: borrar el sitio de Netlify y quitar `workhub-project.netlify.app` de `hostingDomains` y de los dominios autorizados. Opcional: Turnstile en el registro, límites de peticiones y GitHub Action para desplegar también `firestore.rules`.
 - **Ideas que se comprobó (en `main`) que NO están implementadas:** renombrar columnas en GitHub, comentar desde la ficha, crear etiquetas en el repositorio, borrar/renombrar etiquetas del catálogo y filtrar el tablero por etiqueta.
 - Renombrar columnas en GitHub desde Workhub (`updateProjectV2Field`): probar primero que conserva los ids de las opciones, si no los elementos perderían su columna.
 - Comentar desde la ficha (hoy la actividad de GitHub es solo lectura), crear etiquetas nuevas en el repositorio, borrar/renombrar etiquetas del catálogo, filtrar el tablero por etiqueta.

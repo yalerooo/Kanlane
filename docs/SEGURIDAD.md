@@ -11,7 +11,7 @@ Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus 
 | Usar tu Firestore como almacén de cualquier cosa | Cada usuario solo puede escribir en las colecciones que usa la app (tareas, notas, clientes, contactos, reuniones, contraseñas, proyectos, imágenes, ajustes y plugins). Cualquier otra ruta está cerrada. |
 | Un plugin de terceros intenta leer tus datos o tu sesión | Cada plugin corre en un `<iframe sandbox>` sin `allow-same-origin`: no ve la página, ni la sesión, ni el almacenamiento de Workhub. Solo habla por mensajes, cada llamada se comprueba contra los permisos aprobados, ninguno da acceso a las contraseñas, y hay un límite de escrituras por minuto. Ver [PLUGINS.md](PLUGINS.md). |
 | Tras cerrar sesión, los datos quedan en el ordenador | Al cerrar sesión se borra la copia local de Firestore (IndexedDB) y el último proyecto recordado. |
-| Otra web mete Workhub en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`netlify.toml`). |
+| Otra web mete Workhub en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`scripts/build-public.js`, que genera `_headers` para Cloudflare Pages). |
 | Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Workhub y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
 | Nombre o foto del perfil de Google/GitHub manipulados | El nombre se pinta como texto y la foto solo se acepta si es `https:`. |
 | Conexión sin cifrar | HTTPS obligatorio (`Strict-Transport-Security`). |
@@ -60,7 +60,8 @@ Si entras con correo y contraseña y la tuya no cumple la política, Firebase te
 
 **Authentication** → **Settings** → **Dominios autorizados**. Deja solo los que usas:
 
-- `workhub-project.netlify.app`
+- `workhub.yalero.net`
+- `workhub-project.netlify.app` (sitio antiguo: quítalo cuando lo borres)
 - `workhub-26f50.firebaseapp.com` (lo necesita el inicio de sesión)
 
 Quita `localhost` si no desarrollas en tu ordenador con el proyecto real, y `workhub-26f50.web.app` si no usas Firebase Hosting.
@@ -71,7 +72,8 @@ La `apiKey` de `firebase-config.js` es pública por diseño: identifica el proye
 
 1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=workhub-26f50) → **Credenciales** → **Browser key (auto created by Firebase)**.
 2. **Restricciones de aplicaciones** → **Sitios web** → añade:
-   - `https://workhub-project.netlify.app/*`
+   - `https://workhub.yalero.net/*`
+   - `https://workhub-project.netlify.app/*` (sitio antiguo, opcional)
    - `https://workhub-26f50.firebaseapp.com/*`
 3. **Guardar**. Espera unos minutos y comprueba que puedes entrar. Si algo falla, vuelve a poner **Ninguna** y guarda.
 
@@ -86,5 +88,5 @@ Es la protección más importante de todas.
 
 ## Si cambias algo
 
-- **Servicio externo nuevo** (otro CDN, una API…): añade su dominio a la `Content-Security-Policy` de `netlify.toml`, o el navegador lo bloqueará.
+- **Servicio externo nuevo** (otro CDN, una API…): añade su dominio a la `Content-Security-Policy` de `scripts/build-public.js`, o el navegador lo bloqueará.
 - **Nunca** pongas en el repositorio secretos (el *client secret* de GitHub, claves de servicio…) ni `data-backup.json`. Lo que va en `firebase-config.js` no es secreto.

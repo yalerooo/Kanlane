@@ -66,7 +66,7 @@ Un proyecto enlazado con GitHub se puede convertir en **proyecto de equipo** (ve
 
 - El **token se guarda solo en este navegador** (`localStorage`); nunca se sube a Firestore ni al repositorio. En otro dispositivo hay que pegarlo otra vez. **Olvidar token** lo borra.
 - Un token con permiso `project` puede leer y modificar **todos** tus proyectos de GitHub. Créalo con caducidad, y revócalo en GitHub si dejas de usar la integración.
-- La política de contenido (`netlify.toml`) permite conectar con `https://api.github.com`, y nada más de GitHub.
+- La política de contenido (`scripts/build-public.js`) permite conectar con `https://api.github.com`, y nada más de GitHub.
 
 ## Por dentro
 

@@ -11,7 +11,8 @@
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   /* Datos que se copian al convertir un proyecto personal (sin el gestor de contraseñas). */
   const COPY_COLLECTIONS = ['clients', 'contacts', 'meetings', 'plugin_data', 'tasks'];
-  const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels'];
+  /* 'github' lleva el enlace con el GitHub Project (sin ningún token): cada miembro conecta su cuenta. */
+  const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels', 'github'];
   const BATCH_SIZE = 400;
 
   /* Invitaciones: las que ha recibido mi correo, o las que envié desde un equipo. */

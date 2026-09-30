@@ -588,6 +588,10 @@
         <input id="pGhToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
         <p class="field-help">Un token clásico con el permiso <b>project</b>. Se guarda solo en este navegador.</p>
       </div>
+      <div class="gh-oauth" id="pGhOauthBox" hidden>
+        <button type="button" class="btn btn-ghost" id="pGhOauth">Conectar con GitHub (sin token)</button>
+        <p class="field-help">Se abre GitHub para que autorices Workhub, sin copiar ningún token.</p>
+      </div>
       <p class="field-help" id="pGhTokenSaved" hidden>Se usará el token de GitHub guardado en este navegador.</p>
       <label for="pGhUrl">Enlace del proyecto de GitHub</label>
       <input id="pGhUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1">
@@ -617,6 +621,7 @@
         <li>Se crea un proyecto de equipo con una copia de sus tareas (con notas e imágenes), clientes, contactos y reuniones.</li>
         <li>Las contraseñas guardadas no se copian: todavía no se pueden compartir con seguridad.</li>
         <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
+        <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo y el original deja de sincronizar. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
       </ul>
       <p class="type-note" id="shProgress" role="status" hidden></p>
       <button type="button" class="btn btn-primary" id="shConvert">Convertir en proyecto de equipo</button>

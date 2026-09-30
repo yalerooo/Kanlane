@@ -100,7 +100,7 @@
 [data-mode="claude"] .status-dot{background:var(--accent-solid);}
 
 /* Contenido */
-.main{min-width:0;padding:22px 32px 24px;}
+.main{--main-px:32px;min-width:0;padding:22px 32px 24px;}
 .main-inner{max-width:1280px;margin:0 auto;}
 header.page-head{
   display:flex;

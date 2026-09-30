@@ -242,6 +242,36 @@ await wh.ui.openTask(id)                       // abre la ficha de la tarea en W
 await wh.ui.openPanel()                        // abre tu plugin en la sección Plugins
 ```
 
+#### Formularios (`wh.ui.form`, permiso `ui:extend`)
+
+Un plugin no puede pintar cuadros dentro de Workhub, pero sí **pedir que Workhub muestre un formulario** descrito con datos. Lo dibuja Workhub con sus propios componentes (con el nombre e icono del plugin arriba, para que se sepa quién lo pide) y devuelve lo que la persona rellena, o `null` si cancela. Funciona en el panel y en segundo plano; si hay varios pendientes, salen de uno en uno.
+
+```js
+const v = await wh.ui.form({
+  title: 'Registrar horas',              // obligatorio (80 caracteres)
+  subtitle: 'Maquetar la landing',       // opcional
+  intro: 'Cuenta cuánto tiempo le has dedicado.',   // opcional
+  submit: 'Guardar', cancel: 'Omitir',   // textos de los botones (24)
+  fields: [
+    {key:'hours', type:'number', label:'Horas', unit:'h', min:0.25, max:500, step:0.25, value:1},
+    {key:'days', type:'dates', label:'Días trabajados', value:['2026-10-07'], max:62},
+    {key:'project', type:'select', label:'Proyecto', value:'', options:[{value:'a', label:'Acme'}],
+      allowNew:true, newLabel:'+ Añadir proyecto…', newPlaceholder:'Nombre', newColor:true},
+    {key:'note', type:'text', label:'Nota', placeholder:'Opcional', maxlength:120, required:false}
+  ]
+});
+if(v){ /* v.hours → 6, v.days → ['2026-10-06', '2026-10-07'], v.project → 'a' | {new:'Nombre', color:'#16A36A'} */ }
+```
+
+| Tipo | Opciones | Devuelve |
+|---|---|---|
+| `number` | `min`, `max`, `step`, `unit`, `value` | un número |
+| `text` | `value`, `placeholder`, `maxlength` (hasta 200) | texto |
+| `select` | `options:[{value,label}]` (hasta 100), `value`, `allowNew`, `newLabel`, `newPlaceholder`, `newColor` | el `value` elegido, o `{new, color}` si se eligió «añadir nuevo» |
+| `dates` | `value:[AAAA-MM-DD]`, `max` (hasta 62) | lista ordenada de fechas |
+
+Todos aceptan `label` (60 caracteres), `hint` (140) y `required` (por defecto `true`). Máximo 8 campos; las claves (`key`) son únicas y con letras, números o `_`. Todo se muestra como texto: nada de HTML.
+
 ### Errores
 
 | `code` | Cuándo |
@@ -383,6 +413,7 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 |---|---|---|
 | **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV. Añade el botón **Informe** a la barra de Tareas y una acción a `Ctrl K`. | [`plugins/informe`](../plugins/informe) | `tasks:read`, `ui:extend` |
 | **Temporizador** (icono `timer`): cronómetro por tarea y totales. Añade **Iniciar cronómetro** a la ficha de cada tarea, **Detener** a la barra de Tareas y a `Ctrl K` mientras cuenta, y una **etiqueta con el tiempo** en cada tarjeta. | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage`, `ui:extend` |
+| **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Añade **Registrar horas** a la ficha de cada tarea y a `Ctrl K`, y una etiqueta con las horas en cada tarjeta. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
 | **Apariencia** (icono `sparkles`): cualquier color de acento, esquinas rectas o redondeadas y densidad compacta o amplia, iguales en todos los proyectos. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
 
 Para añadir uno oficial al repositorio:

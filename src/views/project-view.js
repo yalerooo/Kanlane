@@ -285,6 +285,8 @@
     /* Cuenta nueva: no hay ningún proyecto y hay que crear el primero. Sin tipo
        elegido de antemano, sin GitHub y sin poder cerrar el diálogo. */
     openOnboarding(){
+      /* Puede estar abierto el de editar/eliminar el proyecto que acaba de borrarse. */
+      if(this.dlg.open) this.dlg.close();
       this.onboarding = true;
       this._open(null, '', null, PT.resolve(null));
       this.title.textContent = 'Crea tu primer proyecto';

@@ -206,7 +206,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Color de acento:** azul (predeterminado, #2F6BFF), lavanda/Violeta (#7C5CFF), rosa (#E0457B), menta/Verde (#16A36A), melocotón/Naranja (#EA6A1F), limón/Ámbar (#E6A310) y grafito (#18181B). Definidos en `settings-model.js` `ACCENTS`.
 - **Tema:** Sistema, Claro u Oscuro.
 - **Idioma:** Español o English.
-- **GitHub Projects:** tarjeta encima de las demás para conectar el proyecto abierto (o uno nuevo) con un GitHub Project; enlazado, muestra el estado, «Sincronizar ahora», el interruptor de enviar tareas nuevas, «Desconectar» y «Olvidar token». No se guarda en la cuenta: la config va en el proyecto y el token en el navegador.
+- **GitHub Projects:** tarjeta encima de las demás para conectar el proyecto abierto (o uno nuevo) con un GitHub Project; enlazado, muestra el estado, «Sincronizar ahora», el interruptor de enviar tareas nuevas, «Desvincular proyecto» (quita el enlace, no borra tareas) y «Olvidar token» / «Quitar mi acceso a GitHub» (quita el acceso de este navegador; el proyecto sigue enlazado). No se guarda en la cuenta: la config va en el proyecto y el token en el navegador.
 - **Almacenamiento:** indica si es modo local o nube.
 - En un dispositivo nuevo se adoptan los ajustes de la cuenta.
 

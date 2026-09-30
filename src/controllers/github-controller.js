@@ -242,7 +242,7 @@
       this.sync.unlink().then(() => {
         this.schedule();
         this.render();
-        toast.success('Proyecto desconectado de GitHub');
+        toast.success('Proyecto desvinculado de GitHub');
       });
     }
   }

@@ -1,0 +1,21 @@
+{
+  // Configuración de Cloudflare Workers (guía: docs/CLOUDFLARE.md).
+  // "name" tiene que ser IGUAL al nombre del Worker en el panel de Cloudflare.
+  "name": "workhub",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-09-01",
+
+  // La web: lo que genera "node scripts/build-public.js" (index.html, assets,
+  // src, plugins y _headers). El Worker de "main" solo atiende /__/auth/* y
+  // /__/firebase/* (login de Firebase); el resto lo sirven estos recursos.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+
+  // Dominio propio: al desplegar, Cloudflare lo conecta solo (yalero.net ya
+  // está en esta cuenta). Si prefieres añadirlo a mano en el panel, borra esto.
+  "routes": [
+    { "pattern": "workhub.yalero.net", "custom_domain": true }
+  ]
+}

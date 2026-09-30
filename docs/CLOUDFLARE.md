@@ -1,30 +1,40 @@
-# Publicar Workhub en Cloudflare Pages
+# Publicar Workhub en Cloudflare
 
-Cloudflare Pages publica la web **desde la nube, cada vez que se fusiona algo en `main`**: no hace falta ningún ordenador encendido. Firebase sigue encargándose del inicio de sesión y de la base de datos (ver [FIREBASE.md](FIREBASE.md)); Cloudflare solo sirve los ficheros de la web, con su red mundial y protección contra ataques.
+Cloudflare publica la web **desde la nube, cada vez que se fusiona algo en `main`**: no hace falta ningún ordenador encendido. Firebase sigue encargándose del inicio de sesión y de la base de datos (ver [FIREBASE.md](FIREBASE.md)); Cloudflare solo sirve los ficheros de la web, con su red mundial y protección contra ataques.
 
-Qué está ya preparado en el repositorio:
+Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare que pide *Build command*, *Deploy command* y *Preview command*). Qué está ya preparado en el repositorio:
 
 - `scripts/build-public.js` copia **solo** `index.html`, `assets/`, `src/` y `plugins/` a `dist/` (`data-backup.json` y el resto **nunca** se publican) y genera `dist/_headers` con las cabeceras de seguridad (CSP, anti-marcos, HTTPS obligatorio…). Es la **única fuente** de esas cabeceras.
-- `functions/__/[[path]].js` es una *Pages Function* que reenvía `/__/auth/*` y `/__/firebase/*` a Firebase sin cambiar la dirección. Así el inicio de sesión (Google, GitHub) se completa en tu propio dominio y funciona también en Safari, Firefox estricto o Chrome con cookies de terceros bloqueadas. Solo reenvía esas rutas; no es un proxy abierto.
+- `wrangler.jsonc` le dice a Cloudflare qué publicar (`dist/`), qué Worker ejecutar y a qué dominio conectarlo (`workhub.yalero.net`).
+- `worker/index.js` es el Worker: reenvía `/__/auth/*` y `/__/firebase/*` a Firebase sin cambiar la dirección. Así el inicio de sesión (Google, GitHub) se completa en tu propio dominio y funciona también en Safari, Firefox estricto o Chrome con cookies de terceros bloqueadas. Solo reenvía esas rutas; no es un proxy abierto. Todo lo demás lo sirven los recursos estáticos.
 - `src/config/firebase-config.js` lista `workhub.yalero.net` en `hostingDomains`, para que la app use ese dominio como `authDomain`.
 
 ---
 
-## 1. Crear el proyecto en Cloudflare Pages
+## 1. Crear el proyecto
 
-1. Entra en <https://dash.cloudflare.com> → **Workers y Pages** (*Workers & Pages*) → **Crear** → pestaña **Pages** → **Conectar con Git**.
-2. Autoriza a Cloudflare en GitHub y elige el repositorio **yalerooo/Workhub**. Rama de producción: **`main`**.
-3. Configuración de compilación:
-   - *Framework preset*: **Ninguno**.
-   - *Build command*: `node scripts/build-public.js`
-   - *Build output directory*: `dist`
-   - *Root directory*: vacío.
-   - *Variables de entorno* (opcional): `NODE_VERSION` = `20`.
-4. **Guardar y desplegar**. Al terminar tienes la web en `https://<nombre>.pages.dev`. La carpeta `functions/` se detecta sola.
+1. Entra en <https://dash.cloudflare.com> → **Workers y Pages** (*Workers & Pages*) → **Crear** (*Create application*) → **Importar un repositorio** (*Connect to Git*).
+2. Autoriza a Cloudflare en GitHub y elige el repositorio **yalerooo/Workhub**.
+3. **Nombre del proyecto: `workhub`.** Tiene que ser igual al campo `"name"` de `wrangler.jsonc`; si usas otro nombre, cambia ese campo (o el compilado falla).
+4. Rama de producción: **`main`**.
+5. Configuración de compilación:
 
-## 2. Conectar `workhub.yalero.net`
+   | Campo | Valor |
+   |---|---|
+   | *Build command* (comando de compilación) | `node scripts/build-public.js` |
+   | *Deploy command* (comando de despliegue) | `npx wrangler deploy` |
+   | *Preview command* / *Non-production branch deploy command* (comando de vista previa) | `npx wrangler versions upload` |
+   | *Root directory* (directorio raíz) | `/` (vacío) |
+   | Variable de compilación (opcional) | `NODE_VERSION` = `20` |
 
-En el proyecto de Pages → **Dominios personalizados** → **Configurar un dominio personalizado** → `workhub.yalero.net`. Como `yalero.net` ya está en tu cuenta de Cloudflare, crea el registro DNS y el certificado él solo (tarda unos minutos).
+   El comando de despliegue publica la rama `main`; el de vista previa se usa para las demás ramas y las PR, sin tocar producción.
+6. **Guardar y desplegar**. Al terminar, la web está en `https://workhub.<tu-subdominio>.workers.dev` y, si el paso 2 va bien, en `https://workhub.yalero.net`.
+
+## 2. El dominio `workhub.yalero.net`
+
+`wrangler.jsonc` ya incluye el dominio, así que el despliegue lo conecta solo (crea el registro DNS y el certificado; tarda unos minutos). Compruébalo en el Worker → **Configuración** → **Dominios y rutas**. Si prefieres hacerlo a mano, borra el bloque `routes` de `wrangler.jsonc` y añade el dominio ahí.
+
+Si el despliegue se queja de que el dominio ya existe, borra en **DNS** de `yalero.net` el registro `workhub` que hubiera de antes y vuelve a lanzar el despliegue.
 
 ## 3. Autorizar el dominio (imprescindible para entrar)
 
@@ -45,9 +55,9 @@ Hazlo **todo antes** de probar el acceso; si falta algo, Google o GitHub darán 
 
 ## 5. Día a día
 
-- **Publicar cambios**: fusiona el PR en `main`. Cloudflare compila y publica solo; el progreso está en **Implementaciones** (*Deployments*).
-- **Vista previa de cada PR**: Cloudflare crea una dirección `https://<rama>.<nombre>.pages.dev`. En ellas no se puede iniciar sesión (el dominio no está autorizado en Firebase); sirven para ver el diseño.
-- **Volver atrás**: en *Implementaciones*, elige una anterior → **Restaurar** (*Rollback*).
+- **Publicar cambios**: fusiona el PR en `main`. Cloudflare compila y publica solo; el progreso está en el Worker → **Implementaciones** (*Deployments*) y en **Compilaciones** (*Builds*).
+- **Vista previa de cada rama o PR**: el comando `npx wrangler versions upload` sube una versión con su propia dirección, sin cambiar producción. En ellas no se puede iniciar sesión (el dominio no está autorizado en Firebase); sirven para ver el diseño.
+- **Volver atrás**: en *Implementaciones*, elige una versión anterior → **Restaurar** (*Rollback*).
 - **Reglas de seguridad de Firestore**: siguen subiéndose con `firebase deploy --only firestore:rules` (o pegándolas en la consola), solo cuando cambia `firestore.rules`. Ver [SEGURIDAD.md](SEGURIDAD.md).
 - **Cabeceras de seguridad**: se cambian en `scripts/build-public.js` (constantes `ALL`, `PAGE` y `CSP`) y se aplican solas en la siguiente publicación. Si añades un servicio externo, añade su dominio a `CSP`.
 
@@ -62,7 +72,7 @@ Todo esto es gratis y opcional:
 
 ## Límites del plan gratuito
 
-Pages: 500 compilaciones al mes, 20 000 ficheros por sitio y 25 MiB por fichero. Ancho de banda **ilimitado**. Las Pages Functions (solo el reenvío del acceso) admiten 100 000 peticiones al día, y cada inicio de sesión gasta muy pocas. Consulta los límites actuales en <https://developers.cloudflare.com/pages/platform/limits/>.
+Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código del Worker (solo el reenvío del inicio de sesión) admite 100 000 peticiones al día, y cada inicio de sesión gasta muy pocas. Además hay un máximo de ficheros por versión y de tamaño por fichero, y un número de minutos de compilación al mes. Consulta los límites actuales en <https://developers.cloudflare.com/workers/platform/limits/>.
 
 ## ¿Y Netlify y Firebase Hosting?
 
@@ -71,6 +81,7 @@ Pages: 500 compilaciones al mes, 20 000 ficheros por sitio y 25 MiB por fichero.
 
 ## Si algo falla
 
+- **La compilación dice que el Worker no coincide**: el nombre del proyecto en Cloudflare tiene que ser igual a `"name"` en `wrangler.jsonc` (`workhub`).
 - **El acceso da error de redirección**: falta alguno de los pasos del apartado 3, o los cambios de Google tardan unos minutos en aplicarse.
-- **`/__/auth/handler` da 404**: la carpeta `functions/` no se desplegó. Comprueba en *Implementaciones* → detalles que aparece «Functions». No debe estar en `.gitignore`.
+- **`/__/auth/handler` da 404**: el Worker no se desplegó o no se ejecuta. Mira el registro de la última compilación y que `wrangler.jsonc` esté en la raíz del repositorio.
 - **La web carga sin estilos o sin scripts**: casi siempre es la CSP. Abre la consola del navegador: el mensaje dice qué dominio se bloqueó; añádelo a `CSP` en `scripts/build-public.js`.

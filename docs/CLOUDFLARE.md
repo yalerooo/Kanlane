@@ -49,7 +49,7 @@ Hazlo **todo antes** de probar el acceso; si falta algo, Google o GitHub darán 
 
 ## 4. Comprobar
 
-- Abre `https://workhub.yalero.net/__/auth/handler`: debe verse una página de Firebase (no un 404 ni un error de Cloudflare).
+- Abre `https://workhub.yalero.net/__/auth/handler`: debe salir una página de Firebase con el mensaje *«Unable to process request due to missing initial state…»*. **Es lo normal**: esa página solo funciona dentro de un inicio de sesión, y significa que el reenvío al login de Firebase funciona. Mala señal sería un 404 o una página de error de Cloudflare.
 - Inicia sesión con Google y con GitHub, en Chrome y en Safari o Firefox.
 - Abre las herramientas del navegador → pestaña *Red*: la respuesta de la página debe llevar `content-security-policy` y `strict-transport-security`.
 

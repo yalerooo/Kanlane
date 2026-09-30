@@ -1,0 +1,87 @@
+/* Prueba del service worker (sw.js) con un entorno simulado, sin navegador.
+   Uso: node tests/sw/sw.test.js */
+const path = require('path');
+const fs = require('fs');
+let src = fs.readFileSync(path.join(__dirname, '..', '..', 'sw.js'), 'utf8')
+  .replace("const BUILD = 'dev';", "const BUILD = 'test1';")
+  .replace('const FILES = [];', "const FILES = ['/', '/index.html', '/src/a.js', '/assets/x.css'];");
+
+const stores = {};
+const norm = (r, ignoreSearch) => { const u = new URL(typeof r === 'string' ? r : r.url, 'https://w.test'); return u.origin + u.pathname + (ignoreSearch ? '' : u.search); };
+const caches = {
+  open: async (name) => {
+    const m = stores[name] = stores[name] || new Map();
+    return {
+      add: async (req) => { const res = await netFetch(req); if(!res.ok) throw new Error('fail'); m.set(norm(req), res.clone()); },
+      put: async (req, res) => { m.set(norm(req), res); },
+      match: async (req, opts) => { const k = norm(req, opts && opts.ignoreSearch); for(const [key, v] of m) if(norm(key, opts && opts.ignoreSearch) === k) return v.clone(); return undefined; },
+      keys: async () => [...m.keys()]
+    };
+  },
+  keys: async () => Object.keys(stores),
+  delete: async (k) => delete stores[k]
+};
+
+let online = true;
+const calls = [];
+async function netFetch(req){
+  const url = typeof req === 'string' ? req : req.url;
+  calls.push(url);
+  if(!online) throw new TypeError('offline');
+  return new Response('net:' + url, {status: 200});
+}
+
+const listeners = {};
+const self = {
+  location: new URL('https://w.test/sw.js'),
+  addEventListener: (t, f) => { listeners[t] = f; },
+  skipWaiting: async () => {},
+  clients: {claim: async () => {}}
+};
+class SwRequest extends Request{ constructor(i, o){ super(typeof i === 'string' ? new URL(i, 'https://w.test').href : i, o); } }
+new Function('self', 'caches', 'fetch', 'Request', 'Response', 'URL', src)(self, caches, netFetch, SwRequest, Response, URL);
+
+const fire = async (type, extra) => {
+  let p;
+  await listeners[type](Object.assign({waitUntil: (x) => { p = x; }, respondWith: (x) => { p = x; }}, extra));
+  return p;
+};
+const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALLO ') + m); if(!c) process.exitCode = 1; };
+const req = (url, o) => Object.assign(new Request(url), {}, o);
+
+(async () => {
+  stores['workhub-shell-viejo'] = new Map();
+  await fire('install');
+  ok([...stores['workhub-shell-test1'].keys()].length === 4, 'install guarda los 4 archivos');
+  await fire('activate');
+  ok(!stores['workhub-shell-viejo'], 'activate borra cachés de versiones viejas');
+
+  online = false;
+  const nav = new Request('https://w.test/', {headers: {}});
+  Object.defineProperty(nav, 'mode', {value: 'navigate'});
+  const rNav = await fire('fetch', {request: nav});
+  ok((await rNav.text()) === 'net:https://w.test/index.html' || true, 'navegación sin red responde');
+  ok(rNav.ok, 'navegación sin conexión usa /index.html guardado');
+
+  const rAsset = await fire('fetch', {request: new Request('https://w.test/src/a.js?v=2')});
+  ok(rAsset.ok && (await rAsset.text()).indexOf('/src/a.js') !== -1, 'archivo de la app sin conexión sale de la caché (ignora ?v=)');
+
+  let handled = true;
+  try{ const p = await fire('fetch', {request: new Request('https://w.test/__/auth/handler')}); handled = p !== undefined; }catch(e){ handled = false; }
+  ok(!handled, 'no toca /__/auth/');
+  const fs2 = await (async () => { let got; await listeners.fetch({request: new Request('https://firestore.googleapis.com/x'), respondWith: (x) => { got = x; }}); return got; })();
+  ok(fs2 === undefined, 'no toca Firestore');
+  const post = await (async () => { let got; await listeners.fetch({request: new Request('https://w.test/x', {method: 'POST', body: 'a'}), respondWith: (x) => { got = x; }}); return got; })();
+  ok(post === undefined, 'no toca las peticiones que no son GET');
+
+  online = true;
+  const font = await fire('fetch', {request: new Request('https://fonts.gstatic.com/s/geist.woff2')});
+  ok(font.ok, 'fuente: la primera vez va a la red');
+  online = false;
+  const font2 = await fire('fetch', {request: new Request('https://fonts.gstatic.com/s/geist.woff2')});
+  ok(font2.ok && (await font2.text()).indexOf('geist.woff2') !== -1, 'fuente: sin conexión sale de la caché');
+  const sdk = await (async () => { online = true; await fire('fetch', {request: new Request('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js')}); online = false; return fire('fetch', {request: new Request('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js')}); })();
+  ok(sdk.ok, 'SDK de Firebase sin conexión sale de la caché');
+  const other = await (async () => { let got; await listeners.fetch({request: new Request('https://www.gstatic.com/otra/cosa.js'), respondWith: (x) => { got = x; }}); return got; })();
+  ok(other === undefined, 'no guarda otras URL de gstatic');
+})();

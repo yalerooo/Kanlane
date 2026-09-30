@@ -11,7 +11,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'assets', 'src', 'plugins'];
+const INCLUDE = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins'];
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -58,7 +58,9 @@ const PAGE = {
    con sangría. Si varias rutas coinciden, se suman. */
 function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].join('\n');
+  /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
+  const SW = {'Cache-Control': 'no-cache'};
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
 }
 
 /* ---------- dist/ ---------- */
@@ -70,8 +72,28 @@ for(const item of INCLUDE){
 }
 fs.writeFileSync(path.join(out, '_headers'), headersFile());
 
+/* Service worker: se le inyecta la lista de archivos de esta versión y una marca
+   (un resumen de su contenido). Si cambia un solo archivo, la marca cambia y los
+   navegadores instalan la versión nueva. */
+function listFiles(dir, base){
+  return fs.readdirSync(dir, {withFileTypes: true}).flatMap((d) => {
+    const rel = base + '/' + d.name;
+    return d.isDirectory() ? listFiles(path.join(dir, d.name), rel) : [rel];
+  });
+}
+const files = listFiles(out, '').filter((f) => f !== '/_headers' && f !== '/sw.js').sort();
+const hash = require('crypto').createHash('sha1');
+files.forEach((f) => { hash.update(f); hash.update(fs.readFileSync(path.join(out, f))); });
+const build = hash.digest('hex').slice(0, 10);
+const swPath = path.join(out, 'sw.js');
+let sw = fs.readFileSync(swPath, 'utf8');
+if(!/const BUILD = '[^']*';/.test(sw) || !/const FILES = \[\];/.test(sw)) throw new Error('sw.js: no encuentro BUILD y FILES');
+sw = sw.replace(/const BUILD = '[^']*';/, "const BUILD = '" + build + "';")
+  .replace(/const FILES = \[\];/, () => 'const FILES = ' + JSON.stringify(['/'].concat(files)) + ';');
+fs.writeFileSync(swPath, sw);
+
 /* Aviso si la configuración de Firebase sigue vacía o apunta a los emuladores. */
 const cfg = fs.readFileSync(path.join(root, 'src/config/firebase-config.js'), 'utf8');
 if(/apiKey:\s*''/.test(cfg)) console.warn('⚠  src/config/firebase-config.js no tiene apiKey: la web funcionará en modo local, sin inicio de sesión.');
 if(/useEmulators:\s*true/.test(cfg)) console.warn('⚠  useEmulators está en true: ponlo en false antes de publicar.');
-console.log('dist/ listo: ' + INCLUDE.join(', ') + ' + _headers');
+console.log('dist/ listo: ' + INCLUDE.join(', ') + ' + _headers (' + files.length + ' archivos en el service worker, versión ' + build + ')');

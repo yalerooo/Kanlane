@@ -2,6 +2,7 @@
    Se muestran por encima de cualquier diálogo abierto (capa superior). */
 (function(){
   const DURATION = 3200;
+  const UNDO_DURATION = 8000;
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
   const OK_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const ERR_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17v.01"/></svg>';
@@ -56,7 +57,17 @@
     return el;
   }
 
+  /* Aviso con «Deshacer» durante unos segundos. restore() devuelve una promesa. */
+  function undoable(message, restore, doneMessage){
+    return show(message, {duration:UNDO_DURATION, action:{label:'Deshacer', run(){
+      restore().then(
+        () => show(doneMessage || 'Restaurado'),
+        () => show('No se pudo deshacer', {error:true}));
+    }}});
+  }
+
   Workhub.views.toast = {
+    undoable,
     success(message, opts){ return show(message, opts); },
     error(message, opts){ return show(message, Object.assign({error:true}, opts)); }
   };

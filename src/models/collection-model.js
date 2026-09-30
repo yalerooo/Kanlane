@@ -81,6 +81,22 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     return this.idsWhere(field, value).then((ids) => Promise.all(ids.map((id) => this.remove(id))));
   }
 
+  /* Copia de documentos para poder devolverlos con restore() (deshacer un borrado).
+     Guarda la colección de ahora: si se cambia de proyecto entre medias, no restaura. */
+  snapshot(ids){
+    const items = (Array.isArray(ids) ? ids : [ids]).map((id) => this.find(id)).filter(Boolean).map((x) => Object.assign({}, x));
+    return {col:this.col, items:items};
+  }
+
+  restore(snap){
+    if(!snap || !snap.col || snap.col !== this.col) return Promise.reject(new Error('project-changed'));
+    return Promise.all(snap.items.map((it) => {
+      const data = Object.assign({}, it);
+      delete data.id;
+      return snap.col.doc(it.id).set(data);
+    }));
+  }
+
   /* Cambio optimista en memoria (la base de datos confirmará después). */
   patchLocal(id, patch){
     const item = this.find(id);

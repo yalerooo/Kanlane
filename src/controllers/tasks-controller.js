@@ -32,6 +32,7 @@
         this.render();
         this.refreshDetail();
       });
+      this.tasks.on('recurred', (r) => toast.success(Workhub.t('Próxima repetición creada para el {fecha}', {fecha:Workhub.utils.dates.fmtDate(r.date)})));
       this.contacts.on('change', () => this.refreshDetail());
       this.vault.on('change', () => this.refreshDetail());
       this.tasks.on('error', (err) => {
@@ -78,6 +79,7 @@
         this.tasks.move(id, status);
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
+      this.detail.bindChecklist((id, itemId, done) => this.tasks.toggleCheck(id, itemId, done));
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       this.detail.bindAssignMe((id) => this.toggleMine(id));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
@@ -240,8 +242,9 @@
         'Se eliminarán ' + list.length + (list.length === 1 ? ' tarjeta' : ' tarjetas') + ' de «' + s.label + '». No se puede deshacer.',
         'Eliminar todas').then((ok) => {
         if(!ok) return;
+        const snap = this.tasks.snapshot(list.map((t) => t.id));
         Promise.all(list.map((t) => this.tasks.remove(t.id))).then(
-          () => toast.success(list.length === 1 ? 'Tarjeta eliminada' : list.length + ' tarjetas eliminadas'),
+          () => toast.undoable(list.length === 1 ? 'Tarjeta eliminada' : list.length + ' tarjetas eliminadas', () => this.tasks.restore(snap), list.length === 1 ? 'Tarjeta restaurada' : 'Tarjetas restauradas'),
           () => toast.error('No se pudieron eliminar todas las tarjetas'));
       });
     }
@@ -395,8 +398,9 @@
 
     remove(id){
       if(!id || !this.tasks.isReady()) return;
+      const snap = this.tasks.snapshot(id);
       this.tasks.remove(id).then(() => {
-        toast.success('Tarea eliminada');
+        toast.undoable('Tarea eliminada', () => this.tasks.restore(snap), 'Tarea restaurada');
         this.closeDialog();
       }, () => {
         toast.error('No se pudo eliminar la tarea');

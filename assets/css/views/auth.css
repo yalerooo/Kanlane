@@ -69,6 +69,60 @@ html.auth-gate .app{display:none !important;}
 .auth-submit{width:100%;height:38px;margin-top:4px;}
 .auth-msg{font-size:12.5px;line-height:1.45;color:var(--danger);margin:0 0 10px;}
 .auth-msg.is-info{color:var(--st-done);}
+
+/* Aviso «esta cuenta ya existe»: neutro, con la explicación y los dos pasos. */
+.auth-notice{
+  margin:0 0 14px;
+  padding:12px 14px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink-soft);
+}
+.auth-notice-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--ink);}
+.auth-notice-head strong{font-size:13px;font-weight:600;letter-spacing:-0.01em;}
+.auth-notice-ic{
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  flex:none;
+  border-radius:50%;
+  color:var(--accent);
+  background:var(--accent-soft);
+}
+.auth-notice p{margin:0 0 10px;}
+.auth-notice-mail{
+  display:inline-block;
+  max-width:100%;
+  padding:0 6px;
+  font-family:var(--mono);
+  font-size:11.5px;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  overflow-wrap:anywhere;
+  vertical-align:baseline;
+}
+.auth-notice-steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;}
+.auth-notice-steps li{display:flex;align-items:center;gap:8px;color:var(--ink);}
+.auth-notice-n{
+  display:grid;
+  place-items:center;
+  width:18px;
+  height:18px;
+  flex:none;
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink-soft);
+  background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-radius:50%;
+}
+#authPanel.is-guest #authNotice{display:none;}
 .auth-guest .auth-divider{margin:16px 0 12px;}
 .auth-guest-note{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
 .auth-guest-back{width:100%;height:36px;margin-top:6px;}

@@ -45,7 +45,10 @@
        Ese primero ocupa el sitio del proyecto principal (la raíz de la base de
        datos), así que las cuentas que ya tienen datos no cambian nada. */
     checkFirstRun(){
-      if(this.firstRunChecked || !this.projects.loaded || !this.app.rootDb) return;
+      if(!this.projects.loaded || !this.app.rootDb || this.firstRun || this.firstRunSaving) return;
+      /* Se eliminó el último proyecto: hay que crear uno nuevo. */
+      if(!this.projects.list().length){ this.startFirstRun(); return; }
+      if(this.firstRunChecked) return;
       this.firstRunChecked = true;
       if(this.projects.items.length) return;
       const db = this.app.rootDb;
@@ -53,10 +56,15 @@
         db.collection(name).get().then((snap) => !snap.docs.length));
       Promise.all(empty).then((flags) => {
         if(!flags.every(Boolean) || this.projects.items.length) return;
-        this.firstRun = true;
-        document.body.classList.add('is-onboarding');
-        this.view.openOnboarding();
+        this.startFirstRun();
       }).catch(() => { this.firstRunChecked = false; });
+    }
+
+    startFirstRun(){
+      if(this.firstRun) return;
+      this.firstRun = true;
+      document.body.classList.add('is-onboarding');
+      this.view.openOnboarding();
     }
 
     finishFirstRun(){
@@ -75,7 +83,8 @@
       if(found) return found;
       const cached = this.app.cachedProject();
       if(cached && cached.id === id) return cached;
-      return this.projects.get(ProjectModel.MAIN_ID);
+      /* Sin proyectos (recién eliminados): un marcador hasta que se cree el primero. */
+      return this.projects.get(ProjectModel.MAIN_ID) || {id:ProjectModel.MAIN_ID, nombre:Workhub.t('Proyecto principal')};
     }
 
     render(){
@@ -87,12 +96,16 @@
     }
 
     /* Si el proyecto abierto ya no existe (borrado desde otro dispositivo, o el
-       recordado en este navegador es de otra cuenta), se vuelve al principal. */
+       recordado en este navegador es de otra cuenta), se pasa a otro. Si no
+       queda ninguno, checkFirstRun pide crear uno. */
     onProjectsChange(){
       const id = this.app.projectId;
       if(this.projects.loaded && !this.projects.exists(id) && id !== this.justCreated){
-        this.app.switchProject(ProjectModel.MAIN_ID, false);
-        return;
+        const next = this.projects.list()[0];
+        if(next){
+          this.app.switchProject(next.id, false);
+          return;
+        }
       }
       if(this.projects.exists(id)) this.justCreated = null;
       const p = this.current();
@@ -154,7 +167,7 @@
 
     openEdit(id){
       const p = this.projects.get(id || this.app.projectId);
-      if(p) this.view.openEdit(p, p.id !== ProjectModel.MAIN_ID, this.projects.configOf(p));
+      if(p) this.view.openEdit(p, true, this.projects.configOf(p));
     }
 
     /* Crea un proyecto y lo abre. Devuelve la referencia del documento nuevo. */
@@ -172,11 +185,14 @@
       this.view.setBusy(true);
       if(!id && this.firstRun){
         /* El primero es el proyecto principal, con lo que haya elegido el usuario. */
+        this.firstRunSaving = true;
         this.projects.save(ProjectModel.MAIN_ID, nombre, color, config).then(() => {
+          setTimeout(() => { this.firstRunSaving = false; }, 1500);
           this.finishFirstRun();
           this.render();
           toast.success('Proyecto «' + nombre + '» creado');
         }).catch(() => {
+          this.firstRunSaving = false;
           this.view.setBusy(false);
           this.view.showError('No se pudo crear el proyecto. Inténtalo de nuevo.');
         });
@@ -204,10 +220,12 @@
 
     remove(id){
       const p = this.projects.get(id);
-      if(!p || id === ProjectModel.MAIN_ID) return;
+      if(!p) return;
       this.view.setBusy(true, 'Eliminando…');
       this.app.deleteProject(id).then(() => {
-        this.view.closeDialog();
+        /* Si era el último, el asistente de primer proyecto ya ocupa el diálogo. */
+        if(!this.firstRun) this.view.closeDialog();
+        Promise.resolve().then(() => this.checkFirstRun());
         toast.success('Proyecto «' + p.nombre + '» eliminado');
       }).catch(() => {
         this.view.setBusy(false);

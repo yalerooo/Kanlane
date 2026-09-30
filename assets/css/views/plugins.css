@@ -156,3 +156,6 @@
   .plugin-grid{grid-template-columns:minmax(0,1fr);}
   .plugin-facts{grid-template-columns:minmax(0,1fr);}
 }
+
+/* Con un plugin abierto la sección es la del propio plugin: sin la cabecera «Plugins». */
+.main-inner:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])) > .page-head{display:none;}

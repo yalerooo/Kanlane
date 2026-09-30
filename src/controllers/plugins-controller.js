@@ -64,6 +64,9 @@
         })).filter((x) => x.value && x.label);
         o.value = str(f.value, 64);
         o.allowNew = !!f.allowNew;
+        /* Para volver a abrir el formulario con un «nuevo» ya escrito. */
+        o.newName = str(f.newName, 60);
+        o.newColorValue = HEX.test(f.newColorValue || '') ? f.newColorValue : '';
         o.newLabel = str(f.newLabel, 60) || Workhub.t('+ Añadir nuevo…');
         o.newPlaceholder = str(f.newPlaceholder, 60) || Workhub.t('Nombre');
         o.newColor = !!f.newColor;
@@ -74,7 +77,7 @@
       }
       return o;
     });
-    return {title:title, subtitle:str(p.subtitle, 140), intro:str(p.intro, 240), submit:str(p.submit, 24), cancel:str(p.cancel, 24), fields:fields};
+    return {title:title, subtitle:str(p.subtitle, 140), intro:str(p.intro, 240), notice:str(p.notice, 400), submit:str(p.submit, 24), cancel:str(p.cancel, 24), fields:fields};
   }
 
   class PluginsController {

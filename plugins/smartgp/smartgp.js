@@ -58,13 +58,27 @@
     'Apuntar las horas de esta tarea':'Log the hours of this task',
     'h':'h', 'día':'day', 'días':'days', 'registros':'entries',
     'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}',
-    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).'
+    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
+    'Jornada':'Schedule',
+    'Máximo de horas por día de la semana, según el mes. Si un día se pasa del máximo, no se podrán añadir más horas.':'Maximum hours per weekday, by month. If a day goes over its maximum, no more hours can be added.',
+    'Periodo':'Period', 'Añadir periodo':'Add period', 'Sin meses':'No months', 'Quitar periodo':'Remove period',
+    'Aún no hay periodos. Sin ellos no hay límite de horas.':'No periods yet. Without them there is no hour limit.',
+    'Meses':'Months', 'Horas máximas por día':'Maximum hours per day',
+    'Vacío = sin límite · 0 = ese día no admite horas':'Empty = no limit · 0 = that day accepts no hours',
+    'sin límite':'no limit', 'Ese mes ya está en otro periodo':'That month is already in another period',
+    'Límite de este mes:':'This month\'s limit:', 'Sin límite este mes.':'No limit this month.', 'Cambiar':'Change',
+    'El {d} no admite horas (tu jornada lo tiene a 0 h).':'{d} accepts no hours (your schedule has it at 0 h).',
+    'El {d} admite como máximo {l} h y ya tiene {u} h: te quedan {f} h.':'{d} allows at most {l} h and already has {u} h: {f} h left.',
+    'Ese día: {u} de {l} h (te quedan {f} h).':'That day: {u} of {l} h ({f} h left).',
+    'Ese día no admite horas.':'That day accepts no hours.',
+    'máx.':'max.',
+    'lun':'Mon', 'mar':'Tue', 'mié':'Wed', 'jue':'Thu', 'vie':'Fri', 'sáb':'Sat', 'dom':'Sun'
   }});
 
   var wh = null;
   var now = new Date();
   var st = {
-    projects: [], logged: {}, taskHours: {}, prefs: {hours: 1, project: ''},
+    projects: [], logged: {}, taskHours: {}, prefs: {project: ''}, schedule: [],
     tasks: [], doneKeys: [],
     month: {y: now.getFullYear(), m: now.getMonth()}, selected: '', hidden: {},
     view: 'calendar', entries: [], armed: ''
@@ -103,6 +117,89 @@
     return out;
   }
 
+  /* ---------- Jornada: máximo de horas por día de la semana ---------- */
+  /* Cada periodo: {id, months:[1..12], hours:[lun, mar, mié, jue, vie, sáb, dom]}.
+     Un valor vacío (null) = sin límite; 0 = ese día no admite horas. Un mes que no
+     está en ningún periodo no tiene límite. */
+
+  function weekdayIndex(date){
+    var p = date.split('-');
+    return (new Date(+p[0], +p[1] - 1, +p[2]).getDay() + 6) % 7;
+  }
+  function ruleFor(date){
+    var m = +date.slice(5, 7);
+    return st.schedule.filter(function(r){ return r.months.indexOf(m) !== -1; })[0] || null;
+  }
+  /* Máximo de horas de ese día (Infinity si no hay límite). */
+  function limitFor(date){
+    var r = ruleFor(date);
+    if(!r) return Infinity;
+    var v = r.hours[weekdayIndex(date)];
+    return v == null || v === '' ? Infinity : +v;
+  }
+  function dateLabel(date){
+    var p = date.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(WorkhubPlugin.locale, {weekday: 'short', day: 'numeric', month: 'short'});
+  }
+  /* Horas ya registradas en esos días (sin contar el registro ignoreId, si se edita). */
+  function usedOn(dates, ignoreId){
+    var months = {};
+    dates.forEach(function(d){ months[d.slice(0, 7)] = true; });
+    return Promise.all(Object.keys(months).map(function(k){ return get('log-' + k, []); })).then(function(lists){
+      var map = {};
+      lists.forEach(function(l){
+        l.forEach(function(e){ if(e.id !== ignoreId) map[e.date] = round2((map[e.date] || 0) + e.hours); });
+      });
+      return map;
+    });
+  }
+  /* perDay: [{date, hours}] → los días que se pasarían del máximo. */
+  function violations(perDay, used){
+    var out = [];
+    perDay.forEach(function(x){
+      var limit = limitFor(x.date);
+      if(limit === Infinity) return;
+      var u = used[x.date] || 0;
+      if(u + x.hours > limit + 0.001) out.push({date: x.date, limit: limit, used: u, free: Math.max(0, round2(limit - u))});
+    });
+    return out;
+  }
+  function violationText(v){
+    return v.limit === 0
+      ? tr('El {d} no admite horas (tu jornada lo tiene a 0 h).', {d: dateLabel(v.date)})
+      : tr('El {d} admite como máximo {l} h y ya tiene {u} h: te quedan {f} h.', {d: dateLabel(v.date), l: fmt(v.limit), u: fmt(v.used), f: fmt(v.free)});
+  }
+  /* Pista para un solo día: cuánto queda. */
+  function limitHint(date, used){
+    var limit = limitFor(date);
+    if(limit === Infinity) return '';
+    if(limit === 0) return tr('Ese día no admite horas.');
+    return tr('Ese día: {u} de {l} h (te quedan {f} h).', {u: fmt(used[date] || 0), l: fmt(limit), f: fmt(Math.max(0, limit - (used[date] || 0)))});
+  }
+  /* «lun–jue 8 h · vie 7 h» (los días seguidos con el mismo máximo se agrupan). */
+  function describeRule(r){
+    var names = [];
+    for(var i = 0; i < 7; i++) names.push(tr(new Intl.DateTimeFormat('es-ES', {weekday: 'short'}).format(new Date(2024, 0, 1 + i)).replace('.', '')));
+    var parts = [];
+    var i2 = 0;
+    while(i2 < 7){
+      var v = r.hours[i2];
+      if(v == null || v === ''){ i2++; continue; }
+      var j = i2;
+      while(j + 1 < 7 && r.hours[j + 1] === v) j++;
+      parts.push((j > i2 ? names[i2] + '–' + names[j] : names[i2]) + ' ' + fmt(v) + ' h');
+      i2 = j + 1;
+    }
+    return parts.length ? parts.join(' · ') : tr('sin límite');
+  }
+  function monthsLabel(r){
+    if(!r.months.length) return tr('Sin meses');
+    var names = r.months.slice().sort(function(a, b){ return a - b; }).map(function(m){
+      return new Intl.DateTimeFormat(WorkhubPlugin.locale, {month: 'long'}).format(new Date(2024, m - 1, 1));
+    });
+    return names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' ' + (WorkhubPlugin.lang === 'en' ? 'and' : 'y') + ' ' + names[names.length - 1];
+  }
+
   /* ---------- Datos ---------- */
 
   function get(key, dflt){ return wh.storage.user.get(key).then(function(v){ return v == null ? dflt : v; }); }
@@ -115,8 +212,8 @@
   }
 
   function loadBase(){
-    return Promise.all([get('projects', []), get('logged', {}), get('taskhours', {}), get('prefs', {hours: 1, project: ''})]).then(function(r){
-      st.projects = r[0]; st.logged = r[1]; st.taskHours = r[2]; st.prefs = r[3];
+    return Promise.all([get('projects', []), get('logged', {}), get('taskhours', {}), get('prefs', {project: ''}), get('schedule', [])]).then(function(r){
+      st.projects = r[0]; st.logged = r[1]; st.taskHours = r[2]; st.prefs = r[3]; st.schedule = r[4];
     });
   }
   function loadMonth(){
@@ -161,65 +258,88 @@
   function hoursField(value){
     return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: 0.25, max: 500, step: 0.25, value: value != null ? value : 0};
   }
+  /* value: id de un proyecto, o {new, color} si se había escrito uno nuevo y se vuelve a abrir. */
   function projectField(value){
+    var isNew = value && typeof value === 'object';
     return {
-      key: 'project', type: 'select', label: tr('Proyecto'), value: value || '',
+      key: 'project', type: 'select', label: tr('Proyecto'), value: isNew ? '__new__' : (value || ''),
+      newName: isNew ? value.new : '', newColorValue: isNew ? value.color : '',
       options: st.projects.map(function(p){ return {value: p.id, label: p.name}; }),
       allowNew: true, newLabel: tr('+ Añadir proyecto…'), newPlaceholder: tr('Nombre del proyecto'), newColor: true
     };
   }
 
   /* task: la tarea terminada; null para apuntar horas a mano. dates: días por defecto. */
-  function logTask(task, dates){
+  function logTask(task, dates, state, notice){
+    state = state || {};
     /* Si el cliente de la tarea se llama igual que un proyecto, ese; si no, el último usado. */
     var byClient = task && task.cliente ? st.projects.filter(function(p){ return p.name.toLowerCase() === task.cliente.toLowerCase(); })[0] : null;
-    var fields = [
-      hoursField(0),                       /* siempre empieza en 0: cada tarea tiene sus horas */
-      {key: 'days', type: 'dates', label: tr('Días trabajados'), value: dates && dates.length ? dates : [today()], hint: tr('Las horas se reparten a partes iguales entre los días.')},
-      projectField(byClient ? byClient.id : st.prefs.project)
-    ];
-    if(!task) fields.push({key: 'title', type: 'text', label: tr('Descripción'), placeholder: tr('Ej.: Reunión con el cliente'), maxlength: 120});
-    return wh.ui.form({
-      title: tr('Registrar horas'),
-      subtitle: task ? task.title : '',
-      intro: task ? tr('Has terminado esta tarea. ¿Cuánto le has dedicado?') : tr('Añade horas a mano.'),
-      submit: tr('Guardar'),
-      cancel: task ? tr('Omitir') : tr('Cancelar'),
-      fields: fields
+    var days = state.days || (dates && dates.length ? dates : [today()]);
+    return usedOn(days).then(function(used){
+      var hoursField_ = hoursField(state.hours != null ? state.hours : 0);   /* siempre empieza en 0: cada tarea tiene sus horas */
+      if(days.length === 1) hoursField_.hint = limitHint(days[0], used);
+      var fields = [
+        hoursField_,
+        {key: 'days', type: 'dates', label: tr('Días trabajados'), value: days, hint: tr('Las horas se reparten a partes iguales entre los días.')},
+        projectField(state.project !== undefined ? state.project : (byClient ? byClient.id : st.prefs.project))
+      ];
+      if(!task) fields.push({key: 'title', type: 'text', label: tr('Descripción'), value: state.title || '', placeholder: tr('Ej.: Reunión con el cliente'), maxlength: 120});
+      return wh.ui.form({
+        title: tr('Registrar horas'),
+        subtitle: task ? task.title : '',
+        intro: task ? tr('Has terminado esta tarea. ¿Cuánto le has dedicado?') : tr('Añade horas a mano.'),
+        notice: notice || '',
+        submit: tr('Guardar'),
+        cancel: task ? tr('Omitir') : tr('Cancelar'),
+        fields: fields
+      });
     }).then(function(v){
       if(!v) return false;
-      return resolveProject(v.project).then(function(pid){
-        var parts = splitHours(v.hours, v.days.length);
-        var entries = v.days.map(function(d, i){
-          return {id: newId(), date: d, hours: parts[i], project: pid, task: task ? task.id : '', title: task ? task.title : (v.title || tr('Registro manual'))};
-        });
-        return addEntries(entries).then(function(){
-          if(task) st.logged[task.id] = true;
-          st.prefs = {project: pid};
-          return Promise.all([set('logged', st.logged), set('prefs', st.prefs)]);
-        }).then(function(){
-          wh.ui.toast(tr('{h} h registradas en {p}', {h: fmt(v.hours), p: projectName(pid)}));
-          return true;
+      var parts = splitHours(v.hours, v.days.length);
+      var perDay = v.days.map(function(d, i){ return {date: d, hours: parts[i]}; });
+      return usedOn(v.days).then(function(used){
+        /* Si algún día se pasa del máximo de la jornada, no se guarda: se avisa y se vuelve a abrir. */
+        var bad = violations(perDay, used);
+        if(bad.length) return logTask(task, dates, {hours: v.hours, days: v.days, project: v.project, title: v.title}, bad.map(violationText).join(' '));
+        return resolveProject(v.project).then(function(pid){
+          var entries = perDay.map(function(x){
+            return {id: newId(), date: x.date, hours: x.hours, project: pid, task: task ? task.id : '', title: task ? task.title : (v.title || tr('Registro manual'))};
+          });
+          return addEntries(entries).then(function(){
+            if(task) st.logged[task.id] = true;
+            st.prefs = {project: pid};
+            return Promise.all([set('logged', st.logged), set('prefs', st.prefs)]);
+          }).then(function(){
+            wh.ui.toast(tr('{h} h registradas en {p}', {h: fmt(v.hours), p: projectName(pid)}));
+            return true;
+          });
         });
       });
     });
   }
 
-  function editEntry(id){
+  function editEntry(id, state, notice){
     var e = st.entries.filter(function(x){ return x.id === id; })[0];
     if(!e) return Promise.resolve();
-    return wh.ui.form({
-      title: tr('Editar registro'), subtitle: e.title, submit: tr('Guardar'), cancel: tr('Cancelar'),
-      fields: [hoursField(e.hours), projectField(e.project)]
-    }).then(function(v){
-      if(!v) return;
-      return resolveProject(v.project).then(function(pid){
-        return serial(function(){
-          var key = 'log-' + e.date.slice(0, 7);
-          return get(key, []).then(function(arr){
-            arr.forEach(function(x){ if(x.id === id){ x.hours = v.hours; x.project = pid; } });
-            if(e.task) st.taskHours[e.task] = Math.max(0, round2((st.taskHours[e.task] || 0) + v.hours - e.hours));
-            return Promise.all([set(key, arr), set('taskhours', st.taskHours)]);
+    state = state || {};
+    return usedOn([e.date], id).then(function(used){
+      var hf = hoursField(state.hours != null ? state.hours : e.hours);
+      hf.hint = limitHint(e.date, used);
+      return wh.ui.form({
+        title: tr('Editar registro'), subtitle: e.title, notice: notice || '', submit: tr('Guardar'), cancel: tr('Cancelar'),
+        fields: [hf, projectField(state.project !== undefined ? state.project : e.project)]
+      }).then(function(v){
+        if(!v) return;
+        var bad = violations([{date: e.date, hours: v.hours}], used);
+        if(bad.length) return editEntry(id, {hours: v.hours, project: v.project}, bad.map(violationText).join(' '));
+        return resolveProject(v.project).then(function(pid){
+          return serial(function(){
+            var key = 'log-' + e.date.slice(0, 7);
+            return get(key, []).then(function(arr){
+              arr.forEach(function(x){ if(x.id === id){ x.hours = v.hours; x.project = pid; } });
+              if(e.task) st.taskHours[e.task] = Math.max(0, round2((st.taskHours[e.task] || 0) + v.hours - e.hours));
+              return Promise.all([set(key, arr), set('taskhours', st.taskHours)]);
+            });
           });
         });
       });
@@ -248,6 +368,9 @@
     var days = new Date(y, m + 1, 0).getDate();
     var byDay = {};
     visible().forEach(function(e){ (byDay[e.date] = byDay[e.date] || []).push(e); });
+    /* Horas de cada día de todos los proyectos (aunque haya un filtro): el máximo se comprueba con ellas. */
+    var allByDay = {};
+    st.entries.forEach(function(e){ allByDay[e.date] = (allByDay[e.date] || 0) + e.hours; });
     var head = '';
     for(var i = 0; i < 7; i++){
       head += '<span>' + esc(new Intl.DateTimeFormat(WorkhubPlugin.locale, {weekday: 'short'}).format(new Date(2024, 0, 1 + i))) + '</span>';
@@ -261,17 +384,22 @@
       var list = byDay[key] || [];
       var sum = list.reduce(function(n, e){ return n + e.hours; }, 0);
       var weekend = c % 7 > 4;
+      /* Máximo de la jornada para ese día: la barra se llena al llegar a él. */
+      var limit = limitFor(key);
+      var limited = limit !== Infinity;
+      var over = limited && (allByDay[key] || 0) > limit + 0.001;
+      var scale = limited && limit > 0 ? limit : DAY_HOURS;
       var perProject = {};
       list.forEach(function(e){ perProject[e.project || '_'] = (perProject[e.project || '_'] || 0) + e.hours; });
       var bar = list.length
-        ? '<div class="trk" style="width:' + Math.min(100, sum / DAY_HOURS * 100) + '%">' + Object.keys(perProject).map(function(k){
+        ? '<div class="trk" style="width:' + Math.min(100, sum / scale * 100) + '%">' + Object.keys(perProject).map(function(k){
             return '<i style="flex:' + perProject[k] + ';--c:' + esc(projectColor(k === '_' ? '' : k)) + '"></i>';
           }).join('') + '</div>'
         : '<div class="none"></div>';
-      cells += '<button type="button" class="sg-cell' + (weekend ? ' is-weekend' : '') + (key === today() ? ' is-today' : '') + (key === st.selected ? ' is-selected' : '') + '" data-act="day" data-date="' + key + '"' +
-        ' aria-label="' + esc(new Date(y, m, d).toLocaleDateString(WorkhubPlugin.locale, {weekday: 'long', day: 'numeric', month: 'long'}) + (sum ? ', ' + fmt(sum) + ' h' : '')) + '">' +
+      cells += '<button type="button" class="sg-cell' + (weekend ? ' is-weekend' : '') + (limit === 0 ? ' is-off' : '') + (over ? ' is-over' : '') + (key === today() ? ' is-today' : '') + (key === st.selected ? ' is-selected' : '') + '" data-act="day" data-date="' + key + '"' +
+        ' aria-label="' + esc(new Date(y, m, d).toLocaleDateString(WorkhubPlugin.locale, {weekday: 'long', day: 'numeric', month: 'long'}) + (sum ? ', ' + fmt(sum) + ' h' : '') + (limited ? ', ' + tr('máx.') + ' ' + fmt(limit) + ' h' : '')) + '">' +
         '<span class="n">' + d + '</span>' +
-        '<span><span class="h">' + (sum ? fmt(sum) + ' <small>h</small>' : '') + '</span>' + bar + '</span></button>';
+        '<span><span class="h">' + (sum ? fmt(sum) + ' <small>' + (limited && limit > 0 ? '/ ' + fmt(limit) + ' ' : '') + 'h</small>' : '') + '</span>' + bar + '</span></button>';
     }
     return '<div class="sg-cal"><div class="sg-week" aria-hidden="true">' + head + '</div><div class="sg-grid">' + cells + '</div></div>';
   }
@@ -338,13 +466,56 @@
     var L = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
     var R = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
     return '<header class="sg-head"><div><h1>Smart GP</h1><p class="wh-muted">' + tr('Tus horas por día y proyecto') + '</p></div>' +
-      '<div class="sg-actions"><button type="button" class="wh-btn" data-act="projects">' + tr('Proyectos') + '</button>' +
+      '<div class="sg-actions"><button type="button" class="wh-btn" data-act="schedule">' + tr('Jornada') + '</button>' +
+      '<button type="button" class="wh-btn" data-act="projects">' + tr('Proyectos') + '</button>' +
       '<button type="button" class="wh-btn is-primary" data-act="add">' + tr('Registrar horas') + '</button></div></header>' +
       pendingHtml() +
       '<div class="sg-bar"><div class="sg-month"><button type="button" class="sg-icon" data-act="prev" aria-label="' + esc(tr('Mes anterior')) + '">' + L + '</button>' +
       '<h2>' + esc(title) + '</h2><button type="button" class="sg-icon" data-act="next" aria-label="' + esc(tr('Mes siguiente')) + '">' + R + '</button></div>' +
       '<button type="button" class="wh-btn" data-act="today">' + tr('Hoy') + '</button></div>' +
-      statsHtml() + legendHtml() + calendarHtml() + dayHtml();
+      limitLine() + statsHtml() + legendHtml() + calendarHtml() + dayHtml();
+  }
+
+  /* El máximo de horas que rige este mes (o que no hay). */
+  function limitLine(){
+    var r = ruleFor(monthKey(st.month.y, st.month.m) + '-01');
+    return '<p class="sg-limit">' + (r ? esc(tr('Límite de este mes:')) + ' <b>' + esc(describeRule(r)) + '</b>' : esc(tr('Sin límite este mes.'))) +
+      ' <button type="button" class="sg-link" data-act="schedule">' + tr('Cambiar') + '</button></p>';
+  }
+
+  function scheduleView(){
+    var owner = {};
+    st.schedule.forEach(function(r){ r.months.forEach(function(m){ owner[m] = r.id; }); });
+    var days = [];
+    for(var i = 0; i < 7; i++) days.push(new Intl.DateTimeFormat(WorkhubPlugin.locale, {weekday: 'short'}).format(new Date(2024, 0, 1 + i)).replace('.', ''));
+    var rules = st.schedule.length ? st.schedule.map(function(r, idx){
+      var chips = '';
+      for(var m = 1; m <= 12; m++){
+        var on = r.months.indexOf(m) !== -1;
+        var other = owner[m] && owner[m] !== r.id;
+        chips += '<button type="button" class="sg-mchip' + (on ? ' is-on' : '') + '" data-act="month" data-rule="' + esc(r.id) + '" data-m="' + m + '" aria-pressed="' + on + '"' +
+          (other ? ' disabled title="' + esc(tr('Ese mes ya está en otro periodo')) + '"' : '') + '>' +
+          esc(new Intl.DateTimeFormat(WorkhubPlugin.locale, {month: 'short'}).format(new Date(2024, m - 1, 1)).replace('.', '')) + '</button>';
+      }
+      var inputs = days.map(function(name, d){
+        var v = r.hours[d];
+        return '<label class="sg-dayin"><span>' + esc(name) + '</span><input class="wh-input" type="number" min="0" max="24" step="0.25" inputmode="decimal" placeholder="—" ' +
+          'data-act="rule-hours" data-rule="' + esc(r.id) + '" data-d="' + d + '" value="' + (v == null ? '' : esc(v)) + '" aria-label="' + esc(name) + '"></label>';
+      }).join('');
+      return '<div class="sg-rule"><div class="sg-rule-head"><b>' + esc(tr('Periodo')) + ' ' + (idx + 1) + ' · <span class="sg-months-label">' + esc(monthsLabel(r)) + '</span></b>' +
+        '<button type="button" class="sg-link is-muted" data-act="rule-del" data-rule="' + esc(r.id) + '">' + (st.armed === r.id ? tr('¿Seguro?') : tr('Quitar periodo')) + '</button></div>' +
+        '<p class="sg-sub">' + tr('Meses') + '</p><div class="sg-months">' + chips + '</div>' +
+        '<p class="sg-sub">' + tr('Horas máximas por día') + '</p><div class="sg-dayins">' + inputs + '</div></div>';
+    }).join('') : '<p class="sg-empty">' + tr('Aún no hay periodos. Sin ellos no hay límite de horas.') + '</p>';
+    return '<header class="sg-head"><div><h1>' + tr('Jornada') + '</h1><p class="wh-muted">' +
+      tr('Máximo de horas por día de la semana, según el mes. Si un día se pasa del máximo, no se podrán añadir más horas.') + '</p></div>' +
+      '<div class="sg-actions"><button type="button" class="wh-btn" data-act="back">' + tr('Volver') + '</button></div></header>' +
+      '<div class="sg-box">' + rules + '<p class="sg-hint">' + tr('Vacío = sin límite · 0 = ese día no admite horas') + '</p>' +
+      '<button type="button" class="wh-btn is-primary" data-act="rule-add">' + tr('Añadir periodo') + '</button></div>';
+  }
+
+  function saveSchedule(){
+    return serial(function(){ return set('schedule', st.schedule); });
   }
 
   function projectsView(){
@@ -364,7 +535,7 @@
   function render(){
     var app = document.getElementById('app');
     if(!app) return;
-    app.innerHTML = st.view === 'projects' ? projectsView() : calendarView();
+    app.innerHTML = st.view === 'projects' ? projectsView() : st.view === 'schedule' ? scheduleView() : calendarView();
   }
 
   function refresh(){
@@ -402,7 +573,37 @@
         busy(deleteEntry(id));
         break;
       case 'projects': st.view = 'projects'; render(); break;
+      case 'schedule': st.view = 'schedule'; render(); break;
       case 'back': st.view = 'calendar'; render(); break;
+      case 'rule-add': {
+        /* Nuevo periodo con los meses que aún no tienen jornada y lunes a viernes a 8 h. */
+        var taken = {};
+        st.schedule.forEach(function(r){ r.months.forEach(function(m){ taken[m] = true; }); });
+        var free = [];
+        for(var mm = 1; mm <= 12; mm++) if(!taken[mm]) free.push(mm);
+        st.schedule.push({id: newId(), months: free, hours: [8, 8, 8, 8, 8, null, null]});
+        render();
+        saveSchedule();
+        break;
+      }
+      case 'rule-del':
+        var rid = t.getAttribute('data-rule');
+        if(st.armed !== rid){ st.armed = rid; render(); setTimeout(function(){ if(st.armed === rid){ st.armed = ''; render(); } }, 3500); break; }
+        st.armed = '';
+        st.schedule = st.schedule.filter(function(r){ return r.id !== rid; });
+        render();
+        saveSchedule();
+        break;
+      case 'month': {
+        var rule = st.schedule.filter(function(r){ return r.id === t.getAttribute('data-rule'); })[0];
+        var mo = +t.getAttribute('data-m');
+        if(!rule || t.disabled) break;
+        var at = rule.months.indexOf(mo);
+        if(at === -1) rule.months.push(mo); else rule.months.splice(at, 1);
+        render();
+        saveSchedule();
+        break;
+      }
       case 'proj-add': {
         var input = document.getElementById('newProject');
         var name = input.value.trim();
@@ -431,6 +632,16 @@
 
   function onChange(ev){
     var t = ev.target;
+    if(t.getAttribute('data-act') === 'rule-hours'){
+      var rule = st.schedule.filter(function(r){ return r.id === t.getAttribute('data-rule'); })[0];
+      if(!rule) return;
+      var raw = t.value.trim().replace(',', '.');
+      var n = raw === '' ? null : Math.max(0, Math.min(24, parseFloat(raw)));
+      rule.hours[+t.getAttribute('data-d')] = n == null || isNaN(n) ? null : round2(n);
+      t.value = rule.hours[+t.getAttribute('data-d')] == null ? '' : rule.hours[+t.getAttribute('data-d')];
+      saveSchedule();
+      return;
+    }
     if(t.getAttribute('data-act') !== 'rename') return;
     var p = project(t.getAttribute('data-id'));
     var name = t.value.trim();

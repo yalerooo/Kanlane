@@ -15,7 +15,7 @@ body{
 }
 h1,h2,h3{font-family:inherit;color:var(--ink);letter-spacing:-0.012em;font-weight:600;}
 a{color:var(--accent);text-underline-offset:2px;}
-::selection{background:color-mix(in srgb, var(--accent-solid) 22%, transparent);color:inherit;}
+::selection{background:var(--accent-soft);background:color-mix(in srgb, var(--accent-solid) 22%, transparent);color:inherit;}
 svg{flex:none;}
 [hidden]{display:none!important;}
 :focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}

@@ -5,7 +5,6 @@
   const toast = Workhub.views.toast;
   const extensions = Workhub.views.extensions;
   const TaskModel = Workhub.models.TaskModel;
-  const MeetingModel = Workhub.models.MeetingModel;
   const PluginModel = Workhub.models.PluginModel;
   const ProjectModel = Workhub.models.ProjectModel;
 
@@ -15,70 +14,10 @@
     '--danger', '--danger-bg', '--st-pend', '--st-proc', '--st-wait', '--st-done', '--meet',
     '--r-sm', '--r-md', '--r-lg', '--r-xl', '--font', '--mono'];
   const EVENT_DELAY_MS = 250;
-  const YMD = /^\d{4}-\d{2}-\d{2}$/;
-  const HM = /^\d{2}:\d{2}$/;
-  const HEX = /^#[0-9a-fA-F]{6}$/;
   const RADII = {sharp:{sm:2, md:3, lg:4, xl:6}, round:{sm:7, md:10, lg:14, xl:18}};
   const DENSITIES = ['compact', 'normal', 'comfortable'];
-  const FORM_TYPES = ['number', 'text', 'select', 'dates'];
-  const FORM_KEY = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
 
-  function fail(code, message){
-    const e = new Error(message);
-    e.code = code;
-    return e;
-  }
-  const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-  const sameSet = (a, b) => a.length === b.length && a.every((x) => b.indexOf(x) !== -1);
-
-  /* Copias limpias de los datos: nada de ids de vínculos a contraseñas. */
-  const cleanTask = (t) => ({id:t.id, title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', status:TaskModel.stageKey(t),
-    dueDate:t.dueDate || '', contacto:t.contacto || '', createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
-  const cleanClient = (c) => ({id:c.id, nombre:c.nombre || '', color:typeof c.color === 'number' ? c.color : null});
-  const cleanContact = (c) => ({id:c.id, cliente:c.cliente || '', nombre:c.nombre || '', email:c.email || '', telefono:c.telefono || '', notas:c.notas || ''});
-  const cleanMeeting = (m) => ({id:m.id, title:m.title || '', cliente:m.cliente || '', date:m.date || '', start:m.start || '', end:m.end || '', link:m.link || '', notas:m.notas || ''});
-
-  /* Valida la descripción de un formulario (wh.ui.form): nada de HTML, tipos y
-     tamaños cerrados. Devuelve una copia limpia. */
-  function cleanForm(p){
-    const title = str(p.title, 80);
-    if(!title) throw fail('bad-params', 'El formulario necesita un título.');
-    const list = Array.isArray(p.fields) ? p.fields.slice(0, 8) : [];
-    if(!list.length) throw fail('bad-params', 'El formulario necesita al menos un campo.');
-    const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
-    const seen = {};
-    const fields = list.map((f) => {
-      f = f && typeof f === 'object' ? f : {};
-      if(!FORM_KEY.test(f.key || '') || seen[f.key]) throw fail('bad-params', 'Cada campo necesita una clave única (letras, números y _).');
-      if(FORM_TYPES.indexOf(f.type) === -1) throw fail('bad-params', 'Tipo de campo desconocido: ' + f.type);
-      seen[f.key] = true;
-      const o = {key:f.key, type:f.type, label:str(f.label, 60) || f.key, hint:str(f.hint, 140), required:f.required !== false};
-      if(f.type === 'number'){
-        o.min = num(f.min); o.max = num(f.max); o.step = num(f.step) > 0 ? num(f.step) : null;
-        o.value = num(f.value); o.unit = str(f.unit, 8);
-      } else if(f.type === 'text'){
-        o.value = str(f.value, 200); o.placeholder = str(f.placeholder, 80); o.maxlength = Math.min(200, Math.max(1, num(f.maxlength) || 120));
-      } else if(f.type === 'select'){
-        o.options = (Array.isArray(f.options) ? f.options : []).slice(0, 100).map((x) => ({
-          value: str(x && x.value, 64), label: str(x && x.label, 60)
-        })).filter((x) => x.value && x.label);
-        o.value = str(f.value, 64);
-        o.allowNew = !!f.allowNew;
-        /* Para volver a abrir el formulario con un «nuevo» ya escrito. */
-        o.newName = str(f.newName, 60);
-        o.newColorValue = HEX.test(f.newColorValue || '') ? f.newColorValue : '';
-        o.newLabel = str(f.newLabel, 60) || Workhub.t('+ Añadir nuevo…');
-        o.newPlaceholder = str(f.newPlaceholder, 60) || Workhub.t('Nombre');
-        o.newColor = !!f.newColor;
-        if(!o.options.length && !o.allowNew) throw fail('bad-params', 'Un desplegable necesita opciones o allowNew.');
-      } else {
-        o.max = Math.min(62, Math.max(1, num(f.max) || 62));
-        o.value = (Array.isArray(f.value) ? f.value : []).filter((d) => typeof d === 'string' && YMD.test(d)).slice(0, o.max);
-      }
-      return o;
-    });
-    return {title:title, subtitle:str(p.subtitle, 140), intro:str(p.intro, 240), notice:str(p.notice, 400), submit:str(p.submit, 24), cancel:str(p.cancel, 24), fields:fields};
-  }
+  const {fail, str, sameSet, cleanTask, cleanClient, cleanContact, cleanMeeting, cleanForm, YMD, HM, HEX} = Workhub.pluginClean;
 
   class PluginsController {
     constructor(app, view){
@@ -562,61 +501,6 @@
       return run;
     }
 
-    createTask(params){
-      const tasks = this.m.tasks;
-      if(!tasks.isReady()) throw fail('not-ready', 'Los datos todavía se están cargando.');
-      const title = str(params.title, 200);
-      if(!title) throw fail('bad-params', 'La tarea necesita un título.');
-      const status = TaskModel.STATUS.some((s) => s.key === params.status) ? params.status : TaskModel.STATUS[0].key;
-      const dueDate = YMD.test(params.dueDate || '') ? params.dueDate : '';
-      return tasks.save(null, {
-        title: title,
-        desc: str(params.desc, 5000),
-        cliente: str(params.cliente, 60),
-        status: status,
-        contacto: str(params.contacto, 120),
-        dueDate: dueDate
-      }).then((ref) => ({id:ref.id}));
-    }
-
-    updateTask(params){
-      const tasks = this.m.tasks;
-      const t = tasks.find(params.id);
-      if(!t) throw fail('not-found', 'No existe esa tarea.');
-      const src = params.patch && typeof params.patch === 'object' ? params.patch : {};
-      const patch = {};
-      if(typeof src.title === 'string'){
-        patch.title = str(src.title, 200);
-        if(!patch.title) throw fail('bad-params', 'El título no puede quedar vacío.');
-      }
-      if(typeof src.desc === 'string') patch.desc = str(src.desc, 5000);
-      if(typeof src.cliente === 'string') patch.cliente = str(src.cliente, 60);
-      if(typeof src.contacto === 'string') patch.contacto = str(src.contacto, 120);
-      if(typeof src.dueDate === 'string'){
-        if(src.dueDate && !YMD.test(src.dueDate)) throw fail('bad-params', 'La fecha tiene que ser AAAA-MM-DD.');
-        patch.dueDate = src.dueDate;
-      }
-      const status = typeof src.status === 'string' ? src.status : null;
-      if(status && !TaskModel.STATUS.some((s) => s.key === status)) throw fail('bad-params', 'Estado desconocido.');
-      const work = [];
-      if(status && status !== TaskModel.stageKey(t)) work.push(Promise.resolve(tasks.move(t.id, status)));
-      if(Object.keys(patch).length) work.push(tasks.save(t.id, patch));
-      return Promise.all(work).then(() => true);
-    }
-
-    createMeeting(params){
-      const meetings = this.m.meetings;
-      if(!meetings.isReady()) throw fail('not-ready', 'Los datos todavía se están cargando.');
-      const date = YMD.test(params.date || '') ? params.date : '';
-      const start = HM.test(params.start || '') ? params.start : '';
-      const end = HM.test(params.end || '') ? params.end : '';
-      const v = MeetingModel.validate({
-        title: str(params.title, 200), date: date, start: start, end: end,
-        cliente: str(params.cliente, 60), rawLink: str(params.link, 500), notas: str(params.notas, 2000)
-      });
-      if(v.error !== undefined) throw fail('bad-params', v.error || 'La reunión necesita título y fecha (AAAA-MM-DD).');
-      return meetings.save(null, v.body).then((ref) => ({id:ref.id}));
-    }
   }
 
   Workhub.controllers.PluginsController = PluginsController;

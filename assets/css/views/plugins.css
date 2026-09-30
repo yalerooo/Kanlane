@@ -158,10 +158,10 @@
 }
 
 /* Con un plugin abierto la sección es la del propio plugin: sin la cabecera «Plugins». */
-.main-inner:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])) > .page-head{display:none;}
+body.plugin-open .main-inner > .page-head{display:none;}
 
 /* El plugin ocupa todo el ancho, hasta el borde de la ventana, como una pestaña propia. */
-.main-inner:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])){max-width:none;}
+body.plugin-open .main-inner{max-width:none;}
 #pluginStage .plugin-frame-wrap{margin-inline:calc(-1 * var(--main-px, 0px));}
 
 /* Barra del plugin abierto: una cabecera de ancho completo con línea inferior, como la de una pestaña. */
@@ -174,4 +174,4 @@
 #pluginStage .plugin-bar-text strong{font-size:15px;}
 #pluginStage .plugin-bar-text span{font-size:12.5px;}
 #pluginStage .plugin-notice{margin:10px 0 0;}
-.main:has(#viewPlugins:not([hidden]) #pluginStage:not([hidden])){padding-top:0;}
+body.plugin-open .main{padding-top:0;}

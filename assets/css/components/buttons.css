@@ -30,7 +30,7 @@
 .btn-ghost{background:var(--surface);color:var(--ink);border-color:var(--line-strong);box-shadow:var(--shadow-sm);}
 .btn-ghost:hover:not(:disabled){background:var(--surface-2);}
 .btn-danger{background:var(--surface);color:var(--danger);border-color:var(--line-strong);box-shadow:var(--shadow-sm);}
-.btn-danger:hover:not(:disabled){background:var(--danger-bg);border-color:color-mix(in srgb, var(--danger) 35%, transparent);}
+.btn-danger:hover:not(:disabled){background:var(--danger-bg);border-color:var(--danger);border-color:color-mix(in srgb, var(--danger) 35%, transparent);}
 .btn-sm{font-size:12.5px;height:28px;padding:0 10px;gap:5px;}
 .btn-sm svg{width:14px;height:14px;}
 .icon-btn{

@@ -18,6 +18,16 @@
     reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
   };
 
+  /* Esqueleto con la forma del formulario de acceso: mientras se comprueba la sesión
+     la tarjeta ya tiene su tamaño y no da un salto cuando aparece el formulario. */
+  const SKELETON = '<span class="sr-only">Cargando…</span><div class="sk-stack" aria-hidden="true">' +
+    '<span class="sk sk-title"></span><span class="sk sk-sub"></span>' +
+    '<span class="sk sk-btn sk-first"></span><span class="sk sk-btn"></span><span class="sk sk-divider"></span>' +
+    '<span class="sk sk-label"></span><span class="sk sk-input"></span>' +
+    '<span class="sk sk-label"></span><span class="sk sk-input"></span>' +
+    '<span class="sk sk-btn is-primary"></span>' +
+    '<span class="sk sk-line"></span><span class="sk sk-divider"></span><span class="sk sk-btn"></span></div>';
+
   class AuthView {
     constructor(){
       this.screen = $('authScreen');
@@ -121,7 +131,8 @@
       this.screen.hidden = false;
       this.loading.hidden = false;
       this.loading.classList.remove('is-error', 'is-verify');
-      this.loading.innerHTML = '<span class="spinner" aria-hidden="true"></span>Cargando…';
+      this.loading.classList.add('is-skeleton');
+      this.loading.innerHTML = SKELETON;
       this.panel.hidden = true;
     }
 
@@ -129,6 +140,7 @@
       this.screen.hidden = false;
       this.panel.hidden = true;
       this.loading.hidden = false;
+      this.loading.classList.remove('is-skeleton');
       this.loading.classList.add('is-error');
       this.loading.innerHTML = '<span>No se pudo conectar con el servicio de acceso. Comprueba tu conexión.</span>';
       const btn = document.createElement('button');
@@ -166,7 +178,7 @@
       this.screen.hidden = false;
       this.panel.hidden = true;
       this.loading.hidden = false;
-      this.loading.classList.remove('is-error');
+      this.loading.classList.remove('is-error', 'is-skeleton');
       this.loading.classList.add('is-verify');
       this.loading.textContent = '';
       const title = document.createElement('strong');

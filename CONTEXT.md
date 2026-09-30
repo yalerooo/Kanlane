@@ -296,6 +296,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - ≤600 px: móvil.
   - ≤380 px: móvil pequeño.
   - Sin scroll horizontal en ninguna vista (probado a 360, 390, 768, 1024, 1366, 1920 y 2560 px).
+  - **Barra inferior en móvil** (`.tabs`, `position:fixed; bottom:0`): el `<meta viewport>` **no debe llevar `viewport-fit=cover`**. Con él, Safari en iPhone extiende la página bajo su barra de direcciones inferior y ésta tapa los botones (lo reportó el usuario). Sin `cover`, el navegador respeta su barra y la nuestra queda encima. Los `env(safe-area-inset-*)` del CSS se quedan (valen 0 sin `cover`) por si algún día se hace PWA a pantalla completa; las alturas de `.app` y `.sidebar` usan `100dvh` con `100vh` de respaldo. **Sin verificar en un iPhone ni en un Android con la barra abajo real**: solo con el emulador de tamaño del navegador.
 - **Iconos:** SVG de trazo, al estilo Lucide. Los de plugins están en `src/views/plugin-icons.js`: puzzle, chart, trending, pie, timer, clock, calendar, check, list, kanban, users, briefcase, mail, message, bell, file, folder, book, database, download, link, globe, tag, wallet, target, bolt, sparkles, code, shield, star.
 - **Tarjetas:** fondo surface, borde 1px `--line`, radio lg, `shadow-sm`; al pasar el ratón, `line-strong` y `shadow`. Mismo acabado en clientes, contraseñas y plugins.
 - **Etiquetas y PRs**: `.label-chip` (color con `--lc`, mezcla con `color-mix`) y `.pr-chip` (`is-merged`, `is-closed`) en `assets/css/views/github.css`; línea de tiempo `.gh-timeline`.

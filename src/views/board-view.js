@@ -19,6 +19,7 @@
       this.summary = document.getElementById('summary');
       this.search = document.getElementById('search');
       this.filterCliente = document.getElementById('filterCliente');
+      this.filterAssignee = document.getElementById('filterAssignee');
       this.btnNew = document.getElementById('btnNew');
       this.tabs = document.getElementById('boardTabs');
 
@@ -82,6 +83,7 @@
     bindFilters(handler){
       this.search.addEventListener('input', handler);
       this.filterCliente.addEventListener('change', handler);
+      this.filterAssignee.addEventListener('change', handler);
     }
 
     bindOpen(handler){
@@ -212,7 +214,26 @@
     }
 
     filters(){
-      return {query:this.search.value, cliente:this.filterCliente.value};
+      return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value};
+    }
+
+    /* Filtro por miembro (solo en equipos). Sin miembros se vacía y se olvida la elección. */
+    setAssigneeOptions(members, meUid){
+      const T = Workhub.views.team;
+      const current = this.filterAssignee.value;
+      const others = members.filter((m) => m.uid !== meUid);
+      const opts = members.length
+        ? [['', Workhub.t('Todos los miembros')], ['me', Workhub.t('Asignadas a mí')], ['none', Workhub.t('Sin asignar')]]
+            .concat(others.map((m) => [m.uid, m.name]))
+        : [['', Workhub.t('Todos los miembros')]];
+      this.filterAssignee.innerHTML = opts.map((o) => '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>').join('');
+      this.filterAssignee.value = opts.some((o) => o[0] === current) ? current : '';
+    }
+
+    /* «Mis tareas»: filtra por las asignadas a mí. */
+    filterMine(){
+      this.filterAssignee.value = 'me';
+      this.filterAssignee.dispatchEvent(new Event('change', {bubbles:true}));
     }
 
     setClientOptions(names){
@@ -278,7 +299,7 @@
           ? items.map(cardHtml).join('')
           : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
         return '<section class="col' + state + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
-          '<header class="col-head" draggable="true" title="Arrastra para mover la columna">' +
+          '<header class="col-head" draggable="' + (Workhub.views.team.canEdit() ? 'true' : 'false') + '" title="Arrastra para mover la columna">' +
             '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count" title="' + (s.limit ? 'Límite: ' + s.limit + ' tarjetas' : '') + '">' + countTxt + '</span></span>' +
             '<span class="col-tools">' +
               '<button type="button" class="col-add" data-add-status="' + esc(s.key) + '" aria-label="Nueva tarea en ' + esc(s.label) + '" title="Nueva tarea en ' + esc(s.label) + '">' + PLUS_ICON + '</button>' +
@@ -312,13 +333,16 @@
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
     const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';
     const gh = t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '';
+    const T = Workhub.views.team;
+    const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
     const meta = [
       gh,
       t.contacto ? '<span class="contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
-      due
+      due,
+      who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');
-    return '<article class="card" draggable="true" tabindex="0" data-id="' + esc(t.id) + '">' +
+    return '<article class="card" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" data-id="' + esc(t.id) + '">' +
       (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
       '<h3 translate="no">' + esc(t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +

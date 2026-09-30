@@ -180,10 +180,9 @@
 
   /* ---------- Interfaz que usa la app (window.claude) ---------- */
 
-  /* Base de datos acotada a users/{uid}: db.collection('tasks'),
+  /* Base de datos acotada a un documento: db.collection('tasks'),
      db.doc('vault_meta/check'), etc. */
-  function userDb(uid){
-    const root = firestore.collection('users').doc(uid);
+  function scopedDb(root){
     return {
       collection: (path) => {
         const parts = path.split('/').filter(Boolean);
@@ -198,6 +197,43 @@
         return ref;
       }
     };
+  }
+
+  /* Datos de la cuenta que ha entrado (para los miembros de un equipo). */
+  function profileOf(user){
+    const email = String(user.email || '').toLowerCase();
+    const photo = Workhub.utils.urls.safeUrl(user.photoURL);
+    return {
+      uid: user.uid,
+      email: email,
+      name: String(user.displayName || (email ? email.split('@')[0] : 'Usuario')).slice(0, 80),
+      photo: photo && photo.indexOf('https:') === 0 ? photo : ''
+    };
+  }
+
+  /* Base de datos acotada a users/{uid}. Además da acceso a los proyectos de
+     equipo (teams/{id}), que no cuelgan de ningún usuario: team(tid) es la base
+     de datos de uno, y teams tiene sus consultas y las invitaciones. */
+  function userDb(user){
+    const uid = user.uid;
+    const me = profileOf(user);
+    const db = scopedDb(firestore.collection('users').doc(uid));
+    db.me = me;
+    db.team = (tid) => scopedDb(firestore.collection('teams').doc(tid));
+    db.teams = {
+      /* Equipos de los que soy miembro. */
+      query: () => firestore.collection('teams').where('memberIds', 'array-contains', uid),
+      doc: (tid) => firestore.collection('teams').doc(tid),
+      newId: () => firestore.collection('teams').doc().id,
+      /* Invitaciones que ha recibido mi correo. */
+      invitesForMe: () => firestore.collection('invites').where('email', '==', me.email),
+      /* Las que he enviado yo desde un equipo. */
+      invitesFrom: (tid) => firestore.collection('invites').where('teamId', '==', tid).where('invitedByUid', '==', uid),
+      invite: (id) => firestore.collection('invites').doc(id),
+      FieldValue: fb.firestore.FieldValue,
+      batch: () => firestore.batch()
+    };
+    return db;
   }
 
   function readAsDataUrl(blob){
@@ -237,25 +273,34 @@
     }));
   }
 
+  /* Imágenes de las notas. En un proyecto de equipo (window.__teamId, que fija
+     la app al abrirlo) van a teams/{id}/assets para que las vean todos los
+     miembros; en el resto, a las del usuario. */
   function userAssets(uid){
-    const col = firestore.collection('users').doc(uid).collection('assets');
+    const own = firestore.collection('users').doc(uid).collection('assets');
+    const shared = () => window.__teamId ? firestore.collection('teams').doc(window.__teamId).collection('assets') : null;
     const cache = {};
+    const read = (col, id) => col.doc(id).get().then((snap) => {
+      const data = snap.exists ? snap.data() : null;
+      return data && data.data ? data.data : null;
+    }).catch(() => null);
     window.__assetUrl = (id) => {
       if(cache[id]) return Promise.resolve(cache[id]);
-      return col.doc(id).get().then((snap) => {
-        const data = snap.exists ? snap.data() : null;
-        if(data && data.data) cache[id] = data.data;
-        return cache[id] || null;
+      const team = shared();
+      const first = team ? read(team, id) : Promise.resolve(null);
+      return first.then((url) => url || read(own, id)).then((url) => {
+        if(url) cache[id] = url;
+        return url;
       });
     };
     return {
       upload: (file) => compressImage(file).then((dataUrl) => {
-        return col.add({data:dataUrl, contentType:'image/jpeg', createdAt:Date.now()}).then((ref) => {
+        return (shared() || own).add({data:dataUrl, contentType:'image/jpeg', createdAt:Date.now()}).then((ref) => {
           cache[ref.id] = dataUrl;
           return {id:ref.id, url:dataUrl, contentType:'image/jpeg'};
         });
       }),
-      delete: (id) => col.doc(id).delete().then(() => { delete cache[id]; return {deleted:true}; })
+      delete: (id) => (shared() || own).doc(id).delete().then(() => { delete cache[id]; return {deleted:true}; })
     };
   }
 
@@ -276,7 +321,7 @@
 
   /* Sustituye el almacén local por el de este usuario. */
   function install(user){
-    const db = userDb(user.uid);
+    const db = userDb(user);
     const assets = userAssets(user.uid);
     window.__workhubBackend = 'firebase';
     window.__usingLocalStorageShim = false;

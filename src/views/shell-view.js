@@ -80,6 +80,16 @@
 
     /* Proyectos sin clientes: se ocultan la sección Clientes y todo lo que
        depende de ellos (filtros, campos de formulario, etiquetas). */
+    /* Elementos .team-only (filtro de miembros…) solo en proyectos de equipo. */
+    setTeamMode(on){
+      document.querySelectorAll('.team-only').forEach((el) => {
+        el.classList.toggle('team-off', !on);
+        /* Los <select> se muestran con un desplegable propio (Dropdown): también se oculta su envoltorio. */
+        const wrap = el.closest('.dd');
+        if(wrap) wrap.classList.toggle('team-off', !on);
+      });
+    }
+
     setClientsEnabled(on){
       this.clientsOn = on;
       document.body.classList.toggle('no-clients', !on);
@@ -148,7 +158,7 @@
         el.value = '';
         el.dispatchEvent(new Event('input', {bubbles:true}));
       });
-      ['filterCliente', 'calFilterCliente', 'filterClienteVault'].forEach((id) => {
+      ['filterCliente', 'calFilterCliente', 'filterClienteVault', 'filterAssignee'].forEach((id) => {
         const el = document.getElementById(id);
         if(!el || !el.value) return;
         el.value = '';

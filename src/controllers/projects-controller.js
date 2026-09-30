@@ -9,6 +9,7 @@
       this.projects = app.models.projects;
       this.view = view;
 
+      app.models.team.incoming.on('change', () => this.onInvitesChange());
       this.projects.on('change', () => {
         this.onProjectsChange();
         /* Un instante después: ProjectModel marca "loaded" en su propio listener, que va detrás de este. */
@@ -18,12 +19,21 @@
       this.view.bindMenuSource(() => ({
         projects: this.projects.list(),
         currentId: this.app.projectId,
-        hueOf: (p) => this.projects.hueOf(p)
+        hueOf: (p) => this.projects.hueOf(p),
+        invites: this.invites(),
+        canShare: this.app.models.team.enabled()
       }));
       this.view.bindMenu({
         pick: (id) => this.app.switchProject(id, true),
         edit: (id) => this.openEdit(id),
-        create: () => this.openNew()
+        create: () => this.openNew(),
+        share: () => this.app.controllers.team.open(),
+        accept: (id) => this.acceptInvite(id),
+        decline: (id) => this.declineInvite(id)
+      });
+      this.view.bindInviteActions({
+        accept: (id) => this.acceptInvite(id),
+        decline: (id) => this.declineInvite(id)
       });
       this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
       this.view.bindDelete((id) => this.remove(id));
@@ -50,12 +60,12 @@
       if(!this.projects.list().length){ this.startFirstRun(); return; }
       if(this.firstRunChecked) return;
       this.firstRunChecked = true;
-      if(this.projects.items.length) return;
+      if(this.projects.items.length || this.projects.teamItems.length) return;
       const db = this.app.rootDb;
       const empty = ['tasks', 'clients', 'contacts', 'meetings', 'vault'].map((name) =>
         db.collection(name).get().then((snap) => !snap.docs.length));
       Promise.all(empty).then((flags) => {
-        if(!flags.every(Boolean) || this.projects.items.length) return;
+        if(!flags.every(Boolean) || this.projects.items.length || this.projects.teamItems.length) return;
         this.startFirstRun();
       }).catch(() => { this.firstRunChecked = false; });
     }
@@ -65,6 +75,8 @@
       this.firstRun = true;
       document.body.classList.add('is-onboarding');
       this.view.openOnboarding();
+      /* Si ya te habían invitado a un equipo, puedes aceptarlo en vez de crear uno. */
+      this.view.renderInvites(this.invites());
     }
 
     finishFirstRun(){
@@ -87,11 +99,56 @@
       return this.projects.get(ProjectModel.MAIN_ID) || {id:ProjectModel.MAIN_ID, nombre:Workhub.t('Proyecto principal')};
     }
 
+    /* Invitaciones que ha recibido mi correo. */
+    invites(){
+      return this.app.models.team.incoming.items.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+
+    /* Llegó, se aceptó o se canceló una invitación. */
+    onInvitesChange(){
+      const list = this.invites();
+      this.view.setInviteBadge(list.length);
+      if(this.firstRun) this.view.renderInvites(list);
+    }
+
+    acceptInvite(id){
+      const inv = this.invites().find((i) => i.id === id);
+      if(!inv) return;
+      this.app.models.team.accept(inv).then(() => {
+        /* Cuando el equipo llegue a la lista se abre (ver onProjectsChange). */
+        this.pendingSwitch = Workhub.models.ProjectModel.teamKey(inv.teamId);
+        this.onProjectsChange();
+      }, () => toast.error('No se pudo aceptar la invitación. Puede que ya no exista.'));
+    }
+
+    declineInvite(id){
+      const inv = this.invites().find((i) => i.id === id);
+      if(inv) this.app.models.team.decline(inv).catch(() => toast.error('No se pudo rechazar la invitación.'));
+    }
+
+    /* Contexto de equipo del proyecto abierto: miembros, mi rol y qué se ve. */
+    applyTeam(p){
+      const T = Workhub.views.team;
+      const me = this.projects.rootDb && this.projects.rootDb.me ? this.projects.rootDb.me.uid : '';
+      T.set(p, this.projects.membersOf(p), me);
+      document.body.classList.toggle('team-project', T.enabled());
+      document.body.classList.toggle('is-readonly', !T.canEdit());
+      const sig = T.signature();
+      if(sig === this.teamSig) return;
+      this.teamSig = sig;
+      this.app.shell.setTeamMode(T.enabled());
+      const t = this.app.controllers.tasks;
+      if(t) t.applyTeam();
+      /* En un equipo todavía no hay gestor de contraseñas. */
+      if(T.enabled() && this.app.shell.isVisible('vault')) this.app.navigate('tasks');
+    }
+
     render(){
       const p = this.current();
       this.view.renderCurrent(p, this.projects.hueOf(p));
       this.app.applyProjectConfig(this.projects.configOf(p));
       this.applyLabels(p);
+      this.applyTeam(p);
       document.title = this.projects.list().length > 1 ? p.nombre + ' · Workhub' : 'Workhub';
     }
 
@@ -99,6 +156,19 @@
        recordado en este navegador es de otra cuenta), se pasa a otro. Si no
        queda ninguno, checkFirstRun pide crear uno. */
     onProjectsChange(){
+      /* Acabo de aceptar una invitación: abre ese equipo en cuanto llegue. */
+      if(this.pendingSwitch && this.projects.exists(this.pendingSwitch)){
+        const key = this.pendingSwitch;
+        this.pendingSwitch = null;
+        if(this.firstRun){
+          /* Cuenta nueva que entra en un equipo: no se queda con un proyecto vacío por defecto. */
+          this.projects.set(ProjectModel.MAIN_ID, {deleted:true, createdAt:0});
+          this.finishFirstRun();
+        }
+        this.justCreated = key;
+        this.app.switchProject(key, true);
+        return;
+      }
       const id = this.app.projectId;
       if(this.projects.loaded && !this.projects.exists(id) && id !== this.justCreated){
         const next = this.projects.list()[0];

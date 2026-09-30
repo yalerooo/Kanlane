@@ -104,6 +104,12 @@
       if(c.github && c.github.sync.isLinked()){
         list.push({title:t('Sincronizar con GitHub'), icon:ICONS.go, run:() => { app.navigate('tasks'); c.github.syncNow(false); }});
       }
+      if(Workhub.views.team.enabled()){
+        list.push({title:t('Mis tareas'), icon:ICONS.go, run:() => { app.navigate('tasks'); c.tasks.showMine(); }});
+      }
+      if(c.team && c.team.enabled()){
+        list.push({title:t('Compartir proyecto'), icon:ICONS.go, run:() => c.team.open()});
+      }
       list.push({title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()});
       list.push({title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {

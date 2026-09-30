@@ -282,8 +282,9 @@
 
     remove(id){
       if(!id || !this.vault.isReady()) return;
+      const snap = this.vault.snapshot(id);
       this.vault.removeEntry(id).then(() => {
-        toast.success('Credencial eliminada');
+        toast.undoable('Credencial eliminada', () => this.vault.restore(snap), 'Credencial restaurada');
         this.view.closeForm();
       }, () => {
         toast.error('No se pudo eliminar la credencial');

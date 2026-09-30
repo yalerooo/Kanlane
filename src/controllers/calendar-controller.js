@@ -15,6 +15,9 @@
       this.year = now.getFullYear();
       this.month = now.getMonth();
       this.selected = todayYmd();
+      this.mode = 'month';
+      try{ const saved = localStorage.getItem('workhub_cal_mode'); if(saved === 'week' || saved === 'day') this.mode = saved; }catch(e){}
+      this.view.setMode(this.mode);
 
       this.tasks.on('change', () => this.render());
       this.meetings.on('change', () => this.render());
@@ -26,8 +29,9 @@
       });
 
       this.view.bindToolbar({
-        prev: () => this.shiftMonth(-1),
-        next: () => this.shiftMonth(1),
+        prev: () => this.shift(-1),
+        next: () => this.shift(1),
+        mode: (m) => this.setMode(m),
         today: () => { this.selectDate(todayYmd()); this.render(); },
         newMeeting: () => this.openNewMeeting(this.selected),
         filter: () => this.render()
@@ -73,7 +77,7 @@
     render(){
       if(!this.view.isVisible()) return;
       const map = this.buckets();
-      this.view.render(this.year, this.month, this.selected, map);
+      this.view.render(this.year, this.month, this.selected, map, this.mode);
       this.view.renderDay(this.selected, map[this.selected]);
       this.fillExtensions();
     }
@@ -83,6 +87,26 @@
       const slot = document.getElementById('calExtSlot');
       slot.setAttribute('data-ext-context', JSON.stringify({date:this.selected}));
       Workhub.views.extensions.fillSlots(slot.parentNode);
+    }
+
+    setMode(mode){
+      if(mode !== 'month' && mode !== 'week' && mode !== 'day') return;
+      this.mode = mode;
+      try{ localStorage.setItem('workhub_cal_mode', mode); }catch(e){}
+      this.view.setMode(mode);
+      /* Al volver al mes se enseña el mes del día elegido. */
+      const d = parseYmd(this.selected);
+      this.year = d.getFullYear();
+      this.month = d.getMonth();
+      this.render();
+    }
+
+    /* Flechas: un mes, una semana o un día según la vista. */
+    shift(delta){
+      if(this.mode === 'month'){ this.shiftMonth(delta); return; }
+      const d = parseYmd(this.selected);
+      const step = this.mode === 'week' ? 7 : 1;
+      this.selectDate(Workhub.utils.dates.ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + delta * step)));
     }
 
     shiftMonth(delta){
@@ -95,7 +119,7 @@
     selectDate(date, scroll){
       this.selected = date;
       const d = parseYmd(date);
-      if(d.getFullYear() !== this.year || d.getMonth() !== this.month){
+      if(this.mode !== 'month' || d.getFullYear() !== this.year || d.getMonth() !== this.month){
         this.year = d.getFullYear();
         this.month = d.getMonth();
         this.render();
@@ -150,8 +174,9 @@
 
     removeMeeting(id){
       if(!id || !this.meetings.isReady()) return;
+      const snap = this.meetings.snapshot(id);
       this.meetings.remove(id).then(() => {
-        toast.success('Reunión eliminada');
+        toast.undoable('Reunión eliminada', () => this.meetings.restore(snap), 'Reunión restaurada');
         this.view.closeMeeting();
       }, () => {
         toast.error('No se pudo eliminar la reunión');

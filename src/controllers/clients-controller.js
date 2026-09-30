@@ -176,8 +176,10 @@
       if(!client || !this.clients.isReady() || !this.tasks.isReady()) return;
       this.view.setDeleting(btn);
       const name = client.nombre;
+      const taskSnap = this.tasks.snapshot(this.tasks.items.filter((t) => t.cliente === name).map((t) => t.id));
+      const clientSnap = this.clients.snapshot(client.id);
       this.clients.removeWithTasks(client.id, this.tasks).then(() => {
-        toast.success('Cliente «' + name + '» eliminado');
+        toast.undoable('Cliente «' + name + '» eliminado', () => this.clients.restore(clientSnap).then(() => this.tasks.restore(taskSnap)), 'Cliente «' + name + '» restaurado');
       }).catch(() => {
         toast.error('No se pudo eliminar el cliente. Inténtalo de nuevo.');
       }).finally(() => {

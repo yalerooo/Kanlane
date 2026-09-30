@@ -12,6 +12,7 @@
   const $ = (id) => document.getElementById(id);
 
   const FACT_ICONS = {
+    repeat: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
     due: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
     contact: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     created: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
@@ -27,6 +28,9 @@
       this.top = $('tvTop');
       this.title = $('tvTitle');
       this.facts = $('tvFacts');
+      this.checkWrap = $('tvChecklistWrap');
+      this.checkCount = $('tvChecklistCount');
+      this.checks = $('tvChecklist');
       this.descWrap = $('tvDescWrap');
       this.desc = $('tvDesc');
       this.notes = $('tvNotes');
@@ -64,6 +68,14 @@
       this.facts.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-action="assign-me"]');
         if(b && this.taskId) handler(this.taskId);
+      });
+    }
+
+    /* handler(taskId, itemId, done) */
+    bindChecklist(handler){
+      this.checks.addEventListener('change', (ev) => {
+        const row = ev.target.closest('[data-cid]');
+        if(row && this.taskId) handler(this.taskId, row.getAttribute('data-cid'), ev.target.checked);
       });
     }
 
@@ -132,6 +144,7 @@
       this.facts.innerHTML = [
         assigneesFact(t),
         fact('due', 'Fecha límite', dueHtml(t)),
+        t.repeat ? fact('repeat', 'Se repite', esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || ''))) : '',
         t.contacto ? fact('contact', 'Contacto', esc(t.contacto)) : '',
         ghFact(t),
         known(t.createdAt) ? fact('created', 'Creada', esc(fmtDateTime(t.createdAt))) : '',
@@ -140,6 +153,14 @@
 
       this.descWrap.hidden = !t.desc;
       this.desc.textContent = t.desc || '';
+
+      const items = Array.isArray(t.checklist) ? t.checklist : [];
+      const prog = TaskModel.checklistProgress(t);
+      this.checkWrap.hidden = !items.length;
+      this.checkCount.textContent = items.length ? prog.done + '/' + prog.total : '';
+      this.checks.innerHTML = items.map((c) =>
+        '<li data-cid="' + esc(c.id) + '"><label><input type="checkbox"' + (c.done ? ' checked' : '') + '>' +
+        '<span translate="no"' + (c.done ? ' class="is-done"' : '') + '>' + esc(c.text) + '</span></label></li>').join('');
 
       /* Etiquetas y pull requests (los datos completos de GitHub llegan después: renderGithub). */
       const L = Workhub.views.labels;

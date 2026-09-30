@@ -213,3 +213,7 @@
 }
 .stat-link:hover{text-decoration:underline;}
 @media (hover:none){.col-head{cursor:default;}}
+
+/* Subtareas y repetición en la tarjeta. */
+.card .meta .check-badge,.card .meta .repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-faint);}
+.card .meta .check-badge.is-complete{color:var(--st-done);}

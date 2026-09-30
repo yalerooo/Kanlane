@@ -99,3 +99,9 @@
   .tv-status-field .dd{flex:1;width:auto;}
 }
 .tv-fact-ic{display:inline-flex;color:var(--ink-faint);}
+
+/* Subtareas en la ficha. */
+.tv-checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;}
+.tv-checks label{display:flex;align-items:flex-start;gap:9px;padding:5px 2px;font-size:13.5px;line-height:1.4;cursor:pointer;}
+.tv-checks input{margin-top:2px;flex:none;}
+.tv-checks .is-done{color:var(--ink-faint);text-decoration:line-through;}

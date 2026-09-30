@@ -18,16 +18,6 @@
     reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
   };
 
-  /* Esqueleto con la forma del formulario de acceso: mientras se comprueba la sesión
-     la tarjeta ya tiene su tamaño y no da un salto cuando aparece el formulario. */
-  const SKELETON = '<span class="sr-only">Cargando…</span><div class="sk-stack" aria-hidden="true">' +
-    '<span class="sk sk-title"></span><span class="sk sk-sub"></span>' +
-    '<span class="sk sk-btn sk-first"></span><span class="sk sk-btn"></span><span class="sk sk-divider"></span>' +
-    '<span class="sk sk-label"></span><span class="sk sk-input"></span>' +
-    '<span class="sk sk-label"></span><span class="sk sk-input"></span>' +
-    '<span class="sk sk-btn is-primary"></span>' +
-    '<span class="sk sk-line"></span><span class="sk sk-divider"></span><span class="sk sk-btn"></span></div>';
-
   class AuthView {
     constructor(){
       this.screen = $('authScreen');
@@ -126,21 +116,23 @@
 
     /* ---------- Estados ---------- */
 
+    /* Comprobando la sesión: no se pinta nada (negro), o el esqueleto de la página si ya
+       había entrado antes (lo pone boot.js). Solo aparece algo si hay que iniciar sesión. */
     showLoading(){
-      document.body.classList.add('is-authing');
-      this.screen.hidden = false;
-      this.loading.hidden = false;
-      this.loading.classList.remove('is-error', 'is-verify');
-      this.loading.classList.add('is-skeleton');
-      this.loading.innerHTML = SKELETON;
-      this.panel.hidden = true;
+      this.screen.hidden = true;
+    }
+
+    /* Ya hay sesión y se están cargando los datos: esqueleto de la página principal. */
+    showAppSkeleton(){
+      document.documentElement.classList.add('skel-on');
+      this.screen.hidden = true;
     }
 
     showLoadError(onRetry){
+      window.__hideBootSkeleton();
       this.screen.hidden = false;
       this.panel.hidden = true;
       this.loading.hidden = false;
-      this.loading.classList.remove('is-skeleton');
       this.loading.classList.add('is-error');
       this.loading.innerHTML = '<span>No se pudo conectar con el servicio de acceso. Comprueba tu conexión.</span>';
       const btn = document.createElement('button');
@@ -154,6 +146,7 @@
     /* providers: lista de claves ('google', 'github', …, 'password').
        allowSignup: false oculta "Crear una cuenta". */
     showSignIn(providers, allowSignup){
+      window.__hideBootSkeleton();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.loading.hidden = true;
@@ -174,11 +167,12 @@
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
        resend() → Promise<bool>, signOut()} */
     showVerify(email, handlers){
+      window.__hideBootSkeleton();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.panel.hidden = true;
       this.loading.hidden = false;
-      this.loading.classList.remove('is-error', 'is-skeleton');
+      this.loading.classList.remove('is-error');
       this.loading.classList.add('is-verify');
       this.loading.textContent = '';
       const title = document.createElement('strong');

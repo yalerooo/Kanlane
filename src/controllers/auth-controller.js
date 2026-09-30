@@ -8,6 +8,15 @@
   const MIN_PASSWORD = 8;
   /* Datos de la sesión que se guardan en este navegador y se borran al salir. */
   const SESSION_PREFS = ['workhub_project'];
+  /* Modo invitado: solo el nombre, en este navegador. Los datos van al almacén local (IndexedDB). */
+  const GUEST_KEY = 'workhub_guest';
+
+  function guestName(){
+    try{
+      const g = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
+      return g && typeof g.name === 'string' && g.name.trim() ? g.name.trim().slice(0, 40) : '';
+    }catch(e){ return ''; }
+  }
 
   const ERRORS = {
     'auth/invalid-email': 'El correo no es válido.',
@@ -43,7 +52,9 @@
       this.app = app;
       this.view = view;
       this.user = null;
+      this.guest = '';
 
+      this.view.bindGuest((name) => this.enterGuest(name));
       this.view.bindProvider((key) => this.signInWith(key));
       this.view.bindEmail((mode, values) => this.submitEmail(mode, values));
       this.view.bindSignOut(() => this.signOut());
@@ -59,10 +70,35 @@
         document.documentElement.classList.remove('auth-gate');
         return Promise.resolve();
       }
+      /* Invitado recordado: no se contacta con Firebase en ningún momento. */
+      const guest = guestName();
+      if(guest){
+        this.startGuest(guest);
+        return Promise.resolve();
+      }
       return new Promise((resolve) => {
         this.resolveGate = resolve;
         this.boot();
       });
+    }
+
+    /* Entra como invitado desde la pantalla de acceso. Se recarga para arrancar
+       limpio con el almacén local, sin ninguna sesión de Firebase de por medio. */
+    enterGuest(name){
+      name = String(name || '').trim().slice(0, 40);
+      if(!name) return;
+      try{ localStorage.setItem(GUEST_KEY, JSON.stringify({name:name})); }catch(e){
+        this.view.showMessage('Este navegador no permite guardar datos, así que no se puede usar el modo invitado.');
+        return;
+      }
+      location.reload();
+    }
+
+    /* El almacén local (window.claude del shim) ya está activo: solo hay que mostrar la app. */
+    startGuest(name){
+      this.guest = name;
+      this.view.hide();
+      this.view.showGuest(name);
     }
 
     boot(){
@@ -165,6 +201,13 @@
     /* Al salir se recarga la página (onUser) y, ya sin sesión, se borra la
        copia local de los datos (clearLocalCache). */
     signOut(){
+      if(this.guest){
+        /* Los datos se quedan en el navegador: al volver a entrar como invitado siguen ahí. */
+        try{ localStorage.removeItem(GUEST_KEY); }catch(e){}
+        SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
+        location.reload();
+        return;
+      }
       if(!this.user) return;
       SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
       firebase.signOut().catch(() => location.reload());

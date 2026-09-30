@@ -63,6 +63,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   2. `src/main.js` llama a `Workhub.i18n.observe()`, quita `i18n-pending` y crea `AppController` y `AuthController`.
 - **Modos de datos:**
   - Con Firebase configurado y servido por http(s), hay que iniciar sesión y los datos van a Firestore.
+  - **Modo invitado** (botón «Continuar como invitado» en el login): solo un nombre, sin cuenta ni Firebase; datos en IndexedDB (mismo almacén que el modo local). Se recuerda en `localStorage['workhub_guest']` ({name}); `AuthController.gate()` salta Firebase por completo si existe. Salir lo borra pero deja los datos del navegador.
   - Sin `apiKey`, la app funciona en **modo local** con IndexedDB, sin login ("Modo local" abajo en la barra lateral).
   - `start-workhub.bat` lanza el modo local en Windows.
 - **Firebase** (`src/config/firebase-config.js`):

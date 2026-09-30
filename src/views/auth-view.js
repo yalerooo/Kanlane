@@ -39,6 +39,11 @@
       this.switchWrap = $('authSwitch');
       this.switchText = $('authSwitchText');
       this.switchLink = $('authSwitchLink');
+      this.guest = $('authGuest');
+      this.guestBtn = $('authGuestBtn');
+      this.guestForm = $('authGuestForm');
+      this.guestName = $('authGuestName');
+      this.guestMsg = $('authGuestMsg');
       this.mode = 'signin';
       this.hasPassword = true;
       this.allowSignup = true;
@@ -63,6 +68,10 @@
         ev.preventDefault();
         this.setMode(this.mode === 'signin' ? 'signup' : 'signin');
       });
+      this.guestBtn.addEventListener('click', () => {
+        this.guestForm.hidden = !this.guestForm.hidden;
+        if(!this.guestForm.hidden) this.guestName.focus();
+      });
       this.forgot.addEventListener('click', (ev) => {
         ev.preventDefault();
         this.setMode('reset');
@@ -84,6 +93,21 @@
         ev.preventDefault();
         this.clearMessage();
         handler(this.mode, {name:this.name.value.trim(), email:this.email.value.trim(), password:this.pass.value});
+      });
+    }
+
+    /* handler(nombre) */
+    bindGuest(handler){
+      this.guestForm.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        this.guestMsg.hidden = true;
+        const name = this.guestName.value.trim();
+        if(!name){
+          this.guestMsg.textContent = 'Escribe tu nombre.';
+          this.guestMsg.hidden = false;
+          return;
+        }
+        handler(name);
       });
     }
 
@@ -210,6 +234,7 @@
       this.providersEl.hidden = mode === 'reset' || !this.providersEl.children.length;
       this.divider.hidden = mode === 'reset' || !this.providersEl.children.length || !this.hasPassword;
       this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
+      this.guest.hidden = mode === 'reset';
       this.clearMessage();
     }
 
@@ -227,6 +252,19 @@
     clearMessage(){ this.msg.hidden = true; }
 
     /* ---------- Cuenta ---------- */
+
+    /* Invitado: sin cuenta, los datos viven solo en este navegador. */
+    showGuest(name){
+      this.accountBox.hidden = false;
+      this.accountName.textContent = name;
+      this.accountMail.textContent = Workhub.t('Invitado');
+      this.accountAvatar.style.setProperty('--h', hueFor(name));
+      this.accountAvatar.textContent = initials(name);
+      this.settingsAccount.hidden = false;
+      this.settingsAccountText.textContent = Workhub.t('Modo invitado: tus datos se guardan solo en este navegador.');
+      $('btnSignOut').title = Workhub.t('Salir del modo invitado');
+      $('btnSignOutSettings').textContent = Workhub.t('Salir del modo invitado');
+    }
 
     showAccount(user){
       const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario');

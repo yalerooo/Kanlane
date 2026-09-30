@@ -14,6 +14,8 @@
   const MAIL_ICON = svg(13, '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>');
   const PHONE_ICON = svg(13, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>');
   const BOARD_ICON = svg(15, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>');
+  const USERS_ICON = svg(15, '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>');
+  const ARROW_ICON = svg(14, '<path d="M7 17L17 7M8 7h9v9"/>');
   const LOCK_ICON = svg(15, '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
   const $ = (id) => document.getElementById(id);
 
@@ -45,6 +47,8 @@
       this.formNew = $('formNewClient');
       this.newName = $('newClientName');
       this.btnNewContact = $('btnNewContact');
+      this.listLabel = $('crmListLabel');
+      this.count = $('crmCount');
     }
 
     /* ---------- Eventos ---------- */
@@ -165,6 +169,8 @@
        state: {selectedId, query, editing, pendingDelete, colorOpen, colors, hasAny} */
     render(entries, state){
       const q = state.query;
+      this.listLabel.hidden = !state.hasAny || !entries.length;
+      this.count.textContent = entries.filter((e) => e.client).length || '';
       if(!state.hasAny){
         this.list.hidden = true;
         this.detail.hidden = true;
@@ -200,11 +206,13 @@
       let meta;
       if(q && e.matches && !e.nameMatch) meta = plural(e.matches, 'contacto coincide', 'contactos coinciden');
       else meta = e.contacts.length ? plural(e.contacts.length, 'contacto', 'contactos') : 'Sin contactos';
-      if(!orphan && e.stats.open) meta += ' · ' + plural(e.stats.open, 'tarea abierta', 'tareas abiertas');
+      const badge = !orphan && e.stats.open
+        ? '<span class="crm-badge" title="' + esc(Workhub.t(plural(e.stats.open, 'tarea abierta', 'tareas abiertas'))) + '">' + e.stats.open + '</span>'
+        : '';
       return '<button type="button" class="crm-item' + (orphan ? ' is-orphan' : '') + '" role="option" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '" data-client="' + esc(e.id) + '"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' +
         '<span class="avatar is-square is-sm' + (orphan ? ' is-lock' : '') + '" aria-hidden="true">' + (orphan ? '?' : esc(initials(e.nombre))) + '</span>' +
         '<span class="crm-item-text"><span class="crm-item-name" translate="no">' + (orphan ? esc(e.nombre) : highlight(e.nombre, q)) + '</span>' +
-        '<span class="crm-item-meta">' + esc(meta) + '</span></span>' +
+        '<span class="crm-item-meta">' + esc(meta) + '</span></span>' + badge +
         '</button>';
     }
 
@@ -225,9 +233,7 @@
       } else {
         const meta = orphan
           ? 'Contactos cuyo cliente ya no existe. Edítalos para asignarles uno.'
-          : [plural(e.contacts.length, 'contacto', 'contactos'),
-             e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + (e.stats.open ? ' (' + e.stats.open + ' abierta' + (e.stats.open === 1 ? '' : 's') + ')' : '') : 'Sin tareas']
-            .join(' · ');
+          : (e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + ' en total' : 'Sin tareas todavía');
         head = '<div class="crm-head"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' + back +
           (orphan
             ? '<span class="avatar is-square is-lock" aria-hidden="true">?</span>'
@@ -251,20 +257,29 @@
           '<button type="button" class="btn btn-danger btn-sm" data-action="confirm-delete">Eliminar cliente</button></div></div>'
         : '';
 
+      const stat = (icon, n, label, action, title) => {
+        const inner = '<span class="crm-stat-top">' + icon + (action ? '<span class="crm-stat-go">' + ARROW_ICON + '</span>' : '') + '</span>' +
+          '<b>' + n + '</b><span class="crm-stat-label">' + esc(Workhub.t(label)) + '</span>';
+        return action
+          ? '<button type="button" class="crm-stat is-link" data-action="' + action + '" title="' + esc(Workhub.t(title)) + '">' + inner + '</button>'
+          : '<div class="crm-stat">' + inner + '</div>';
+      };
       const shortcuts = orphan ? '' :
-        '<div class="crm-shortcuts">' +
-        '<button type="button" class="crm-shortcut" data-action="view-tasks">' + BOARD_ICON + '<span>Ver tareas</span><em>' + (e.stats.open || '') + '</em></button>' +
-        '<button type="button" class="crm-shortcut" data-action="view-vault">' + LOCK_ICON + '<span>Ver contraseñas</span><em>' + (e.vaultCount || '') + '</em></button>' +
-        '<div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div>' +
-        '</div>';
+        '<div class="crm-stats">' +
+        stat(USERS_ICON, e.contacts.length, 'Contactos') +
+        stat(BOARD_ICON, e.stats.open || 0, 'Tareas abiertas', 'view-tasks', 'Ver tareas') +
+        stat(LOCK_ICON, e.vaultCount || 0, 'Contraseñas', 'view-vault', 'Ver contraseñas') +
+        '</div>' +
+        '<div class="crm-shortcuts"><div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div></div>';
 
       const people = e.contacts.length
         ? '<div class="people">' + e.contacts.map((c) => personHtml(c, q)).join('') + '</div>'
-        : '<div class="people-empty">' + (orphan ? 'No hay contactos sin cliente.' : 'Aún no hay personas de contacto para este cliente.') + '</div>';
+        : '<div class="people-empty"><p>' + esc(Workhub.t(orphan ? 'No hay contactos sin cliente.' : 'Aún no hay personas de contacto para este cliente.')) + '</p>' +
+          (orphan ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-action="add-contact">' + PLUS_ICON + esc(Workhub.t('Añadir contacto')) + '</button>') + '</div>';
 
       return head + color + confirm + shortcuts +
         '<div class="crm-section">' +
-          '<div class="crm-section-head"><h3>Personas de contacto</h3>' +
+          '<div class="crm-section-head"><h3>Personas de contacto' + (e.contacts.length ? '<span class="crm-count">' + e.contacts.length + '</span>' : '') + '</h3>' +
           (orphan ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-action="add-contact">' + PLUS_ICON + 'Añadir contacto</button>') +
           '</div>' + people +
         '</div>';

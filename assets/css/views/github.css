@@ -5,6 +5,8 @@
 .gh-form .field{margin-bottom:0;}
 .gh-lead,.gh-note{margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft);}
 .gh-note{font-size:12.5px;}
+.gh-note.is-warn{color:var(--ink);background:var(--surface-2,var(--bg));border:1px solid var(--line);border-radius:var(--r-md,7px);padding:10px 12px;margin-bottom:8px;}
+.gh-token-missing{display:grid;gap:8px;}
 .gh-actions{display:flex;flex-wrap:wrap;gap:8px;}
 .gh-project{display:flex;align-items:flex-start;gap:10px;color:var(--ink);}
 .gh-project > svg{flex:none;margin-top:2px;}

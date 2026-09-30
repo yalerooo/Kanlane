@@ -10,6 +10,8 @@
   const SESSION_PREFS = ['workhub_project'];
   /* Modo invitado: solo el nombre, en este navegador. Los datos van al almacén local (IndexedDB). */
   const GUEST_KEY = 'workhub_guest';
+  /* «Ya entró antes en este navegador»: lo lee boot.js para pintar el esqueleto sin esperar a Firebase. */
+  const SESSION_KEY = 'workhub_session';
 
   function guestName(){
     try{
@@ -125,6 +127,7 @@
       } else if(this.user){
         location.reload();
       } else {
+        try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
         firebase.clearLocalCache();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
       }
@@ -132,7 +135,8 @@
 
     /* Sesión válida: caché local, datos del usuario y arranque de la app. */
     enter(user){
-      this.view.showLoading();
+      try{ localStorage.setItem(SESSION_KEY, '1'); }catch(e){}
+      this.view.showAppSkeleton();
       firebase.startSession().then(() => {
         firebase.install(user);
         this.view.hide();
@@ -210,6 +214,7 @@
       }
       if(!this.user) return;
       SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
+      try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
       firebase.signOut().catch(() => location.reload());
     }
   }

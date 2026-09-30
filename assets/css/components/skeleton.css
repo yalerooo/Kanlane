@@ -1,0 +1,123 @@
+/* ---------- Esqueletos de carga ----------
+   Los estados de carga se pintan con bloques grises que brillan (.sk), con la forma
+   de lo que va a aparecer, y no con «Cargando…» y un círculo.
+   - .app-skel: esqueleto de toda la página (barra lateral + tablero). Aparece desde el
+     primer fotograma si ya se había entrado antes en este navegador (html.boot-session,
+     lo pone boot.js) o mientras se cargan los datos tras iniciar sesión (html.skel-on).
+     Se quita con window.__hideBootSkeleton() cuando llegan las tareas.
+   - .bsk: esqueleto de las columnas del tablero (también dentro de la página). */
+
+.sk{
+  display:block;
+  border-radius:var(--r-md);
+  background:linear-gradient(90deg, var(--surface-2) 0%, var(--hover) 50%, var(--surface-2) 100%);
+  background-size:220% 100%;
+  animation:sk-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes sk-shimmer{from{background-position:120% 0;}to{background-position:-120% 0;}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none;}}
+
+/* Columnas del tablero */
+.bsk{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+  height:calc(100dvh - 240px);
+  min-height:420px;
+  overflow:hidden;
+}
+.bsk[hidden]{display:none;}
+.bsk-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:0 8px 8px;
+  background:color-mix(in srgb, var(--surface-2) 70%, var(--bg));
+  border-radius:var(--r-xl);
+}
+.bsk-head{display:flex;align-items:center;gap:8px;height:44px;padding:0 6px;}
+.bsk-head .dot{width:8px;height:8px;border-radius:50%;}
+.bsk-head .lbl{height:11px;}
+.bsk-card{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:13px 12px 14px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+}
+.bsk-card .chip{width:92px;height:17px;border-radius:5px;}
+.bsk-card .l1{height:13px;}
+.bsk-card .l2{height:10px;}
+
+/* Página entera */
+.app-skel{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:49;
+  grid-template-columns:236px minmax(0, 1fr);
+  background:var(--bg);
+  overflow:hidden;
+}
+html.boot-session .app-skel,html.skel-on .app-skel{display:grid;}
+
+.app-skel-side{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px 10px 10px;
+  background:var(--sidebar);
+  border-right:1px solid var(--line);
+}
+.ask-project,.ask-topbar{display:flex;align-items:center;gap:10px;}
+.ask-project{padding:2px 8px 10px;}
+.ask-mark{width:34px;height:34px;border-radius:9px;flex:none;}
+.ask-lines{display:grid;gap:7px;flex:1;min-width:0;}
+.ask-lines .sk:first-child{height:11px;width:68%;}
+.ask-lines .sk:last-child{height:9px;width:38%;}
+.ask-search{height:32px;}
+.ask-nav{display:grid;gap:4px;margin-top:4px;}
+.ask-item{display:flex;align-items:center;gap:10px;height:32px;padding:0 8px;}
+.ask-item .ic{width:16px;height:16px;border-radius:5px;flex:none;}
+.ask-item .tx{height:11px;}
+.ask-label{width:30%;height:9px;margin:14px 8px 4px;}
+.ask-foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding:8px;}
+.ask-avatar{width:28px;height:28px;border-radius:50%;flex:none;}
+
+.app-skel-main{min-width:0;padding:22px 32px 24px;overflow:hidden;}
+.ask-topbar,.ask-round,.ask-tabbar{display:none;}
+.ask-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding-bottom:18px;
+  margin-bottom:18px;
+  border-bottom:1px solid var(--line);
+}
+.ask-title{width:104px;height:22px;margin-bottom:9px;}
+.ask-sub{width:min(460px, 58vw);height:12px;}
+.ask-cta{width:132px;height:36px;flex:none;}
+.ask-toolbar{display:flex;gap:10px;margin-bottom:14px;}
+.ask-tsearch{flex:1 1 240px;max-width:520px;height:40px;}
+.ask-tselect{width:210px;height:40px;}
+
+@media (max-width:900px){
+  .app-skel{grid-template-columns:minmax(0, 1fr);grid-template-rows:minmax(0, 1fr) auto;}
+  .ask-tabbar{display:flex;justify-content:space-around;align-items:center;height:62px;padding:0 8px;background:var(--sidebar);border-top:1px solid var(--line);}
+  .ask-tab{display:grid;justify-items:center;gap:6px;}
+  .ask-tab .ic{width:20px;height:20px;border-radius:6px;}
+  .ask-tab .tx{width:34px;height:8px;}
+  .app-skel-side{display:none;}
+  .app-skel-main{padding:0 16px 16px;}
+  .ask-topbar{display:flex;height:56px;margin:0 -16px 14px;padding:0 16px;border-bottom:1px solid var(--line);}
+  .ask-round{display:block;width:34px;height:34px;border-radius:9px;flex:none;}
+  .ask-head{padding-bottom:14px;margin-bottom:14px;}
+  .ask-cta{width:44px;height:38px;}
+  .ask-tselect{display:none;}
+  .ask-tsearch{max-width:none;}
+  .bsk{grid-template-columns:minmax(0, 1fr);height:auto;min-height:0;}
+  .bsk-col:nth-child(n+2){display:none;}
+}

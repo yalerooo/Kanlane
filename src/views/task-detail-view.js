@@ -16,6 +16,7 @@
     contact: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
     created: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
     updated: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    assignees: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     gh: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.72.5.1.68-.22.68-.49v-1.9c-2.78.62-3.37-1.21-3.37-1.21-.46-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.85.09-.66.35-1.12.64-1.38-2.22-.26-4.55-1.14-4.55-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9v2.81c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>'
   };
   const LOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
@@ -57,6 +58,14 @@
     /* ---------- Eventos hacia el controlador ---------- */
 
     bindClose(handler){ this.btnClose.addEventListener('click', handler); }
+
+    /* «Asignarme» / «Quitar mi asignación» en la ficha. */
+    bindAssignMe(handler){
+      this.facts.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-action="assign-me"]');
+        if(b && this.taskId) handler(this.taskId);
+      });
+    }
 
     bindEdit(handler){ this.btnEdit.addEventListener('click', () => handler(this.taskId)); }
 
@@ -121,6 +130,7 @@
          importadas de copias antiguas no traen fechas reales de creación). */
       const known = (ts) => ts > 100000;
       this.facts.innerHTML = [
+        assigneesFact(t),
         fact('due', 'Fecha límite', dueHtml(t)),
         t.contacto ? fact('contact', 'Contacto', esc(t.contacto)) : '',
         ghFact(t),
@@ -175,6 +185,21 @@
     }
 
     copy(btn, text){ return copyWithFeedback(btn, text); }
+  }
+
+  /* Quién tiene asignada la tarea (solo en equipos), con acceso rápido para asignármela. */
+  function assigneesFact(t){
+    const T = Workhub.views.team;
+    if(!T.enabled()) return '';
+    const who = T.assigned(t);
+    const mine = who.indexOf(T.meUid()) !== -1;
+    const list = who.length
+      ? who.map((uid) => '<span class="tv-assignee">' + T.avatar(T.member(uid), 'is-mini') + '<span translate="no">' + esc(T.name(uid)) + '</span></span>').join('')
+      : '<span class="tv-muted">' + esc(Workhub.t('Sin asignar')) + '</span>';
+    const btn = T.canEdit()
+      ? '<button type="button" class="btn btn-ghost btn-sm tv-assign-me" data-action="assign-me">' + esc(Workhub.t(mine ? 'Quitar mi asignación' : 'Asignármela')) + '</button>'
+      : '';
+    return fact('assignees', 'Asignada a', '<span class="tv-assignees">' + list + btn + '</span>');
   }
 
   /* Enlace al elemento de GitHub (solo direcciones de github.com). */

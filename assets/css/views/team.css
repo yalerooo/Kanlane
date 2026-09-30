@@ -1,0 +1,117 @@
+/* ---------- Trabajo en equipo ---------- */
+
+/* Lo que solo tiene sentido en un proyecto de equipo (ShellView.setTeamMode). */
+.team-off{display:none !important;}
+
+/* En un equipo todavía no hay gestor de contraseñas. */
+body.team-project #tabVault{display:none;}
+
+/* Rol de lector: solo lectura. */
+body.is-readonly #btnNew,
+body.is-readonly .col-add,
+body.is-readonly #btnTvEdit,
+body.is-readonly .tv-status-edit{display:none !important;}
+
+/* Avatares de miembros */
+.avatar.is-mini{width:20px;height:20px;font-size:8.5px;overflow:hidden;box-shadow:0 0 0 2px var(--surface);}
+.avatar.is-mini img,.avatar.is-sm img,.avatar.is-xs img{width:100%;height:100%;object-fit:cover;display:block;}
+.avatar-stack{display:inline-flex;align-items:center;}
+.avatar-stack .avatar + .avatar{margin-left:-6px;}
+.avatar-more{background:var(--surface-2);color:var(--ink-soft);font-size:8px;}
+
+/* Punto en el botón del proyecto cuando hay invitaciones */
+#btnProject{position:relative;}
+#btnProject.has-invites::after{
+  content:"";
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--accent-solid, var(--accent));
+  box-shadow:0 0 0 2px var(--sidebar, var(--surface));
+}
+
+/* Menú de proyectos: equipos e invitaciones */
+.project-team{display:inline-flex;color:var(--ink-faint);margin-left:6px;}
+.project-invites{display:grid;gap:6px;padding:2px 6px 6px;}
+.invite-row-item{
+  display:grid;
+  gap:8px;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--surface);
+}
+.invite-text{display:grid;gap:1px;font-size:12.5px;line-height:1.35;color:var(--ink-soft);}
+.invite-text strong{font-size:13px;color:var(--ink);font-weight:600;}
+.invite-btns{display:flex;gap:6px;}
+
+/* Invitaciones dentro del diálogo del primer proyecto */
+.invite-box{display:grid;gap:8px;margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);}
+.invite-box-title{margin:0;font-size:12.5px;font-weight:600;color:var(--ink);}
+.invite-box-or{margin:2px 0 0;font-size:12.5px;color:var(--ink-faint);}
+
+/* Diálogo de compartir */
+.share-points{margin:0 0 16px;padding-left:18px;display:grid;gap:6px;font-size:13px;line-height:1.5;color:var(--ink-soft);}
+.share-points strong{color:var(--ink);font-weight:600;}
+.member-list{list-style:none;margin:0;padding:0;display:grid;gap:2px;}
+.member-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line);}
+.member-row:last-child{border-bottom:none;}
+.member-text{flex:1;min-width:0;display:grid;gap:1px;}
+.member-name{font-size:13.5px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.member-name em{font-style:normal;color:var(--ink-faint);font-weight:400;}
+.member-mail{font-size:12px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.member-role-text{font-size:12.5px;color:var(--ink-soft);white-space:nowrap;}
+.member-role{
+  height:30px;
+  padding:0 8px;
+  font-family:inherit;
+  font-size:12.5px;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line-strong, var(--line));
+  border-radius:var(--r-md);
+}
+.invite-form-row{display:flex;gap:8px;}
+.invite-form-row input{flex:1;min-width:0;}
+.invite-form-row select{width:auto;flex:none;}
+#shInviteForm .field-help{margin-top:6px;}
+@media (max-width:600px){
+  .invite-form-row{flex-wrap:wrap;}
+  .invite-form-row input{flex:1 1 100%;}
+  .invite-form-row select,.invite-form-row .btn{flex:1;}
+}
+
+/* Asignaciones: selector en el formulario de la tarea */
+.assignee-picker{display:flex;flex-wrap:wrap;gap:6px;}
+.assignee-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  height:28px;
+  padding:0 10px 0 4px;
+  font-family:inherit;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  background:var(--surface);
+  border:1px solid var(--line-strong, var(--line));
+  border-radius:999px;
+  cursor:pointer;
+  transition:background .12s ease, border-color .12s ease, color .12s ease;
+}
+.assignee-chip:hover{background:var(--surface-2);}
+.assignee-chip.is-on{color:var(--ink);border-color:var(--accent);background:var(--accent-soft, var(--surface-2));}
+.assignee-chip .avatar{box-shadow:none;}
+.assignee-picker .field-help{margin:0;}
+
+/* En la tarjeta del tablero */
+.card-assignees{margin-left:auto;display:inline-flex;align-items:center;}
+.card .meta{align-items:center;}
+
+/* En la ficha de la tarea */
+.tv-assignees{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+.tv-assignee{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);}
+.tv-assignee .avatar{box-shadow:none;}
+.tv-assign-me{margin-left:2px;}

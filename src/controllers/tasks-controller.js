@@ -79,6 +79,7 @@
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
+      this.detail.bindAssignMe((id) => this.toggleMine(id));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
       this.detail.dlg.addEventListener('close', () => {
         if(!this.detail.isOpen()) this.releaseDetail();
@@ -88,7 +89,34 @@
     render(){
       const f = this.board.filters();
       this.board.setHidden(this.hiddenColumns());
-      this.board.render(this.tasks.filter(f.query, f.cliente), this.tasks.items);
+      this.board.render(this.tasks.filter(f.query, f.cliente, f.assignee), this.tasks.items);
+    }
+
+    /* Cambió el equipo del proyecto abierto (miembros, mi rol): filtro, tarjetas y ficha. */
+    applyTeam(){
+      const T = Workhub.views.team;
+      this.board.setAssigneeOptions(T.members(), T.meUid());
+      this.render();
+      this.refreshDetail();
+    }
+
+    /* «Mis tareas»: filtra el tablero por las asignadas a mí. */
+    showMine(){
+      this.board.filterMine();
+    }
+
+    /* Me asigno o me quito una tarea. */
+    toggleMine(id){
+      const T = Workhub.views.team;
+      const t = this.tasks.find(id);
+      if(!t || !T.enabled() || !T.canEdit()) return;
+      const me = T.meUid();
+      const now = T.assigned(t);
+      const next = now.indexOf(me) === -1 ? now.concat(me) : now.filter((u) => u !== me);
+      this.tasks.save(id, {assignees:next}).then(
+        () => toast.success(next.indexOf(me) === -1 ? 'Ya no la tienes asignada' : 'Te la has asignado'),
+        () => toast.error('No se pudo cambiar la asignación')
+      );
     }
 
     /* ---------- Columnas del tablero ---------- */
@@ -355,6 +383,7 @@
         const prev = id ? this.tasks.find(id) : null;
         values.cliente = prev ? (prev.cliente || '') : '';
       }
+      if(values.assignees === undefined) delete values.assignees;
       this.tasks.save(id, values).then(() => {
         toast.success(id ? 'Cambios guardados' : 'Tarea creada');
         this.closeDialog(true);

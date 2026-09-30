@@ -19,11 +19,14 @@ Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus 
 | Adivinar si un correo tiene cuenta | "Recuperar contraseña" responde lo mismo exista o no la cuenta. |
 | Fuerza bruta contra el inicio de sesión | Firebase bloquea temporalmente tras muchos intentos (`auth/too-many-requests`). |
 | Token de GitHub (integración con GitHub Projects) | Se guarda solo en el navegador (`localStorage`), nunca en Firestore ni en el repositorio. Ver [GITHUB.md](GITHUB.md#seguridad). |
+| Alguien entra en un proyecto de equipo sin permiso | Un equipo (`teams/{id}`) solo lo lee quien está en su lista de miembros, y solo propietarios y editores escriben datos. Para entrar hace falta una invitación dirigida a tu correo **verificado**, con el rol que te dieron; nadie puede darse un rol mayor ni meter a otros. Las invitaciones las crea solo el propietario y las lee solo su destinatario. Ver [EQUIPOS.md](EQUIPOS.md). |
 | Robo de la base de datos | Las contraseñas guardadas van cifradas en tu navegador (AES-256 + PBKDF2) antes de subir. En Firestore solo hay texto cifrado. |
 
 ## Lo que tienes que hacer en la consola (una vez)
 
 ### 1. Publicar las reglas nuevas
+
+Cada vez que cambia `firestore.rules` hay que publicarlas. Las últimas añaden los **proyectos de equipo** (`teams`, `invites`): sin ellas, compartir proyectos no funciona.
 
 Con la terminal, en la carpeta de Workhub:
 

@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="assets/css/views/vault.css">
   <link rel="stylesheet" href="assets/css/views/clients.css">
   <link rel="stylesheet" href="assets/css/views/github.css">
+  <link rel="stylesheet" href="assets/css/views/team.css">
   <link rel="stylesheet" href="assets/css/views/plugins.css">
   <link rel="stylesheet" href="assets/css/views/settings.css">
   <link rel="stylesheet" href="assets/css/views/auth.css">
@@ -146,6 +147,7 @@
     <div class="toolbar">
       <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
       <select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select>
       <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
       <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
       <div class="summary" id="summary" aria-live="polite"></div>
@@ -407,6 +409,10 @@
       <label for="fDesc">Descripción / notas</label>
       <textarea id="fDesc" maxlength="600" placeholder="Detalles, próximos pasos…"></textarea>
     </div>
+    <div class="field team-only team-off" id="fAssigneesField">
+      <span class="field-label" id="fAssigneesLabel">Asignada a</span>
+      <div class="assignee-picker" id="fAssignees" role="group" aria-labelledby="fAssigneesLabel"></div>
+    </div>
     <div class="field" id="fLabelsField">
       <span class="field-label" id="fLabelsLabel">Etiquetas</span>
       <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
@@ -556,6 +562,7 @@
   <form class="dlg-inner" id="formProject" method="dialog">
     <h2 id="dlgProjectTitle">Nuevo proyecto</h2>
     <p class="dlg-lead" id="pLead">Cada proyecto tiene sus propias tareas, calendario, contraseñas y etapas de trabajo.</p>
+    <div class="invite-box" id="pInvites" hidden></div>
     <input type="hidden" id="pId">
     <div class="field">
       <label for="pNombre">Nombre</label>
@@ -599,6 +606,51 @@
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlgShare" aria-labelledby="shTitle">
+  <div class="dlg-inner">
+    <h2 id="shTitle">Compartir proyecto</h2>
+    <p class="dlg-lead" id="shLead"></p>
+    <div id="shPersonal" hidden>
+      <ul class="share-points">
+        <li>Se crea un proyecto de equipo con una copia de sus tareas (con notas e imágenes), clientes, contactos y reuniones.</li>
+        <li>Las contraseñas guardadas no se copian: todavía no se pueden compartir con seguridad.</li>
+        <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
+      </ul>
+      <p class="type-note" id="shProgress" role="status" hidden></p>
+      <button type="button" class="btn btn-primary" id="shConvert">Convertir en proyecto de equipo</button>
+    </div>
+    <div id="shTeam" hidden>
+      <div class="field">
+        <span class="field-label">Miembros</span>
+        <ul class="member-list" id="shMembers"></ul>
+      </div>
+      <form class="field" id="shInviteForm" novalidate>
+        <label for="shEmail">Invitar por correo</label>
+        <div class="invite-form-row">
+          <input id="shEmail" type="email" maxlength="120" autocomplete="off" placeholder="nombre@empresa.com">
+          <select id="shRole" aria-label="Rol">
+            <option value="editor">Editor</option>
+            <option value="viewer">Lector</option>
+          </select>
+          <button type="submit" class="btn btn-primary" id="shInviteBtn">Invitar</button>
+        </div>
+        <p class="field-help">La persona verá la invitación al entrar en Workhub con ese correo. Tiene que tener una cuenta con ese mismo correo.</p>
+      </form>
+      <div class="field" id="shPendingWrap" hidden>
+        <span class="field-label">Invitaciones pendientes</span>
+        <ul class="member-list" id="shPending"></ul>
+      </div>
+    </div>
+    <p class="lock-error" id="shError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="shLeave" hidden>Salir del equipo</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnShareClose" data-dismiss>Cerrar</button>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="dlgColumn">
@@ -938,10 +990,12 @@
 <script src="src/models/project-model.js"></script>
 <script src="src/models/plugin-model.js"></script>
 <script src="src/models/github-sync.js"></script>
+<script src="src/models/team-model.js"></script>
 
 <!-- Vistas: DOM y renderizado -->
 <script src="src/views/client-colors.js"></script>
 <script src="src/views/labels.js"></script>
+<script src="src/views/team-ui.js"></script>
 <script src="src/views/plugin-icons.js"></script>
 <script src="src/views/extensions.js"></script>
 <script src="src/views/dropdown.js"></script>
@@ -963,6 +1017,7 @@
 <script src="src/views/project-view.js"></script>
 <script src="src/views/plugins-view.js"></script>
 <script src="src/views/github-view.js"></script>
+<script src="src/views/share-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="src/controllers/settings-controller.js"></script>
@@ -975,6 +1030,7 @@
 <script src="src/controllers/projects-controller.js"></script>
 <script src="src/controllers/plugins-controller.js"></script>
 <script src="src/controllers/github-controller.js"></script>
+<script src="src/controllers/team-controller.js"></script>
 <script src="src/controllers/command-controller.js"></script>
 <script src="src/controllers/auth-controller.js"></script>
 <script src="src/controllers/app-controller.js"></script>

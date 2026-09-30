@@ -63,8 +63,8 @@
   .sidebar-foot{padding:10px 0 0;width:100%;}
   .account{justify-content:center;padding:0;}
   .account-text,#btnSignOut{display:none;}
-  .storage-status{justify-content:center;padding:4px;margin:0;border-color:transparent;background:transparent;}
-  .storage-text,.storage-status .status-dot{display:none;}
+  .storage-status{justify-content:center;padding:0;}
+  .storage-status span:last-child{display:none;}
   .main{padding:20px 24px 22px;}
   .page-head p{max-width:56ch;}
   .board{gap:10px;}

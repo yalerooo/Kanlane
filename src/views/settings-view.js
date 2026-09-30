@@ -9,9 +9,7 @@
       this.swatches = $('accentSwatches');
       this.themeSegment = $('themeSegment');
       this.storageCard = $('storageCard');
-      this.storageCardIcon = $('storageCardIcon');
       this.storageTitle = $('storageTitle');
-      this.storageBadge = $('storageBadge');
       this.storageDesc = $('storageDesc');
       this.langSegment = $('langSegment');
     }
@@ -72,9 +70,7 @@
       });
       const info = Workhub.views.storageInfo(mode);
       this.storageCard.setAttribute('data-mode', info.mode);
-      this.storageCardIcon.innerHTML = info.icon;
       this.storageTitle.textContent = info.title;
-      this.storageBadge.textContent = info.badge;
       this.storageDesc.textContent = info.desc;
     }
   }

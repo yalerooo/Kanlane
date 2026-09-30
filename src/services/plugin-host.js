@@ -64,7 +64,9 @@
     'ui.addButton': 'ui:extend',
     'ui.removeButton': 'ui:extend',
     'ui.setTaskBadges': 'ui:extend',
-    'ui.setAppearance': 'appearance'
+    'ui.setAppearance': 'appearance',
+    /* Cuadro de formulario que dibuja Workhub (no cuenta como escritura). */
+    'ui.form': 'ui:extend'
   };
   const WRITE_METHODS = ['tasks.create', 'tasks.update', 'meetings.create', 'storage.set', 'storage.remove',
     'ui.addButton', 'ui.removeButton', 'ui.setTaskBadges', 'ui.setAppearance'];

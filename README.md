@@ -82,7 +82,7 @@ Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual qu
 Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la sección **Plugins**, aisladas en un `<iframe sandbox>`, y que solo acceden a los datos que el usuario les permite al instalarlas (nunca a las contraseñas guardadas).
 
 - **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (color, esquinas, densidad). No toca el HTML de Workhub: declara lo que quiere añadir y Workhub lo pinta.
-- **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo**, **Temporizador** (cronómetro desde la ficha de cada tarea y tiempo en cada tarjeta) y **Apariencia**. Se instalan con un clic desde la sección Plugins.
+- **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo**, **Temporizador** (cronómetro desde la ficha de cada tarea y tiempo en cada tarjeta), **Smart GP** (al terminar una tarea pide las horas, los días y el proyecto, y las muestra en un calendario) y **Apariencia**. Se instalan con un clic desde la sección Plugins.
 - **De terceros:** cualquiera puede publicar el suyo en una web con https, y se instala pegando su enlace.
 
 **Guía para crear un plugin:** [docs/PLUGINS.md](docs/PLUGINS.md) (SDK, permisos, API, eventos, estilos y una [plantilla](plugins/plantilla) lista para copiar).
@@ -91,7 +91,22 @@ Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la
 
 Qué protege el código y qué hay que activar en la consola de Firebase (verificación de correo, política de contraseñas, dominios autorizados…): [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
-## Cómo lanzarlo en local
+## Trabajar en local (con recarga automática)
+
+Para desarrollar sin esperar a que Cloudflare despliegue nada, hay un servidor local con Node (no necesita instalar nada más):
+
+```bash
+node scripts/dev.js
+```
+
+o doble clic en **`start-dev.bat`** (Windows). Abre `http://localhost:5500` y **la página se recarga sola cada vez que guardas** un archivo de `index.html`, `assets/`, `src/` o `plugins/`.
+
+- **Modo local (por defecto):** sin inicio de sesión; los datos se guardan solo en ese navegador. Es el modo seguro para probar cosas.
+- **Modo nube:** `node scripts/dev.js --nube` usa el Firebase real (te pide iniciar sesión, y **lo que cambies se guarda en tus datos de verdad**). `localhost` ya está autorizado en Firebase.
+- Otro puerto: `node scripts/dev.js --puerto 8080`.
+- Solo sirve lo que se publica (nunca `data-backup.json`, `docs/`, etc.). Lo que no se puede probar aquí es lo que depende de Cloudflare (el reenvío del inicio de sesión de `worker/` y las cabeceras de `_headers`).
+
+## Cómo lanzarlo en local con Python
 
 `index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).
 

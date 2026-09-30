@@ -130,6 +130,11 @@
               toast: function(message, opts){ return call('ui.toast', {message:message, type:(opts && opts.type) || 'success'}); },
               openTask: function(id){ return call('ui.openTask', {id:id}); },
               openPanel: function(){ return call('ui.openPanel'); },
+              /* Cuadro de formulario que dibuja Workhub (permiso ui:extend). Devuelve
+                 {clave: valor} o null si la persona lo cancela. spec: {title, subtitle,
+                 intro, submit, cancel, fields:[{key, type:'number'|'text'|'select'|'dates',
+                 label, hint, required, value, ...}]}. Ver docs/PLUGINS.md. */
+              form: function(spec){ return call('ui.form', spec); },
               /* Solo en segundo plano (permiso ui:extend). def: {id, location,
                  label, icon, tooltip, variant}. Si ya existe, se actualiza. */
               addButton: function(def){ return call('ui.addButton', def); },

@@ -1,0 +1,68 @@
+/* Formulario que piden los plugins (wh.ui.form). Mismo lenguaje que el resto de
+   diálogos: filas planas, borde fino, sin sombras ni degradados. */
+#dlgPluginForm{width:min(440px, calc(100vw - 32px));}
+.pf-who{display:inline-flex;align-items:center;gap:7px;margin:0 0 10px;font-size:12px;color:var(--ink-faint);}
+.pf-badge{
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  color:#fff;
+  background:hsl(var(--h, 214) 58% 50%);
+  border-radius:var(--r-sm);
+}
+.pf-badge svg{width:13px;height:13px;}
+#pfTitle{margin-bottom:4px;}
+.pf-sub{margin:0 0 4px;font-size:13.5px;font-weight:500;color:var(--ink);overflow-wrap:anywhere;}
+.pf-intro{margin:0 0 6px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+#pfBody{margin-top:14px;}
+#pfBody .field select{width:100%;}
+
+.pf-number{display:flex;align-items:center;gap:8px;}
+.pf-number input{width:120px;}
+.pf-unit{font-size:13px;color:var(--ink-soft);}
+
+.pf-new{display:grid;gap:10px;margin-top:8px;}
+.pf-new[hidden]{display:none;}
+.pf-swatches{display:flex;flex-wrap:wrap;gap:8px;}
+.pf-swatch{
+  width:22px;
+  height:22px;
+  padding:0;
+  background:var(--c);
+  border:2px solid var(--surface);
+  border-radius:50%;
+  box-shadow:0 0 0 1px var(--line-strong);
+  cursor:pointer;
+}
+.pf-swatch.is-selected{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--c);}
+
+/* Calendario para elegir varios días. */
+.pf-dates{padding:10px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);}
+.pf-dates-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.pf-dates-head strong{font-size:13px;font-weight:600;color:var(--ink);}
+.pf-dates-head strong::first-letter{text-transform:uppercase;}
+.pf-dates-week,.pf-dates-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:2px;}
+.pf-dates-week span{padding:4px 0;font-size:11px;text-align:center;color:var(--ink-faint);text-transform:uppercase;}
+.pf-day{
+  height:32px;
+  padding:0;
+  font:inherit;
+  font-size:12.5px;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:var(--r-md);
+  cursor:pointer;
+}
+.pf-day:hover{background:var(--hover);}
+.pf-day.is-today{border-color:var(--line-strong);}
+.pf-day.is-on{color:var(--accent-ink);background:var(--accent-solid);border-color:var(--accent-solid);font-weight:600;}
+.pf-dates-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);}
+.pf-dates-quick{display:flex;gap:12px;}
+
+@media (max-width:600px){
+  #dlgPluginForm{width:100% !important;}
+  .pf-day{height:36px;}
+}

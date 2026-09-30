@@ -450,6 +450,7 @@
     'No se pudo conectar al almacenamiento de tareas.':'Couldn\'t connect to task storage.',
 
     /* ---------- Calendario ---------- */
+    'Omitir':'Skip',
     'Mes anterior':'Previous month',
     'Mes siguiente':'Next month',
     'Nueva reunión':'New meeting',
@@ -779,6 +780,17 @@
     /* Plugins oficiales */
     'Informe de trabajo':'Work report',
     'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.':'Summary of tasks by client and status, what\'s overdue and what was done this week. Copy it as text or download it as CSV.',
+    'Smart GP':'Smart GP',
+    'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.':'When you finish a task, log the hours, the days and the project. Then see it all in a calendar by day and project.',
+    'Mes anterior':'Previous month',
+    'Mes siguiente':'Next month',
+    '{n} día seleccionado':'{n} day selected',
+    '{n} días seleccionados':'{n} days selected',
+    'Ayer':'Yesterday',
+    '+ Añadir nuevo…':'+ Add new…',
+    'Falta: {campo}':'Missing: {campo}',
+    '{campo}: mínimo {n}':'{campo}: minimum {n}',
+    '{campo}: máximo {n}':'{campo}: maximum {n}',
     'Temporizador':'Timer',
     'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.':'Track the time you spend on each task with a stopwatch and see totals per task and per client.',
     'Personaliza Workhub: cualquier color de acento, esquinas rectas o redondeadas y una densidad compacta o amplia.':'Customize Workhub: any accent color, square or rounded corners and a compact or roomy density.'

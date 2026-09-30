@@ -4,7 +4,7 @@
    hasta que hay sesión (AuthController quita la clase). También se aplica ya
    el tema guardado, para no ver un parpadeo.
    Va en un archivo aparte, no en línea, para que la política de seguridad
-   (CSP de netlify.toml) pueda prohibir cualquier script en línea. */
+   (CSP de scripts/build-public.js) pueda prohibir cualquier script en línea. */
 (function(){
   var root = document.documentElement;
   var c = window.WORKHUB_FIREBASE || {};

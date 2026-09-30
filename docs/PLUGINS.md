@@ -7,7 +7,7 @@ Un plugin es **una página web** que se integra en Workhub. Siempre con los perm
 - **Cambiar la apariencia**: color de acento, forma de las esquinas y densidad.
 - **Trabajar con los datos**: leer y crear tareas, consultar clientes, contactos y reuniones, guardar sus propios datos y mostrar avisos.
 
-Puedes publicarlo donde quieras (GitHub Pages, Netlify, tu propio servidor…) y cualquiera puede instalarlo pegando su enlace en **Plugins → Añadir**.
+Puedes publicarlo donde quieras (GitHub Pages, Cloudflare Pages, tu propio servidor…) y cualquiera puede instalarlo pegando su enlace en **Plugins → Añadir**.
 
 - [Cómo funciona](#cómo-funciona)
 - [Tu primer plugin en 5 minutos](#tu-primer-plugin-en-5-minutos)
@@ -73,13 +73,13 @@ El esqueleto mínimo es este:
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="https://workhub-project.netlify.app/plugins/sdk/workhub-plugin.css">
+  <link rel="stylesheet" href="https://workhub.yalero.net/plugins/sdk/workhub-plugin.css">
 </head>
 <body>
   <h1>Hola</h1>
   <p id="out" class="wh-muted">Conectando…</p>
 
-  <script src="https://workhub-project.netlify.app/plugins/sdk/workhub-plugin.js"></script>
+  <script src="https://workhub.yalero.net/plugins/sdk/workhub-plugin.js"></script>
   <script>
     WorkhubPlugin.connect({
       id: 'com.tu-nombre.hola',
@@ -350,7 +350,7 @@ El atributo `data-theme` de `<html>` vale `light` o `dark` por si quieres ajusta
 ## Publicarlo y probarlo
 
 - **Tiene que servirse por https.** Para desarrollar, también vale `http://localhost` o `http://127.0.0.1`: abre Workhub y pega `http://localhost:8080/index.html`, por ejemplo.
-- **Cualquier hosting estático sirve:** GitHub Pages, Netlify, Vercel, Cloudflare Pages…
+- **Cualquier hosting estático sirve:** GitHub Pages, Cloudflare Pages, Vercel, Netlify…
 - **No necesitas CORS ni cabeceras especiales.** Tu página se carga en un marco y el SDK usa `postMessage`.
 - **Enlaces que se abren fuera:** usa `<a target="_blank">`, que se abren en otra pestaña.
 - **Descargas y portapapeles:** puedes crear descargas con un `<a download>` y usar el portapapeles (`navigator.clipboard.writeText`).

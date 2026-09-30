@@ -91,7 +91,22 @@ Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la
 
 Qué protege el código y qué hay que activar en la consola de Firebase (verificación de correo, política de contraseñas, dominios autorizados…): [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 
-## Cómo lanzarlo en local
+## Trabajar en local (con recarga automática)
+
+Para desarrollar sin esperar a que Cloudflare despliegue nada, hay un servidor local con Node (no necesita instalar nada más):
+
+```bash
+node scripts/dev.js
+```
+
+o doble clic en **`start-dev.bat`** (Windows). Abre `http://localhost:5500` y **la página se recarga sola cada vez que guardas** un archivo de `index.html`, `assets/`, `src/` o `plugins/`.
+
+- **Modo local (por defecto):** sin inicio de sesión; los datos se guardan solo en ese navegador. Es el modo seguro para probar cosas.
+- **Modo nube:** `node scripts/dev.js --nube` usa el Firebase real (te pide iniciar sesión, y **lo que cambies se guarda en tus datos de verdad**). `localhost` ya está autorizado en Firebase.
+- Otro puerto: `node scripts/dev.js --puerto 8080`.
+- Solo sirve lo que se publica (nunca `data-backup.json`, `docs/`, etc.). Lo que no se puede probar aquí es lo que depende de Cloudflare (el reenvío del inicio de sesión de `worker/` y las cabeceras de `_headers`).
+
+## Cómo lanzarlo en local con Python
 
 `index.html` ya funciona por su cuenta, sin depender de claude.ai. Cuando lo abres fuera de un Artifact de Claude, detecta que no existe `window.claude` y usa en su lugar un almacén propio en el navegador (IndexedDB) con la misma forma — así que tareas, notas, imágenes, contactos, clientes y contraseñas se guardan igual, pero **solo en ese navegador y ese origen** (no se sincronizan con la versión de claude.ai ni entre distintos navegadores/ordenadores).
 

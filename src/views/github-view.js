@@ -98,7 +98,7 @@
     _form(s){
       const tokenField = s.hasToken
         ? (s.tokenKind === 'oauth'
-          ? '<p class="gh-note gh-connected">' + CHECK + '<span>' + esc(Workhub.t('Conectado con tu cuenta de GitHub en este navegador.')) + '</span> <button type="button" class="link-btn" data-gh="forget">' + esc(Workhub.t('Desconectar cuenta')) + '</button></p>'
+          ? '<p class="gh-note gh-connected">' + CHECK + '<span>' + esc(Workhub.t('Conectado con tu cuenta de GitHub en este navegador.')) + '</span> <button type="button" class="link-btn" data-gh="forget">' + esc(Workhub.t('Quitar mi acceso a GitHub')) + '</button></p>'
           : '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>')
         : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
@@ -170,9 +170,9 @@
           '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
           '<div class="gh-actions">' +
           (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
-          '<button type="button" class="btn btn-ghost" data-gh="unlink">Desconectar</button>' +
+          '<button type="button" class="btn btn-ghost" data-gh="unlink" title="' + esc(Workhub.t('Quita el enlace de este proyecto con el GitHub Project. No borra ninguna tarea.')) + '">' + esc(Workhub.t('Desvincular proyecto')) + '</button>' +
           (s.hasToken && s.tokenKind !== 'oauth' && s.canOAuth ? '<button type="button" class="btn btn-ghost" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
-          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget">' + esc(Workhub.t(s.tokenKind === 'oauth' ? 'Desconectar cuenta' : 'Olvidar token')) + '</button>' : '') +
+          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget" title="' + esc(Workhub.t('Quita el acceso a GitHub de este navegador. El proyecto sigue enlazado.')) + '">' + esc(Workhub.t(s.tokenKind === 'oauth' ? 'Quitar mi acceso a GitHub' : 'Olvidar token')) + '</button>' : '') +
           '</div>')) +
         '</div>';
     }

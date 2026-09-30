@@ -81,6 +81,7 @@
     startFirstRun(){
       if(this.firstRun) return;
       this.firstRun = true;
+      window.__hideBootSkeleton();
       document.body.classList.add('is-onboarding');
       this.view.openOnboarding();
       /* Si ya te habían invitado a un equipo, puedes aceptarlo en vez de crear uno. */

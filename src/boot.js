@@ -8,7 +8,16 @@
 (function(){
   var root = document.documentElement;
   var c = window.WORKHUB_FIREBASE || {};
-  if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)) root.classList.add('auth-gate');
+  if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)){
+    root.classList.add('auth-gate');
+    /* ¿Ya entró antes en este navegador? Se sabe al instante (Firebase tarda en responder):
+       si sí, desde el primer fotograma se ve el esqueleto de la página principal; si no,
+       negro hasta que aparezca el acceso. La marca la pone AuthController al entrar. */
+    try{ if(localStorage.getItem('workhub_session') === '1') root.classList.add('boot-session'); }catch(e){}
+    /* Por si la carga se atasca, el esqueleto no se queda para siempre. */
+    setTimeout(function(){ window.__hideBootSkeleton(); }, 15000);
+  }
+  window.__hideBootSkeleton = function(){ root.classList.remove('boot-session', 'skel-on'); };
   /* Idioma distinto del español: la página se oculta hasta que se traduce
      (src/i18n/i18n.js), para no ver los textos en español un instante. */
   try{

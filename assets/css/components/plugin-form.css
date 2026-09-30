@@ -67,3 +67,16 @@
   #dlgPluginForm{width:100% !important;}
   .pf-day{height:36px;}
 }
+
+/* Aviso del plugin (p. ej. «ese día ya está completo»): bajo la introducción, con un borde rojo a la izquierda. */
+#pfError{
+  margin:0 0 14px;
+  padding:10px 12px;
+  font-size:13px;
+  line-height:1.45;
+  color:var(--ink);
+  background:var(--danger-bg);
+  border:1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  border-left:3px solid var(--danger);
+  border-radius:var(--r-md);
+}

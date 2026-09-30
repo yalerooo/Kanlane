@@ -3,6 +3,9 @@
    - El registro vive en la colección 'projects' de la raíz.
    - El proyecto principal ('main') usa la raíz tal cual, así los datos que ya
      existían antes de haber proyectos siguen en su sitio, sin migrar nada.
+     Se puede eliminar: se vacía la raíz y su documento queda marcado con
+     deleted:true para que no vuelva a salir en la lista. Crear de nuevo el
+     primer proyecto lo reescribe.
    - El resto guarda sus datos bajo projects/{id}/… (ver scope()). */
 (function(){
   const MAIN_ID = 'main';
@@ -45,12 +48,14 @@
     }
 
     /* Lista ordenada: el principal primero y después por fecha de creación.
-       El principal existe siempre, aunque nunca se haya renombrado. */
+       El principal existe aunque nunca se haya renombrado, salvo que se haya
+       eliminado. */
     list(){
       const stored = this.items.filter((p) => p.id !== MAIN_ID);
       const mainDoc = this.items.find((p) => p.id === MAIN_ID) || {};
-      const main = Object.assign({createdAt:0}, mainDoc, {id:MAIN_ID, nombre:mainDoc.nombre || Workhub.t(MAIN_NAME)});
       stored.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || String(a.nombre).localeCompare(String(b.nombre), 'es'));
+      if(mainDoc.deleted) return stored;
+      const main = Object.assign({createdAt:0}, mainDoc, {id:MAIN_ID, nombre:mainDoc.nombre || Workhub.t(MAIN_NAME)});
       return [main].concat(stored);
     }
 
@@ -104,9 +109,10 @@
     }
 
     /* Borra todos los datos del proyecto y después su entrada del registro.
-       El principal no se puede eliminar. rootDb: base de datos sin acotar. */
+       El principal (la raíz) se vacía y queda marcado como eliminado.
+       rootDb: base de datos sin acotar. */
     removeProject(id, rootDb, assets){
-      if(!id || id === MAIN_ID) return Promise.reject(new Error('main-project'));
+      if(!id) return Promise.reject(new Error('no-project'));
       const db = ProjectModel.scope(rootDb, id);
       const assetIds = [];
       const wipeTasks = db.collection('tasks').get().then((snap) => Promise.all(snap.docs.map((d) => {
@@ -126,7 +132,7 @@
         /* Las imágenes son lo menos importante: si alguna falla, se sigue. */
         if(!assets || !assets.delete) return null;
         return Promise.all(assetIds.map((a) => assets.delete(a).catch(() => null)));
-      }).then(() => this.remove(id));
+      }).then(() => id === MAIN_ID ? this.set(MAIN_ID, {deleted:true, createdAt:0}) : this.remove(id));
     }
   }
 

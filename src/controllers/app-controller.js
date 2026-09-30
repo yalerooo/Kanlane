@@ -196,10 +196,14 @@
       if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
     }
 
-    /* Borra un proyecto y todos sus datos. Si es el abierto, antes se pasa al principal. */
+    /* Borra un proyecto y todos sus datos. Si es el abierto, antes se pasa a otro
+       (si no queda ninguno, se pedirá crear uno). */
     deleteProject(id){
       if(!this.rootDb) return Promise.reject(new Error('not-ready'));
-      if(id === this.projectId) this.switchProject(M.ProjectModel.MAIN_ID, false);
+      if(id === this.projectId){
+        const next = this.models.projects.list().find((p) => p.id !== id);
+        if(next) this.switchProject(next.id, false);
+      }
       return platform.connectAssets().catch(() => null).then((assets) => {
         return this.models.projects.removeProject(id, this.rootDb, assets);
       });

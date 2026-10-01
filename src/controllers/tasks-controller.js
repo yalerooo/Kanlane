@@ -32,7 +32,7 @@
         this.render();
         this.refreshDetail();
       });
-      this.tasks.on('recurred', (r) => toast.success(Workhub.t('Próxima repetición creada para el {fecha}', {fecha:Workhub.utils.dates.fmtDate(r.date)})));
+      this.tasks.on('recurred', (r) => toast.success(Workhub.t('Próxima repetición creada para el {fecha}', {fecha:Workhub.utils.dates.fmtDate(r.date)}), {important:true}));
       this.contacts.on('change', () => this.refreshDetail());
       this.vault.on('change', () => this.refreshDetail());
       this.tasks.on('error', (err) => {

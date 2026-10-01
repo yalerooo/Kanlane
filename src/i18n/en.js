@@ -813,6 +813,7 @@
     'Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.':'Customize each project’s theme, colors, typography, text size, corners and spacing.',
     /* Deshacer, subtareas, repetición, calendario, búsqueda y recordatorios */
     'Deshacer':'Undo',
+    'Cerrar aviso':'Dismiss notification',
     'Restaurado':'Restored',
     'No se pudo deshacer':'Couldn\'t undo',
     'Tarea restaurada':'Task restored',
@@ -920,7 +921,6 @@
     [/^Vencida · (.+)$/, 'Overdue · $1'],
     [/^Nueva tarea en (.+)$/, 'New task in $1'],
     [/^Movida a «(.+)»$/, 'Moved to “$1”'],
-    [/^Ahora estás en «(.+)»$/, 'Now in “$1”'],
     [/^Cliente «(.+)» añadido$/, 'Client “$1” added'],
     [/^Cliente «(.+)» eliminado$/, 'Client “$1” deleted'],
     [/^Cliente «(.+)» restaurado$/, 'Client “$1” restored'],

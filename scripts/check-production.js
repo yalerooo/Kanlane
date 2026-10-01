@@ -6,8 +6,12 @@ const origin = process.env.WORKHUB_HEALTH_ORIGIN || 'https://kanlane.com';
 const checks = [
   {path:'/', marker:'Kanlane', type:'text/html', canonical:'https://kanlane.com/'},
   {path:'/alternativa-a-trello/', marker:'Una alternativa a Trello', type:'text/html', canonical:'https://kanlane.com/alternativa-a-trello/'},
+  {path:'/alternativa-a-asana/', marker:'Una alternativa a Asana', type:'text/html', canonical:'https://kanlane.com/alternativa-a-asana/'},
+  {path:'/alternativa-a-notion/', marker:'Una alternativa a Notion', type:'text/html', canonical:'https://kanlane.com/alternativa-a-notion/'},
   {path:'/gestion-de-proyectos/', marker:'El gestor de proyectos', type:'text/html', canonical:'https://kanlane.com/gestion-de-proyectos/'},
-  {path:'/sitemap.xml', marker:'https://kanlane.com/alternativa-a-trello/', type:'xml'},
+  {path:'/gestor-de-clientes/', marker:'El gestor de clientes', type:'text/html', canonical:'https://kanlane.com/gestor-de-clientes/'},
+  {path:'/crm-para-autonomos/', marker:'El CRM para autónomos', type:'text/html', canonical:'https://kanlane.com/crm-para-autonomos/'},
+  {path:'/sitemap.xml', marker:'https://kanlane.com/gestor-de-clientes/', type:'xml'},
   {path:'/app/', marker:'id="authPanel"', type:'text/html'},
   {path:'/robots.txt', marker:'Sitemap:', type:'text/plain'},
   {path:'/sw.js', marker:'self.addEventListener', type:'javascript'},

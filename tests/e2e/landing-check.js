@@ -60,8 +60,8 @@ module.exports = async function checkLanding(browser, origin){
     await basic.goto(origin + '/?portada');
     assert.ok(await basic.locator('#h-hero').isVisible());
     assert.ok(await basic.locator('#h-clientes').isVisible());
-    assert.equal(await basic.locator('a[href="alternativa-a-trello/"], a[href="gestion-de-proyectos/"]').count(), 0, 'las páginas de captación no aparecen en la portada');
-    for(const route of ['alternativa-a-trello', 'gestion-de-proyectos']){
+    assert.equal(await basic.locator('a[href="alternativa-a-trello/"], a[href="gestion-de-proyectos/"], a[href="alternativa-a-asana/"], a[href="alternativa-a-notion/"], a[href="gestor-de-clientes/"], a[href="crm-para-autonomos/"]').count(), 0, 'las páginas de captación no aparecen en la portada');
+    for(const route of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos']){
       const response = await basic.goto(origin + '/' + route + '/');
       assert.equal(response.status(), 200, route + ' responde');
       assert.ok(await basic.locator('h1').isVisible(), route + ' se lee sin JavaScript');

@@ -28,7 +28,7 @@ const path = require('node:path');
 
   /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
   const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
-  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos']){
+  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos']){
     assert.ok(wrangler.includes('"/' + landing + '"'), landing + ' sin barra final pasa por el Worker');
     assert.ok(wrangler.includes('"/' + landing + '/*"'), landing + ' pasa por el Worker');
     r = await get('https://kanlane.yalero.net/' + landing + '/');

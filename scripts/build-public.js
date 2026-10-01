@@ -11,7 +11,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'app', 'demo', 'alternativa-a-trello', 'gestion-de-proyectos', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
+const INCLUDE = ['index.html', 'app', 'demo', 'alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -79,7 +79,7 @@ function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/alternativa-a-trello/*', PAGE), block('/gestion-de-proyectos/*', PAGE), block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/alternativa-a-trello/*', PAGE), block('/alternativa-a-asana/*', PAGE), block('/alternativa-a-notion/*', PAGE), block('/gestion-de-proyectos/*', PAGE), block('/gestor-de-clientes/*', PAGE), block('/crm-para-autonomos/*', PAGE), block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
 }
 
 /* ---------- dist/ ---------- */

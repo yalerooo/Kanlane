@@ -57,6 +57,13 @@
 
     /* mode: 'local' | 'firebase' | 'claude' */
     render(accents, currentAccent, currentTheme, mode){
+      this.storageModeNow = mode;
+      if(!this.watchingConnection){
+        this.watchingConnection = true;
+        const again = () => this.renderStorage(this.storageModeNow);
+        window.addEventListener('online', again);
+        window.addEventListener('offline', again);
+      }
       this.swatches.innerHTML = accents.map((a) => {
         const sel = a.key === currentAccent;
         return '<button type="button" class="swatch" role="radio" aria-checked="' + (sel ? 'true' : 'false') + '" data-accent="' + a.key + '" style="--sw:' + a.solid + ';--sw-ink:' + a.ink + '">' +
@@ -68,6 +75,10 @@
       this.themeSegment.querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-theme-choice') === currentTheme ? 'true' : 'false');
       });
+      this.renderStorage(mode);
+    }
+
+    renderStorage(mode){
       const info = Workhub.views.storageInfo(mode);
       this.storageCard.setAttribute('data-mode', info.mode);
       this.storageTitle.textContent = info.title;

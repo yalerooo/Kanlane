@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Workhub">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Workhub · Aplicación</title>
+  <!-- La aplicación necesita iniciar sesión: no tiene nada que indexar. La portada pública está en «/». -->
+  <meta name="robots" content="noindex, follow">
+  <link rel="preload" as="font" type="font/woff2" href="../assets/fonts/Geist-Variable.woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/fonts.css">
+
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/layout.css">
+  <link rel="stylesheet" href="../assets/css/components/skeleton.css">
+  <link rel="stylesheet" href="../assets/css/components/consent.css">
+  <link rel="stylesheet" href="../assets/css/components/buttons.css">
+  <link rel="stylesheet" href="../assets/css/components/forms.css">
+  <link rel="stylesheet" href="../assets/css/components/dropdown.css">
+  <link rel="stylesheet" href="../assets/css/components/toolbar.css">
+  <link rel="stylesheet" href="../assets/css/components/cards.css">
+  <link rel="stylesheet" href="../assets/css/components/dialogs.css">
+  <link rel="stylesheet" href="../assets/css/components/overlays.css">
+  <link rel="stylesheet" href="../assets/css/components/projects.css">
+  <link rel="stylesheet" href="../assets/css/components/extensions.css">
+  <link rel="stylesheet" href="../assets/css/views/board.css">
+  <link rel="stylesheet" href="../assets/css/views/task-detail.css">
+  <link rel="stylesheet" href="../assets/css/views/calendar.css">
+  <link rel="stylesheet" href="../assets/css/views/vault.css">
+  <link rel="stylesheet" href="../assets/css/views/clients.css">
+  <link rel="stylesheet" href="../assets/css/views/github.css">
+  <link rel="stylesheet" href="../assets/css/components/plugin-form.css">
+  <link rel="stylesheet" href="../assets/css/views/team.css">
+  <link rel="stylesheet" href="../assets/css/views/plugins.css">
+  <link rel="stylesheet" href="../assets/css/views/settings.css">
+  <link rel="stylesheet" href="../assets/css/views/auth.css">
+  <link rel="stylesheet" href="../assets/css/responsive.css">
+  <link rel="stylesheet" href="../assets/css/components/appearance.css">
+
+  <!-- Arranque: se decide ANTES de pintar nada. Si Workhub está publicado con
+       Firebase, la app queda oculta desde el primer fotograma y solo se ve la
+       pantalla de acceso/carga hasta que hay sesión (AuthController quita la
+       clase). También se aplica ya el tema guardado, para no ver un parpadeo. -->
+  <script src="../src/config/firebase-config.js"></script>
+  <script src="../src/boot.js"></script>
+</head>
+<body>
+
+<!-- Pantalla de acceso (solo cuando Workhub está publicado con Firebase) -->
+<div class="app-skel" id="appSkeleton" role="status" aria-live="polite">
+  <span class="sr-only">Cargando…</span>
+  <aside class="app-skel-side" aria-hidden="true">
+    <div class="ask-project"><span class="sk ask-mark"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span></div>
+    <span class="sk ask-search"></span>
+    <div class="ask-nav"><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:44%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:62%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:58%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:50%"></span></span></div>
+    <span class="sk ask-label"></span>
+    <div class="ask-nav"><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:48%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:72%"></span></span><span class="ask-item"><span class="sk ic"></span><span class="sk tx" style="width:46%"></span></span></div>
+    <div class="ask-foot"><span class="sk ask-avatar"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span></div>
+  </aside>
+  <div class="app-skel-main" aria-hidden="true">
+    <div class="ask-topbar"><span class="sk ask-mark"></span><span class="ask-lines"><span class="sk"></span><span class="sk"></span></span><span class="sk ask-round"></span></div>
+    <div class="ask-head"><div class="ask-titles"><span class="sk ask-title"></span><span class="sk ask-sub"></span></div><span class="sk ask-cta"></span></div>
+    <div class="ask-toolbar"><span class="sk ask-tsearch"></span><span class="sk ask-tselect"></span></div>
+    <div class="bsk" aria-hidden="true"><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:80px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:62%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:78%"></span><span class="sk l2" style="width:50%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:86%"></span><span class="sk l2" style="width:70%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:96px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:84%"></span><span class="sk l2" style="width:58%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:120px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:92%"></span><span class="sk l2" style="width:66%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:70%"></span><span class="sk l2" style="width:48%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:88%"></span><span class="sk l2" style="width:60%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:84px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:80%"></span><span class="sk l2" style="width:54%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:64%"></span></div></div></div>
+  </div>
+  <div class="ask-tabbar" aria-hidden="true"><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span><span class="ask-tab"><span class="sk ic"></span><span class="sk tx"></span></span></div>
+</div>
+
+<div id="authScreen" class="auth-screen" hidden>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <img class="brand-logo" src="../assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
+      <span class="brand-name">Workhub</span>
+    </div>
+    <div id="authLoading" class="auth-loading" role="status" hidden></div>
+    <div id="authPanel" hidden>
+      <h1 id="authTitle">Inicia sesión</h1>
+      <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
+      <div class="auth-notice" id="authNotice" role="status" hidden></div>
+      <div class="auth-providers" id="authProviders"></div>
+      <div class="auth-divider" id="authDivider"><span>o con tu correo</span></div>
+      <form id="authEmailForm" class="auth-form" novalidate>
+        <div class="field" id="authNameField" hidden>
+          <label for="authName">Nombre</label>
+          <input id="authName" autocomplete="name" maxlength="80">
+        </div>
+        <div class="field">
+          <label for="authEmail">Correo electrónico</label>
+          <input id="authEmail" type="email" autocomplete="email" required>
+        </div>
+        <div class="field" id="authPassField">
+          <div class="auth-label-row">
+            <label for="authPass">Contraseña</label>
+            <a href="#" id="authForgot">¿La has olvidado?</a>
+          </div>
+          <input id="authPass" type="password" autocomplete="current-password" minlength="6" required>
+        </div>
+        <p class="auth-msg" id="authMsg" role="alert" hidden></p>
+        <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
+      </form>
+      <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
+      <div class="auth-guest" id="authGuest">
+        <div class="auth-divider"><span>o sin cuenta</span></div>
+        <button type="button" class="auth-provider" id="authGuestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Continuar como invitado</span></button>
+        <form id="authGuestForm" class="auth-form" hidden novalidate>
+          <div class="field">
+            <label for="authGuestName">Tu nombre</label>
+            <input id="authGuestName" autocomplete="name" maxlength="40">
+          </div>
+          <p class="auth-msg" id="authGuestMsg" role="alert" hidden></p>
+          <p class="auth-guest-note">Sin cuenta ni conexión con la base de datos: todo se guarda solo en este navegador. Si borras los datos del navegador o entras desde otro, no lo encontrarás. Usa la copia de seguridad para llevarte tus datos.</p>
+          <button type="submit" class="btn btn-primary auth-submit">Entrar como invitado</button>
+          <button type="button" class="btn btn-ghost auth-guest-back" id="authGuestBack">Volver</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+  <p class="auth-foot auth-legal">Al continuar aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</p>
+  <p class="auth-lang" id="authLang" translate="no"><button type="button" data-lang-choice="es">Español</button><span aria-hidden="true">·</span><button type="button" data-lang-choice="en">English</button></p>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
+        <span class="project-mark" id="projectMark" aria-hidden="true">PP</span>
+        <span class="project-switch-text">
+          <span class="project-switch-name" id="projectName" translate="no">Proyecto principal</span>
+          <span class="project-switch-sub">Workhub</span>
+        </span>
+        <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+      </button>
+    </div>
+    <div class="dd-menu project-menu" id="projectMenu" role="menu" aria-label="Proyectos" hidden></div>
+    <button type="button" class="search-trigger" id="btnCommand" aria-label="Buscar (Ctrl K)">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <span>Buscar…</span>
+      <kbd class="kbd" id="cmdHint">Ctrl K</kbd>
+    </button>
+    <nav class="tabs" aria-label="Secciones">
+      <button class="tab active" id="tabTasks" data-short="Tareas" title="Tareas" data-view="tasks" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span>Tareas</span><span class="tab-count" id="countTasks"></span></button>
+      <button class="tab" id="tabCalendar" data-short="Agenda" title="Calendario" data-view="calendar" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Calendario</span><span class="tab-count" id="countCalendar"></span></button>
+      <button class="tab" id="tabVault" data-short="Claves" title="Contraseñas" data-view="vault" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Contraseñas</span><span class="tab-count" id="countVault"></span></button>
+      <button class="tab needs-clients" id="tabClients" data-short="Clientes" title="Clientes y contactos" data-view="clients" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span>Clientes</span><span class="tab-count" id="countClients"></span></button>
+      <p class="nav-label">Sistema</p>
+      <div class="plugin-nav" id="pluginNav">
+        <button class="tab" id="tabPlugins" data-short="Plugins" title="Plugins" data-view="plugins" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.4 11H18V7a1 1 0 0 0-1-1h-4V4.6a2.1 2.1 0 1 0-4 0V6H5a1 1 0 0 0-1 1v3.6h1.4a2.1 2.1 0 1 1 0 4H4V19a1 1 0 0 0 1 1h3.6v-1.4a2.1 2.1 0 1 1 4 0V20H17a1 1 0 0 0 1-1v-4h1.4a2.1 2.1 0 1 0 0-4Z"/></svg><span>Plugins</span></button>
+        <button class="plugin-nav-toggle" id="pluginNavToggle" type="button" aria-label="Mostrar plugins instalados" aria-expanded="false" aria-controls="pluginNavList" hidden><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="plugin-nav-list" id="pluginNavList" aria-label="Plugins instalados" hidden></div>
+      </div>
+      <button class="tab" id="tabData" data-short="Copia" title="Copia de seguridad" data-view="data" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M20 12c0 1.66-3.58 3-8 3s-8-1.34-8-3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/></svg><span>Copia de seguridad</span></button>
+      <button class="tab" id="tabSettings" data-short="Ajustes" title="Ajustes" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="account" id="accountBox" hidden>
+        <span class="avatar is-xs" id="accountAvatar" aria-hidden="true"></span>
+        <div class="account-text"><span class="account-name" id="accountName"></span><span class="account-mail" id="accountMail"></span></div>
+        <button type="button" class="icon-only" id="btnSignOut" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+      </div>
+      <div class="storage-status" id="storageStatus" data-mode="firebase"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+  <div class="main-inner">
+  <header class="page-head top">
+    <div class="titles">
+      <h1 id="pageTitle">Tareas</h1>
+      <p id="pageDesc">Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.</p>
+    </div>
+    <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
+  </header>
+
+  <section id="viewTasks">
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
+      <select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
+      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
+      <div class="summary" id="summary" aria-live="polite"></div>
+    </div>
+
+    <div id="boardWrap">
+      <div class="state-msg" id="stateMsg" hidden></div>
+      <div class="bsk" id="boardSkeleton" aria-hidden="true"><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:80px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:62%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:78%"></span><span class="sk l2" style="width:50%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:86%"></span><span class="sk l2" style="width:70%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:96px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:84%"></span><span class="sk l2" style="width:58%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:120px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:92%"></span><span class="sk l2" style="width:66%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:70%"></span><span class="sk l2" style="width:48%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:88%"></span><span class="sk l2" style="width:60%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:84px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:80%"></span><span class="sk l2" style="width:54%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:64%"></span></div></div></div>
+      <div class="board-tabs" id="boardTabs" role="tablist" aria-label="Columnas del tablero"></div>
+      <p class="sr-only" id="boardKeyboardHelp">Pulsa Intro para abrir una tarea. Pulsa Alt y una flecha para moverla.</p>
+      <p class="sr-only" id="boardKeyboardStatus" role="status" aria-live="polite"></p>
+      <div class="board" id="board" hidden></div>
+    </div>
+  </section>
+
+  <section id="viewCalendar" hidden>
+    <div class="cal-toolbar">
+      <div class="cal-nav">
+        <button type="button" class="icon-btn cal-arrow" id="calPrev" aria-label="Mes anterior"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h2 class="cal-month" id="calMonthLabel"></h2>
+        <button type="button" class="icon-btn cal-arrow" id="calNext" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="cal-actions">
+        <div class="ext-slot" id="calExtSlot" data-ext-slot="calendar.toolbar" hidden></div>
+        <div class="segmented" id="calMode" role="radiogroup" aria-label="Vista del calendario">
+          <button type="button" role="radio" data-cal-mode="month" aria-checked="true">Mes</button>
+          <button type="button" role="radio" data-cal-mode="week" aria-checked="false">Semana</button>
+          <button type="button" role="radio" data-cal-mode="day" aria-checked="false">Día</button>
+        </div>
+        <select id="calFilterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+        <button type="button" class="btn btn-ghost" id="calToday">Hoy</button>
+        <button type="button" class="btn btn-primary" id="calNewMeeting"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva reunión</button>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span><i style="background:var(--meet-bg);box-shadow:inset 0 0 0 1px var(--meet)"></i>Reunión</span>
+      <span><i style="background:var(--st-pend-bg);box-shadow:inset 0 0 0 1px var(--st-pend)"></i>Tarea que vence ese día</span>
+      <span><i style="background:var(--danger-bg);box-shadow:inset 0 0 0 1px var(--danger)"></i>Tarea vencida</span>
+      <span class="cal-hint">Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
+    </div>
+    <div class="cal-layout">
+      <div id="calGridWrap">
+        <div class="cal-weekdays"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <aside class="cal-day" id="calDay" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section id="viewVault" hidden>
+    <div id="vaultLockScreen" class="lock-screen">
+      <div class="lock-card">
+        <h2 id="lockTitle">Desbloquear contraseñas</h2>
+        <p id="lockDesc" class="lock-desc">Introduce tu contraseña maestra. Se usa solo en tu navegador para cifrar y descifrar — nunca se guarda ni se envía a ningún sitio.</p>
+        <form id="unlockForm">
+          <div class="field">
+            <label for="masterPass">Contraseña maestra</label>
+            <input id="masterPass" type="password" autocomplete="off" required>
+          </div>
+          <div class="field" id="masterPass2Wrap" hidden>
+            <label for="masterPass2">Repite la contraseña maestra</label>
+            <input id="masterPass2" type="password" autocomplete="off">
+          </div>
+          <p class="lock-error" id="lockError" hidden></p>
+          <button type="submit" class="btn btn-primary" id="btnUnlock" style="width:100%">Desbloquear</button>
+        </form>
+        <p class="lock-forgot" id="forgotLinkWrap" hidden><a href="#" id="linkForgot">¿Has olvidado tu contraseña maestra?</a></p>
+
+        <form id="recoverForm" hidden>
+          <p class="lock-desc">Pega la clave de recuperación de tu archivo .txt y elige una contraseña maestra nueva.</p>
+          <div class="field">
+            <label for="recoveryInput">Clave de recuperación</label>
+            <textarea id="recoveryInput" rows="2" placeholder="XXXX-XXXX-XXXX-…"></textarea>
+          </div>
+          <div class="field">
+            <label for="newPass1">Nueva contraseña maestra</label>
+            <input id="newPass1" type="password" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="newPass2">Repite la nueva contraseña maestra</label>
+            <input id="newPass2" type="password" autocomplete="off" required>
+          </div>
+          <p class="lock-error" id="recoverError" hidden></p>
+          <button type="submit" class="btn btn-primary" id="btnRecover" style="width:100%">Restablecer con la clave</button>
+          <p class="lock-forgot"><a href="#" id="linkCancelRecover">Volver</a></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="recoveryReveal" class="lock-screen" hidden>
+      <div class="lock-card" style="width:min(480px,100%)">
+        <h2>Guarda tu clave de recuperación</h2>
+        <p class="lock-desc">Es la única forma de recuperar el acceso si olvidas tu contraseña maestra. Guárdala en un lugar seguro — no la compartas ni la subas a ningún sitio. Quien la tenga, junto con acceso a este tablero, podría leer las contraseñas guardadas.</p>
+        <div class="recovery-key-box" id="recoveryKeyBox"></div>
+        <div class="recovery-actions">
+          <button type="button" class="btn btn-ghost" id="btnCopyRecovery">Copiar</button>
+          <button type="button" class="btn btn-ghost" id="btnDownloadRecovery">Descargar .txt</button>
+        </div>
+        <label class="recovery-confirm">
+          <input type="checkbox" id="recoveryConfirmChk">
+          Ya he guardado esta clave en un lugar seguro
+        </label>
+        <button type="button" class="btn btn-primary" id="btnRecoveryContinue" style="width:100%;margin-top:10px" disabled>Continuar</button>
+      </div>
+    </div>
+
+    <div id="vaultContent" hidden>
+      <div class="toolbar">
+        <input type="search" id="searchVault" placeholder="Buscar por cliente, correo, web o IP…">
+        <select id="filterTipo" aria-label="Filtrar por tipo">
+          <option value="">Todos los tipos</option>
+          <option value="correo">Correo / Web</option>
+          <option value="usuario">Usuario / Web</option>
+          <option value="servidor">Servidor</option>
+          <option value="rdp">RDP</option>
+          <option value="vpn">VPN</option>
+        </select>
+        <select id="filterClienteVault" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+        <button class="btn btn-primary" id="btnNewVault" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva credencial</button>
+        <button class="btn btn-ghost" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear</button>
+      </div>
+      <p class="hint">Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</p>
+      <div id="vaultWrap">
+        <div class="state-msg" id="stateMsgVault">Sin credenciales guardadas todavía.</div>
+        <div class="contacts-grid" id="vaultGrid" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="viewClients" hidden>
+    <div class="toolbar">
+      <input type="search" id="searchClients" placeholder="Buscar cliente, persona, email o teléfono…" aria-label="Buscar clientes y contactos">
+      <button class="btn btn-primary" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
+    </div>
+    <div class="crm" id="crm">
+      <div class="crm-list-pane">
+        <form id="formNewClient" class="crm-new">
+          <input id="newClientName" maxlength="60" placeholder="Nuevo cliente…" aria-label="Nombre del cliente nuevo" autocomplete="off" required>
+          <button type="submit" class="btn btn-ghost btn-sm" aria-label="Añadir cliente"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Añadir</button>
+        </form>
+        <div class="state-msg" id="stateMsgClients">Cargando clientes…</div>
+        <p class="crm-list-label" id="crmListLabel" hidden><span>Clientes</span><em id="crmCount"></em></p>
+        <div class="crm-list" id="clientsList" role="listbox" aria-label="Clientes" hidden></div>
+      </div>
+      <div class="crm-detail" id="clientDetail" hidden></div>
+    </div>
+    <p class="hint crm-hint"><strong>No guardes contraseñas en los contactos.</strong> Usa la sección Contraseñas, donde se cifran.</p>
+  </section>
+
+  <section id="viewPlugins" hidden>
+    <div id="pluginsHome">
+      <p class="plugin-file-notice" id="pluginsFileNotice" hidden><strong>Los plugins no funcionan al abrir Workhub como archivo.</strong> El navegador no deja que una página aislada cargue archivos del disco. Abre Workhub con <code>start-workhub.bat</code> (o desde tu web publicada) para usarlos.</p>
+      <p class="plugin-file-notice" id="pluginsReadonlyNotice" hidden>En este proyecto de equipo solo el propietario y los editores pueden instalar o quitar plugins.</p>
+      <form class="plugin-add" id="formPluginUrl">
+        <div class="plugin-add-field">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="url" id="pluginUrl" placeholder="Pega el enlace de un plugin (https://…)" aria-label="Enlace del plugin" autocomplete="off" spellcheck="false">
+        </div>
+        <button type="submit" class="btn btn-primary">Añadir</button>
+      </form>
+      <p class="plugin-url-msg" id="pluginUrlMsg" role="status" hidden></p>
+      <p class="plugin-add-hint">Los plugins se instalan solo en el proyecto abierto. Cada uno se ejecuta aislado: solo ve lo que le permitas y nunca tus contraseñas. <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Crear un plugin</a></p>
+
+      <div class="plugins-head"><h2>Instalados en este proyecto</h2><span class="plugins-count" id="pluginsInstalledCount"></span></div>
+      <div class="plugins-empty" id="pluginsInstalledEmpty">
+        <span class="plugins-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.4 11H18V7a1 1 0 0 0-1-1h-4V4.6a2.1 2.1 0 1 0-4 0V6H5a1 1 0 0 0-1 1v3.6h1.4a2.1 2.1 0 1 1 0 4H4V19a1 1 0 0 0 1 1h3.6v-1.4a2.1 2.1 0 1 1 4 0V20H17a1 1 0 0 0 1-1v-4h1.4a2.1 2.1 0 1 0 0-4Z"/></svg></span>
+        <div><strong>Este proyecto aún no tiene plugins</strong><p>Instala uno oficial de la lista de abajo o añade uno por enlace.</p></div>
+      </div>
+      <div class="plugin-grid" id="pluginsInstalled" hidden></div>
+
+      <div class="plugins-head"><h2>Plugins oficiales</h2><span class="plugins-sub">Creados y mantenidos por Workhub</span></div>
+      <div class="plugin-grid" id="pluginsOfficial"></div>
+    </div>
+    <div class="plugin-stage" id="pluginStage" hidden>
+      <div class="plugin-bar">
+        <button type="button" class="icon-only" id="btnPluginBack" aria-label="Volver a los plugins" title="Volver a los plugins"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <span class="plugin-tile is-sm" id="pluginStageTile" aria-hidden="true"></span>
+        <div class="plugin-bar-text"><strong id="pluginStageName"></strong><span id="pluginStageMeta"></span></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnPluginManage">Detalles</button>
+      </div>
+      <div class="plugin-notice" id="pluginNotice" hidden></div>
+      <div class="plugin-frame-wrap" id="pluginFrameWrap"></div>
+    </div>
+  </section>
+
+  <section id="viewData" hidden>
+    <p class="hint">Exporta una copia de seguridad completa (tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo. <strong>Importar añade a lo que ya tienes — no borra ni reemplaza nada.</strong></p>
+    <div class="data-actions">
+      <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
+      <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
+      <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+    </div>
+    <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
+    <div class="backup-history-head"><div><h3>Versiones de este navegador</h3><p>Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button></div>
+    <div class="backup-history" id="backupHistory" aria-live="polite"></div>
+    <div class="backup-history-head" id="cloudBackupHead" hidden><div><h3>Copias cifradas en tu cuenta</h3><p>Recupéralas desde otro dispositivo con tu clave de recuperación. La clave solo se guarda en este navegador: consérvala fuera de Workhub. Se mantienen siete versiones por proyecto.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveCloudBackup" hidden>Guardar en la nube</button></div>
+    <div class="cloud-backup-setup" id="cloudBackupSetup" hidden>
+      <button type="button" class="btn btn-primary" id="btnEnableCloudBackup">Activar copias cifradas</button>
+      <label for="cloudBackupImportKey">¿Ya tienes una clave? Introdúcela para recuperar las copias</label>
+      <div class="data-actions"><input id="cloudBackupImportKey" type="text" autocomplete="off" spellcheck="false" aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnUseCloudBackupKey">Usar clave</button></div>
+    </div>
+    <div class="cloud-backup-key" id="cloudBackupKeyWrap" hidden><label for="cloudBackupKey">Guarda esta clave fuera de Workhub. Sin ella no podrás abrir las copias en otro dispositivo.</label><div class="data-actions"><input id="cloudBackupKey" type="text" readonly aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnCopyCloudBackupKey">Copiar clave</button><button type="button" class="btn btn-ghost" id="btnHideCloudBackupKey">Ocultar clave</button></div></div>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnForgetCloudBackupKey" hidden>Dejar de guardar copias en la nube</button>
+    <div class="backup-history" id="cloudBackupHistory" aria-live="polite" hidden></div>
+    <p class="lock-error" id="dataError" hidden></p>
+    <p class="hint" id="dataStatus" hidden></p>
+  </section>
+
+  <section id="viewSettings" hidden>
+    <div class="settings-card gh-card">
+      <div class="settings-row">
+        <div>
+          <h3>GitHub Projects</h3>
+          <p>Sincroniza el tablero de este proyecto con un proyecto de GitHub.</p>
+        </div>
+      </div>
+      <div class="gh-body" id="ghBody"></div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div>
+          <h3>Color de acento</h3>
+          <p>Se usa en los botones principales, la sección activa y los elementos seleccionados.</p>
+        </div>
+        <div class="swatches" id="accentSwatches" role="radiogroup" aria-label="Color de acento"></div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <h3>Tema</h3>
+          <p>Claro, oscuro o el mismo que tenga configurado tu sistema.</p>
+        </div>
+        <div>
+          <div class="segmented" id="themeSegment" role="radiogroup" aria-label="Tema">
+            <button type="button" role="radio" data-theme-choice="system">Sistema</button>
+            <button type="button" role="radio" data-theme-choice="light">Claro</button>
+            <button type="button" role="radio" data-theme-choice="dark">Oscuro</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <h3>Idioma</h3>
+          <p>Idioma de la interfaz. Tus datos no se traducen.</p>
+        </div>
+        <div>
+          <div class="segmented" id="langSegment" role="radiogroup" aria-label="Idioma">
+            <button type="button" role="radio" data-lang-choice="es" translate="no">Español</button>
+            <button type="button" role="radio" data-lang-choice="en" translate="no">English</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <h3>Recordatorios</h3>
+          <p>Avisos de las tareas que vencen y de las reuniones que están a punto de empezar, mientras Workhub esté abierto.</p>
+        </div>
+        <div class="remind-block">
+          <div class="segmented" id="remindSegment" role="radiogroup" aria-label="Recordatorios">
+            <button type="button" role="radio" data-remind="on">Activados</button>
+            <button type="button" role="radio" data-remind="off">Desactivados</button>
+          </div>
+          <div class="remind-options" id="remindOptions">
+            <label class="remind-field"><span>Tareas</span>
+              <select id="remindTaskLead">
+                <option value="0">El mismo día</option>
+                <option value="1">Un día antes</option>
+                <option value="2">Dos días antes</option>
+              </select>
+            </label>
+            <label class="remind-field"><span>Reuniones</span>
+              <select id="remindMeetLead">
+                <option value="5">5 minutos antes</option>
+                <option value="10">10 minutos antes</option>
+                <option value="15">15 minutos antes</option>
+                <option value="30">30 minutos antes</option>
+                <option value="60">1 hora antes</option>
+              </select>
+            </label>
+            <div class="remind-notify">
+              <button type="button" class="btn btn-ghost btn-sm" id="btnRemindNotify">Activar notificaciones del navegador</button>
+              <p id="remindNotifyState"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-row" id="installRow" hidden>
+        <div>
+          <h3>Aplicación</h3>
+          <p>Instala Workhub como una aplicación: se abre en su propia ventana y funciona sin conexión con tus últimos datos.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-primary" id="btnInstallApp" hidden>Instalar Workhub</button>
+          <p class="install-hint" id="installHint" hidden>En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».</p>
+        </div>
+      </div>
+      <div class="settings-row" id="privacyRow">
+        <div>
+          <h3>Privacidad</h3>
+          <p>Consulta cómo tratamos tus datos y elige qué cookies permites.</p>
+        </div>
+        <div class="privacy-links">
+          <button type="button" class="btn btn-ghost btn-sm" data-cookie-settings>Configurar cookies</button>
+          <p class="privacy-note"><a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a> · <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/cookies/" target="_blank" rel="noopener">Política de cookies</a></p>
+          <p class="privacy-note">Para ejercer tus derechos de protección de datos o cerrar tu cuenta, escribe al correo de contacto que figura en la política de privacidad.</p>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <h3>Almacenamiento</h3>
+          <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
+        </div>
+        <div class="storage-block" id="storageCard" data-mode="firebase">
+          <div class="storage-line"><span class="status-dot"></span><span id="storageTitle"></span></div>
+          <p class="storage-desc" id="storageDesc"></p>
+          <div class="settings-account" id="settingsAccount" hidden>
+            <div class="settings-account-who">
+              <span class="settings-account-label" id="settingsAccountLabel"></span>
+              <span class="settings-account-mail" id="settingsAccountMail" translate="no"></span>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>
+  </main>
+</div>
+
+<dialog id="dlg">
+  <form class="dlg-inner" id="form" method="dialog">
+    <h2 id="dlgTitle">Nueva tarea</h2>
+    <input type="hidden" id="taskId">
+    <div class="field">
+      <label for="fTitle">Título</label>
+      <input id="fTitle" required maxlength="140" placeholder="p. ej. Activar Shibboleth">
+    </div>
+    <div class="field">
+      <label for="fDesc">Descripción / notas</label>
+      <textarea id="fDesc" maxlength="600" placeholder="Detalles, próximos pasos…"></textarea>
+    </div>
+    <div class="field team-only team-off" id="fAssigneesField">
+      <span class="field-label" id="fAssigneesLabel">Asignada a</span>
+      <div class="assignee-picker" id="fAssignees" role="group" aria-labelledby="fAssigneesLabel"></div>
+    </div>
+    <div class="field" id="fLabelsField">
+      <span class="field-label" id="fLabelsLabel">Etiquetas</span>
+      <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
+      <div class="label-new" id="fLabelNew" hidden>
+        <input id="fLabelName" maxlength="40" autocomplete="off" placeholder="Nombre de la etiqueta" aria-label="Nombre de la etiqueta">
+        <div class="label-colors" id="fLabelColors" role="radiogroup" aria-label="Color de la etiqueta"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="fLabelAdd">Crear</button>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field needs-clients">
+        <label for="fCliente">Cliente / proyecto</label>
+        <select id="fCliente"></select>
+        <div class="new-client-inline" id="fClienteNewWrap" hidden>
+          <input id="fClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fEstado">Estado</label>
+        <select id="fEstado" data-dots="status">
+          <option value="pendiente">Pendiente</option>
+          <option value="proceso">En proceso</option>
+          <option value="espera">Esperando al cliente</option>
+          <option value="completada">Completada</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="fContacto">Contacto (opcional)</label>
+        <input id="fContacto" maxlength="80" placeholder="Nombre / email">
+      </div>
+      <div class="field">
+        <label for="fFecha">Fecha límite (opcional)</label>
+        <input id="fFecha" type="date">
+      </div>
+    </div>
+    <div class="field" id="fRepeatField">
+      <label for="fRepeat">Repetir</label>
+      <select id="fRepeat">
+        <option value="">No se repite</option>
+        <option value="daily">Cada día</option>
+        <option value="weekly">Cada semana</option>
+        <option value="biweekly">Cada 2 semanas</option>
+        <option value="monthly">Cada mes</option>
+        <option value="yearly">Cada año</option>
+      </select>
+      <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
+    </div>
+    <div class="field" id="fChecklistField">
+      <div class="check-heading"><span class="field-label" id="fChecklistLabel">Subtareas</span><span class="check-summary" id="fChecklistSummary" hidden></span></div>
+      <div class="check-progress-bar" id="fChecklistProgress" hidden role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="fChecklistProgressFill"></span></div>
+      <div class="check-edit" id="fChecklist" role="group" aria-labelledby="fChecklistLabel"></div>
+      <div class="check-add">
+        <input id="fCheckNew" maxlength="120" autocomplete="off" placeholder="Añadir una subtarea" aria-label="Nueva subtarea">
+        <button type="button" class="btn btn-ghost btn-sm" id="fCheckAdd">Añadir</button>
+      </div>
+    </div>
+    <div class="field" id="taskNotesSection" hidden>
+      <label>Notas</label>
+      <div class="notes-list" id="taskNotesList"></div>
+      <div class="note-add-box">
+        <textarea id="noteText" rows="2" placeholder="Añade una nota…"></textarea>
+        <div id="noteImagePreviewWrap" class="note-image-preview" hidden>
+          <img id="noteImagePreview" alt="">
+          <button type="button" class="icon-btn" id="btnRemoveNoteImage">Quitar imagen</button>
+        </div>
+        <div class="note-add-actions">
+          <input type="file" id="noteImageInput" accept="image/*" hidden>
+          <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar imagen</button>
+          <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
+        </div>
+        <p class="lock-error" id="noteError" hidden></p>
+      </div>
+    </div>
+    <div class="field needs-clients" id="taskLinksSection" hidden>
+      <label>Contactos vinculados</label>
+      <div class="linked-list" id="linkedContactsList"></div>
+      <select id="linkContactPicker" data-placeholder aria-label="Vincular contacto">
+        <option value="">+ Vincular contacto existente…</option>
+      </select>
+    </div>
+    <div class="field" id="taskLinksSection2" hidden>
+      <label>Contraseñas vinculadas</label>
+      <div class="linked-list" id="linkedVaultList"></div>
+      <select id="linkVaultPicker" data-placeholder aria-label="Vincular contraseña">
+        <option value="">+ Vincular contraseña existente…</option>
+      </select>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancel" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSave">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
+  <div class="dlg-inner">
+    <div class="tv-top" id="tvTop"></div>
+    <h2 id="tvTitle" translate="no"></h2>
+    <div class="tv-facts" id="tvFacts"></div>
+    <section class="tv-section" id="tvDescWrap" hidden>
+      <h3>Descripción</h3>
+      <div class="tv-desc" id="tvDesc" translate="no"></div>
+    </section>
+    <section class="tv-section" id="tvChecklistWrap" hidden>
+      <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
+      <div class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></div>
+      <ul class="tv-checks" id="tvChecklist"></ul>
+    </section>
+    <section class="tv-section" id="tvLabelsWrap" hidden>
+      <h3>Etiquetas</h3>
+      <div class="tv-chips" id="tvLabels"></div>
+    </section>
+    <section class="tv-section" id="tvPrsWrap" hidden>
+      <h3>Pull requests vinculadas</h3>
+      <div class="tv-chips" id="tvPrs"></div>
+    </section>
+    <section class="tv-section">
+      <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
+      <div class="tv-notes" id="tvNotes"></div>
+      <form class="tv-comment-form" id="tvCommentForm" hidden><label for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="3" placeholder="Comparte una actualización con el equipo…" required></textarea><div><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button><p class="lock-error" id="tvCommentError" role="alert" hidden></p></div></form>
+    </section>
+    <section class="tv-section" id="tvGhWrap" hidden>
+      <h3>Actividad de GitHub</h3>
+      <ol class="gh-timeline" id="tvTimeline"></ol>
+    </section>
+    <section class="tv-section" id="tvLinksWrap" hidden>
+      <h3>Vínculos</h3>
+      <div class="tv-links" id="tvLinks"></div>
+    </section>
+    <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
+    <div class="dlg-actions">
+      <div class="tv-status-field">
+        <label for="tvEstado">Estado</label>
+        <select id="tvEstado" data-dots="status">
+          <option value="pendiente">Pendiente</option>
+          <option value="proceso">En proceso</option>
+          <option value="espera">Esperando al cliente</option>
+          <option value="completada">Completada</option>
+        </select>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnTvClose" data-dismiss>Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnTvEdit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgCommand" class="cmdk" aria-label="Buscar y ejecutar">
+  <div class="cmdk-input">
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="Busca o escribe una acción…" aria-label="Buscar" aria-controls="cmdList">
+    <kbd class="kbd">Esc</kbd>
+  </div>
+  <div class="cmdk-list" id="cmdList" role="listbox" aria-label="Resultados"></div>
+  <div class="cmdk-foot">
+    <span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> moverse</span>
+    <span><kbd class="kbd">↵</kbd> abrir</span>
+    <span class="cmdk-foot-right"><kbd class="kbd">N</kbd> nueva tarea · <kbd class="kbd">/</kbd> buscar en la sección</span>
+  </div>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
+
+<dialog id="dlgProject">
+  <form class="dlg-inner" id="formProject" method="dialog">
+    <h2 id="dlgProjectTitle">Nuevo proyecto</h2>
+    <p class="dlg-lead" id="pLead">Cada proyecto tiene sus propias tareas, calendario, contraseñas y etapas de trabajo.</p>
+    <div class="invite-box" id="pInvites" hidden></div>
+    <input type="hidden" id="pId">
+    <div class="field">
+      <label for="pNombre">Nombre</label>
+      <input id="pNombre" maxlength="160" autocomplete="off" placeholder="Por ejemplo: Agencia, Freelance, Personal…">
+    </div>
+    <div class="field">
+      <span class="field-label" id="pColorsLabel">Color</span>
+      <div class="color-picker is-plain" id="pColors" role="radiogroup" aria-labelledby="pColorsLabel"></div>
+    </div>
+    <div class="field">
+      <span class="field-label" id="pTypesLabel">Tipo de proyecto</span>
+      <div class="type-picker" id="pTypes" role="radiogroup" aria-labelledby="pTypesLabel"></div>
+    </div>
+    <div class="field" id="pCustom" hidden>
+      <span class="field-label" id="pStagesLabel">Etapas del tablero</span>
+      <div class="stage-editor" id="pStages" aria-labelledby="pStagesLabel"></div>
+      <button type="button" class="btn btn-ghost btn-sm stage-add" id="pAddStage">Añadir etapa</button>
+      <label class="check-row"><input type="checkbox" id="pClients"> Este proyecto trabaja con clientes</label>
+    </div>
+    <div class="field" id="pGh" hidden>
+      <div class="field" id="pGhTokenField">
+        <label for="pGhToken">Token de GitHub</label>
+        <input id="pGhToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">
+        <p class="field-help">Un token clásico con el permiso <b>project</b>. Se guarda solo en este navegador.</p>
+      </div>
+      <div class="gh-oauth" id="pGhOauthBox" hidden>
+        <button type="button" class="btn btn-ghost" id="pGhOauth">Conectar con GitHub (sin token)</button>
+        <p class="field-help">Se abre GitHub para que autorices Workhub, sin copiar ningún token.</p>
+      </div>
+      <p class="field-help" id="pGhTokenSaved" hidden>Se usará el token de GitHub guardado en este navegador.</p>
+      <label for="pGhUrl">Enlace del proyecto de GitHub</label>
+      <input id="pGhUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1">
+      <p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de ese GitHub Project, y se mantiene sincronizado. Si dejas el nombre vacío se usa el del proyecto de GitHub.</p>
+    </div>
+    <p class="type-note" id="pTypeNote" hidden>Las tareas cuya etapa ya no exista pasarán a la primera columna. No se pierde ninguna.</p>
+    <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>
+      <strong>Se borrará todo lo que hay dentro</strong>: tareas y notas, reuniones, contactos, contraseñas y clientes de este proyecto. No se puede deshacer; si quieres conservarlo, exporta antes una copia de seguridad desde el proyecto.
+    </div>
+    <p class="lock-error" id="pError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteProject" hidden>Eliminar proyecto</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelProject" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveProject">Crear proyecto</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgShare" aria-labelledby="shTitle">
+  <div class="dlg-inner">
+    <h2 id="shTitle">Compartir proyecto</h2>
+    <p class="dlg-lead" id="shLead"></p>
+    <div id="shPersonal" hidden>
+      <ul class="share-points">
+        <li>Se crea un proyecto de equipo con una copia de sus tareas (con notas e imágenes), clientes, contactos y reuniones.</li>
+        <li>Las contraseñas guardadas no se copian: todavía no se pueden compartir con seguridad.</li>
+        <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
+        <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo y el original deja de sincronizar. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
+      </ul>
+      <p class="type-note" id="shProgress" role="status" hidden></p>
+      <button type="button" class="btn btn-primary" id="shConvert">Convertir en proyecto de equipo</button>
+    </div>
+    <div id="shTeam" hidden>
+      <div class="field">
+        <span class="field-label">Miembros</span>
+        <ul class="member-list" id="shMembers"></ul>
+      </div>
+      <form class="field" id="shInviteForm" novalidate>
+        <label for="shEmail">Invitar por correo</label>
+        <div class="invite-form-row">
+          <input id="shEmail" type="email" maxlength="120" autocomplete="off" placeholder="nombre@empresa.com">
+          <select id="shRole" aria-label="Rol">
+            <option value="editor">Editor</option>
+            <option value="viewer">Lector</option>
+          </select>
+          <button type="submit" class="btn btn-primary" id="shInviteBtn">Invitar</button>
+        </div>
+        <p class="field-help">La persona verá la invitación al entrar en Workhub con ese correo. Tiene que tener una cuenta con ese mismo correo.</p>
+      </form>
+      <div class="field" id="shPendingWrap" hidden>
+        <span class="field-label">Invitaciones pendientes</span>
+        <ul class="member-list" id="shPending"></ul>
+      </div>
+    </div>
+    <p class="lock-error" id="shError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="shLeave" hidden>Salir del equipo</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnShareClose" data-dismiss>Cerrar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgColumn">
+  <form class="dlg-inner" id="formColumn" method="dialog">
+    <h2>Editar columna</h2>
+    <div class="field">
+      <label for="colName">Nombre</label>
+      <input id="colName" maxlength="40" autocomplete="off" translate="no" required>
+    </div>
+    <div class="field">
+      <span class="field-label" id="colColorLabel">Color</span>
+      <div class="stage-colors" id="colColors" role="radiogroup" aria-labelledby="colColorLabel"></div>
+    </div>
+    <div class="field">
+      <label for="colLimit">Límite de tarjetas</label>
+      <input id="colLimit" type="number" min="1" max="999" inputmode="numeric" placeholder="Sin límite">
+      <p class="field-help">Déjalo vacío para no poner límite. La cuenta se marca en rojo al superarlo.</p>
+    </div>
+    <label class="check-row"><input type="checkbox" id="colDone"> Las tarjetas de esta columna cuentan como terminadas</label>
+    <p class="lock-error" id="colError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelColumn" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm" aria-labelledby="confirmTitle">
+  <div class="dlg-inner">
+    <h2 id="confirmTitle">¿Seguro?</h2>
+    <p class="confirm-text" id="confirmText"></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnConfirmCancel" data-dismiss>Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmOk">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgPluginForm" aria-labelledby="pfTitle">
+  <form class="dlg-inner" id="formPluginForm" method="dialog" novalidate>
+    <div class="pf-who" id="pfWho"></div>
+    <h2 id="pfTitle" translate="no"></h2>
+    <p class="pf-sub" id="pfSub" translate="no" hidden></p>
+    <p class="pf-intro" id="pfIntro" translate="no" hidden></p>
+    <p class="lock-error" id="pfError" role="alert" hidden></p>
+    <div id="pfBody"></div>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="pfCancel" data-dismiss>Omitir</button>
+        <button type="submit" class="btn btn-primary" id="pfSubmit">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgPlugin" aria-labelledby="pluginDlgTitle">
+  <div class="dlg-inner">
+    <h2 id="pluginDlgTitle">Instalar plugin</h2>
+    <div id="pluginDlgBody"></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnPluginRemove" hidden>Quitar plugin</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnPluginCancel" data-dismiss>Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnPluginConfirm">Instalar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Plugins que se cargan sin mostrarse, solo para leer su manifiesto al instalarlos. -->
+<div id="pluginProbeArea" aria-hidden="true"></div>
+
+<dialog id="dlgContact">
+  <form class="dlg-inner" id="formContact" method="dialog">
+    <h2 id="dlgContactTitle">Nuevo contacto</h2>
+    <input type="hidden" id="cId">
+    <div class="row2">
+      <div class="field">
+        <label for="cCliente">Cliente</label>
+        <select id="cCliente" required></select>
+        <div class="new-client-inline" id="cClienteNewWrap" hidden>
+          <input id="cClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="cClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="cNombre">Nombre</label>
+        <input id="cNombre" maxlength="80" placeholder="Persona de contacto">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="cEmail">Email</label>
+        <input id="cEmail" type="email" maxlength="120" placeholder="nombre@cliente.com">
+      </div>
+      <div class="field">
+        <label for="cTelefono">Teléfono</label>
+        <input id="cTelefono" maxlength="40" placeholder="+34…">
+      </div>
+    </div>
+    <div class="field">
+      <label for="cNotas">Notas / enlaces útiles</label>
+      <textarea id="cNotas" maxlength="800" placeholder="Portales, usuarios, referencias internas, URLs… (nunca contraseñas)"></textarea>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteContact" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelContact" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveContact">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgVault">
+  <form class="dlg-inner" id="formVault" method="dialog">
+    <h2 id="dlgVaultTitle">Nueva credencial</h2>
+    <input type="hidden" id="vId">
+    <div class="field">
+      <label for="vTipo">Tipo</label>
+      <select id="vTipo">
+        <option value="correo">Correo / Web</option>
+        <option value="usuario">Usuario / Web</option>
+        <option value="servidor">Servidor</option>
+        <option value="rdp">RDP (escritorio remoto)</option>
+        <option value="vpn">VPN</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field needs-clients">
+        <label for="vCliente">Cliente</label>
+        <select id="vCliente" required></select>
+        <div class="new-client-inline" id="vClienteNewWrap" hidden>
+          <input id="vClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="vClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="vLabel">Etiqueta (opcional)</label>
+        <input id="vLabel" maxlength="60" placeholder="p. ej. Cuenta admin">
+      </div>
+    </div>
+    <div class="row2" id="camposCorreo">
+      <div class="field">
+        <label for="vCorreo">Correo</label>
+        <input id="vCorreo" type="email" maxlength="120" placeholder="usuario@cliente.com">
+      </div>
+      <div class="field">
+        <label for="vWeb">Web</label>
+        <input id="vWeb" maxlength="160" placeholder="https://…">
+      </div>
+    </div>
+    <div class="row2" id="camposUsuario" hidden>
+      <div class="field">
+        <label for="vUserUsuario">Usuario</label>
+        <input id="vUserUsuario" maxlength="80" placeholder="nombre de usuario">
+      </div>
+      <div class="field">
+        <label for="vUserWeb">Web (opcional)</label>
+        <input id="vUserWeb" maxlength="160" placeholder="https://…">
+      </div>
+    </div>
+    <div class="row2" id="camposServidor" hidden>
+      <div class="field">
+        <label for="vIp">IP / host del servidor</label>
+        <input id="vIp" maxlength="120" placeholder="p. ej. 192.168.1.10">
+      </div>
+      <div class="field">
+        <label for="vUsuario">Usuario (opcional)</label>
+        <input id="vUsuario" maxlength="80" placeholder="root, admin…">
+      </div>
+    </div>
+    <div id="camposRdp" hidden>
+      <div class="row2">
+        <div class="field">
+          <label for="vRdpHost">IP / host</label>
+          <input id="vRdpHost" maxlength="120" placeholder="p. ej. 192.168.1.20">
+        </div>
+        <div class="field">
+          <label for="vRdpPuerto">Puerto (opcional)</label>
+          <input id="vRdpPuerto" maxlength="10" placeholder="3389">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="vRdpUsuario">Usuario</label>
+          <input id="vRdpUsuario" maxlength="80" placeholder="usuario">
+        </div>
+        <div class="field">
+          <label for="vRdpDominio">Dominio (opcional)</label>
+          <input id="vRdpDominio" maxlength="80" placeholder="p. ej. OFICINA">
+        </div>
+      </div>
+    </div>
+    <div class="field" id="camposVpn" hidden>
+      <label for="vVpnUsuario">Usuario</label>
+      <input id="vVpnUsuario" maxlength="80" placeholder="nombre de usuario">
+    </div>
+    <div class="field">
+      <label for="vPass">Contraseña</label>
+      <input id="vPass" type="password" autocomplete="new-password" maxlength="300" placeholder="Introduce la contraseña">
+    </div>
+    <div class="field">
+      <label for="vNotas">Notas (se cifran junto a la contraseña)</label>
+      <textarea id="vNotas" maxlength="500" placeholder="Detalles, puerto, VPN necesaria…"></textarea>
+    </div>
+    <p class="lock-error" id="vaultFormError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteVault" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelVault" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveVault">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgMeeting">
+  <form class="dlg-inner" id="formMeeting" method="dialog">
+    <h2 id="dlgMeetingTitle">Nueva reunión</h2>
+    <input type="hidden" id="mId">
+    <div class="field">
+      <label for="mTitle">Título</label>
+      <input id="mTitle" required maxlength="140" placeholder="p. ej. Seguimiento semanal con Finba">
+    </div>
+    <div class="row2">
+      <div class="field needs-clients">
+        <label for="mCliente">Cliente (opcional)</label>
+        <select id="mCliente" data-allow-empty="1"></select>
+        <div class="new-client-inline" id="mClienteNewWrap" hidden>
+          <input id="mClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <button type="button" class="btn btn-ghost" id="mClienteNewBtn">Crear</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="mDate">Fecha</label>
+        <input id="mDate" type="date" required>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="mStart">Hora de inicio</label>
+        <input id="mStart" type="time">
+      </div>
+      <div class="field">
+        <label for="mEnd">Hora de fin (opcional)</label>
+        <input id="mEnd" type="time">
+      </div>
+    </div>
+    <div class="field">
+      <label for="mLink">Enlace de la reunión (opcional)</label>
+      <input id="mLink" maxlength="600" inputmode="url" placeholder="Pega el enlace de Meet, Teams, Zoom…">
+      <p class="field-hint" id="mLinkHint"></p>
+    </div>
+    <div class="field">
+      <label for="mNotas">Notas (opcional)</label>
+      <textarea id="mNotas" maxlength="1500" placeholder="Orden del día, asistentes, acuerdos…"></textarea>
+    </div>
+    <p class="lock-error" id="meetingFormError" hidden></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteMeeting" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelMeeting" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgMeetingView">
+  <div class="dlg-inner">
+    <div class="cat"><span id="mvCliente" translate="no"></span><span class="type-badge meet-badge" id="mvPlatform"></span></div>
+    <h2 id="mvTitle" translate="no"></h2>
+    <p class="mv-when" id="mvWhen"></p>
+    <div class="mv-link" id="mvLinkWrap" hidden>
+      <a class="btn btn-primary" id="mvJoin" target="_blank" rel="noopener noreferrer">Unirse a la reunión</a>
+      <button type="button" class="btn btn-ghost" id="mvCopyLink">Copiar enlace</button>
+      <p class="mv-url" id="mvUrl" translate="no"></p>
+    </div>
+    <div class="field" id="mvNotasWrap" hidden>
+      <label>Notas</label>
+      <div class="view-notas" id="mvNotas" translate="no"></div>
+    </div>
+    <div class="dlg-actions">
+      <div></div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnMvClose" data-dismiss>Cerrar</button>
+        <button type="button" class="btn btn-ghost" id="btnMvEdit">Editar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgVaultView">
+  <div class="dlg-inner">
+    <div class="cat"><span id="vvCliente" translate="no"></span><span class="type-badge" id="vvTipo"></span></div>
+    <h2 id="vvTitle" translate="no"></h2>
+    <div class="view-rows" id="vvFields"></div>
+    <div class="field">
+      <label>Contraseña</label>
+      <div class="pass-row">
+        <span class="pass-value" id="vvPassValue" translate="no">••••••••</span>
+        <button type="button" class="icon-btn" id="btnVvToggle">Mostrar</button>
+        <button type="button" class="icon-btn" id="btnVvCopy">Copiar</button>
+      </div>
+    </div>
+    <div class="field" id="vvNotasWrap" hidden>
+      <label>Notas</label>
+      <div class="view-notas" id="vvNotas"></div>
+    </div>
+    <div class="dlg-actions">
+      <div></div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnVvClose" data-dismiss>Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnVvEdit">Editar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Núcleo, utilidades y servicios -->
+<script src="../src/core/local-storage-shim.js"></script>
+<script src="../src/core/namespace.js"></script>
+<script src="../src/i18n/i18n.js"></script>
+<script src="../src/i18n/en.js"></script>
+<script src="../src/core/emitter.js"></script>
+<script src="../src/utils/html.js"></script>
+<script src="../src/utils/dates.js"></script>
+<script src="../src/utils/urls.js"></script>
+<script src="../src/utils/autoscroll.js"></script>
+<script src="../src/utils/ui.js"></script>
+<script src="../src/services/preferences.js"></script>
+<script src="../src/services/platform.js"></script>
+<script src="../src/services/backup-history.js"></script>
+<script src="../src/services/cloud-backup.js"></script>
+<script src="../src/services/crypto.js"></script>
+<script src="../src/services/firebase-backend.js"></script>
+<script src="../src/services/github-api.js"></script>
+<script src="../src/services/plugin-host.js"></script>
+<script src="../src/services/official-plugins.js"></script>
+
+<!-- Modelos: datos y persistencia -->
+<script src="../src/models/collection-model.js"></script>
+<script src="../src/models/client-model.js"></script>
+<script src="../src/models/project-templates.js"></script>
+<script src="../src/models/task-model.js"></script>
+<script src="../src/models/contact-model.js"></script>
+<script src="../src/models/meeting-model.js"></script>
+<script src="../src/models/vault-model.js"></script>
+<script src="../src/models/settings-model.js"></script>
+<script src="../src/models/backup-model.js"></script>
+<script src="../src/models/project-model.js"></script>
+<script src="../src/models/plugin-model.js"></script>
+<script src="../src/models/github-sync.js"></script>
+<script src="../src/models/team-model.js"></script>
+
+<!-- Vistas: DOM y renderizado -->
+<script src="../src/views/client-colors.js"></script>
+<script src="../src/views/labels.js"></script>
+<script src="../src/views/team-ui.js"></script>
+<script src="../src/views/plugin-icons.js"></script>
+<script src="../src/views/extensions.js"></script>
+<script src="../src/views/dropdown.js"></script>
+<script src="../src/views/client-select.js"></script>
+<script src="../src/views/shell-view.js"></script>
+<script src="../src/views/board-view.js"></script>
+<script src="../src/views/column-view.js"></script>
+<script src="../src/views/task-dialog-view.js"></script>
+<script src="../src/views/task-detail-view.js"></script>
+<script src="../src/views/calendar-view.js"></script>
+<script src="../src/views/contacts-view.js"></script>
+<script src="../src/views/vault-view.js"></script>
+<script src="../src/views/vault-lock-view.js"></script>
+<script src="../src/views/clients-view.js"></script>
+<script src="../src/views/backup-view.js"></script>
+<script src="../src/views/settings-view.js"></script>
+<script src="../src/views/toast-view.js"></script>
+<script src="../src/views/command-palette-view.js"></script>
+<script src="../src/views/auth-view.js"></script>
+<script src="../src/views/project-view.js"></script>
+<script src="../src/views/project-dialog-view.js"></script>
+<script src="../src/views/plugins-view.js"></script>
+<script src="../src/views/plugin-form-view.js"></script>
+<script src="../src/views/github-view.js"></script>
+<script src="../src/views/share-view.js"></script>
+<script src="../src/views/reminders-view.js"></script>
+
+<!-- Controladores: eventos y coordinación -->
+<script src="../src/controllers/settings-controller.js"></script>
+<script src="../src/controllers/clients-controller.js"></script>
+<script src="../src/controllers/tasks-controller.js"></script>
+<script src="../src/controllers/calendar-controller.js"></script>
+<script src="../src/controllers/contacts-controller.js"></script>
+<script src="../src/controllers/vault-controller.js"></script>
+<script src="../src/controllers/backup-controller.js"></script>
+<script src="../src/controllers/projects-controller.js"></script>
+<script src="../src/controllers/plugins-clean.js"></script>
+<script src="../src/controllers/plugins-controller.js"></script>
+<script src="../src/controllers/plugins-data-api.js"></script>
+<script src="../src/controllers/reminders-controller.js"></script>
+<script src="../src/controllers/github-controller.js"></script>
+<script src="../src/controllers/team-controller.js"></script>
+<script src="../src/controllers/command-controller.js"></script>
+<script src="../src/controllers/auth-controller.js"></script>
+<script src="../src/controllers/app-controller.js"></script>
+
+<script src="../src/services/pwa.js"></script>
+
+<!-- Aviso de cookies y consentimiento (sin dependencias) -->
+<script src="../src/consent/consent.js"></script>
+
+<!-- Arranque -->
+<script src="../src/main.js"></script>
+</body>
+</html>

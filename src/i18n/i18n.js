@@ -1,4 +1,4 @@
-/* Traducciones. Workhub está escrito en español; para otros idiomas, cada
+/* Traducciones. Kanlane está escrito en español; para otros idiomas, cada
    texto de la interfaz se traduce al pintarse:
    - Diccionario exacto: 'Nueva tarea' → 'New task'.
    - Patrones para textos con datos: /^Cliente «(.+)» añadido$/ → 'Client “$1” added'.

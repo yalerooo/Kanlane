@@ -1,11 +1,11 @@
-/* Configuración de Firebase para publicar Workhub en la web con inicio de sesión.
+/* Configuración de Firebase para publicar Kanlane en la web con inicio de sesión.
 
    Cómo rellenarla: Consola de Firebase → ⚙ Configuración del proyecto →
    "Tus apps" → app web → "Configuración del SDK" (opción "Config") y copia aquí
    esos valores. No son secretos: identifican el proyecto, y lo que protege los
    datos son las reglas de firestore.rules. Guía completa en docs/FIREBASE.md.
 
-   Mientras apiKey esté vacío, Workhub funciona como hasta ahora (modo local en
+   Mientras apiKey esté vacío, Kanlane funciona como hasta ahora (modo local en
    el navegador, o dentro de claude.ai). */
 window.WORKHUB_FIREBASE = {
   apiKey: 'AIzaSyDqO3Mxm7kP7H0Mz5fOZbWN6k7nRPxhXYk',
@@ -24,7 +24,7 @@ window.WORKHUB_FIREBASE = {
      worker/index.js). En ellos el inicio de sesión se completa en el
      propio dominio. El de Netlify es el sitio antiguo: quítalo cuando lo borres.
      Ver docs/CLOUDFLARE.md. */
-  hostingDomains: ['workhub.yalero.net', 'workhub-project.netlify.app'],
+  hostingDomains: ['kanlane.com', 'kanlane.yalero.net', 'workhub.yalero.net', 'workhub-project.netlify.app'],
 
   /* Botones de acceso que se muestran, en este orden. Cada uno debe estar
      activado en Firebase → Authentication → Sign-in method.

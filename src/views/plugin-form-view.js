@@ -1,4 +1,4 @@
-/* Formulario que un plugin pide mostrar (wh.ui.form). Lo dibuja Workhub con
+/* Formulario que un plugin pide mostrar (wh.ui.form). Lo dibuja Kanlane con
    sus propios componentes a partir de una descripción declarativa: el plugin
    nunca inserta HTML. Devuelve lo que la persona rellena, o null si cancela.
    Campos: number, text, select (con «añadir nuevo» opcional) y dates

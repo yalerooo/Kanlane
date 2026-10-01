@@ -1,6 +1,6 @@
-/* Plugin oficial "Apariencia": personaliza el aspecto de Workhub.
+/* Plugin oficial "Apariencia": personaliza el aspecto de Kanlane.
    Permisos: appearance, storage.
-   - En segundo plano: aplica la apariencia guardada al abrir Workhub.
+   - En segundo plano: aplica la apariencia guardada al abrir Kanlane.
    - En el panel: tema, paleta, acento, fuente, tamaño, esquinas y espaciado.
    Se guarda en storage ('look') del proyecto abierto. */
 (function(){
@@ -9,7 +9,7 @@
     name: 'Apariencia',
     version: '1.1.0',
     description: 'Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.',
-    author: 'Workhub',
+    author: 'Kanlane',
     icon: 'sparkles',
     color: 328,
     permissions: ['appearance', 'storage']
@@ -34,18 +34,18 @@
     'Rectas':'Sharp', 'Normales':'Normal', 'Redondeadas':'Rounded', 'Densidad':'Density',
     'Espacio de las tarjetas del tablero, listas y barra lateral.':'Spacing of board cards, lists and sidebar.',
     'Compacta':'Compact', 'Normal':'Normal', 'Amplia':'Comfortable',
-    'Tipografía':'Typography', 'Fuente de los textos de Workhub.':'Font used by Workhub text.',
-    'Workhub':'Workhub', 'Del sistema':'System', 'Serif':'Serif', 'Monoespaciada':'Monospaced',
+    'Tipografía':'Typography', 'Fuente de los textos de Kanlane.':'Font used by Kanlane text.',
+    'Kanlane':'Kanlane', 'Del sistema':'System', 'Serif':'Serif', 'Monoespaciada':'Monospaced',
     'Tamaño del texto':'Text size', 'Ajusta la lectura de la interfaz.':'Adjust interface text for reading.',
     'Pequeño':'Small', 'Grande':'Large', 'Guardando…':'Saving…', 'Guardado':'Saved', 'No se pudo guardar':'Could not save',
     'Restablecer':'Reset',
-    'Conectando con Workhub…':'Connecting to Workhub…',
-    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
-    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+    'Conectando con Kanlane…':'Connecting to Kanlane…',
+    'Este plugin se abre desde Kanlane (sección Plugins).':'This plugin opens from Kanlane (Plugins section).',
+    'No se pudo conectar con Kanlane: {error}':'Could not connect to Kanlane: {error}'
   }});
 
   var app = document.getElementById('app');
-  document.getElementById('status').textContent = tr('Conectando con Workhub…');
+  document.getElementById('status').textContent = tr('Conectando con Kanlane…');
   var wh = null;
   var look = {theme:'default', palette:'default', accent:null, font:'default', textSize:'normal', radius:'normal', density:'normal'};
   var persisted = null;
@@ -100,7 +100,7 @@
     var palettes = [['default', 'Original'], ['warm', 'Cálida'], ['cool', 'Fría'], ['slate', 'Pizarra']].map(function(o){
       return '<button type="button" class="palette-choice' + (look.palette === o[0] ? ' is-on' : '') + '" data-set="palette" data-value="' + o[0] + '" aria-pressed="' + (look.palette === o[0]) + '"><span class="palette-sample is-' + o[0] + '"><i></i><i></i><i></i></span><span>' + tr(o[1]) + '</span></button>';
     }).join('');
-    var fonts = [['default', 'Workhub'], ['system', 'Del sistema'], ['serif', 'Serif'], ['mono', 'Monoespaciada']].map(function(o){
+    var fonts = [['default', 'Kanlane'], ['system', 'Del sistema'], ['serif', 'Serif'], ['mono', 'Monoespaciada']].map(function(o){
       return '<button type="button" class="font-choice is-' + o[0] + (look.font === o[0] ? ' is-on' : '') + '" data-set="font" data-value="' + o[0] + '" aria-pressed="' + (look.font === o[0]) + '"><strong>Aa</strong><span>' + tr(o[1]) + '</span></button>';
     }).join('');
     app.innerHTML =
@@ -113,7 +113,7 @@
           PRESETS.map(function(c){ return '<button type="button" class="sw' + (look.accent === c ? ' is-on' : '') + '" style="background:' + c + ';--sw:' + c + '" data-accent="' + c + '" aria-label="' + c + '">' + (look.accent === c ? CHECK : '') + '</button>'; }).join('') +
           '<label class="custom' + (look.accent && PRESETS.indexOf(look.accent) === -1 ? ' is-on' : '') + '">' + tr('Otro') + '<input type="color" id="custom" value="' + (look.accent || '#2F6BFF') + '"></label>' +
         '</div></div>' +
-        '<div class="group"><h2>' + tr('Tipografía') + '</h2><p>' + tr('Fuente de los textos de Workhub.') + '</p><div class="font-grid">' + fonts + '</div></div>' +
+        '<div class="group"><h2>' + tr('Tipografía') + '</h2><p>' + tr('Fuente de los textos de Kanlane.') + '</p><div class="font-grid">' + fonts + '</div></div>' +
         '<div class="group"><h2>' + tr('Tamaño del texto') + '</h2><p>' + tr('Ajusta la lectura de la interfaz.') + '</p>' + seg('textSize', [['small', 'Pequeño'], ['normal', 'Normal'], ['large', 'Grande']]) + '</div>' +
         '<div class="group"><h2>' + tr('Esquinas') + '</h2><p>' + tr('Forma de tarjetas, botones y campos.') + '</p>' + seg('radius', [['sharp', 'Rectas'], ['normal', 'Normales'], ['round', 'Redondeadas']]) + '</div>' +
         '<div class="group"><h2>' + tr('Densidad') + '</h2><p>' + tr('Espacio de las tarjetas del tablero, listas y barra lateral.') + '</p>' + seg('density', [['compact', 'Compacta'], ['normal', 'Normal'], ['comfortable', 'Amplia']]) + '</div>' +
@@ -137,17 +137,17 @@
     look = norm(saved);
     persisted = look;
     if(wh.isBackground){
-      apply().catch(function(err){ wh.ui.toast(tr('No se pudo conectar con Workhub: {error}', {error:err.message}), {type:'error'}); });
+      apply().catch(function(err){ wh.ui.toast(tr('No se pudo conectar con Kanlane: {error}', {error:err.message}), {type:'error'}); });
       /* El panel guardó cambios: aplicarlos. */
       wh.on('storage', function(ev){
-        if(ev.scope === 'project' && ev.key === 'look') wh.storage.get('look').then(function(v){ look = norm(v); return apply(); }).catch(function(err){ wh.ui.toast(tr('No se pudo conectar con Workhub: {error}', {error:err.message}), {type:'error'}); });
+        if(ev.scope === 'project' && ev.key === 'look') wh.storage.get('look').then(function(v){ look = norm(v); return apply(); }).catch(function(err){ wh.ui.toast(tr('No se pudo conectar con Kanlane: {error}', {error:err.message}), {type:'error'}); });
       });
     } else {
       render();
     }
   }).catch(function(err){
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
-      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
+      ? tr('Este plugin se abre desde Kanlane (sección Plugins).')
+      : tr('No se pudo conectar con Kanlane: {error}', {error:err.message});
   });
 })();

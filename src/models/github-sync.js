@@ -1,14 +1,14 @@
-/* Sincronización de un proyecto de Workhub con un GitHub Project (v2).
-   - Las columnas de Workhub son las opciones del campo Status de GitHub
+/* Sincronización de un proyecto de Kanlane con un GitHub Project (v2).
+   - Las columnas de Kanlane son las opciones del campo Status de GitHub
      (clave de etapa = 'g' + id de la opción).
    - Cada tarea enlazada guarda ghItemId (más ghContentId, ghUrl, ghNumber,
-     ghRepo) y dos marcas de tiempo: ghSyncedAt (última vez que Workhub y
+     ghRepo) y dos marcas de tiempo: ghSyncedAt (última vez que Kanlane y
      GitHub coincidieron) y ghRemoteAt (última modificación de GitHub vista).
        · cambio local  = updatedAt > ghSyncedAt
        · cambio remoto = fecha en GitHub > ghRemoteAt
      Si cambian los dos lados gana el más reciente.
    - Lo que se borra en un lado no se borra en el otro. Una tarea borrada en
-     Workhub se recuerda (github.ignored) para que no vuelva a importarse.
+     Kanlane se recuerda (github.ignored) para que no vuelva a importarse.
    - La configuración vive en el documento del proyecto (campo github); el
      token, solo en este navegador. */
 (function(){
@@ -59,7 +59,7 @@
       return !!this.config();
     }
 
-    /* En un equipo, los lectores no escriben (ni en Workhub ni en GitHub). */
+    /* En un equipo, los lectores no escriben (ni en Kanlane ni en GitHub). */
     canSync(){
       const p = this.app.controllers.projects.current();
       return !(p && p.team && p.role === 'viewer');
@@ -73,7 +73,7 @@
       return !(p && p.team && p.role !== 'owner');
     }
 
-    /* Etapas de Workhub a partir de las opciones del campo Status. */
+    /* Etapas de Kanlane a partir de las opciones del campo Status. */
     static stagesFromOptions(options){
       const list = options.map((o) => ({key:keyOf(o.id), label:o.name, color:COLORS[o.color] || 'gray', done:false}));
       if(!list.length) return list;
@@ -85,7 +85,7 @@
     /* ---------- Conectar y desconectar ---------- */
 
     /* opts: {url, token, pushExisting, target, name}.
-       target: id del proyecto de Workhub donde inyectarlo, o NEW para crear uno
+       target: id del proyecto de Kanlane donde inyectarlo, o NEW para crear uno
        nuevo (con opts.name, o el título del proyecto de GitHub). */
     link(opts){
       const ref = api.parseProjectUrl(opts.url);
@@ -148,7 +148,7 @@
       this.projects.patch(this.app.projectId, {github:Object.assign({}, cfg, {ignored:ignored})}).catch(() => {});
     }
 
-    /* ¿Hay cambios en Workhub pendientes de enviar? */
+    /* ¿Hay cambios en Kanlane pendientes de enviar? */
     hasPending(){
       const cfg = this.config();
       if(!cfg) return false;
@@ -199,7 +199,7 @@
       });
     }
 
-    /* Opciones nuevas en GitHub → columnas nuevas en Workhub. */
+    /* Opciones nuevas en GitHub → columnas nuevas en Kanlane. */
     _ensureColumns(options, result){
       const projects = this.app.controllers.projects;
       const wanted = GithubSync.stagesFromOptions(options);
@@ -285,7 +285,7 @@
       };
     }
 
-    /* GitHub → Workhub. */
+    /* GitHub → Kanlane. */
     _pull(items, cfg, result, alive){
       const ignored = cfg.ignored || [];
       const byItem = {};
@@ -343,7 +343,7 @@
       return chain.then(() => at);
     }
 
-    /* Workhub → GitHub. */
+    /* Kanlane → GitHub. */
     _push(project, items, cfg, result, alive){
       const remote = {};
       items.forEach((it) => { remote[it.id] = it; });
@@ -381,7 +381,7 @@
               return this.tasks.markSynced(t.id, startedAt, {ghRemoteAt:Math.max(time(at), r.remoteAt)});
             });
           }
-          /* Tarea nueva de Workhub → borrador en el proyecto. */
+          /* Tarea nueva de Kanlane → borrador en el proyecto. */
           this.sent[t.id] = true;
           return api.addDraft(project.id, t.title, t.desc || '').then((d) => {
             const done = optionId ? api.setStatus(project.id, d.id, project.fieldId, optionId).then((n) => n.updatedAt) : Promise.resolve(d.updatedAt);

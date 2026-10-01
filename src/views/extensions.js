@@ -1,6 +1,6 @@
 /* Extensiones de la interfaz aportadas por plugins (permiso "ui:extend").
-   Un plugin no toca el HTML de Workhub: declara botones y etiquetas, y
-   Workhub los pinta con sus propios componentes en huecos fijos:
+   Un plugin no toca el HTML de Kanlane: declara botones y etiquetas, y
+   Kanlane los pinta con sus propios componentes en huecos fijos:
 
      tasks.toolbar     barra de Tareas                 contexto: {}
      task.actions      ficha de una tarea              contexto: {taskId}

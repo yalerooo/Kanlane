@@ -1,7 +1,7 @@
 /* Plugin oficial "Temporizador": cronómetro por tarea y tiempo acumulado.
    Permisos: tasks:read, storage, ui:extend.
 
-   - En segundo plano (se carga oculto al abrir Workhub):
+   - En segundo plano (se carga oculto al abrir Kanlane):
        · botón "Iniciar cronómetro" en la ficha de cada tarea;
        · mientras cuenta, botón "Detener" en la barra de Tareas y en la paleta;
        · etiqueta con el tiempo acumulado en cada tarjeta del tablero.
@@ -17,7 +17,7 @@
     name: 'Temporizador',
     version: '1.1.0',
     description: 'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.',
-    author: 'Workhub',
+    author: 'Kanlane',
     icon: 'timer',
     color: 24,
     permissions: ['tasks:read', 'storage', 'ui:extend']
@@ -38,13 +38,13 @@
     'Tarea':'Task', 'Elige una tarea…':'Choose a task…', 'Empezar':'Start', 'Sin cliente':'No client',
     'Total':'Total', 'últimos 7 días':'last 7 days', 'Borrar tiempos':'Clear times', 'Por tarea':'By task', 'Por cliente':'By client',
     'Tarea eliminada':'Deleted task', 'Aún no has medido tiempo. Elige una tarea y pulsa Empezar.':'You haven’t tracked any time yet. Choose a task and click Start.',
-    'Conectando con Workhub…':'Connecting to Workhub…',
-    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
-    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+    'Conectando con Kanlane…':'Connecting to Kanlane…',
+    'Este plugin se abre desde Kanlane (sección Plugins).':'This plugin opens from Kanlane (Plugins section).',
+    'No se pudo conectar con Kanlane: {error}':'Could not connect to Kanlane: {error}'
   }});
 
   var app = document.getElementById('app');
-  document.getElementById('status').textContent = tr('Conectando con Workhub…');
+  document.getElementById('status').textContent = tr('Conectando con Kanlane…');
   var wh = null, tasks = [], running = null, totals = {}, sessions = [], tick = null, selected = '';
 
   function esc(s){
@@ -91,7 +91,7 @@
       .then(function(){ return ms; });
   }
 
-  /* ---------- Segundo plano: botones y etiquetas en Workhub ---------- */
+  /* ---------- Segundo plano: botones y etiquetas en Kanlane ---------- */
 
   function refreshUi(){
     var badges = {};
@@ -257,7 +257,7 @@
     else panel();
   }).catch(function(err){
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
-      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
+      ? tr('Este plugin se abre desde Kanlane (sección Plugins).')
+      : tr('No se pudo conectar con Kanlane: {error}', {error:err.message});
   });
 })();

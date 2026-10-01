@@ -10,7 +10,7 @@
    - Se guarda cuándo se decidió y se vuelve a preguntar a los 12 meses o si cambian las
      categorías (VERSION).
 
-   HOY Workhub solo usa almacenamiento técnico imprescindible, que no necesita consentimiento
+   HOY Kanlane solo usa almacenamiento técnico imprescindible, que no necesita consentimiento
    (ver legal/cookies/). La categoría «analytics» existe para el día que se añada algo que sí
    lo necesite: cualquier script de analítica o de terceros debe cargarse SOLO si
    WorkhubConsent.has('analytics') es verdadero, y volver a comprobarlo con onChange().
@@ -30,7 +30,7 @@
     es: {
       region: 'Aviso de cookies',
       title: 'Tu privacidad',
-      body: 'Workhub solo usa almacenamiento técnico imprescindible: mantener tu sesión y recordar tu idioma y tu tema. No usamos cookies de analítica ni de publicidad. Si algún día añadiéramos alguna, no se activaría sin tu permiso.',
+      body: 'Kanlane solo usa almacenamiento técnico imprescindible: mantener tu sesión y recordar tu idioma y tu tema. No usamos cookies de analítica ni de publicidad. Si algún día añadiéramos alguna, no se activaría sin tu permiso.',
       cookies: 'Política de cookies',
       privacy: 'Privacidad',
       reject: 'Rechazar',
@@ -42,7 +42,7 @@
       necessaryBadge: 'Siempre activas',
       necessaryText: 'Imprescindibles para iniciar sesión, usar la aplicación y recordar lo que tú eliges (idioma, tema, proyecto abierto). No se pueden desactivar.',
       analyticsTitle: 'Analítica y medición',
-      analyticsText: 'Servirían para entender cómo se usa Workhub. Hoy no se usa ninguna; si algún día se añade, solo se activará si lo permites aquí.',
+      analyticsText: 'Servirían para entender cómo se usa Kanlane. Hoy no se usa ninguna; si algún día se añade, solo se activará si lo permites aquí.',
       save: 'Guardar mi elección',
       acceptAll: 'Aceptar todas',
       rejectAll: 'Rechazar todas',
@@ -51,7 +51,7 @@
     en: {
       region: 'Cookie notice',
       title: 'Your privacy',
-      body: 'Workhub only uses essential technical storage: keeping you signed in and remembering your language and theme. We do not use analytics or advertising cookies. If we ever added any, they would not run without your permission.',
+      body: 'Kanlane only uses essential technical storage: keeping you signed in and remembering your language and theme. We do not use analytics or advertising cookies. If we ever added any, they would not run without your permission.',
       cookies: 'Cookie policy',
       privacy: 'Privacy',
       reject: 'Reject',
@@ -63,7 +63,7 @@
       necessaryBadge: 'Always on',
       necessaryText: 'Essential to sign in, use the app and remember what you choose (language, theme, open project). They cannot be turned off.',
       analyticsTitle: 'Analytics and measurement',
-      analyticsText: 'They would help understand how Workhub is used. None is used today; if one is ever added, it will only run if you allow it here.',
+      analyticsText: 'They would help understand how Kanlane is used. None is used today; if one is ever added, it will only run if you allow it here.',
       save: 'Save my choice',
       acceptAll: 'Accept all',
       rejectAll: 'Reject all',

@@ -75,7 +75,7 @@
       top.appendChild(el('div', {'class': 'legal-bar'}, [
         el('a', {'class': 'legal-brand', href: '/'}, [
           el('img', {src: '/assets/img/favicon.svg', width: '28', height: '28', alt: ''}),
-          el('span', {text: 'Workhub'})
+          el('span', {text: 'Kanlane'})
         ]),
         el('a', {'class': 'legal-back', href: '/app/', text: 'Volver a la app'})
       ]));

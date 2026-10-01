@@ -29,7 +29,7 @@
   }
 
   function sourceText(url, official){
-    if(official) return 'Oficial de Workhub';
+    if(official) return 'Oficial de Kanlane';
     return hostOf(url) || 'De terceros';
   }
 
@@ -249,7 +249,7 @@
       const facts = [
         ['Versión', esc(m.version || '1.0.0')],
         ['Autor', esc(m.author || 'Desconocido')],
-        ['Origen', info.official ? 'Oficial de Workhub' : '<span class="plugin-mono">' + esc(host || info.url) + '</span>']
+        ['Origen', info.official ? 'Oficial de Kanlane' : '<span class="plugin-mono">' + esc(host || info.url) + '</span>']
       ];
       if(mode === 'details' && info.installedAt) facts.push(['Instalado', esc(dateText(info.installedAt))]);
       facts.push(['Identificador', '<span class="plugin-mono">' + esc(m.id) + '</span>']);

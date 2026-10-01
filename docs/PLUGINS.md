@@ -73,13 +73,13 @@ El esqueleto mínimo es este:
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="https://workhub.yalero.net/plugins/sdk/workhub-plugin.css">
+  <link rel="stylesheet" href="https://kanlane.com/plugins/sdk/workhub-plugin.css">
 </head>
 <body>
   <h1>Hola</h1>
   <p id="out" class="wh-muted">Conectando…</p>
 
-  <script src="https://workhub.yalero.net/plugins/sdk/workhub-plugin.js"></script>
+  <script src="https://kanlane.com/plugins/sdk/workhub-plugin.js"></script>
   <script>
     WorkhubPlugin.connect({
       id: 'com.tu-nombre.hola',

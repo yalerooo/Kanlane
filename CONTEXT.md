@@ -436,7 +436,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
 - **Comprobar que no falta ninguna traducción:** `node scripts/check-i18n.js` (con `--strict` sale con error si falta alguna). Revisa `index.html` y los `Workhub.t('…')` de `src/` contra `en.js`. Ejecútalo después de cambiar un texto de la interfaz: si se cambia el español, la traducción exacta se pierde sin avisar.
 
-## 8. Historial de pull requests (todos fusionados hasta el #74)
+## 8. Historial de pull requests (fusionados hasta el #83)
 
 | # | Qué |
 |---|---|
@@ -501,6 +501,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 81 | Actualiza `CONTEXT.md` con el estado tras la migración a Kanlane (PR 78 a 80) y limpia lo ya hecho |
 | 82 | **Portada interactiva**: demo del tablero real en la portada, explorador de clientes, comparador de roles, escaparate de plugins y tarjetas con contacto y progreso sin solaparse |
 | 83 | **Páginas de captación SEO**: landings `alternativa-a-trello/` y `gestion-de-proyectos/` (indexables, JSON-LD y canónico), titular y descripción de la portada para SEO, demo con carga diferida, `sitemap.xml`, cabeceras, Worker y pruebas |
+| 84 | **SEO y páginas de captación**: cuatro landings nuevos (`alternativa-a-asana/`, `alternativa-a-notion/`, `gestor-de-clientes/`, `crm-para-autonomos/`) con enlazado interno, demo del tablero en `alternativa-a-trello/`, `CONTEXT.md` al día y alta en `sitemap.xml`, build, Worker y pruebas |
 
 ## 9. Cómo trabajar y probar
 

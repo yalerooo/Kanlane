@@ -11,7 +11,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins'];
+const INCLUDE = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -40,8 +40,8 @@ const CSP = [
   "connect-src 'self' https://*.googleapis.com https://apis.google.com https://api.github.com",
   "frame-src 'self' https: http://localhost:* http://127.0.0.1:*",
   "img-src 'self' data: blob: https:",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -60,7 +60,7 @@ function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/legal/*', PAGE), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
 }
 
 /* ---------- dist/ ---------- */
@@ -91,6 +91,11 @@ if(!/const BUILD = '[^']*';/.test(sw) || !/const FILES = \[\];/.test(sw)) throw 
 sw = sw.replace(/const BUILD = '[^']*';/, "const BUILD = '" + build + "';")
   .replace(/const FILES = \[\];/, () => 'const FILES = ' + JSON.stringify(['/'].concat(files)) + ';');
 fs.writeFileSync(swPath, sw);
+
+/* Aviso si faltan los datos del titular de las páginas legales (obligatorios: LSSI-CE art. 10 y RGPD art. 13). */
+const legal = fs.readFileSync(path.join(root, 'src/config/legal-config.js'), 'utf8');
+const missingLegal = ['titular', 'nif', 'domicilio', 'email'].filter((k) => new RegExp(k + ":\\s*''").test(legal));
+if(missingLegal.length) console.warn('⚠  src/config/legal-config.js: faltan datos del titular (' + missingLegal.join(', ') + '). Las páginas legales los muestran como «[completar: …]»; rellénalos antes de publicar.');
 
 /* Aviso si la configuración de Firebase sigue vacía o apunta a los emuladores. */
 const cfg = fs.readFileSync(path.join(root, 'src/config/firebase-config.js'), 'utf8');

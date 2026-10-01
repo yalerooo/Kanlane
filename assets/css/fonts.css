@@ -1,0 +1,17 @@
+/* Tipografías Geist y Geist Mono (licencia SIL OFL: assets/fonts/LICENSE-Geist-OFL.txt).
+   Se sirven desde este mismo sitio y no desde Google Fonts: así no se envía la
+   dirección IP de quien visita Workhub a Google solo por cargar una fuente. */
+@font-face{
+  font-family:'Geist';
+  src:url('../fonts/Geist-Variable.woff2') format('woff2');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'Geist Mono';
+  src:url('../fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight:100 900;
+  font-style:normal;
+  font-display:swap;
+}

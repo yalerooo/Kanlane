@@ -14,14 +14,14 @@
   <meta name="apple-mobile-web-app-title" content="Workhub">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>Workhub</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="preload" as="font" type="font/woff2" href="assets/fonts/Geist-Variable.woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/fonts.css">
 
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/layout.css">
   <link rel="stylesheet" href="assets/css/components/skeleton.css">
+  <link rel="stylesheet" href="assets/css/components/consent.css">
   <link rel="stylesheet" href="assets/css/components/buttons.css">
   <link rel="stylesheet" href="assets/css/components/forms.css">
   <link rel="stylesheet" href="assets/css/components/dropdown.css">
@@ -123,6 +123,7 @@
     </div>
   </div>
   <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+  <p class="auth-foot auth-legal">Al continuar aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</p>
   <p class="auth-lang" id="authLang" translate="no"><button type="button" data-lang-choice="es">Español</button><span aria-hidden="true">·</span><button type="button" data-lang-choice="en">English</button></p>
 </div>
 
@@ -458,6 +459,17 @@
         <div>
           <button type="button" class="btn btn-primary" id="btnInstallApp" hidden>Instalar Workhub</button>
           <p class="install-hint" id="installHint" hidden>En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».</p>
+        </div>
+      </div>
+      <div class="settings-row" id="privacyRow">
+        <div>
+          <h3>Privacidad</h3>
+          <p>Consulta cómo tratamos tus datos y elige qué cookies permites.</p>
+        </div>
+        <div class="privacy-links">
+          <button type="button" class="btn btn-ghost btn-sm" data-cookie-settings>Configurar cookies</button>
+          <p class="privacy-note"><a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a> · <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/cookies/" target="_blank" rel="noopener">Política de cookies</a></p>
+          <p class="privacy-note">Para ejercer tus derechos de protección de datos o cerrar tu cuenta, escribe al correo de contacto que figura en la política de privacidad.</p>
         </div>
       </div>
       <div class="settings-row">
@@ -1175,6 +1187,9 @@
 <script src="src/controllers/app-controller.js"></script>
 
 <script src="src/services/pwa.js"></script>
+
+<!-- Aviso de cookies y consentimiento (sin dependencias) -->
+<script src="src/consent/consent.js"></script>
 
 <!-- Arranque -->
 <script src="src/main.js"></script>

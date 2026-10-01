@@ -43,6 +43,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Tokens:** el acceso a GitHub de la integración no se guarda en ningún fichero ni en Firestore, solo en el navegador. Si el usuario pega un token en el chat, no se usa; se le recuerda que no lo haga (aunque diga que ya lo borró). **Prefiere no pegar tokens nunca**: hay «Conectar con GitHub» (OAuth) y hay que seguir ese criterio en cualquier integración futura.
 - **Cuentas nuevas sin proyecto por defecto:** el usuario no quiere que se cree ningún proyecto por su cuenta; hay que elegir nombre y tipo (ver «Primer proyecto»). Y quiere poder **borrar también el primero**.
 - **PROHIBIDO en cualquier diseño: rayas o barras de acento en el lateral de un elemento** (una línea de color a la izquierda de un elemento seleccionado, de una tarjeta, de un aviso, de una cita, etc.: `border-left`/`border-right` de color, `box-shadow: inset 2px 0 0 …`, pseudoelementos que dibujan una barra…). El usuario dijo que «queda horrible» y que **no lo quiere en ningún diseño**. Para marcar un elemento seleccionado o destacado se usa el **fondo suave de acento** (`--accent-soft`), el color del texto, un borde completo o un punto/insignia, como ya hace el resto de la web. Vale también para lo que se añada en el futuro y para los plugins.
+- **Las páginas legales tienen que decir la verdad (RGPD/LSSI, España):** cada vez que se añada algo que guarde datos en el navegador (una clave de `localStorage`, una base de IndexedDB, una caché), un servicio de terceros (analítica, fuentes, mapas, pagos, correo…), un dato nuevo que se pida o un cambio de región/proveedor, hay que actualizar **`legal/cookies/`** (tabla de lo que se guarda), **`legal/privacidad/`** (datos, proveedores, bases legales) y **`legal/terminos/`** si cambian las condiciones, subir `actualizado`/`version` en `src/config/legal-config.js` y, si el nuevo elemento no es imprescindible, cargarlo **solo con consentimiento** (`WorkhubConsent.has('analytics')`). Detalle en `docs/LEGAL.md`. No cargar nada de terceros (fuentes, scripts) sin que figure ahí.
 - **Nombres de botones claros:** si dos acciones se parecen («Desconectar» / «Desconectar cuenta»), el usuario se confunde; usar verbos distintos y una ayuda al pasar el ratón.
 - **Cuando el usuario pega un error, mira el texto exacto y no lo des por explicado**: un `permission-denied` de Firestore parecía «reglas sin publicar» y era el límite de los lotes (ver §9). Los mensajes de error deben decir el paso que falló.
 - El usuario pide cambios de forma directa y con libertad de diseño; cuando algo no puede verificarse contra un servicio real (GitHub, Firebase), hay que decirlo claramente en el resumen.
@@ -111,9 +112,11 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - `docs/SEGURIDAD.md`: pasos en la consola, como publicar reglas, política de contraseñas, protección contra la enumeración de correos, dominios autorizados y restringir la API key.
   - `docs/PLUGINS.md`: guía completa para crear plugins.
   - `docs/GITHUB.md`: integración con GitHub Projects (conectar con un clic o con token, qué se sincroniza, en equipos, límites, seguridad, estructura interna).
+  - `docs/LEGAL.md`: páginas legales, aviso de cookies, qué rellenar y obligaciones fuera del código (registro de tratamientos, derechos, brechas).
   - `docs/EQUIPOS.md`: trabajo en equipo (uso, roles, cómo se guarda, límite de lotes de Firestore, reglas, diseño de la fase de contraseñas compartidas).
   - `tests/rules/`: pruebas de las reglas con el emulador (`README.md`, `package.json`, `rules-test.js`).
   - `tests/sw/sw.test.js`: prueba del service worker con un entorno simulado (`node tests/sw/sw.test.js`).
+  - `tests/consent/consent.test.js`: prueba de la lógica del aviso de cookies (`node tests/consent/consent.test.js`).
   - `scripts/`: `build-public.js` (publicación), `dev.js` (servidor local con recarga), `check-i18n.js` (textos sin traducir), `make-icons.js` (iconos de la app instalable).
 
 ## 4. Funcionalidades (estado actual)
@@ -272,6 +275,16 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Calendario**: botones Mes / Semana / Día (`calMode`, se recuerda en `workhub_cal_mode`). La semana usa la misma cuadrícula sin límite de chips (y arrastrar y soltar entre días sigue funcionando; en móvil pasa a lista); el día muestra solo la agenda. Las flechas mueven un mes, una semana o un día.
 - **Recordatorios** (`reminders-controller.js`, `reminders-view.js`; Ajustes → Recordatorios; preferencias por navegador en `workhub_reminders`): cada minuto (y al volver a la pestaña) avisa una sola vez de tareas vencidas, que vencen hoy o dentro de 1-2 días, y de reuniones que empiezan en 5-60 min. Aviso dentro de la app con «Ver» y, si el usuario permite las notificaciones y la pestaña está en segundo plano, notificación del navegador. Con 4 o más avisos a la vez se agrupan en un resumen. Lo ya avisado se guarda en `workhub_reminded` (10 días). **Solo funciona con Workhub abierto** y mira el proyecto abierto. **Pendiente (no hecho):** avisos por correo con la app cerrada; hace falta un Worker programado (Cron Trigger de Cloudflare) con acceso a Firestore y un servicio de envío de correo (Resend, MailChannels…), con sus claves como secretos.
 
+### Páginas legales y aviso de cookies (`docs/LEGAL.md`)
+
+- **Páginas** (HTML estático en `legal/`, servidas como `/legal/privacidad/`, `/legal/terminos/` y `/legal/cookies/`): política de privacidad (RGPD art. 13, con el contrato de encargo del art. 28 para quien guarda datos de sus clientes), términos y condiciones con la información del titular (LSSI-CE art. 10) y política de cookies con la tabla exacta de claves de `localStorage`, IndexedDB y cachés. Están **solo en español**. Estilos: `assets/css/legal.css`; `src/legal/legal.js` añade cabecera, pie y rellena los datos.
+- **Datos del titular** en `src/config/legal-config.js` (`titular`, `nif`, `domicilio`, `email`, `ubicacionDatos`, `actualizado`, `version`). **Están vacíos: los tiene que rellenar el usuario** (son obligatorios y públicos). Vacíos, las páginas los marcan en amarillo («[completar: …]») y `scripts/build-public.js` avisa. No se ha puesto ningún dato personal del usuario por mi cuenta.
+- **Aviso de cookies** (`src/consent/consent.js`, sin dependencias, + `assets/css/components/consent.css`): tarjeta flotante «Rechazar / Aceptar / Configurar» (los dos primeros idénticos, sin muro de cookies, nada premarcado), diálogo de configuración con categorías (`necessary` siempre activa; `analytics` desactivada y **sin uso hoy**), decisión en `localStorage['workhub_consent']` = `{v, at, analytics}`, caduca a los 12 meses o si sube `VERSION`. API `WorkhubConsent` (`has('analytics')`, `onChange`…). Cualquier botón con `data-cookie-settings` abre la configuración. Hoy la app **solo usa almacenamiento técnico**, que no exige consentimiento; el aviso es transparencia y deja preparado el día que se añada analítica.
+- **Enlaces en la app:** pantalla de acceso («Al continuar aceptas los Términos… y la Política…»), **Ajustes → Privacidad** (`#privacyRow`) y el pie de cada página legal. Las páginas están en la lista de publicación (`legal` en `INCLUDE`), con la misma CSP que la app (`/legal/*` en `_headers`), en `scripts/dev.js` (que sirve `index.html` de cada carpeta) y se guardan para uso sin conexión.
+- **Tipografías propias:** Geist y Geist Mono (variables, OFL) en `assets/fonts/` con `assets/css/fonts.css`; **ya no se carga Google Fonts** (enviaba la IP del visitante a Google) y la CSP no permite sus dominios.
+- **Service worker corregido:** cada navegación se guarda con su propia clave (antes todas como `/index.html`, así que abrir otra página pisaba la copia de la app sin conexión).
+- **Limitaciones/pendiente:** no existe «Eliminar mi cuenta» (la baja es por correo y manual); no se guarda la fecha en que cada persona aceptó los términos; solo se cifran la contraseña y las notas de cada credencial (el resto va en claro, y la política lo dice); falta que un abogado revise los textos y el registro de actividades de tratamiento (plantilla en `docs/LEGAL.md`).
+
 ### Aplicación instalable y uso sin conexión (PWA)
 
 - **Archivos:** `manifest.webmanifest` (nombre, colores, iconos), `sw.js` (service worker), `src/services/pwa.js` (registro, avisos y botón de instalar) e iconos `assets/img/icon-192.png`, `icon-512.png` e `icon-maskable-512.png` (se generan con `node scripts/make-icons.js`, sin dependencias, a partir del logo «Barras»).
@@ -283,7 +296,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 
 ## 5. Diseño (sistema visual)
 
-- **Tipografía:** Geist y Geist Mono (Google Fonts).
+- **Tipografía:** Geist y Geist Mono, **alojadas en el propio sitio** (`assets/fonts/`, `assets/css/fonts.css`); no se usa Google Fonts por privacidad.
 - **Tokens** en `assets/css/tokens.css`:
   - Claro: bg `#FAFAFA`, sidebar `#F4F4F5`, surface `#FFFFFF`, ink `#18181B`, ink-soft `#56565F`, ink-faint `#8E8E97`, line `#E6E6E9`.
   - Oscuro: bg `#0F0F11`, surface `#161619`, ink `#EDEDEF`, line `#26262B`.
@@ -436,6 +449,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 43 | Logo simbólico: pila de tarjetas con check sobre degradado azul, y favicon nuevo |
 | 44–45 | Pantalla de acceso: esqueleto de carga con la forma del formulario en lugar de «Cargando…» con círculo (y un retoque) |
 | **pendiente** | Rama `claude/read-context-md-df6b13`, **un pull request abierto** (lo fusiona el usuario): plugin **Smart GP** con horas por tarea y proyecto, calendario y **jornada máxima por día** (`wh.ui.form` nuevo en la API de plugins); plugins a pantalla completa sin recuadro ni cabecera; **deshacer al borrar**, **búsqueda global** con notas, **subtareas**, **tareas repetidas**, calendario **semana/día**, **recordatorios**; **aplicación instalable (PWA)** con uso sin conexión y barra del color del fondo; script de traducciones; archivos grandes divididos; respaldos para navegadores antiguos; revisión en móvil. Ya fusionado antes en `main`: **migración a Cloudflare**, servidor local `scripts/dev.js`, logo «Barras». |
+
+**Rama `claude/legal-pages-privacy` (pendiente de PR, lo abre/fusiona el usuario):** páginas de privacidad, términos y cookies para España/UE, aviso de cookies con configuración, tipografías propias en lugar de Google Fonts, arreglo del service worker para páginas distintas de la app, `docs/LEGAL.md` y pruebas.
 
 ## 9. Cómo trabajar y probar
 

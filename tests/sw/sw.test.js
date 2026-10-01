@@ -74,12 +74,26 @@ const req = (url, o) => Object.assign(new Request(url), {}, o);
   const post = await (async () => { let got; await listeners.fetch({request: new Request('https://w.test/x', {method: 'POST', body: 'a'}), respondWith: (x) => { got = x; }}); return got; })();
   ok(post === undefined, 'no toca las peticiones que no son GET');
 
+  /* Las fuentes ya no vienen de Google: no se tocan (así no se piden a terceros). */
+  const gfont = await (async () => { let got; await listeners.fetch({request: new Request('https://fonts.gstatic.com/s/geist.woff2'), respondWith: (x) => { got = x; }}); return got; })();
+  ok(gfont === undefined, 'no toca Google Fonts (las fuentes son del propio sitio)');
+
+  /* Otra página (política de privacidad) no debe pisar la copia de la app. */
   online = true;
-  const font = await fire('fetch', {request: new Request('https://fonts.gstatic.com/s/geist.woff2')});
-  ok(font.ok, 'fuente: la primera vez va a la red');
+  const legalReq = new Request('https://w.test/legal/privacidad/');
+  Object.defineProperty(legalReq, 'mode', {value: 'navigate'});
+  const legalRes = await fire('fetch', {request: legalReq});
+  ok(legalRes.ok, 'página legal: con red responde');
   online = false;
-  const font2 = await fire('fetch', {request: new Request('https://fonts.gstatic.com/s/geist.woff2')});
-  ok(font2.ok && (await font2.text()).indexOf('geist.woff2') !== -1, 'fuente: sin conexión sale de la caché');
+  const appReq = new Request('https://w.test/');
+  Object.defineProperty(appReq, 'mode', {value: 'navigate'});
+  const appOffline = await fire('fetch', {request: appReq});
+  const appText = await appOffline.text();
+  ok(appText.indexOf('/legal/') === -1, 'abrir una página legal no pisa la copia de la app sin conexión');
+  const legalReq2 = new Request('https://w.test/legal/privacidad/');
+  Object.defineProperty(legalReq2, 'mode', {value: 'navigate'});
+  const legalOffline = await fire('fetch', {request: legalReq2});
+  ok(legalOffline.ok, 'página legal sin conexión sale de su propia copia');
   const sdk = await (async () => { online = true; await fire('fetch', {request: new Request('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js')}); online = false; return fire('fetch', {request: new Request('https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js')}); })();
   ok(sdk.ok, 'SDK de Firebase sin conexión sale de la caché');
   const other = await (async () => { let got; await listeners.fetch({request: new Request('https://www.gstatic.com/otra/cosa.js'), respondWith: (x) => { got = x; }}); return got; })();

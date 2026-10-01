@@ -22,7 +22,7 @@ const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
 const ROOT = path.resolve(__dirname, '..');
 /* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
-const SERVED = ['index.html', 'app', 'demo', 'alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
+const SERVED = ['index.html', 'app', 'demo', 'alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'en', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',

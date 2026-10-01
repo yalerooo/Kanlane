@@ -20,6 +20,6 @@ if %ERRORLEVEL%==0 (
 echo Iniciando el Tablero en http://localhost:5500 ...
 start "Tablero - servidor local (no cierres esta ventana)" cmd /k %PYCMD% -m http.server 5500
 timeout /t 2 /nobreak >nul
-start "" http://localhost:5500
+start "" http://localhost:5500/app/
 
 exit /b 0

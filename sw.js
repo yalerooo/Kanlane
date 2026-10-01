@@ -80,8 +80,8 @@ self.addEventListener('fetch', (event) => {
       /* Cada página se guarda con su propia clave. Antes todas se guardaban como
          /index.html y abrir otra (la política de privacidad, por ejemplo) pisaba la
          copia de la app que se usa sin conexión. */
-      const isApp = url.pathname === '/' || url.pathname === '/index.html';
-      const key = isApp ? '/index.html' : (url.pathname.slice(-1) === '/' ? url.pathname + 'index.html' : url.pathname);
+      const isHome = url.pathname === '/' || url.pathname === '/index.html';
+      const key = isHome ? '/index.html' : (url.pathname.slice(-1) === '/' ? url.pathname + 'index.html' : url.pathname);
       event.respondWith(networkFirst(request, key));
       return;
     }

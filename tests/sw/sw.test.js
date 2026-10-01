@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 let src = fs.readFileSync(path.join(__dirname, '..', '..', 'sw.js'), 'utf8')
   .replace("const BUILD = 'dev';", "const BUILD = 'test1';")
-  .replace('const FILES = [];', "const FILES = ['/', '/index.html', '/src/a.js', '/assets/x.css'];");
+  .replace('const FILES = [];', "const FILES = ['/', '/index.html', '/app/index.html', '/src/a.js', '/assets/x.css'];");
 
 const stores = {};
 const norm = (r, ignoreSearch) => { const u = new URL(typeof r === 'string' ? r : r.url, 'https://w.test'); return u.origin + u.pathname + (ignoreSearch ? '' : u.search); };
@@ -60,7 +60,7 @@ const req = (url, o) => Object.assign(new Request(url), {}, o);
   ok(installFailed && activated === 0 && !!stores['workhub-shell-viejo'], 'instalación incompleta no activa ni borra la versión anterior');
   failPath = '';
   await fire('install');
-  ok([...stores['workhub-shell-test1'].keys()].length === 4, 'install guarda los 4 archivos');
+  ok([...stores['workhub-shell-test1'].keys()].length === 5, 'install guarda los 5 archivos');
   await fire('activate');
   ok(!stores['workhub-shell-viejo'], 'activate borra cachés de versiones viejas');
 
@@ -70,6 +70,12 @@ const req = (url, o) => Object.assign(new Request(url), {}, o);
   const rNav = await fire('fetch', {request: nav});
   ok((await rNav.text()) === 'net:https://w.test/index.html', 'navegación sin red responde con el HTML guardado');
   ok(rNav.ok, 'navegación sin conexión usa /index.html guardado');
+
+  /* La aplicación vive en /app/ y la portada en /: cada una con su propia copia. */
+  const navApp = new Request('https://w.test/app/');
+  Object.defineProperty(navApp, 'mode', {value: 'navigate'});
+  const rApp = await fire('fetch', {request: navApp});
+  ok(rApp.ok && (await rApp.text()) === 'net:https://w.test/app/index.html', 'sin conexión /app/ sale de su propia copia (no de la portada)');
 
   const rAsset = await fire('fetch', {request: new Request('https://w.test/src/a.js?v=2')});
   ok(rAsset.ok && (await rAsset.text()).indexOf('/src/a.js') !== -1, 'archivo de la app sin conexión sale de la caché (ignora ?v=)');

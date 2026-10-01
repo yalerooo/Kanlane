@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://workhub.yalero.net/sitemap.xml

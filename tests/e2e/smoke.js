@@ -7,7 +7,7 @@ const {chromium} = require('playwright');
 
 const root = path.resolve(__dirname, '../..');
 const port = 58637;
-const url = 'http://localhost:' + port;
+const url = 'http://localhost:' + port + '/app/';
 const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
 const chrome = process.env.CHROME_PATH || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',

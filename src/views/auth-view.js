@@ -45,6 +45,8 @@
       this.guestForm = $('authGuestForm');
       this.guestName = $('authGuestName');
       this.guestMsg = $('authGuestMsg');
+      /* La portada enlaza a /app/?registro para abrir directamente «Crear cuenta». */
+      this.registroRequested = /[?&]registro(=|&|$)/.test(location.search);
       this.mode = 'signin';
       this.hasPassword = true;
       this.allowSignup = true;
@@ -163,7 +165,10 @@
       this.form.hidden = !this.hasPassword;
       this.allowSignup = allowSignup !== false;
       this.setGuestStep(false);
-      this.setMode('signin');
+      /* Venir de «Crear cuenta» en la portada abre directamente el registro (una sola vez). */
+      const wantsSignup = this.registroRequested && this.hasPassword && this.allowSignup;
+      this.registroRequested = false;
+      this.setMode(wantsSignup ? 'signup' : 'signin');
     }
 
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,

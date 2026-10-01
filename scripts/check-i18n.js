@@ -4,7 +4,7 @@
    Workhub traduce por coincidencia exacta con el texto en español (src/i18n/en.js),
    así que si alguien cambia un texto de la interfaz la traducción se pierde sin
    avisar. Este script lo detecta:
-   - textos y atributos (placeholder, title, aria-label, alt) de index.html;
+   - textos y atributos (placeholder, title, aria-label, alt) de app/index.html;
    - los textos literales que se pasan a Workhub.t('…') en src/.
    Un texto cuenta como traducido si está en el diccionario o encaja con algún patrón.
 
@@ -64,7 +64,7 @@ function note(text, where){
 }
 
 /* ---------- index.html ---------- */
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+const html = fs.readFileSync(path.join(root, 'app/index.html'), 'utf8')
   .replace(/<script[\s\S]*?<\/script>/g, '')
   .replace(/<style[\s\S]*?<\/style>/g, '')
   .replace(/<svg[\s\S]*?<\/svg>/g, '')

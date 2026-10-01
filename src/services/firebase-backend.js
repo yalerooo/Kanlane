@@ -71,8 +71,8 @@
       /* Firestore rechaza campos undefined; así se ignoran en vez de fallar. */
       firestore.settings({ignoreUndefinedProperties:true, merge:true});
       if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
-        auth.useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
-        firestore.useEmulator('127.0.0.1', 8080);
+        auth.useEmulator('http://127.0.0.1:' + (c.authEmulatorPort || 9099), {disableWarnings:true});
+        firestore.useEmulator('127.0.0.1', c.firestoreEmulatorPort || 8080);
       }
     });
   }
@@ -206,7 +206,7 @@
       if(!app2){
         app2 = fb.initializeApp({apiKey:c.apiKey, authDomain:resolveAuthDomain(c, location.host), projectId:c.projectId, appId:c.appId}, NAME);
         if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
-          app2.auth().useEmulator('http://127.0.0.1:9099', {disableWarnings:true});
+          app2.auth().useEmulator('http://127.0.0.1:' + (c.authEmulatorPort || 9099), {disableWarnings:true});
         }
       }
       const auth2 = app2.auth();

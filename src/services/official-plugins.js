@@ -34,8 +34,8 @@ Workhub.services.officialPlugins = [
     manifest: {
       id: 'workhub.apariencia',
       name: 'Apariencia',
-      version: '1.0.0',
-      description: 'Personaliza Workhub: cualquier color de acento, esquinas rectas o redondeadas y una densidad compacta o amplia.',
+      version: '1.1.0',
+      description: 'Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.',
       author: 'Workhub',
       icon: 'sparkles',
       color: 328,

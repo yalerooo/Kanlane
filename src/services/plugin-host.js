@@ -24,7 +24,7 @@
     'calendar:write': 'Crear reuniones en el calendario',
     'storage': 'Guardar sus propios datos en tu cuenta',
     'ui:extend': 'Añadir botones y etiquetas en Tareas, Calendario, Clientes y la paleta de comandos',
-    'appearance': 'Cambiar la apariencia de Workhub (color de acento, esquinas y densidad)'
+    'appearance': 'Cambiar el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de Workhub'
   };
 
   /* Nombre corto e icono de cada permiso (etiquetas de las tarjetas). */

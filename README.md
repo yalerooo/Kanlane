@@ -84,7 +84,7 @@ Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la
 
 Los plugins se **instalan en el proyecto abierto**. Si quieres usar uno en otro proyecto, instálalo allí también. Al cambiar de proyecto se cierran sus paneles y botones y se cargan únicamente los plugins del nuevo proyecto. Al quitar uno se borran solo sus datos de ese proyecto. En equipos, propietarios y editores gestionan las instalaciones; los lectores pueden usar las ya instaladas.
 
-- **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (color, esquinas, densidad). No toca el HTML de Workhub: declara lo que quiere añadir y Workhub lo pinta.
+- **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (tema, paleta, acento, tipografía, tamaño del texto, esquinas y densidad). No toca el HTML de Workhub: declara lo que quiere añadir y Workhub lo pinta.
 - **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo**, **Temporizador** (cronómetro desde la ficha de cada tarea y tiempo en cada tarjeta), **Smart GP** (al terminar una tarea pide las horas, los días y el proyecto, y las muestra en un calendario) y **Apariencia**. Se instalan con un clic desde la sección Plugins.
 - **De terceros:** cualquiera puede publicar el suyo en una web con https, y se instala pegando su enlace.
 

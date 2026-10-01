@@ -16,6 +16,10 @@
   const EVENT_DELAY_MS = 250;
   const RADII = {sharp:{sm:2, md:3, lg:4, xl:6}, round:{sm:7, md:10, lg:14, xl:18}};
   const DENSITIES = ['compact', 'normal', 'comfortable'];
+  const THEMES = ['system', 'light', 'dark'];
+  const PALETTES = ['default', 'warm', 'cool', 'slate'];
+  const FONTS = ['default', 'system', 'serif', 'mono'];
+  const TEXT_SIZES = ['small', 'normal', 'large'];
 
   const {fail, str, sameSet, cleanTask, cleanClient, cleanContact, cleanMeeting, cleanForm, YMD, HM, HEX} = Workhub.pluginClean;
 
@@ -34,6 +38,7 @@
       this.bg = new Map();
       /* Apariencia aplicada por un plugin: {pluginId, values}. */
       this.appearance = null;
+      this.appearanceThemeOverridden = false;
 
       this.plugins.on('change', () => {
         this.render();
@@ -186,6 +191,22 @@
         if(DENSITIES.indexOf(params.density) === -1) throw fail('bad-params', 'density: "compact", "normal" o "comfortable".');
         v.density = params.density;
       }
+      if(params.theme != null){
+        if(THEMES.indexOf(params.theme) === -1) throw fail('bad-params', 'theme: "system", "light" o "dark".');
+        v.theme = params.theme;
+      }
+      if(params.palette != null){
+        if(PALETTES.indexOf(params.palette) === -1) throw fail('bad-params', 'palette: "default", "warm", "cool" o "slate".');
+        v.palette = params.palette;
+      }
+      if(params.font != null){
+        if(FONTS.indexOf(params.font) === -1) throw fail('bad-params', 'font: "default", "system", "serif" o "mono".');
+        v.font = params.font;
+      }
+      if(params.textSize != null){
+        if(TEXT_SIZES.indexOf(params.textSize) === -1) throw fail('bad-params', 'textSize: "small", "normal" o "large".');
+        v.textSize = params.textSize;
+      }
       this.appearance = {pluginId:pluginId, values:v};
       this.applyAppearance();
       return true;
@@ -203,6 +224,8 @@
       const settings = this.app.controllers.settings;
       const v = this.appearance ? this.appearance.values : {};
       settings.view.applyAccent(settings.model.currentAccent());
+      settings.view.applyTheme(v.theme || settings.model.theme, !!v.theme || this.appearanceThemeOverridden);
+      this.appearanceThemeOverridden = !!v.theme;
       if(v.accent){
         const hex = v.accent;
         const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
@@ -222,6 +245,17 @@
       });
       if(v.density && v.density !== 'normal') root.setAttribute('data-density', v.density);
       else root.removeAttribute('data-density');
+      if(v.palette && v.palette !== 'default') root.setAttribute('data-palette', v.palette);
+      else root.removeAttribute('data-palette');
+      const fonts = {
+        system:'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        serif:'Georgia, "Times New Roman", serif',
+        mono:'var(--mono)'
+      };
+      if(fonts[v.font]) root.style.setProperty('--font', fonts[v.font]);
+      else root.style.removeProperty('--font');
+      if(v.textSize && v.textSize !== 'normal') root.setAttribute('data-text-size', v.textSize);
+      else root.removeAttribute('data-text-size');
       this.schedule('theme', () => this.theme());
     }
 

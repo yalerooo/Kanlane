@@ -788,7 +788,7 @@
     'Crear reuniones en el calendario':'Create calendar meetings',
     'Guardar sus propios datos en tu cuenta':'Save its own data in your account',
     'Añadir botones y etiquetas en Tareas, Calendario, Clientes y la paleta de comandos':'Add buttons and labels in Tasks, Calendar, Clients and the command palette',
-    'Cambiar la apariencia de Workhub (color de acento, esquinas y densidad)':'Change how Workhub looks (accent color, corners and density)',
+    'Cambiar el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de Workhub':'Change Workhub’s theme, colors, typography, text size, corners and spacing',
     'Editar tareas':'Edit tasks',
     'Crear reuniones':'Create meetings',
     'Guardar datos':'Save data',
@@ -810,7 +810,7 @@
     '{campo}: máximo {n}':'{campo}: maximum {n}',
     'Temporizador':'Timer',
     'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.':'Track the time you spend on each task with a stopwatch and see totals per task and per client.',
-    'Personaliza Workhub: cualquier color de acento, esquinas rectas o redondeadas y una densidad compacta o amplia.':'Customize Workhub: any accent color, square or rounded corners and a compact or roomy density.',
+    'Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.':'Customize each project’s theme, colors, typography, text size, corners and spacing.',
     /* Deshacer, subtareas, repetición, calendario, búsqueda y recordatorios */
     'Deshacer':'Undo',
     'Restaurado':'Restored',

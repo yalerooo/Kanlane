@@ -148,7 +148,7 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 | `calendar:write` | Crear reuniones. |
 | `storage` | Guardar datos propios del plugin, por proyecto (`wh.storage`) o comunes a todos (`wh.storage.user`). |
 | `ui:extend` | Añadir botones en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en la paleta de comandos, y etiquetas en las tarjetas. El plugin se carga en segundo plano. |
-| `appearance` | Cambiar el color de acento, las esquinas y la densidad de Workhub. El plugin se carga en segundo plano. |
+| `appearance` | Cambiar el tema, la paleta de interfaz, el color de acento, la tipografía, el tamaño del texto, las esquinas y la densidad de Workhub. El plugin se carga en segundo plano. |
 
 **No existe ningún permiso para las contraseñas guardadas:** ningún plugin puede leerlas.
 
@@ -336,6 +336,10 @@ await wh.ui.setTaskBadges({});   // quitarlas todas
 ```js
 await wh.ui.setAppearance({
   accent: '#16A36A',     // color de acento (#RRGGBB) o null para el de Ajustes
+  theme: 'dark',         // 'system', 'light', 'dark' o null para seguir Ajustes
+  palette: 'warm',       // 'default', 'warm', 'cool' o 'slate'
+  font: 'serif',         // 'default', 'system', 'serif' o 'mono'
+  textSize: 'large',     // 'small', 'normal' o 'large'
   radius: 'round',       // 'sharp' (rectas), 'normal' o 'round' (redondeadas)
   density: 'compact'     // 'compact', 'normal' o 'comfortable'
 });
@@ -414,7 +418,7 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 | **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV. Añade el botón **Informe** a la barra de Tareas y una acción a `Ctrl K`. | [`plugins/informe`](../plugins/informe) | `tasks:read`, `ui:extend` |
 | **Temporizador** (icono `timer`): cronómetro por tarea y totales. Añade **Iniciar cronómetro** a la ficha de cada tarea, **Detener** a la barra de Tareas y a `Ctrl K` mientras cuenta, y una **etiqueta con el tiempo** en cada tarjeta. | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage`, `ui:extend` |
 | **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Sus datos se guardan por proyecto de Workhub; los registros globales anteriores se copian al proyecto principal la primera vez que se abre allí, sin borrar el origen. Los colores de sus proyectos se pueden elegir libremente y sus nombres admiten 160 caracteres. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
-| **Apariencia** (icono `sparkles`): cualquier color de acento, esquinas rectas o redondeadas y densidad compacta o amplia, propios de cada proyecto de Workhub. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
+| **Apariencia** (icono `sparkles`): tema, paleta de interfaz, color de acento libre, fuente, tamaño del texto, esquinas y densidad propios de cada proyecto de Workhub. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
 
 Para añadir uno oficial al repositorio:
 

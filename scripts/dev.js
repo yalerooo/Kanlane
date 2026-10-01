@@ -20,7 +20,7 @@ const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
 const ROOT = path.resolve(__dirname, '..');
 /* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
-const SERVED = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins'];
+const SERVED = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
@@ -61,7 +61,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if(url === '/') url = '/index.html';
+  /* «/legal/privacidad/» sirve su index.html, como hace Cloudflare. */
+  if(url.slice(-1) === '/') url += 'index.html';
 
   /* Modo local: la configuración de Firebase va vacía y la app arranca sin cuenta. */
   if(url === '/src/config/firebase-config.js' && !cloud){

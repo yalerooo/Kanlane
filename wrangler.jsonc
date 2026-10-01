@@ -19,6 +19,14 @@
     { "pattern": "workhub.yalero.net", "custom_domain": true }
   ],
 
+  // Solo las peticiones que pasan por este Worker. Auth y Firestore directos
+  // se protegen por separado con Firebase App Check y sus cuotas.
+  "ratelimits": [{
+    "name": "AUTH_RATE_LIMIT",
+    "namespace_id": "73001",
+    "simple": { "limit": 240, "period": 60 }
+  }],
+
   // Registros, trazas e incidencias del Worker (el reenvío del login). Es lo
   // que Cloudflare tenía activado en el panel; se deja aquí para que los
   // despliegues no lo cambien. "redact_query_string" oculta la query de las

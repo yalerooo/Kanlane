@@ -48,6 +48,7 @@ async function verify(email){
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+    if(await page.locator('.consent [data-act="reject"]').isVisible()) await page.locator('.consent [data-act="reject"]').click();
     await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
     await page.locator('#authSwitchLink').click();
     const email = 'test-' + Date.now() + '@example.test';
@@ -77,6 +78,60 @@ async function verify(email){
     await page.locator('#masterPass').fill('maestra-prueba-123');
     await page.locator('#btnUnlock').click();
     await page.locator('#vaultContent').waitFor({state:'visible'});
+    await page.locator('#tabTasks').click();
+    await page.locator('#btnNew').click();
+    await page.locator('#fTitle').fill('Tarea guardada en la nube');
+    await page.locator('#btnSave').click();
+    await page.locator('.card').filter({hasText:'Tarea guardada en la nube'}).waitFor();
+    await page.locator('#tabData').click();
+    await page.locator('#cloudBackupHead').waitFor({state:'visible'});
+    await page.locator('#btnEnableCloudBackup').click();
+    await page.locator('#cloudBackupKeyWrap').waitFor({state:'visible'});
+    const recoveryKey = await page.locator('#cloudBackupKey').inputValue();
+    assert.equal(recoveryKey.length, 43, 'clave de recuperación de 256 bits');
+    await page.locator('#cloudBackupHistory .backup-version').waitFor({state:'visible', timeout:30000});
+    const storedChunk = await page.evaluate(async () => {
+      const id = document.querySelector('#cloudBackupHistory .backup-version button').dataset.id;
+      const snap = await Workhub.app.rootDb.collection('backup_versions/' + id + '/chunks').doc('0').get();
+      return snap.data().data;
+    });
+    assert.ok(!storedChunk.includes('Tarea guardada en la nube'), 'Firestore solo recibe contenido cifrado');
+    await page.evaluate(async () => {
+      const app = Workhub.app;
+      const copy = await app.models.backup.build('Proyecto eliminado');
+      await Workhub.services.cloudBackup.save(app.rootDb, 'proyecto-eliminado', copy,
+        Workhub.services.cloudBackup.getKey(app.rootDb.me.uid));
+    });
+
+    /* Otra sesión y otro almacenamiento local: la copia se recupera solo con
+       la clave guardada por la persona usuaria. */
+    const secondContext = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES', acceptDownloads:true});
+    const second = await secondContext.newPage();
+    await second.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+    if(await second.locator('.consent [data-act="reject"]').isVisible()) await second.locator('.consent [data-act="reject"]').click();
+    await second.locator('#authEmail').fill(email);
+    await second.locator('#authPass').fill('contraseña-prueba-123');
+    await second.locator('#authSubmit').click();
+    await second.locator('#tabData').waitFor({state:'visible', timeout:30000});
+    await second.locator('#tabData').click();
+    await second.locator('#cloudBackupSetup').waitFor({state:'visible'});
+    await second.locator('#cloudBackupImportKey').fill('A'.repeat(43));
+    await second.locator('#btnUseCloudBackupKey').click();
+    await second.locator('#dataError').getByText('La clave no es válida o no abre las copias de esta cuenta.').waitFor();
+    await second.locator('#cloudBackupImportKey').fill(recoveryKey);
+    await second.locator('#btnUseCloudBackupKey').click();
+    await second.locator('#cloudBackupHistory .backup-version').first().waitFor({state:'visible'});
+    await second.locator('#cloudBackupHistory .backup-version').filter({hasText:'Otro proyecto'}).waitFor();
+    const downloadPromise = second.waitForEvent('download');
+    await second.locator('#cloudBackupHistory .backup-version').filter({hasText:'Otro proyecto'})
+      .locator('[data-cloud-action="download"]').click();
+    const download = await downloadPromise;
+    const saved = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    assert.equal(saved.tasks[0].title, 'Tarea guardada en la nube');
+    await second.setViewportSize({width:390,height:844});
+    assert.equal(await second.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false,
+      'copias cifradas sin desbordamiento horizontal en móvil');
+    await secondContext.close();
     assert.deepEqual(errors, [], 'sin excepciones JavaScript');
     await context.close();
     console.log('OK   Firebase emulado: alta, verificación, proyecto y cofre');

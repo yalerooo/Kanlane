@@ -57,23 +57,105 @@ service cloud.firestore {
       return col in ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'vault_meta', 'plugin_data'];
     }
 
+    function textWithin(data, key, max) {
+      return data.get(key, '') is string && data.get(key, '').size() <= max;
+    }
+
+    function listWithin(data, key, max) {
+      return data.get(key, []) is list && data.get(key, []).size() <= max;
+    }
+
+    // Validación del servidor: el cliente puede modificarse, estas reglas no.
+    function validData(col) {
+      let data = request.resource.data;
+      return data.keys().size() <= 50
+        && (col != 'tasks' || (data.keys().hasOnly([
+            'title', 'desc', 'cliente', 'status', 'contacto', 'dueDate', 'repeat',
+            'checklist', 'labels', 'assignees', 'linkedContacts', 'linkedVault',
+            'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
+            'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
+            'ghPrs', 'ghSyncedAt', 'ghRemoteAt'
+          ]) && textWithin(data, 'title', 500)
+          && textWithin(data, 'desc', 20000)
+          && textWithin(data, 'cliente', 200)
+          && listWithin(data, 'labels', 60)
+          && listWithin(data, 'checklist', 100)
+          && listWithin(data, 'assignees', 50)))
+        && (col != 'clients' || (data.keys().hasOnly(['nombre', 'color', 'createdAt'])
+          && textWithin(data, 'nombre', 200)))
+        && (col != 'contacts' || (data.keys().hasOnly([
+            'cliente', 'nombre', 'email', 'telefono', 'notas', 'createdAt', 'updatedAt'
+          ]) && textWithin(data, 'nombre', 200)
+          && textWithin(data, 'email', 320) && textWithin(data, 'notas', 10000)))
+        && (col != 'meetings' || (data.keys().hasOnly([
+            'title', 'cliente', 'date', 'start', 'end', 'link', 'notas', 'createdAt', 'updatedAt'
+          ]) && textWithin(data, 'title', 500)
+          && textWithin(data, 'notas', 20000) && textWithin(data, 'link', 2048)))
+        && (col != 'vault' || (data.keys().hasOnly([
+            'tipo', 'cliente', 'label', 'correo', 'web', 'ip', 'usuario', 'puerto',
+            'dominio', 'iv', 'cipher', 'ivV2', 'cipherV2', 'order', 'createdAt', 'updatedAt'
+          ]) && textWithin(data, 'label', 500)
+          && textWithin(data, 'cipher', 900000) && textWithin(data, 'cipherV2', 900000)))
+        && (col != 'assets' || (data.keys().hasOnly(['data', 'contentType', 'createdAt'])
+          && textWithin(data, 'data', 900000)))
+        && (col != 'projects' || (textWithin(data, 'nombre', 200)
+          && listWithin(data, 'stages', 8) && listWithin(data, 'labels', 60)))
+        && (col != 'notes' || (data.keys().hasOnly([
+            'text', 'imageAssetId', 'createdAt', 'kind', 'actorUid', 'actorName'
+          ]) && textWithin(data, 'text', 20000)
+          && textWithin(data, 'actorName', 200)));
+    }
+
     match /users/{uid} {
       // Proyecto principal: sus datos cuelgan directamente de users/{uid}.
       // 'settings' guarda preferencias y storage.user de los plugins.
       // 'plugins' conserva las instalaciones del proyecto principal.
       match /{col}/{docId} {
-        allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
+        allow read: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
+        allow create, update: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']) && validData(col);
+        allow delete: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
       }
       match /tasks/{taskId}/notes/{noteId} {
-        allow read, write: if canUse(uid);
+        allow read, delete: if canUse(uid);
+        allow create, update: if canUse(uid) && validData('notes');
       }
 
       // Resto de proyectos: las mismas colecciones bajo projects/{id}.
       match /projects/{projectId}/{col}/{docId} {
-        allow read, write: if canUse(uid) && isDataCollection(col);
+        allow read, delete: if canUse(uid) && isDataCollection(col);
+        allow create, update: if canUse(uid) && isDataCollection(col) && validData(col);
       }
       match /projects/{projectId}/tasks/{taskId}/notes/{noteId} {
-        allow read, write: if canUse(uid);
+        allow read, delete: if canUse(uid);
+        allow create, update: if canUse(uid) && validData('notes');
+      }
+
+      match /backup_versions/{backupId} {
+        allow read, delete: if canUse(uid);
+        allow create: if canUse(uid)
+          && request.resource.data.keys().hasOnly(['projectId', 'createdAt', 'iv', 'chunkCount', 'complete', 'counts'])
+          && request.resource.data.keys().hasAll(['projectId', 'createdAt', 'iv', 'chunkCount', 'complete', 'counts'])
+          && request.resource.data.projectId is string && request.resource.data.projectId.size() <= 128
+          && request.resource.data.createdAt is number
+          && request.resource.data.iv is string && request.resource.data.iv.size() <= 32
+          && request.resource.data.chunkCount is int && request.resource.data.chunkCount > 0
+          && request.resource.data.chunkCount <= 16 && request.resource.data.complete == false
+          && request.resource.data.counts is map && request.resource.data.counts.keys().size() <= 10;
+        allow update: if canUse(uid) && resource.data.complete == false
+          && request.resource.data.complete == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['complete']);
+
+        match /chunks/{chunkId} {
+          allow read, delete: if canUse(uid);
+          allow create: if canUse(uid)
+            && get(/databases/$(database)/documents/users/$(uid)/backup_versions/$(backupId)).data.complete == false
+            && request.resource.data.keys().hasOnly(['index', 'data'])
+            && request.resource.data.keys().hasAll(['index', 'data'])
+            && request.resource.data.index is int && request.resource.data.index >= 0
+            && request.resource.data.index < 16
+            && request.resource.data.data is string && request.resource.data.data.size() <= 300000;
+          allow update: if false;
+        }
       }
     }
 
@@ -86,6 +168,7 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.memberIds == [request.auth.uid]
         && request.resource.data.members.keys().hasOnly([request.auth.uid])
+        && request.resource.data.memberIds.size() <= 50
         && request.resource.data.members[request.auth.uid].role == 'owner';
 
       allow update: if verified() && (
@@ -121,11 +204,13 @@ service cloud.firestore {
 
     match /teams/{tid}/{col}/{docId} {
       allow read: if isTeamCollection(col) && isMember(tid);
-      allow write: if isTeamCollection(col) && canEdit(tid);
+      allow delete: if isTeamCollection(col) && canEdit(tid);
+      allow create, update: if isTeamCollection(col) && canEdit(tid) && validData(col);
     }
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);
-      allow write: if canEdit(tid);
+      allow delete: if canEdit(tid);
+      allow create, update: if canEdit(tid) && validData('notes');
     }
 
     // Invitaciones: id = {idDelEquipo}_{correo en minúsculas}. Las lee y

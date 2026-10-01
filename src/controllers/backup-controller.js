@@ -5,6 +5,7 @@
   const history = Workhub.services.backupHistory;
   const NOT_READY = 'El tablero todavía se está cargando, prueba de nuevo en unos segundos.';
   const DAY = 24 * 60 * 60 * 1000;
+  const cloud = Workhub.services.cloudBackup;
 
   class BackupController {
     constructor(app, view){
@@ -16,6 +17,14 @@
       this.view.bindImport((data) => this.importData(data));
       this.view.bindSaveVersion(() => this.saveVersion());
       this.view.bindHistory((action, id) => this.historyAction(action, id));
+      this.view.bindCloud({
+        enable: () => this.enableCloud(),
+        useKey: (key) => this.useCloudKey(key),
+        forget: () => this.forgetCloudKey(),
+        copy: (key) => navigator.clipboard.writeText(key).then(() => this.view.showStatus('Clave copiada. Guárdala fuera de Workhub.')).catch(() => this.view.showError('No se pudo copiar la clave. Selecciónala y cópiala manualmente.')),
+        save: () => this.saveCloudVersion(),
+        action: (action, id) => this.cloudAction(action, id)
+      });
       setInterval(() => this.autoSave(), 60 * 60 * 1000);
     }
 
@@ -25,7 +34,116 @@
       return Workhub.services.platform.mode() + ':' + account + ':' + this.app.projectId;
     }
 
-    onShow(){ this.refreshHistory(); }
+    onShow(){ this.refreshHistory(); this.refreshCloud(); }
+
+    cloudContext(){
+      const project = this.app.controllers.projects.current();
+      if(Workhub.services.platform.mode() !== 'firebase' || !this.app.rootDb?.me?.uid || !project || project.team) return null;
+      return {db:this.app.rootDb, uid:this.app.rootDb.me.uid, projectId:this.app.projectId};
+    }
+
+    refreshCloud(){
+      const context = this.cloudContext();
+      if(!context){
+        this.view.cloudHead.hidden = true;
+        this.view.cloudSetup.hidden = true;
+        this.view.cloudHistory.hidden = true;
+        this.view.cloudKeyWrap.hidden = true;
+        this.view.cloudForget.hidden = true;
+        return;
+      }
+      cloud.listAny(context.db).then((entries) => {
+        if(this.cloudContext()?.projectId === context.projectId){
+          this.cloudEntries = entries;
+          this.view.showCloud(!!cloud.getKey(context.uid), entries, context.projectId);
+        }
+      }).catch(() => this.view.showError('No se pudieron consultar las copias cifradas de tu cuenta.'));
+    }
+
+    enableCloud(){
+      const context = this.cloudContext();
+      if(!context) return;
+      cloud.listAny(context.db).then((entries) => {
+        if(entries.length) throw new Error('existing-backups');
+        const key = cloud.createKey(context.uid);
+        this.view.revealCloudKey(key);
+        this.view.showStatus('Copias cifradas activadas. Guarda la clave de recuperación antes de cerrar esta página.');
+        this.refreshCloud();
+        this.saveCloudVersion();
+      }).catch((error) => this.view.showError(error.message === 'existing-backups' ?
+        'Ya hay copias en esta cuenta. Introduce la clave de recuperación original.' : 'No se pudieron activar las copias cifradas en este navegador.'));
+    }
+
+    useCloudKey(key){
+      const context = this.cloudContext();
+      if(!context) return;
+      cloud.listAny(context.db).then((entries) => {
+        if(entries.length) return cloud.get(context.db, entries[0].id, entries[0].projectId, key);
+      }).then(() => {
+        cloud.setKey(context.uid, key);
+        this.view.clearImportedKey();
+        this.view.showStatus('Clave aceptada. Ya puedes recuperar las copias de tu cuenta.');
+        this.refreshCloud();
+      }).catch(() => this.view.showError('La clave no es válida o no abre las copias de esta cuenta.'));
+    }
+
+    forgetCloudKey(){
+      const context = this.cloudContext();
+      if(!context || !confirm('¿Dejar de guardar copias automáticas en la nube en este navegador? Las versiones ya guardadas seguirán en tu cuenta.')) return;
+      cloud.forgetKey(context.uid);
+      this.view.cloudKeyWrap.hidden = true;
+      this.view.cloudKey.value = '';
+      this.view.showStatus('Las copias automáticas en la nube están desactivadas en este navegador.');
+      this.refreshCloud();
+    }
+
+    saveCloudVersion(silent){
+      const context = this.cloudContext();
+      if(!context || !this.backup.isReady() || this.savingCloud) return;
+      const key = cloud.getKey(context.uid);
+      if(!key) return;
+      this.savingCloud = true;
+      if(!silent) this.view.setCloudBusy(true);
+      const project = this.app.controllers.projects.current();
+      this.backup.build(project.nombre).then((copy) => {
+        if(this.cloudContext()?.projectId !== context.projectId) throw new Error('project-changed');
+        return cloud.save(context.db, context.projectId, copy, key);
+      }).then(() => {
+        if(!silent) this.view.showStatus('Copia cifrada guardada en tu cuenta.');
+        if(this.app.shell.isVisible('data')) this.refreshCloud();
+      }).catch((error) => {
+        if(!silent || this.app.shell.isVisible('data')) this.view.showError(error.message === 'backup-too-large' ?
+          'La copia supera el límite de 4,8 MB cifrados. Descarga un archivo de copia para conservarla.' : 'No se pudo guardar la copia cifrada en tu cuenta.');
+      }).finally(() => { this.savingCloud = false; this.view.setCloudBusy(false); });
+    }
+
+    autoCloudSave(){
+      const context = this.cloudContext();
+      if(!context || !cloud.getKey(context.uid) || this.savingCloud) return;
+      cloud.list(context.db, context.projectId).then((entries) => {
+        if(!entries.length || Date.now() - entries[0].createdAt >= DAY) this.saveCloudVersion(true);
+      }).catch(() => {});
+    }
+
+    cloudAction(action, id){
+      const context = this.cloudContext();
+      if(!context) return;
+      const key = cloud.getKey(context.uid);
+      if(action === 'delete'){
+        if(!confirm('¿Borrar esta copia cifrada de tu cuenta?')) return;
+        cloud.remove(context.db, id).then(() => this.refreshCloud()).catch(() => this.view.showError('No se pudo borrar la copia cifrada.'));
+        return;
+      }
+      const entry = this.cloudEntries?.find((item) => item.id === id);
+      if(!entry) return;
+      if(action === 'restore' && entry.projectId !== context.projectId &&
+          !confirm('Esta copia pertenece a otro proyecto. ¿Importar sus datos en el proyecto abierto?')) return;
+      cloud.get(context.db, id, entry.projectId, key).then((data) => {
+        if(this.cloudContext()?.projectId !== context.projectId) return;
+        if(action === 'restore') this.importData(data);
+        if(action === 'download') return platform.download('workhub-backup-' + entry.projectId + '.json', JSON.stringify(data, null, 2));
+      }).catch(() => this.view.showError('No se pudo abrir la copia. Comprueba la clave de recuperación.'));
+    }
 
     refreshHistory(){
       const scope = this.scope();
@@ -44,6 +162,7 @@
       if(document.hidden || !this.backup.isReady()) return;
       if(this.app.controllers.projects.firstRun ||
           !this.app.models.projects.list().some((project) => project.id === this.app.projectId)) return;
+      this.autoCloudSave();
       const scope = this.scope();
       if(!scope || this.savingVersion) return;
       this.savingVersion = true;

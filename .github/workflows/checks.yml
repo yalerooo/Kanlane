@@ -18,6 +18,7 @@ jobs:
       - name: Pruebas y traducciones
         run: |
           node tests/sw/sw.test.js
+          node tests/demo/demo.test.js
           node tests/plugins/migration.test.js
           node tests/consent/consent.test.js
           node tests/vault/vault.test.js

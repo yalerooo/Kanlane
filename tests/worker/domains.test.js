@@ -26,6 +26,18 @@ const path = require('node:path');
   assert.match(r.headers.get('X-Robots-Tag'), /noindex/);
   ok('kanlane.yalero.net se sirve con noindex');
 
+  /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
+  const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
+  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos']){
+    assert.ok(wrangler.includes('"/' + landing + '"'), landing + ' sin barra final pasa por el Worker');
+    assert.ok(wrangler.includes('"/' + landing + '/*"'), landing + ' pasa por el Worker');
+    r = await get('https://kanlane.yalero.net/' + landing + '/');
+    assert.match(r.headers.get('X-Robots-Tag'), /noindex/);
+    r = await get('https://www.kanlane.com/' + landing + '/');
+    assert.equal(r.headers.get('Location'), 'https://kanlane.com/' + landing + '/');
+  }
+  ok('las páginas SEO respetan canónico y noindex del espejo');
+
   /* Dominios antiguos: redirección temporal que conserva ruta y parámetros. */
   r = await get('https://workhub.yalero.net/app/?registro=1');
   assert.equal(r.status, 302);

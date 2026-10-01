@@ -60,6 +60,14 @@ module.exports = async function checkLanding(browser, origin){
     await basic.goto(origin + '/?portada');
     assert.ok(await basic.locator('#h-hero').isVisible());
     assert.ok(await basic.locator('#h-clientes').isVisible());
+    assert.equal(await basic.locator('a[href="alternativa-a-trello/"], a[href="gestion-de-proyectos/"]').count(), 0, 'las páginas de captación no aparecen en la portada');
+    for(const route of ['alternativa-a-trello', 'gestion-de-proyectos']){
+      const response = await basic.goto(origin + '/' + route + '/');
+      assert.equal(response.status(), 200, route + ' responde');
+      assert.ok(await basic.locator('h1').isVisible(), route + ' se lee sin JavaScript');
+      await basic.setViewportSize({width:390,height:844});
+      assert.equal(await basic.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, route + ' no desborda en móvil');
+    }
   }finally{ await noScript.close(); }
   console.log('OK   portada: interacciones, móvil, movimiento reducido y tarjetas sin solapamientos');
 };

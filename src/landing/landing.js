@@ -1,11 +1,20 @@
 /* Portada: movimiento progresivo e interacciones sin dependencias ni persistencia. */
 (function(){
   var top = document.getElementById('top');
-  /* La demo pesa bastante más que la portada: se pide cuando ya se ha pintado todo. */
+  /* La demo pesa bastante más que la portada: se pide al acercarse a ella. */
   var frame = document.getElementById('demoFrame');
   if(frame){
     var start = function(){ if(!frame.getAttribute('src')) frame.setAttribute('src', frame.getAttribute('data-src')); };
-    if(document.readyState === 'complete') start(); else window.addEventListener('load', start);
+    if('IntersectionObserver' in window){
+      var demoObserver = new IntersectionObserver(function(entries){
+        if(entries.some(function(entry){ return entry.isIntersecting; })){
+          start();
+          demoObserver.disconnect();
+        }
+      }, {rootMargin:'400px 0px'});
+      demoObserver.observe(frame);
+    }else if(document.readyState === 'complete') start();
+    else window.addEventListener('load', start, {once:true});
   }
   var year = document.getElementById('year');
   if(year) year.textContent = String(new Date().getFullYear());

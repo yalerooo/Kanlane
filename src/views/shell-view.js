@@ -40,6 +40,10 @@
     constructor(){
       this.nav = document.querySelector('.tabs');
       this.tabs = Array.from(this.nav.querySelectorAll('.tab[data-view]'));
+      this.pluginNav = document.getElementById('pluginNav');
+      this.pluginNavToggle = document.getElementById('pluginNavToggle');
+      this.pluginNavList = document.getElementById('pluginNavList');
+      this.pluginNavHasItems = false;
       this.pageTitle = document.getElementById('pageTitle');
       this.pageDesc = document.getElementById('pageDesc');
       this.btnNewTask = document.getElementById('btnNew');
@@ -57,8 +61,46 @@
 
     bindTabClick(handler){
       this.tabs.forEach((t) => {
-        t.addEventListener('click', () => handler(t.getAttribute('data-view')));
+        t.addEventListener('click', () => {
+          const view = t.getAttribute('data-view');
+          handler(view);
+          if(view === 'plugins' && this.pluginNavHasItems) this.setPluginNavExpanded(true);
+        });
       });
+    }
+
+    bindPluginNav(handler){
+      this.pluginNavToggle.addEventListener('click', () => this.setPluginNavExpanded(this.pluginNavList.hidden));
+      this.pluginNavList.addEventListener('click', (ev) => {
+        const button = ev.target.closest('[data-plugin-id]');
+        if(button && this.pluginNavList.contains(button)){
+          handler(button.getAttribute('data-plugin-id'));
+          if(window.matchMedia('(max-width:900px)').matches) this.setPluginNavExpanded(false);
+        }
+      });
+    }
+
+    setPluginNavExpanded(expanded){
+      const on = !!expanded && this.pluginNavHasItems;
+      this.pluginNavList.hidden = !on;
+      this.pluginNavToggle.setAttribute('aria-expanded', String(on));
+      this.pluginNavToggle.setAttribute('aria-label', Workhub.t(on ? 'Ocultar plugins instalados' : 'Mostrar plugins instalados'));
+      this.pluginNav.classList.toggle('is-expanded', on);
+    }
+
+    renderPluginNav(installed, activeId){
+      const {esc, hueFor} = Workhub.utils.html;
+      const icons = Workhub.views.pluginIcons;
+      this.pluginNavHasItems = installed.length > 0;
+      this.pluginNavToggle.hidden = !this.pluginNavHasItems;
+      this.pluginNavList.innerHTML = installed.map((p) => {
+        const m = p.manifest || {};
+        const name = m.name || p.id;
+        const hue = typeof m.color === 'number' ? m.color : hueFor(p.id);
+        return '<button type="button" class="plugin-nav-item' + (p.id === activeId ? ' is-active' : '') + '" data-plugin-id="' + esc(p.id) + '" title="' + esc(name) + '"' + (p.id === activeId ? ' aria-current="page"' : '') + '>' +
+          '<span class="plugin-nav-icon" style="--h:' + hue + '" aria-hidden="true">' + icons.svg(m.icon, 13) + '</span><span class="plugin-nav-name" translate="no">' + esc(name) + '</span></button>';
+      }).join('');
+      if(!this.pluginNavHasItems) this.setPluginNavExpanded(false);
     }
 
     isVisible(view){
@@ -66,6 +108,7 @@
     }
 
     show(view){
+      if(view !== 'plugins' && window.matchMedia('(max-width:900px)').matches) this.setPluginNavExpanded(false);
       this.tabs.forEach((t) => {
         const active = t.getAttribute('data-view') === view;
         t.classList.toggle('active', active);
@@ -125,9 +168,9 @@
 
     /* En móvil la barra de secciones es horizontal y desplazable. */
     _scrollTabIntoView(t){
-      const nav = t.parentNode;
+      const nav = t.closest('.tabs');
       if(nav.scrollWidth <= nav.clientWidth) return;
-      const left = t.offsetLeft - nav.offsetLeft;
+      const left = t.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft;
       if(left < nav.scrollLeft || left + t.offsetWidth > nav.scrollLeft + nav.clientWidth){
         nav.scrollLeft = Math.max(0, left - 16);
       }

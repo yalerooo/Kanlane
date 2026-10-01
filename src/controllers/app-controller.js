@@ -69,7 +69,11 @@
         c.calendar.fillExtensions();
       });
 
-      this.shell.bindTabClick((view) => this.navigate(view));
+      this.shell.bindTabClick((view) => {
+        if(view === 'plugins' && this.controllers.plugins.active) this.controllers.plugins.close();
+        this.navigate(view);
+      });
+      this.shell.bindPluginNav((id) => this.controllers.plugins.open(id));
       this.shell.setStorageMode(platform.mode());
     }
 

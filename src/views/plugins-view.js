@@ -197,6 +197,7 @@
     showHome(){
       this.stage.hidden = true;
       this.home.hidden = false;
+      this.syncOpenClass();
     }
 
     /* body.plugin-open: hay un plugin abierto y se está viendo (oculta la cabecera de la sección). */

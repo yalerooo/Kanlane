@@ -2,3 +2,4 @@
 .seo-breadcrumb{display:flex;gap:9px;align-items:center;padding-top:16px;font-size:13px;color:#71717a}.seo-breadcrumb a{color:#52525b}
 .seo-content-tight{padding-top:0}.seo-steps{display:grid;gap:14px;max-width:72ch;padding-left:24px;color:#52525b}.seo-steps li{padding-left:8px}.seo-steps strong{color:#18181b}
 .seo-demo{display:block;width:100%;max-width:100%;height:min(620px,80vh);margin:24px 0;border:1px solid #d4d4d8;border-radius:12px;background:#fff}
+.seo-related{list-style:none;margin:24px 0 0;padding:0;display:grid;gap:12px}.seo-related a{color:#2457d6;text-decoration:none;font-weight:600;font-size:16px}

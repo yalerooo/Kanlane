@@ -2,7 +2,7 @@
 
 > Pega esto al empezar: *"Lee CONTEXT.md del repo yalerooo/Workhub y continúa desde ahí."*
 >
-> Última revisión completa: 1-oct-2026 (Smart GP con jornada, mejoras de uso diario, aplicación instalable y revisión en móvil).
+> Última revisión: 1-oct-2026 (PR #46–#61 fusionados en `main`; quedan pruebas con servicios y dispositivos reales).
 
 ---
 
@@ -24,7 +24,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Web en producción:** **https://workhub.yalero.net** en **Cloudflare** (Workers con recursos estáticos; dominio `yalero.net` en Cloudflare). El sitio antiguo de Netlify (`workhub-project.netlify.app`) queda como respaldo hasta que se borre. **Ya está en marcha**: Cloudflare despliega solo al fusionar en `main` y genera una vista previa por cada pull request (ver «Estado del despliegue»).
 - **Repositorio:** `yalerooo/Workhub` (GitHub), rama principal `main`.
 - **Ramas de trabajo de Claude:** se trabaja en un worktree con su propia rama y se sube ahí; después se abre (o el usuario abre) el pull request contra `main`.
-  - Ramas usadas hasta ahora: `claude/sleepy-brown-tdi6yq`, `claude/read-context-md-df6b13` (PR #24–#30, y después Cloudflare, servidor local, logo, Smart GP y las mejoras de oct-2026: **este último trabajo va en un pull request abierto que el usuario fusiona él**) y `claude/context-docs-review-985e75` (PR #31–#45). Los PR hasta el #45 y la migración a Cloudflare están fusionados en `main`.
+  - Ramas usadas hasta ahora: `claude/sleepy-brown-tdi6yq`, `claude/read-context-md-df6b13` (PR #24–#30 y #46–#59: Cloudflare, servidor local, logo, Smart GP y mejoras de oct-2026), `claude/context-docs-review-985e75` (PR #31–#45), `claude/legal-pages-privacy` (PR #60) y `claude/legal-noindex` (PR #61). Todos esos PR están fusionados en `main`.
   - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main` (`git checkout -B <rama> origin/main`) o se hace `git merge origin/main`.
   - **En el equipo Windows del usuario no hay `gh`**: no se pueden abrir PR desde aquí. Se sube la rama y se da el enlace (el usuario lo abre y lo fusiona él). **El enlace debe llevar ya el título y la descripción** (si no, GitHub pone el nombre de la rama, «Claude/read context md…», y al usuario no le gusta): `https://github.com/yalerooo/Workhub/compare/main...<rama>?quick_pull=1&title=<título>&body=<descripción>` con ambos valores pasados por `encodeURIComponent` (un script de Node lo genera; cabe hasta unos 6 000 caracteres). Título corto y descriptivo en español; cuerpo con *Qué cambia*, *Cómo funciona*, *Pruebas* (decir qué NO se probó) y la línea «🤖 Generated with Claude Code». Además se da el texto suelto por si el usuario prefiere pegarlo.
 - **Estado del despliegue (oct-2026):** la web se publica en **Cloudflare** (Workers con recursos estáticos; proyecto `workhub`, Build `node scripts/build-public.js`, Deploy `npx wrangler deploy`, Preview `npx wrangler versions upload`; dominio `workhub.yalero.net` como `custom_domain` en `wrangler.jsonc`). Se migró desde Netlify, que se quedó sin créditos de build. Funciona y el usuario la usa: acceso con Google y GitHub, unir accesos con el mismo correo, etc. **Cada push a una rama con PR abierto lanza un despliegue de vista previa y Cloudflare solo hace un build a la vez**: hay que **subir una sola vez por pull request** (reunir los cambios y hacer un único push) para no hacer cola. Para ver cambios al momento se usa el servidor local (`node scripts/dev.js`, ver §9). **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue como alternativa de emergencia (`firebase deploy --only hosting`), sin las cabeceras de `_headers`. El sitio antiguo de Netlify queda como respaldo hasta que se borre.
@@ -408,7 +408,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
 - **Comprobar que no falta ninguna traducción:** `node scripts/check-i18n.js` (con `--strict` sale con error si falta alguna). Revisa `index.html` y los `Workhub.t('…')` de `src/` contra `en.js`. Ejecútalo después de cambiar un texto de la interfaz: si se cambia el español, la traducción exacta se pierde sin avisar.
 
-## 8. Historial de pull requests (todos fusionados salvo el último)
+## 8. Historial de pull requests (todos fusionados hasta el #61)
 
 | # | Qué |
 |---|---|
@@ -449,9 +449,12 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 42 | Clientes: lista con insignia de tareas abiertas, ficha con tarjetas de cifras y contactos en tarjetas (sin raya de acento en el cliente elegido) |
 | 43 | Logo simbólico: pila de tarjetas con check sobre degradado azul, y favicon nuevo |
 | 44–45 | Pantalla de acceso: esqueleto de carga con la forma del formulario en lugar de «Cargando…» con círculo (y un retoque) |
-| **pendiente** | Rama `claude/read-context-md-df6b13`, **un pull request abierto** (lo fusiona el usuario): plugin **Smart GP** con horas por tarea y proyecto, calendario y **jornada máxima por día** (`wh.ui.form` nuevo en la API de plugins); plugins a pantalla completa sin recuadro ni cabecera; **deshacer al borrar**, **búsqueda global** con notas, **subtareas**, **tareas repetidas**, calendario **semana/día**, **recordatorios**; **aplicación instalable (PWA)** con uso sin conexión y barra del color del fondo; script de traducciones; archivos grandes divididos; respaldos para navegadores antiguos; revisión en móvil. Ya fusionado antes en `main`: **migración a Cloudflare**, servidor local `scripts/dev.js`, logo «Barras». |
-
-**Rama `claude/legal-pages-privacy` (pendiente de PR, lo abre/fusiona el usuario):** páginas de privacidad, términos y cookies para España/UE, aviso de cookies con configuración, tipografías propias en lugar de Google Fonts, arreglo del service worker para páginas distintas de la app, `docs/LEGAL.md` y pruebas.
+| 46–56 | Migración a Cloudflare, servidor local `scripts/dev.js`, ajustes del acceso y almacenamiento, logo «Barras», Smart GP con horas, calendario y jornada máxima, mejoras en móvil y plugins, script de traducciones, división de archivos grandes y estilos de respaldo |
+| 57 | Deshacer al borrar, búsqueda global con notas, subtareas, tareas repetidas, calendario por semana y día y recordatorios |
+| 58 | Aplicación instalable (PWA) con uso sin conexión y ajustes de diseño para móvil |
+| 59 | CONTEXT.md actualizado con Smart GP, mejoras de uso diario y PWA |
+| 60 | Páginas legales de privacidad, términos y cookies para España/UE; aviso de cookies; tipografías propias; arreglo del service worker para páginas distintas de la app; documentación y pruebas |
+| 61 | Las páginas legales indican a los buscadores que no deben indexarlas (`meta robots` y `X-Robots-Tag`) |
 
 ## 9. Cómo trabajar y probar
 
@@ -481,7 +484,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 ## 10. Ideas y posibles siguientes pasos (no pedidas todavía)
 
 - **Hecho (30-sep-2026):** las reglas de Firestore publicadas en la consola **coinciden con `firestore.rules` de `main`** (el usuario las pegó y se compararon función por función; solo cambian los comentarios), así que «Compartir» ya no debe fallar por reglas. La CSP (ahora en `scripts/build-public.js`) ya incluye `api.github.com`.
-- **Pendiente real 1 — comprobar en producción lo nuevo de oct-2026** cuando Cloudflare despliegue el último pull request: instalar la app en un móvil (Android e iPhone) y abrirla sin conexión, la barra superior del color del fondo, Smart GP con datos reales de Firebase (jornada, formulario con aviso), el calendario por semana/día, los recordatorios y las notificaciones del navegador, deshacer en cada tipo de borrado y la búsqueda con notas. Nada de esto se ha visto en un dispositivo real ni con Firebase real.
+- **Pendiente real 1 — comprobar en producción lo nuevo de oct-2026**: instalar la app en un móvil (Android e iPhone) y abrirla sin conexión, la barra superior del color del fondo, Smart GP con datos reales de Firebase (jornada, formulario con aviso), el calendario por semana/día, los recordatorios y las notificaciones del navegador, deshacer en cada tipo de borrado y la búsqueda con notas. Nada de esto se ha visto en un dispositivo real ni con Firebase real.
 - **Pendiente real 2 — probar con servicios reales** (hasta ahora solo emuladores y una API de GitHub simulada): equipos con Firebase real (crear, convertir, invitar con otra cuenta de Google, asignar, roles), primer proyecto y modo invitado.
 - **Pendiente real 3 — probar «Conectar con GitHub» y la sincronización con GitHub real** (OAuth devuelve `gho_…`; proyectos de organización; actividad de la incidencia y `closedByPullRequestsReferences`).
 - **Contraseñas compartidas** en equipos con cifrado extremo a extremo por miembro (ver `docs/EQUIPOS.md`), y después comentarios, actividad y notificaciones de equipo.

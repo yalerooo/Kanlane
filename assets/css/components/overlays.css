@@ -83,7 +83,7 @@ dialog.cmdk::backdrop{background:rgba(10,10,12,0.32);backdrop-filter:none;}
   display:flex;
   flex-direction:column;
   align-items:flex-end;
-  gap:8px;
+  gap:10px;
   z-index:3000;
   pointer-events:none;
 }
@@ -95,34 +95,40 @@ dialog.cmdk::backdrop{background:rgba(10,10,12,0.32);backdrop-filter:none;}
   display:flex;
   align-items:center;
   gap:10px;
-  min-width:220px;
   max-width:380px;
-  padding:10px 12px 10px 12px;
+  padding:11px 12px;
   font-size:13px;
+  line-height:1.4;
   color:var(--ink);
   background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-left:3px solid var(--accent-solid);
   border-radius:var(--r-lg);
-  box-shadow:var(--shadow-pop);
+  box-shadow:var(--shadow-lg);
   animation:toast-in .18s cubic-bezier(.2,.8,.2,1);
 }
+.toast.is-error{border-left-color:var(--danger);}
 .toast.is-leaving{animation:toast-out .16s ease forwards;}
-.toast-icon{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;flex:none;color:#fff;background:var(--st-done);}
-.toast.is-error .toast-icon{background:var(--danger);}
-.toast-text{flex:1;min-width:0;}
+.toast-icon{display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-sm);flex:none;color:var(--accent);background:var(--accent-soft);}
+.toast.is-error .toast-icon{color:var(--danger);background:var(--danger-bg);}
+.toast-text{flex:1;min-width:0;overflow-wrap:anywhere;}
 .toast-action{
   pointer-events:auto;
   font-family:inherit;
   font-size:12.5px;
   font-weight:600;
   color:var(--accent);
-  background:none;
-  border:none;
-  padding:2px 4px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+  padding:5px 9px;
   cursor:pointer;
   border-radius:var(--r-sm);
 }
 .toast-action:hover{background:var(--hover);}
+.toast-close{pointer-events:auto;display:grid;place-items:center;width:26px;height:26px;flex:none;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-faint);cursor:pointer;}
+.toast-close:hover{background:var(--hover);color:var(--ink);}
 @keyframes toast-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 @keyframes toast-out{to{opacity:0;transform:translateY(4px);}}
 @media (max-width:640px){ .toasts{inset:auto 12px 12px 12px;align-items:stretch;} .toast{max-width:none;} }
+@media (prefers-reduced-motion:reduce){.toast,.toast.is-leaving{animation:none;}}
 @media (max-width:640px){ .cmdk-input .kbd{display:none;} }

@@ -546,7 +546,8 @@
         case 'ui.toast': {
           const msg = str(params.message, 140);
           if(!msg) throw fail('bad-params', 'Falta el mensaje.');
-          (params.type === 'error' ? toast.error : toast.success)(name + ': ' + msg);
+          if(params.type === 'error') toast.error(name + ': ' + msg);
+          else if(params.type === 'important') toast.success(name + ': ' + msg, {important:true});
           return true;
         }
         case 'ui.openTask': {

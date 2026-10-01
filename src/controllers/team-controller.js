@@ -110,7 +110,7 @@
       this.view.setBusy(true);
       promise.then(() => {
         this.view.email.value = '';
-        toast.success(Workhub.t('Invitación enviada a {email}', {email:email.toLowerCase()}));
+        toast.success(Workhub.t('Invitación enviada a {email}', {email:email.toLowerCase()}), {important:true});
       }, (err) => {
         this.view.showError(ERRORS[err && err.message] || 'No se pudo enviar la invitación. Inténtalo de nuevo.');
       }).then(() => this.view.setBusy(false));
@@ -133,7 +133,7 @@
           this.view.setBusy(true);
           /* Antes de salir se pasa a otro proyecto, o se dejaría de tener acceso al abierto. */
           const next = this.projects.list().find((x) => x.id !== p.id);
-          if(this.app.projectId === p.id && next) this.app.switchProject(next.id, false);
+          if(this.app.projectId === p.id && next) this.app.switchProject(next.id);
           this.team.leave(p).then(() => {
             this.view.close();
             toast.success(Workhub.t('Has salido de «{name}»', {name:p.nombre}));
@@ -162,8 +162,8 @@
         /* El enlace con GitHub pasa al equipo: el original deja de sincronizar el mismo tablero. */
         if(p.github) this.projects.patch(p.id, {github:null}).catch(() => {});
         this.app.rememberProject({id:t.id, nombre:p.nombre, color:p.color, tipo:p.tipo, stages:p.stages, clients:p.clients, labels:p.labels});
-        this.app.switchProject(t.id, false);
-        toast.success(Workhub.t('«{name}» ya es un proyecto de equipo. El original sigue como estaba.', {name:p.nombre}));
+        this.app.switchProject(t.id);
+        toast.success(Workhub.t('«{name}» ya es un proyecto de equipo. El original sigue como estaba.', {name:p.nombre}), {important:true});
         this.pendingOpen = t.id;
         this.refresh();
       }).catch((err) => {

@@ -119,7 +119,7 @@
           return this.projects.patch(target, fields).then(() => true);
         }
         return this.projects.patch(target, fields).then(() => {
-          this.app.switchProject(target, false);
+          this.app.switchProject(target);
           return false;
         });
       }).then((here) => (here ? this.sync() : null));

@@ -1,11 +1,12 @@
-/* Avisos breves en la esquina inferior ("Tarea guardada", "Contacto eliminado"…).
-   Se muestran por encima de cualquier diálogo abierto (capa superior). */
+/* Avisos para errores, acciones recuperables y confirmaciones que no son visibles
+   en la pantalla. Se muestran por encima de los diálogos abiertos. */
 (function(){
   const DURATION = 3200;
   const UNDO_DURATION = 8000;
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
-  const OK_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  const ERR_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17v.01"/></svg>';
+  const OK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const ERR_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17v.01"/></svg>';
+  const CLOSE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
   let container = null;
 
@@ -33,12 +34,17 @@
     }, 160);
   }
 
-  /* opts: {error:true} para avisos de fallo; {action:{label, run}} para un botón. */
+  /* Los éxitos habituales ya se ven en la interfaz. Solo se muestran errores,
+     acciones disponibles y confirmaciones marcadas como importantes. */
   function show(message, opts){
     opts = opts || {};
+    if(!opts.error && !opts.action && !opts.important) return null;
     const root = ensureContainer();
+    const duplicate = Array.from(root.children).find((item) => item.dataset.message === message && item.classList.contains('is-error') === !!opts.error);
+    if(duplicate) duplicate.remove();
     const el = document.createElement('div');
     el.className = 'toast' + (opts.error ? ' is-error' : '');
+    el.dataset.message = message;
     el.setAttribute('role', opts.error ? 'alert' : 'status');
     el.innerHTML = '<span class="toast-icon">' + (opts.error ? ERR_ICON : OK_ICON) + '</span><span class="toast-text"></span>';
     el.querySelector('.toast-text').textContent = message;
@@ -50,8 +56,15 @@
       btn.addEventListener('click', () => { opts.action.run(); dismiss(el); });
       el.appendChild(btn);
     }
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'toast-close';
+    close.setAttribute('aria-label', Workhub.t('Cerrar aviso'));
+    close.innerHTML = CLOSE_ICON;
+    close.addEventListener('click', () => dismiss(el));
+    el.appendChild(close);
     root.appendChild(el);
-    while(root.children.length > 3) root.firstChild.remove();
+    while(root.children.length > 2) root.firstChild.remove();
     bringToFront();
     setTimeout(() => dismiss(el), opts.duration || DURATION);
     return el;
@@ -61,7 +74,7 @@
   function undoable(message, restore, doneMessage){
     return show(message, {duration:UNDO_DURATION, action:{label:'Deshacer', run(){
       restore().then(
-        () => show(doneMessage || 'Restaurado'),
+        () => show(doneMessage || 'Restaurado', {important:true}),
         () => show('No se pudo deshacer', {error:true}));
     }}});
   }

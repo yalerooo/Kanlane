@@ -186,7 +186,7 @@
 
     /* Cambia de proyecto sin recargar: cierra lo que hubiera abierto, vacía los
        filtros y reconecta los modelos a los datos del otro proyecto. */
-    switchProject(id, announce){
+    switchProject(id){
       if(!this.rootDb || id === this.projectId) return;
       this.controllers.plugins.beforeProjectChange();
       /* El diálogo de proyectos se queda: desde él se puede estar eliminando este. */
@@ -206,7 +206,6 @@
       this.controllers.plugins.onProjectChange();
       this.controllers.github.onProjectChange();
       this.updateCounts();
-      if(announce && p.nombre) Workhub.views.toast.success('Ahora estás en «' + p.nombre + '»');
     }
 
     /* Borra un proyecto y todos sus datos. Si es el abierto, antes se pasa a otro
@@ -215,7 +214,7 @@
       if(!this.rootDb) return Promise.reject(new Error('not-ready'));
       if(id === this.projectId){
         const next = this.models.projects.list().find((p) => p.id !== id);
-        if(next) this.switchProject(next.id, false);
+        if(next) this.switchProject(next.id);
       }
       return platform.connectAssets().catch(() => null).then((assets) => {
         return this.models.projects.removeProject(id, this.rootDb, assets);

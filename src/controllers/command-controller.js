@@ -134,7 +134,7 @@
         title: p.nombre,
         meta: t('Cambiar de proyecto'),
         icon: projectIcon(projects.hueOf(p), p.nombre),
-        run: () => this.app.switchProject(p.id, true)
+        run: () => this.app.switchProject(p.id)
       }));
     }
 

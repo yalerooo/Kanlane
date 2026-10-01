@@ -1,4 +1,4 @@
-/* Servidor local para trabajar en Workhub sin esperar a ningún despliegue.
+/* Servidor local para trabajar en Kanlane sin esperar a ningún despliegue.
    Sirve la carpeta del proyecto y recarga el navegador solo cuando guardas un
    archivo (index.html, assets/, src/ o plugins/). No tiene dependencias: solo Node.
 

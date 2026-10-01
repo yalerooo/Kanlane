@@ -6,12 +6,12 @@
     name: 'Informe de trabajo',
     version: '1.1.0',
     description: 'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.',
-    author: 'Workhub',
+    author: 'Kanlane',
     icon: 'chart',
     color: 238,
     permissions: ['tasks:read', 'ui:extend']
   };
-  /* Colores de las etapas del proyecto (el nombre del color lo da Workhub). */
+  /* Colores de las etapas del proyecto (el nombre del color lo da Kanlane). */
   var COLOR_VARS = {gray:'var(--st-pend)', blue:'var(--st-proc)', orange:'var(--st-wait)', green:'var(--st-done)', red:'var(--danger)', violet:'var(--meet)'};
   function colorOf(key){
     var st = statuses.filter(function(s){ return s.key === key; })[0];
@@ -32,14 +32,14 @@
     'Título':'Title', 'Estado':'Status', 'Fecha límite':'Due date', 'Contacto':'Contact', 'Descripción':'Description',
     'Resumen copiado':'Summary copied', 'No se pudo copiar':'Could not copy', 'informe':'report',
     'Informe':'Report', 'Ver el informe de trabajo':'View the work report', 'Ver informe de trabajo':'View work report',
-    'Conectando con Workhub…':'Connecting to Workhub…',
-    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
-    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}'
+    'Conectando con Kanlane…':'Connecting to Kanlane…',
+    'Este plugin se abre desde Kanlane (sección Plugins).':'This plugin opens from Kanlane (Plugins section).',
+    'No se pudo conectar con Kanlane: {error}':'Could not connect to Kanlane: {error}'
   }});
 
   var app = document.getElementById('app');
   var wh = null, tasks = [], statuses = [];
-  document.getElementById('status').textContent = tr('Conectando con Workhub…');
+  document.getElementById('status').textContent = tr('Conectando con Kanlane…');
 
   function esc(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
@@ -182,7 +182,7 @@
   }).catch(function(err){
     if(err === 'background') return;
     document.getElementById('status').textContent = err.message === 'not-in-workhub'
-      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
-      : tr('No se pudo conectar con Workhub: {error}', {error:err.message});
+      ? tr('Este plugin se abre desde Kanlane (sección Plugins).')
+      : tr('No se pudo conectar con Kanlane: {error}', {error:err.message});
   });
 })();

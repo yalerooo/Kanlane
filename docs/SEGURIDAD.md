@@ -1,6 +1,6 @@
-# Seguridad del acceso a Workhub
+# Seguridad del acceso a Kanlane
 
-Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus propios datos. Esta guía explica qué protege Workhub desde el propio código y qué tienes que activar tú en la consola de Firebase. La parte del código ya está hecha. Los pasos de la consola, que están más abajo, se hacen **una sola vez**.
+Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus propios datos. Esta guía explica qué protege Kanlane desde el propio código y qué tienes que activar tú en la consola de Firebase. La parte del código ya está hecha. Los pasos de la consola, que están más abajo, se hacen **una sola vez**.
 
 ## Lo que ya hace el código
 
@@ -9,10 +9,10 @@ Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus 
 | Un usuario lee o modifica los datos de otro | Cada cuenta solo puede leer y escribir en `users/{su uid}/…`. Lo impide el servidor (`firestore.rules`), no la app. |
 | Cuentas en masa con correos inventados para llenar la base de datos | Quien se registra con correo y contraseña tiene que **verificar el correo** antes de leer o guardar nada. Lo exige el servidor, y la app muestra la pantalla "Verifica tu correo". Google y GitHub ya llegan verificados por el proveedor. |
 | Usar tu Firestore como almacén de cualquier cosa | Cada usuario solo puede escribir en las colecciones que usa la app (tareas, notas, clientes, contactos, reuniones, contraseñas, proyectos, imágenes, ajustes y plugins). Cualquier otra ruta está cerrada. |
-| Un plugin de terceros intenta leer tus datos o tu sesión | Cada plugin corre en un `<iframe sandbox>` sin `allow-same-origin`: no ve la página, ni la sesión, ni el almacenamiento de Workhub. Solo habla por mensajes, cada llamada se comprueba contra los permisos aprobados, ninguno da acceso a las contraseñas, y hay un límite de escrituras por minuto. Ver [PLUGINS.md](PLUGINS.md). |
+| Un plugin de terceros intenta leer tus datos o tu sesión | Cada plugin corre en un `<iframe sandbox>` sin `allow-same-origin`: no ve la página, ni la sesión, ni el almacenamiento de Kanlane. Solo habla por mensajes, cada llamada se comprueba contra los permisos aprobados, ninguno da acceso a las contraseñas, y hay un límite de escrituras por minuto. Ver [PLUGINS.md](PLUGINS.md). |
 | Tras cerrar sesión, los datos quedan en el ordenador | Al cerrar sesión se borra la copia local de Firestore (IndexedDB) y el último proyecto recordado. |
-| Otra web mete Workhub en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`scripts/build-public.js`, que genera `_headers` para Cloudflare). |
-| Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Workhub y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
+| Otra web mete Kanlane en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`scripts/build-public.js`, que genera `_headers` para Cloudflare). |
+| Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Kanlane y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
 | Nombre o foto del perfil de Google/GitHub manipulados | El nombre se pinta como texto y la foto solo se acepta si es `https:`. |
 | Conexión sin cifrar | HTTPS obligatorio (`Strict-Transport-Security`). |
 | Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas y para la contraseña maestra de las contraseñas. |
@@ -28,7 +28,7 @@ Cualquiera puede crearse una cuenta en Workhub; cada persona solo ve y toca sus 
 
 Cada vez que cambia `firestore.rules` hay que publicarlas. Las últimas añaden los **proyectos de equipo** (`teams`, `invites`): sin ellas, compartir proyectos no funciona.
 
-Con la terminal, en la carpeta de Workhub:
+Con la terminal, en la carpeta de Kanlane:
 
 ```bash
 firebase deploy --only firestore:rules
@@ -44,7 +44,7 @@ Si entras con correo y contraseña y nunca verificaste tu correo, la app te pedi
 
 ### 3. Correo de verificación en español (opcional)
 
-**Authentication** → **Templates** → **Verificación de dirección de correo electrónico**: pulsa el lápiz y cambia el idioma de la plantilla a **Español** y el nombre del remitente a "Workhub".
+**Authentication** → **Templates** → **Verificación de dirección de correo electrónico**: pulsa el lápiz y cambia el idioma de la plantilla a **Español** y el nombre del remitente a "Kanlane".
 
 ### 4. Política de contraseñas
 
@@ -60,7 +60,9 @@ Si entras con correo y contraseña y la tuya no cumple la política, Firebase te
 
 **Authentication** → **Settings** → **Dominios autorizados**. Deja solo los que usas:
 
-- `workhub.yalero.net`
+- `kanlane.com`
+- `kanlane.yalero.net` (respaldo)
+- `workhub.yalero.net` (nombre antiguo: quítalo cuando deje de redirigir)
 - `workhub-project.netlify.app` (sitio antiguo: quítalo cuando lo borres)
 - `workhub-26f50.firebaseapp.com` (lo necesita el inicio de sesión)
 
@@ -72,14 +74,16 @@ La `apiKey` de `firebase-config.js` es pública por diseño: identifica el proye
 
 1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=workhub-26f50) → **Credenciales** → **Browser key (auto created by Firebase)**.
 2. **Restricciones de aplicaciones** → **Sitios web** → añade:
-   - `https://workhub.yalero.net/*`
+   - `https://kanlane.com/*`
+   - `https://kanlane.yalero.net/*`
+   - `https://workhub.yalero.net/*` (nombre antiguo)
    - `https://workhub-project.netlify.app/*` (sitio antiguo, opcional)
    - `https://workhub-26f50.firebaseapp.com/*`
 3. **Guardar**. Espera unos minutos y comprueba que puedes entrar. Si algo falla, vuelve a poner **Ninguna** y guarda.
 
 ### 8. Protege la cuenta con la que entras
 
-Quien entre en tu cuenta de Google o GitHub entra también en Workhub. Activa la **verificación en dos pasos** en esas cuentas:
+Quien entre en tu cuenta de Google o GitHub entra también en Kanlane. Activa la **verificación en dos pasos** en esas cuentas:
 
 - Google: <https://myaccount.google.com/signinoptions/twosv>
 - GitHub: **Settings** → **Password and authentication** → **Two-factor authentication**

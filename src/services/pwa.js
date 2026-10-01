@@ -1,6 +1,6 @@
 /* Aplicación instalable (PWA): registra el service worker (sw.js), avisa cuando
    hay una versión nueva o se pierde la conexión, y gestiona el botón
-   «Instalar Workhub» de Ajustes (Chrome/Edge/Android usan el aviso del
+   «Instalar Kanlane» de Ajustes (Chrome/Edge/Android usan el aviso del
    navegador; en iPhone/iPad solo se puede añadir a la pantalla de inicio
    desde Compartir). El service worker solo se registra en https: en local
    (http://localhost) no, para no guardar copias mientras se desarrolla. */
@@ -62,7 +62,7 @@
     /* Una versión nueva toma el control sola; se ofrece recargar para verla. */
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if(!hadController || reloading) return;
-      toast().success(t('Hay una versión nueva de Workhub'), {duration: 15000, action: {label: t('Recargar'), run: () => { reloading = true; location.reload(); }}});
+      toast().success(t('Hay una versión nueva de Kanlane'), {duration: 15000, action: {label: t('Recargar'), run: () => { reloading = true; location.reload(); }}});
     });
     navigator.serviceWorker.register(Workhub.utils.urls.rootUrl('sw.js')).then((reg) => {
       /* Comprueba si hay versión nueva al volver a la pestaña. */

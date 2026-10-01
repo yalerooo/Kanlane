@@ -25,7 +25,7 @@ const ALL = {
 
 /* Solo la página de la app (no /__/auth/*, que es de Firebase y tiene sus
    propias reglas: debe poder abrirse en ventana y en un marco oculto).
-   - frame-ancestors / X-Frame-Options: ninguna otra web puede meter Workhub
+   - frame-ancestors / X-Frame-Options: ninguna otra web puede meter Kanlane
      en un marco para engañarte con clics.
    - script-src: solo scripts de este dominio y del SDK de Firebase/Google;
      ningún script en línea ni eval, así una inyección de HTML no ejecuta nada.

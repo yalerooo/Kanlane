@@ -158,7 +158,7 @@
       this.app.applyProjectConfig(this.projects.configOf(p));
       this.applyLabels(p);
       this.applyTeam(p);
-      document.title = this.projects.list().length > 1 ? p.nombre + ' · Workhub' : 'Workhub';
+      document.title = this.projects.list().length > 1 ? p.nombre + ' · Kanlane' : 'Kanlane';
     }
 
     /* Si el proyecto abierto ya no existe (borrado desde otro dispositivo, o el

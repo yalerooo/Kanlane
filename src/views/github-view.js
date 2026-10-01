@@ -23,7 +23,7 @@
   function oauthBlock(s){
     if(!s.canOAuth) return '';
     return '<div class="gh-oauth"><button type="button" class="btn btn-primary" data-gh="oauth">' + MARK + '<span>Conectar con GitHub</span></button>' +
-      '<p class="field-help">Se abre GitHub para que autorices Workhub (permiso sobre tus proyectos). No tienes que copiar ningún token.</p></div>';
+      '<p class="field-help">Se abre GitHub para que autorices Kanlane (permiso sobre tus proyectos). No tienes que copiar ningún token.</p></div>';
   }
 
   class GithubView {
@@ -103,7 +103,7 @@
         : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
           '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
           '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
-      /* Destino: uno de los proyectos de Workhub o uno nuevo. */
+      /* Destino: uno de los proyectos de Kanlane o uno nuevo. */
       const projects = s.projects || [];
       /* Por defecto, el proyecto que está abierto (y se reinicia al cambiar de proyecto). */
       if(this.form.forProject !== s.currentId){
@@ -115,7 +115,7 @@
       const options = projects.map((p) => '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(Workhub.t('ya enlazado')) : '') + '</option>').join('') +
         '<option value="__new__"' + (isNew ? ' selected' : '') + '>' + esc(Workhub.t('+ Crear un proyecto nuevo')) + '</option>';
       const targetName = (projects.find((p) => p.id === this.form.target) || {}).nombre || '';
-      const targetField = '<div class="field"><label for="ghTarget">Proyecto de Workhub donde añadirlo</label>' +
+      const targetField = '<div class="field"><label for="ghTarget">Proyecto de Kanlane donde añadirlo</label>' +
         '<select id="ghTarget">' + options + '</select>' +
         (isNew
           ? '<input id="ghName" maxlength="60" autocomplete="off" placeholder="' + esc(Workhub.t('Nombre del proyecto nuevo (por defecto, el de GitHub)')) + '" value="' + esc(this.form.name) + '">' +
@@ -123,7 +123,7 @@
           : '<p class="field-help">' + esc(Workhub.t('Las columnas de «{name}» se sustituirán por las de GitHub y sus elementos se importarán como tareas.', {name:targetName})) + '</p>') +
         '</div>';
       return '<form class="gh-form" autocomplete="off">' +
-        '<p class="gh-lead">Enlaza este proyecto de Workhub con un GitHub Project. Las columnas de GitHub pasan a ser las columnas del tablero y las tareas se mantienen sincronizadas en los dos sentidos.</p>' +
+        '<p class="gh-lead">Enlaza este proyecto de Kanlane con un GitHub Project. Las columnas de GitHub pasan a ser las columnas del tablero y las tareas se mantienen sincronizadas en los dos sentidos.</p>' +
         tokenField +
         '<div class="field"><label for="ghUrl">Enlace del proyecto de GitHub</label>' +
         '<input id="ghUrl" type="url" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1" value="' + esc(this.form.url) + '"></div>' +
@@ -166,7 +166,7 @@
         '<div class="gh-project">' + MARK + '<div><a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(c.title) + '</a>' +
         '<div>' + state + '</div></div></div>' + tokenBlock + detail +
         (readOnly ? '<p class="gh-note">' + esc(Workhub.t('Eres lector de este proyecto: no puedes sincronizar con GitHub.')) + '</p>' : (
-          '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Workhub (como borradores)</label>' +
+          '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Kanlane (como borradores)</label>' +
           '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
           '<div class="gh-actions">' +
           (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +

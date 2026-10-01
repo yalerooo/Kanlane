@@ -1,5 +1,5 @@
 /* Arranque: se decide ANTES de pintar nada (se carga en <head>, justo después
-   de la configuración). Si Workhub está publicado con Firebase, la app queda
+   de la configuración). Si Kanlane está publicado con Firebase, la app queda
    oculta desde el primer fotograma y solo se ve la pantalla de acceso/carga
    hasta que hay sesión (AuthController quita la clase). También se aplica ya
    el tema guardado, para no ver un parpadeo.

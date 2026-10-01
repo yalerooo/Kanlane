@@ -1,4 +1,4 @@
-/* Service worker de Workhub: hace que la web abra sin conexión con los últimos
+/* Service worker de Kanlane: hace que la web abra sin conexión con los últimos
    datos y que se pueda instalar como aplicación.
 
    - Los archivos de la app (la lista FILES) se guardan todos juntos al instalar

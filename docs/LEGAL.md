@@ -1,8 +1,8 @@
 # Páginas legales, privacidad y cookies
 
-Workhub trata datos personales de personas en España y la Unión Europea, así que necesita información legal y un aviso de cookies. Esta guía explica qué hay, qué tienes que rellenar tú y qué obligaciones quedan fuera del código.
+Kanlane trata datos personales de personas en España y la Unión Europea, así que necesita información legal y un aviso de cookies. Esta guía explica qué hay, qué tienes que rellenar tú y qué obligaciones quedan fuera del código.
 
-> **Importante.** Los textos están redactados siguiendo el RGPD, la LOPDGDD, la LSSI-CE y la guía de cookies de la AEPD, y describen lo que Workhub hace de verdad. Pero **no son asesoramiento jurídico**. Si Workhub va a tener usuarios que no conoces, cobrar, o lo explotas como empresa, haz que los revise un abogado o una gestoría. Eres tú, como titular, quien responde de que sean ciertos y estén al día.
+> **Importante.** Los textos están redactados siguiendo el RGPD, la LOPDGDD, la LSSI-CE y la guía de cookies de la AEPD, y describen lo que Kanlane hace de verdad. Pero **no son asesoramiento jurídico**. Si Kanlane va a tener usuarios que no conoces, cobrar, o lo explotas como empresa, haz que los revise un abogado o una gestoría. Eres tú, como titular, quien responde de que sean ciertos y estén al día.
 
 ## Que no salgan en Google
 
@@ -42,7 +42,7 @@ Enlaces desde la app: pantalla de acceso («Al continuar aceptas los Términos y
   | Campo | Contenido |
   |---|---|
   | Responsable | (tus datos) |
-  | Actividad | Gestión de cuentas y contenido de usuarios de Workhub |
+  | Actividad | Gestión de cuentas y contenido de usuarios de Kanlane |
   | Categorías de interesados | Usuarios; personas de contacto que los usuarios introducen |
   | Categorías de datos | Identificativos y de contacto; contenido de trabajo; datos técnicos |
   | Destinatarios / encargados | Google (Firebase), Cloudflare, GitHub (si se activa) |
@@ -57,7 +57,7 @@ Enlaces desde la app: pantalla de acceso («Al continuar aceptas los Términos y
 
 ## El aviso de cookies: qué cubre y por qué
 
-Hoy Workhub **solo usa almacenamiento técnico imprescindible** (sesión, idioma, tema, proyecto abierto, copia sin conexión…), que la ley **no obliga a consentir** (LSSI-CE art. 22.2). Aun así el aviso existe, y funciona de verdad, porque:
+Hoy Kanlane **solo usa almacenamiento técnico imprescindible** (sesión, idioma, tema, proyecto abierto, copia sin conexión…), que la ley **no obliga a consentir** (LSSI-CE art. 22.2). Aun así el aviso existe, y funciona de verdad, porque:
 
 - da transparencia y deja al usuario elegir;
 - está listo para el día que añadas algo que **sí** necesite consentimiento (analítica, publicidad, vídeos incrustados…).

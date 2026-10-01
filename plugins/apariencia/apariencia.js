@@ -30,7 +30,7 @@
     'Paleta de interfaz':'Interface palette', 'Colores de fondo, paneles y barra lateral.':'Background, panels and sidebar colors.',
     'Original':'Original', 'Cálida':'Warm', 'Fría':'Cool', 'Pizarra':'Slate',
     'Color de acento':'Accent color', 'Botones principales, sección activa y elementos seleccionados.':'Primary buttons, active section and selected items.',
-    'El de Ajustes':'From Settings', 'Otro':'Other', 'Esquinas':'Corners', 'Forma de tarjetas, botones y campos.':'Shape of cards, buttons and fields.',
+    'Otro':'Other', 'Esquinas':'Corners', 'Forma de tarjetas, botones y campos.':'Shape of cards, buttons and fields.',
     'Rectas':'Sharp', 'Normales':'Normal', 'Redondeadas':'Rounded', 'Densidad':'Density',
     'Espacio de las tarjetas del tablero, listas y barra lateral.':'Spacing of board cards, lists and sidebar.',
     'Compacta':'Compact', 'Normal':'Normal', 'Amplia':'Comfortable',
@@ -109,7 +109,7 @@
         '<div class="group"><h2>' + tr('Tema') + '</h2>' + seg('theme', [['default', 'Según Ajustes'], ['system', 'Según el sistema'], ['light', 'Claro'], ['dark', 'Oscuro']]) + '</div>' +
         '<div class="group"><h2>' + tr('Paleta de interfaz') + '</h2><p>' + tr('Colores de fondo, paneles y barra lateral.') + '</p><div class="palette-grid">' + palettes + '</div></div>' +
         '<div class="group"><h2>' + tr('Color de acento') + '</h2><p>' + tr('Botones principales, sección activa y elementos seleccionados.') + '</p><div class="swatches">' +
-          '<button type="button" class="sw-default' + (look.accent ? '' : ' is-on') + '" data-accent="">' + tr('El de Ajustes') + '</button>' +
+          '<button type="button" class="sw-default' + (look.accent ? '' : ' is-on') + '" data-accent="" aria-pressed="' + !look.accent + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v4.5h4.5"/></svg>' + tr('Original') + '</button>' +
           PRESETS.map(function(c){ return '<button type="button" class="sw' + (look.accent === c ? ' is-on' : '') + '" style="background:' + c + ';--sw:' + c + '" data-accent="' + c + '" aria-label="' + c + '">' + (look.accent === c ? CHECK : '') + '</button>'; }).join('') +
           '<label class="custom' + (look.accent && PRESETS.indexOf(look.accent) === -1 ? ' is-on' : '') + '">' + tr('Otro') + '<input type="color" id="custom" value="' + (look.accent || '#2F6BFF') + '"></label>' +
         '</div></div>' +

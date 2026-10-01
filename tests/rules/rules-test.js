@@ -11,7 +11,7 @@ async function t(name, fn){
 (async () => {
   const env = await initializeTestEnvironment({
     projectId: 'demo-workhub',
-    firestore: {rules: fs.readFileSync(path.join(__dirname, '..', '..', 'firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080}
+    firestore: {rules: fs.readFileSync(path.join(__dirname, '..', '..', 'firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8187}
   });
   const tok = (email) => ({email: email, email_verified: true, firebase: {sign_in_provider: 'google.com'}});
   const alice = env.authenticatedContext('alice', tok('alice@x.com')).firestore();

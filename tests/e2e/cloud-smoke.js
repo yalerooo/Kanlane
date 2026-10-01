@@ -43,7 +43,7 @@ async function verify(email){
   await ready();
   const browser = await chromium.launch({headless:true, ...(chrome ? {executablePath:chrome} : {})});
   try{
-    const context = await browser.newContext({viewport:{width:1280,height:850}});
+    const context = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES'});
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));

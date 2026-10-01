@@ -1,5 +1,7 @@
-/* Portada: movimiento progresivo e interacciones sin dependencias ni persistencia. */
+/* Portada: movimiento progresivo e interacciones sin dependencias ni persistencia.
+   Textos en español e inglés según <html lang>. */
 (function(){
+  var en = document.documentElement.lang === 'en';
   var top = document.getElementById('top');
   /* La demo pesa bastante más que la portada: se pide al acercarse a ella. */
   var frame = document.getElementById('demoFrame');
@@ -63,8 +65,10 @@
   }
 
   var stage = document.querySelector('.flow-stage');
-  var messages = ['La idea ya tiene su sitio.', 'Cada paso te acerca a la entrega.', 'Menos pendientes. Más tranquilidad.'];
-  var statuses = ['Pendiente', 'En curso', 'Completada'];
+  var messages = en
+    ? ['The idea has its place.', 'Each step brings you closer to delivery.', 'Fewer pending. More peace of mind.']
+    : ['La idea ya tiene su sitio.', 'Cada paso te acerca a la entrega.', 'Menos pendientes. Más tranquilidad.'];
+  var statuses = en ? ['Pending', 'In progress', 'Done'] : ['Pendiente', 'En curso', 'Completada'];
   document.querySelectorAll('[data-flow]').forEach(function(button){
     button.addEventListener('click', function(){
       var index = Number(button.dataset.flow);
@@ -98,7 +102,12 @@
           other.classList.toggle('on', other === button);
           other.setAttribute('aria-pressed', String(other === button));
         });
-        document.querySelector('.calendar-caption').textContent = mode === 'day' ? 'Miércoles 7. Espacio para concentrarte.' : mode === 'month' ? 'Octubre. La perspectiva completa.' : 'Una semana. Todos tus clientes.';
+        var caption = mode === 'day'
+          ? (en ? 'Wednesday 7. Space to focus.' : 'Miércoles 7. Espacio para concentrarte.')
+          : mode === 'month'
+          ? (en ? 'October. The full picture.' : 'Octubre. La perspectiva completa.')
+          : (en ? 'One week. All your clients.' : 'Una semana. Todos tus clientes.');
+        document.querySelector('.calendar-caption').textContent = caption;
       });
     });
   }

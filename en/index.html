@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kanlane · Task and project manager for teams</title>
+  <meta name="description" content="Kanlane is a task and project manager with kanban boards, calendar, clients and teamwork. A simple Trello alternative to organize your work.">
+  <link rel="canonical" href="https://kanlane.com/en/">
+  <link rel="alternate" hreflang="es" href="https://kanlane.com/">
+  <link rel="alternate" hreflang="en" href="https://kanlane.com/en/">
+  <link rel="alternate" hreflang="x-default" href="https://kanlane.com/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kanlane">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta property="og:url" content="https://kanlane.com/en/">
+  <meta property="og:title" content="Kanlane · Task and project manager for teams">
+  <meta property="og:description" content="Task and project manager with kanban boards, calendar, clients and teamwork. A simple Trello alternative.">
+  <meta property="og:image" content="https://kanlane.com/assets/img/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Kanlane: all your clients' work in one place">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Kanlane · Task and project manager for teams">
+  <meta name="twitter:description" content="Task and project manager with kanban boards, calendar, clients and teamwork. A simple Trello alternative.">
+  <meta name="twitter:image" content="https://kanlane.com/assets/img/og-image.png">
+
+  <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="../manifest.webmanifest">
+
+  <link rel="preload" as="font" type="font/woff2" href="../assets/fonts/Geist-Variable.woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/fonts.css">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/landing.css">
+  <link rel="stylesheet" href="../assets/css/landing-product.css">
+  <script src="../src/landing/landing-boot.js"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://kanlane.com/#sitio",
+        "url": "https://kanlane.com/",
+        "name": "Kanlane",
+        "inLanguage": "en"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://kanlane.com/#aplicacion",
+        "name": "Kanlane",
+        "url": "https://kanlane.com/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web, Android, iOS",
+        "inLanguage": ["es", "en"],
+        "description": "Task and project manager for teams and professionals: kanban boards, calendar, clients, contacts, encrypted passwords and offline work.",
+        "image": "https://kanlane.com/assets/img/og-image.png",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR", "category": "Free to start"},
+        "brand": {"@type": "Brand", "name": "Kanlane"},
+        "publisher": {"@id": "https://kanlane.com/#organizacion"},
+        "featureList": [
+          "Kanban boards per project with customizable stages",
+          "Deadlines and meetings calendar by month, week and day",
+          "Clients and contacts",
+          "Passwords encrypted in the browser",
+          "Subtasks and recurring tasks",
+          "Shared projects with roles",
+          "GitHub Projects sync",
+          "Installable app that works offline"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {"@type": "Question", "name": "How much does Kanlane cost?", "acceptedAnswer": {"@type": "Answer", "text": "Creating an account is free and no card is required. If paid plans ever appear, they will be announced first and what you already have stays yours."}},
+          {"@type": "Question", "name": "Does it work offline?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. You can install Kanlane as an app on your phone or computer and open it offline: you will see your latest data and changes will sync when you are back online."}},
+          {"@type": "Question", "name": "Who can see my passwords?", "acceptedAnswer": {"@type": "Answer", "text": "Only you. Passwords and their notes are encrypted in your browser with your master password before being saved, and that password never leaves your device."}},
+          {"@type": "Question", "name": "What if I forget my master password?", "acceptedAnswer": {"@type": "Answer", "text": "When you create it, a recovery key is generated that you can download and keep. Without the master password or that key, no one can decrypt your passwords, not even Kanlane."}},
+          {"@type": "Question", "name": "Can I work in a team?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. You can share a project, invite people by email and assign tasks. Each person has a role: owner, editor or viewer."}},
+          {"@type": "Question", "name": "Can I take my data with me?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. You can export tasks, notes, clients, contacts, meetings and encrypted passwords. The export does not include original images or plugin data. There are also local versions and optional encrypted copies in your account."}},
+          {"@type": "Question", "name": "What are plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Small extensions that add features, like per-project hour tracking or a timer. They run isolated and only access what you allow them to."}}
+        ]
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://kanlane.com/#organizacion",
+        "name": "Kanlane",
+        "url": "https://kanlane.com/",
+        "logo": "https://kanlane.com/assets/img/icon-512.png",
+        "sameAs": ["https://github.com/yalerooo/Kanlane"]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20v-1a5.5 5.5 0 0 1 5.5-5.5h2A5.5 5.5 0 0 1 15.5 19v1"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14a5 5 0 0 1 3 4.7V20"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 3l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 21l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.8"/><circle cx="18" cy="6" r="2.8"/><circle cx="18" cy="18" r="2.8"/><path d="M8.5 10.6l7-3.2M8.5 13.4l7 3.2"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15L6 17z"/><path d="M10 21.5a2.2 2.2 0 0 0 4 0"/></symbol>
+    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M6.5 8v8M17.5 12v.5a3.5 3.5 0 0 1-3.5 3.5H9"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0V8zM12 17v4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.5.9-1.5 2.3-3 3.5M6.5 7.6C4.4 9 3 11 2.5 12c1 1.8 4.5 6 9.5 6 1.3 0 2.5-.3 3.5-.7"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#18181B"/><path d="M16 45l10-26" fill="none" stroke="#52525B" stroke-width="6.5" stroke-linecap="round"/><path d="M29 45l10-26" fill="none" stroke="#7FA3FF" stroke-width="6.5" stroke-linecap="round"/><path d="M42 45l10-26" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#contenido">Skip to content</a>
+
+<header class="top" id="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/" aria-label="Kanlane, home">
+      <svg class="brand-logo" width="28" height="28" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span>Kanlane</span>
+    </a>
+    <nav class="top-nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#plugins">Plugins</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#security">Security</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="top-cta">
+      <a class="lang-link" href="/" hreflang="es" lang="es" aria-label="Ver en español">ES</a>
+      <a class="btn btn-ghost" href="../app/"><span class="long">Sign in</span><span class="short">Sign in</span></a>
+      <a class="btn btn-primary" href="../app/?registro=1">Create account</a>
+    </div>
+  </div>
+</header>
+
+<main id="contenido">
+
+  <!-- Hero -->
+  <section class="hero" aria-labelledby="h-hero">
+    <div class="wrap hero-layout">
+      <div class="hero-copy">
+      <p class="eyebrow hero-eyebrow"><span class="live-dot" aria-hidden="true"></span> Task and project manager</p>
+      <h1 id="h-hero">Organize your work<br><span class="hero-word">in one place.</span></h1>
+      <p class="lead">Kanlane is a project manager with kanban boards, calendar, clients and teamwork. A simple Trello alternative for professionals and small teams.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="../app/?registro=1">Create account</a>
+        <a class="btn btn-outline btn-lg" href="#try">Explore the board <svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <p class="hero-note">Free to start. No card. No complications.</p>
+      <div class="hero-platforms"><span><svg class="ico" width="15" height="15" aria-hidden="true"><use href="#i-globe"/></svg>In your browser</span><span><svg class="ico" width="15" height="15" aria-hidden="true"><use href="#i-phone"/></svg>Also as an app</span></div>
+      </div>
+      <div class="day-preview" aria-label="Interactive example of a work day">
+        <div class="preview-kicker"><span class="live-dot" aria-hidden="true"></span> A DAY WITH KANLANE <span>Example</span></div>
+        <div class="day-heading"><div><p>Wednesday, October 7</p><h2>Go at your own pace.</h2></div><span class="day-avatar">AL</span></div>
+        <div class="day-metrics"><div><strong id="dayPending">3</strong><span>to do</span></div><div><strong>2</strong><span>clients</span></div><div><strong>16:30</strong><span>next meeting</span></div></div>
+        <div class="day-list" aria-label="Check off the tasks in this example as done">
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Shape the new homepage</strong><small><i class="client-dot north"></i>North Studio <span>Design</span></small></span><span class="day-time">09:00</span></label>
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Send the quote</strong><small><i class="client-dot coast"></i>Coast Workshop <span>Management</span></small></span><span class="day-time">11:00</span></label>
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Prepare the handoff</strong><small><i class="client-dot north"></i>North Studio <span>Review</span></small></span><span class="day-time">15:00</span></label>
+        </div>
+        <div class="day-meeting"><svg class="ico" width="19" height="19" aria-hidden="true"><use href="#i-calendar"/></svg><div><strong>Review with Marta</strong><span>16:30 – 17:00 · North Studio</span></div><span class="meeting-avatars" aria-hidden="true"><i>AL</i><i>MR</i></span></div>
+        <div class="day-bottom"><span id="dayFeedback" aria-live="polite">Try completing a task.</span><span id="dayCount">0 / 3</span></div>
+        <div class="day-track" aria-hidden="true"><span id="dayProgress"></span></div>
+      </div>
+    </div>
+
+    <div class="wrap demo-wrap" id="try">
+      <div class="demo-intro"><div><p class="eyebrow">Touch it. It's real.</p><h2>Your next board,<br>without imagining it.</h2></div><p>Drag a card, open its details or check a subtask. This demo uses the real board, with sample data. No account needed.</p></div>
+      <div class="demo-caption"><span><span class="live-dot" aria-hidden="true"></span> Demo space</span><a href="../demo/" target="_blank" rel="noopener">Open full demo <span aria-hidden="true">↗</span></a></div>
+      <div class="demo">
+        <iframe id="demoFrame" title="Interactive demo of the Kanlane board" data-src="../demo/" loading="lazy" width="1120" height="680"></iframe>
+        <noscript><p class="demo-nojs">The demo needs JavaScript. <a href="../demo/">Open it in a separate page</a>.</p></noscript>
+      </div>
+      <div class="demo-footnotes"><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-board"/></svg>Drag between columns</span><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-list"/></svg>Open a task and try its subtasks</span><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-users"/></svg>Filter by client</span></div>
+    </div>
+  </section>
+
+  <section class="section client-story" id="clients" aria-labelledby="h-clients">
+    <div class="wrap">
+      <div class="section-head"><p class="eyebrow">Context matters too</p><h2 id="h-clients">Switch clients.<br>Don't lose the thread.</h2><p class="section-lead">Thursday's meeting, the usual contact and that half-finished task. Everything has a place, and everything is connected.</p></div>
+      <div class="client-explorer">
+        <div class="client-options" aria-label="Explore example clients">
+          <button class="client-option is-active" type="button" data-client="north" aria-pressed="true"><span class="client-monogram north">N</span><span><strong>North Studio</strong><small>Design and communications</small></span><span aria-hidden="true">↗</span></button>
+          <button class="client-option" type="button" data-client="coast" aria-pressed="false"><span class="client-monogram coast">C</span><span><strong>Coast Workshop</strong><small>Retail and maintenance</small></span><span aria-hidden="true">↗</span></button>
+          <button class="client-option" type="button" data-client="house" aria-pressed="false"><span class="client-monogram house">A</span><span><strong>Aldea House</strong><small>Web and content</small></span><span aria-hidden="true">↗</span></button>
+          <p>An example of how your clients' information connects.</p>
+        </div>
+        <div class="client-detail" aria-live="polite" aria-atomic="true">
+          <div class="client-detail-head"><span class="client-monogram north" id="clientInitial">N</span><div><p>EVERYTHING AT HAND</p><h3 id="clientName">North Studio</h3></div><span class="example-label">Example</span></div>
+          <div class="context-grid">
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-board"/></svg>The next step</span><h4 id="clientTask">Mock up the new homepage</h4><span class="context-status" id="clientStatus">In progress</span></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-users"/></svg>The right person</span><h4 id="clientPerson">Marta Ruiz</h4><p id="clientPersonRole">Communications manager</p></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-calendar"/></svg>The next meeting</span><h4 id="clientMeeting">Design review</h4><p id="clientDate">Wednesday · 16:30</p></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-lock"/></svg>The access, located</span><h4 id="clientAccess">Website panel</h4><p>Password encrypted in your personal vault</p></article>
+          </div>
+        </div>
+      </div>
+      <div class="context-benefits"><p><strong>Independent projects.</strong> Separate work and clients with their own boards, stages and data.</p><p><strong>One search to find it.</strong> Tasks, notes, contacts and meetings with Ctrl K.</p><p><strong>Less starting over.</strong> Open a card and recover the context you need.</p></div>
+    </div>
+  </section>
+
+  <section class="section flow-section" aria-labelledby="h-flow">
+    <div class="wrap flow-layout">
+      <div class="flow-copy">
+        <p class="eyebrow">From pending to done</p>
+        <h2 id="h-flow">Make room<br>to move forward.</h2>
+        <p class="section-lead">An order, a client, a next step. That's how simple your day can be.</p>
+        <div class="flow-controls" aria-label="Explore the workflow">
+          <button type="button" class="flow-choice is-active" data-flow="0" aria-pressed="true"><span>01</span><span><strong>Capture the idea</strong><small>Everything starts with a task.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="1" aria-pressed="false"><span>02</span><span><strong>Give it its space</strong><small>Client, date and steps to do.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="2" aria-pressed="false"><span>03</span><span><strong>Close the loop</strong><small>Finished work is enjoyed too.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </div>
+      <div class="flow-stage" data-stage="0">
+        <div class="flow-stage-top"><span>NORTH STUDIO / WEB</span><span>Example view</span></div>
+        <div class="flow-lanes" aria-hidden="true"><span>Pending</span><span>In progress</span><span>Done</span></div>
+        <div class="flow-card">
+          <span class="chip" style="--h:210"><i></i>North Studio</span>
+          <h3>A website that feels like you</h3>
+          <p>Design the new homepage</p>
+          <div class="flow-checks"><span><i></i>Define the structure</span><span><i></i>Shape the design</span><span><i></i>Prepare the handoff</span></div>
+          <div class="flow-card-bottom"><span class="flow-avatar">AL</span><span>Ana López</span><span class="flow-status">Pending</span></div>
+        </div>
+        <div class="flow-result" aria-live="polite"><span class="live-dot" aria-hidden="true"></span><span id="flowMessage">The idea has its place.</span></div>
+        <p class="flow-stage-note">Select a step and watch it change.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features" aria-labelledby="h-features">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Features</p>
+        <h2 id="h-features">The details that make<br>every day easier.</h2>
+        <p class="section-lead">Everything in its place and all connected: a task knows its client, who you talk to and which password you need.</p>
+      </div>
+
+      <div class="grid3">
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-board"/></svg>
+          <h3>A board for every project</h3>
+          <p>Drag tasks between stages. Choose a support, development or kanban board, or define the stages you need, with per-column limits.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-calendar"/></svg>
+          <h3>A calendar that makes sense</h3>
+          <p>Deadlines and meetings in a month, week or day view. Drag a task to another day to reschedule it.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-users"/></svg>
+          <h3>Clients and contacts</h3>
+          <p>Each client with their people, tasks and meetings one click away. All connected, nothing duplicated.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-lock"/></svg>
+          <h3>Encrypted passwords</h3>
+          <p>They are encrypted in your browser before being saved. Your master password never leaves your device.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-list"/></svg>
+          <h3>Subtasks and recurrences</h3>
+          <p>Split a task into steps and make it repeat every week, month or year. The next one appears on its own when you finish.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-share"/></svg>
+          <h3>Teamwork</h3>
+          <p>Share a project, invite by email and split tasks. Each person joins as owner, editor or viewer.</p>
+        </article>
+      </div>
+
+      <!-- Calendar -->
+      <div class="split">
+        <div class="split-text">
+          <p class="eyebrow">Calendar</p>
+          <h3>The week, at a glance</h3>
+          <p>Meetings and deadlines from all your clients in one calendar. Switch between month, week and day, and filter by client when you want to focus.</p>
+          <ul class="ticks">
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Drag to change the date</li>
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Video call links with a "Join" button</li>
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Reminders of what's due and what's about to start</li>
+          </ul>
+        </div>
+        <figure class="mock calendar-preview" aria-label="Interactive calendar example">
+          <div class="mock-top"><strong>October 2026</strong><span class="seg" aria-label="Calendar view"><button type="button" data-calendar="month" aria-pressed="false">Month</button><button type="button" data-calendar="week" class="on" aria-pressed="true">Week</button><button type="button" data-calendar="day" aria-pressed="false">Day</button></span></div>
+          <div class="week" id="calendarPreview">
+            <div class="wd"><span>Mon</span><b>5</b>
+              <em class="ev meet"><s>10:00</s>Kickoff</em><em class="ev task">Quote</em></div>
+            <div class="wd"><span>Tue</span><b>6</b>
+              <em class="ev task">Logo</em></div>
+            <div class="wd today"><span>Wed</span><b>7</b>
+              <em class="ev meet"><s>16:30</s>Review</em><em class="ev task">Form</em></div>
+            <div class="wd"><span>Thu</span><b>8</b>
+              <em class="ev task">Invoices</em></div>
+            <div class="wd"><span>Fri</span><b>9</b>
+              <em class="ev meet"><s>12:00</s>Delivery</em></div>
+            <div class="wd off"><span>Sat</span><b>10</b></div>
+            <div class="wd off"><span>Sun</span><b>11</b></div>
+          </div>
+          <figcaption class="calendar-caption" aria-live="polite">One week. All your clients.</figcaption>
+        </figure>
+      </div>
+
+      <!-- Passwords -->
+      <div class="split is-reverse">
+        <div class="split-text">
+          <p class="eyebrow">Passwords</p>
+          <h3>Your clients' keys, safe</h3>
+          <p>Store email, server, remote desktop and other access, next to the client it belongs to. Sensitive data is encrypted in your browser and only decrypted when you ask.</p>
+          <ul class="ticks">
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Encrypted in the browser with your master password</li>
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>A recovery key you can download and keep</li>
+            <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Link them to a task to keep them at hand</li>
+          </ul>
+        </div>
+        <figure class="mock" role="img" aria-label="List of saved passwords, with hidden values">
+          <div class="mock-top" aria-hidden="true"><strong>Passwords</strong><span class="lockpill"><svg width="13" height="13"><use href="#i-lock"/></svg>Encrypted</span></div>
+          <div class="vault" aria-hidden="true">
+            <div class="vrow"><span class="chip" style="--h:210"><i></i>North Studio</span><div><strong>Admin email</strong><small>admin@northstudio.example</small></div><code>••••••••••••</code><svg width="16" height="16"><use href="#i-eye-off"/></svg></div>
+            <div class="vrow"><span class="chip" style="--h:24"><i></i>Coast Workshop</span><div><strong>Shop server</strong><small>203.0.113.24</small></div><code>••••••••••</code><svg width="16" height="16"><use href="#i-eye-off"/></svg></div>
+            <div class="vrow"><span class="chip" style="--h:150"><i></i>Aldea House</span><div><strong>Domain panel</strong><small>aldeahouse</small></div><code>•••••••••••</code><svg width="16" height="16"><use href="#i-eye-off"/></svg></div>
+          </div>
+        </figure>
+      </div>
+
+      <h3 class="more-title">And also</h3>
+      <ul class="more">
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-search"/></svg><div><strong>Global search</strong><span>With Ctrl K you find tasks, notes, clients and contacts.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-bell"/></svg><div><strong>Reminders</strong><span>Alerts for what's due and upcoming meetings.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-git"/></svg><div><strong>GitHub Projects</strong><span>Sync a board with a GitHub project.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-plug"/></svg><div><strong>Plugins</strong><span>Extend Kanlane with hour tracking and more.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-phone"/></svg><div><strong>Installable</strong><span>Use it as an app and also offline.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-download"/></svg><div><strong>Your data, with you</strong><span>Export a backup whenever you want.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-moon"/></svg><div><strong>Light and dark</strong><span>Follow your system theme or choose your own.</span></div></li>
+        <li><svg width="20" height="20" aria-hidden="true"><use href="#i-globe"/></svg><div><strong>Spanish and English</strong><span>The full interface in both languages.</span></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="section team-section" id="teams" aria-labelledby="h-team">
+    <div class="wrap team-layout">
+      <div class="section-head"><p class="eyebrow">Alone or in a team</p><h2 id="h-team">Share the work.<br>Keep control.</h2><p class="section-lead">Invite by email, assign tasks and follow comments in the same project. Everyone sees the up-to-date board.</p><ul class="ticks"><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>A clear owner for each task</li><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Comments and activity next to the work</li><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Permissions for what each person needs</li></ul><p class="product-note">Teams require an account. Your password vault stays personal.</p></div>
+      <div class="team-preview"><div class="preview-kicker">SHARED PROJECT <span>Example</span></div><h3>A good delivery is a team effort.</h3><div class="team-people"><span class="day-avatar">AL</span><span class="day-avatar">MR</span><span class="day-avatar">LC</span><span>3 people, one board</span></div><div class="role-options" aria-label="Explore team permissions"><button type="button" data-role="owner" aria-pressed="true" class="is-active">Owner</button><button type="button" data-role="editor" aria-pressed="false">Editor</button><button type="button" data-role="viewer" aria-pressed="false">Viewer</button></div><div id="roleDescription" class="role-description" aria-live="polite"><strong>The project, in your hands.</strong><p>Manage the work, invite people and decide who can edit or view.</p></div><ul class="role-rights" id="roleRights"><li>View tasks and comments <span>Yes</span></li><li>Create and edit work <span>Yes</span></li><li>Manage members and permissions <span>Yes</span></li></ul></div>
+    </div>
+  </section>
+
+  <section class="section plugins-section" id="plugins" aria-labelledby="h-plugins">
+    <div class="wrap"><div class="section-head"><p class="eyebrow">Your space, your way</p><h2 id="h-plugins">The essentials built in.<br>The rest, up to you.</h2><p class="section-lead">Install plugins only in the projects where you need them. Hours, reports or a different look: each space can work your way.</p></div>
+      <div class="plugin-showcase">
+        <div class="plugin-menu" aria-label="Explore official plugins">
+          <button class="plugin-option is-active" type="button" data-plugin="smartgp" aria-pressed="true"><span class="plugin-number">01</span><span><strong>Smart GP</strong><small>Hours, with context</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-calendar"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="timer" aria-pressed="false"><span class="plugin-number">02</span><span><strong>Timer</strong><small>Every task has its time</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-clock"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="report" aria-pressed="false"><span class="plugin-number">03</span><span><strong>Work report</strong><small>From data to insight</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-list"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="appearance" aria-pressed="false"><span class="plugin-number">04</span><span><strong>Appearance</strong><small>Make it feel yours</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        </div>
+        <div class="plugin-window"><div class="preview-kicker">OFFICIAL PLUGINS <span>Example views</span></div>
+          <div class="plugin-panel" id="plugin-smartgp"><h3>Where did your week go?</h3><p>Log hours when you finish a task, spread them across days and review your day by project. Set a daily cap to plan sensibly.</p><div class="hours-chart" aria-label="Example: Monday 6 hours, Tuesday 4, Wednesday 7, Thursday 5 and Friday 3"><div style="--hours:75%"><span>6 h</span><i></i><small>Mon</small></div><div style="--hours:50%"><span>4 h</span><i></i><small>Tue</small></div><div style="--hours:87.5%"><span>7 h</span><i></i><small>Wed</small></div><div style="--hours:62.5%"><span>5 h</span><i></i><small>Thu</small></div><div style="--hours:37.5%"><span>3 h</span><i></i><small>Fri</small></div></div><div class="plugin-summary"><span>Time logged · example</span><strong>25 h</strong></div></div>
+          <div class="plugin-panel" id="plugin-timer" hidden><h3>Focus on the task. Time stays logged.</h3><p>Measure the time spent on each task and review totals per client. The timer adds its controls to the task itself.</p><div class="timer-example"><span>Mock up the new homepage</span><strong>01<span>:</span>24<span>:</span>08</strong><small>North Studio · sample session</small></div><div class="plugin-summary"><span>Hours tied to the work</span><svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-check"/></svg></div></div>
+          <div class="plugin-panel" id="plugin-report" hidden><h3>What's done. What needs attention.</h3><p>Review tasks by client and status, spot overdue items and check what's completed. Copy the summary or download it as CSV.</p><div class="report-example"><div><span>North Studio</span><i style="--amount:80%"></i><strong>8 tasks</strong></div><div><span>Coast Workshop</span><i style="--amount:50%"></i><strong>5 tasks</strong></div><div><span>Aldea House</span><i style="--amount:30%"></i><strong>3 tasks</strong></div></div><div class="plugin-summary"><span>A per-client view</span><strong>CSV</strong></div></div>
+          <div class="plugin-panel" id="plugin-appearance" hidden><h3>A project that feels yours.</h3><p>Choose colors, theme, typography and density for each project. Try an accent color on this card here.</p><div class="appearance-example" id="appearanceExample"><span>MY SPACE</span><h4>Less noise.<br>More focus.</h4><span class="appearance-tag">Designed at your pace</span></div><div class="swatch-options" aria-label="Color of the example view"><button type="button" data-accent="blue" aria-label="Blue" aria-pressed="true" style="--swatch:#2F6BFF"></button><button type="button" data-accent="purple" aria-label="Purple" aria-pressed="false" style="--swatch:#7C5CFF"></button><button type="button" data-accent="green" aria-label="Green" aria-pressed="false" style="--swatch:#16A36A"></button></div></div>
+        </div>
+      </div>
+      <div class="plugin-footer"><p>Explicit permissions. Install per project. No plugin can read your passwords.</p><a href="https://github.com/yalerooo/Kanlane/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener">Build your own plugin <span aria-hidden="true">↗</span></a></div>
+    </div>
+  </section>
+
+  <section class="section anywhere-section" aria-labelledby="h-anywhere"><div class="wrap"><div class="section-head"><p class="eyebrow">Choose how to start</p><h2 id="h-anywhere">Your desk doesn't<br>have to be a place.</h2><p class="section-lead">On the computer, from your phone or offline during a trip. Kanlane adapts to how you work.</p></div><div class="anywhere-grid"><article><span class="chapter-num">01 / IN THE CLOUD</span><h3>Open your account.<br>Pick up where you left off.</h3><p>Sign in with Google, GitHub or email. Your projects and settings follow you across browsers and devices.</p><a href="../app/?registro=1">Create my account <span aria-hidden="true">↗</span></a></article><article><span class="chapter-num">02 / NO SIGN-UP</span><h3>Try it first.<br>Decide later.</h3><p>Join as a guest from the sign-in. Your data stays in that browser; it doesn't sync with other devices.</p><a href="../app/">Go to guest access <span aria-hidden="true">↗</span></a></article><article><span class="chapter-num">03 / WITHIN REACH</span><h3>Install it.<br>Take it with you.</h3><p>Keep access to your latest data offline. Changes are sent when the network returns. Reminders require Kanlane to be open.</p><span class="anywhere-note">Installable from compatible browsers</span></article></div></div></section>
+
+  <!-- How it works -->
+  <section class="section section-alt" id="how-it-works" aria-labelledby="h-how">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">How it works</p>
+        <h2 id="h-how">Ready to use in three steps</h2>
+      </div>
+      <ol class="steps">
+        <li>
+          <span class="num">01</span>
+          <h3>Create your account</h3>
+          <p>With email, Google or GitHub. If you just want a look, join as a guest with a name.</p>
+        </li>
+        <li>
+          <span class="num">02</span>
+          <h3>Choose the project type</h3>
+          <p>Support, development, kanban or one made to measure. With or without clients, however you work.</p>
+        </li>
+        <li>
+          <span class="num">03</span>
+          <h3>Add clients and tasks</h3>
+          <p>Start with whatever you have on hand. Kanlane makes sure everything lands where it should.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section comparison-section" id="trello-alternative" aria-labelledby="h-alternative">
+    <div class="wrap narrow">
+      <div class="section-head">
+        <p class="eyebrow">A simple Trello alternative</p>
+        <h2 id="h-alternative">Kanban boards with the full project context</h2>
+        <p class="section-lead">If you're looking for a Trello alternative to bring together tasks, calendar, clients and contacts, Kanlane gives you a clear space to work without jumping between tools.</p>
+      </div>
+      <div class="comparison-copy">
+        <p><strong>Start with a kanban board</strong> and add only what you need: deadlines, subtasks, meetings, assignees and permissions for your team.</p>
+        <p><strong>Try it without commitment.</strong> You can open the demo, join as a guest or create a free account. Your data is exportable and no card is required to start.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section class="section" id="security" aria-labelledby="h-sec">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Security and privacy</p>
+        <h2 id="h-sec">Built to hold other people's data</h2>
+        <p class="section-lead">You work with your clients' information. That's why Kanlane tries to know the minimum and protect the maximum.</p>
+      </div>
+      <div class="grid3 plain">
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-lock"/></svg>
+          <h3>Encrypted in your browser</h3>
+          <p>Passwords and their notes are encrypted with AES-256 before leaving your device. Without your master password or recovery key, no one can read them.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-users"/></svg>
+          <h3>Your data, only for you</h3>
+          <p>Each account only accesses its own data and the projects shared with it. You can export a copy of your data whenever you want.</p>
+        </article>
+        <article class="feat">
+          <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-eye-off"/></svg>
+          <h3>No ads or third-party analytics</h3>
+          <p>No ads or third-party analytics, and fonts are served from the site itself. More details in the <a href="../legal/privacidad/">privacy policy</a>.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section section-alt" id="faq" aria-labelledby="h-faq">
+    <div class="wrap narrow">
+      <div class="section-head">
+        <p class="eyebrow">Frequently asked questions</p>
+        <h2 id="h-faq">What people usually ask</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>How much does Kanlane cost?</summary>
+          <p>Creating an account is free and no card is required. If paid plans ever appear, they will be announced first and what you already have stays yours.</p>
+        </details>
+        <details>
+          <summary>Does it work offline?</summary>
+          <p>Yes. You can install Kanlane as an app on your phone or computer and open it offline: you will see your latest data and changes will sync when you are back online.</p>
+        </details>
+        <details>
+          <summary>Who can see my passwords?</summary>
+          <p>Only you. Passwords and their notes are encrypted in your browser with your master password before being saved, and that password never leaves your device.</p>
+        </details>
+        <details>
+          <summary>What if I forget my master password?</summary>
+          <p>When you create it, a recovery key is generated that you can download and keep. Without the master password or that key, no one can decrypt your passwords, not even Kanlane.</p>
+        </details>
+        <details>
+          <summary>Can I work in a team?</summary>
+          <p>Yes. You can share a project, invite people by email and assign tasks. Each person has a role: owner, editor or viewer.</p>
+        </details>
+        <details>
+          <summary>Can I take my data with me?</summary>
+          <p>Yes. You can export tasks, notes, clients, contacts, meetings and encrypted passwords. There are also local versions and optional encrypted copies in your account. The export doesn't include original images or plugin data; keep separately what you need.</p>
+        </details>
+        <details>
+          <summary>What are plugins?</summary>
+          <p>Small extensions that add features, like per-project hour tracking or a timer. They run isolated and only access what you allow them to.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing -->
+  <section class="closing" aria-labelledby="h-close">
+    <div class="wrap">
+      <h2 id="h-close">Start working with order.</h2>
+      <p>Create your account in a minute and organize your first project today.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="../app/?registro=1">Create account</a>
+        <a class="btn btn-outline btn-lg" href="../app/">Sign in</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <a class="brand" href="/" aria-label="Kanlane, home">
+        <svg class="brand-logo" width="28" height="28" aria-hidden="true"><use href="#i-logo"/></svg>
+        <span>Kanlane</span>
+      </a>
+      <p>Tasks, clients, calendar and passwords in one place.</p>
+    </div>
+    <nav class="foot-cols" aria-label="Footer">
+      <div>
+        <h2>Product</h2>
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#security">Security</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div>
+        <h2>Account</h2>
+        <a href="../app/">Sign in</a>
+        <a href="../app/?registro=1">Create account</a>
+      </div>
+      <div>
+        <h2>Legal</h2>
+        <a href="../legal/privacidad/">Privacy</a>
+        <a href="../legal/terminos/">Terms</a>
+        <a href="../legal/cookies/">Cookies</a>
+      </div>
+    </nav>
+  </div>
+  <div class="wrap foot-end"><span>© <span id="year">2026</span> Kanlane</span></div>
+</footer>
+
+<script src="../src/landing/landing.js" defer></script>
+<script src="../src/landing/landing-product.js" defer></script>
+</body>
+</html>

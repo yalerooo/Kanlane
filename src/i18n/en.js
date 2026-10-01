@@ -935,7 +935,11 @@
     'Sin conexión: verás los últimos datos guardados y los cambios se enviarán al volver.':'You\'re offline: you\'ll see the latest saved data and your changes will be sent when you\'re back.',
     'De nuevo en línea':'Back online',
     'Hay una versión nueva de Workhub':'There\'s a new version of Workhub',
-    'Recargar':'Reload'
+    'Recargar':'Reload',
+    /* Indicador sin conexión */
+    'Sin conexión':'Offline',
+    'Estás viendo la copia guardada en este dispositivo. Los cambios se enviarán a la nube cuando vuelvas a tener conexión.':'You\'re viewing the copy saved on this device. Your changes will be sent to the cloud when you\'re back online.',
+    'Sin conexión: se muestra la copia guardada en este dispositivo y los cambios se enviarán al volver.':'Offline: the copy saved on this device is shown and your changes will be sent when you\'re back.'
   }, [
     [/^GitHub respondió con un error \((\d+)\)\.$/, 'GitHub responded with an error ($1).'],
     [/^El token es de la cuenta «(.+)» y el proyecto es de «(.+)»\. Si el proyecto es privado, el token tiene que ser de esa cuenta\.$/, 'The token belongs to account «$1» and the project to «$2». If the project is private, the token must belong to that account.'],

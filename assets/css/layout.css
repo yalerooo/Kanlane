@@ -108,7 +108,7 @@
 .storage-status{display:flex;align-items:center;gap:8px;padding:0 8px 2px;}
 .status-dot{width:6px;height:6px;border-radius:50%;background:var(--st-done);flex:none;}
 /* En modo local los datos no salen del navegador: el punto avisa en ámbar. */
-[data-mode="local"] .status-dot{background:var(--st-wait);}
+[data-mode="local"] .status-dot,[data-mode="offline"] .status-dot{background:var(--st-wait);}
 [data-mode="claude"] .status-dot{background:var(--accent-solid);}
 
 /* Contenido */

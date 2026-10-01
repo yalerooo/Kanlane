@@ -28,6 +28,11 @@
 
   /* Cómo se presenta cada modo de almacenamiento (barra lateral y Ajustes). */
   Workhub.views.storageInfo = function(mode){
+    /* Sin conexión, los datos que se ven son la copia guardada en este dispositivo
+       (Firestore los guarda en el navegador); lo que se cambie se envía al volver. */
+    if(mode === 'firebase' && typeof navigator !== 'undefined' && navigator.onLine === false) return {mode:'offline', side:'Sin conexión', title:'Sin conexión',
+      desc:'Estás viendo la copia guardada en este dispositivo. Los cambios se enviarán a la nube cuando vuelvas a tener conexión.',
+      hint:'Sin conexión: se muestra la copia guardada en este dispositivo y los cambios se enviarán al volver.'};
     if(mode === 'firebase') return {mode:'firebase', side:'En la nube', title:'En la nube',
       desc:'Tus datos se sincronizan entre todos tus dispositivos.', hint:'Tus datos están en la nube y se sincronizan entre tus dispositivos.'};
     if(mode === 'local') return {mode:'local', side:'Modo local', title:'En este navegador',
@@ -223,6 +228,14 @@
 
     /* mode: 'local' | 'firebase' | 'claude' (ver services/platform.js) */
     setStorageMode(mode){
+      this.storageModeNow = mode;
+      if(!this.watchingConnection){
+        /* El indicador cambia solo al perder o recuperar la conexión. */
+        this.watchingConnection = true;
+        const again = () => this.setStorageMode(this.storageModeNow);
+        window.addEventListener('online', again);
+        window.addEventListener('offline', again);
+      }
       const info = Workhub.views.storageInfo(mode);
       this.storageLabel.textContent = info.side;
       this.storageStatus.setAttribute('data-mode', info.mode);

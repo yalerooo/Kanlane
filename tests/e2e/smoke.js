@@ -38,7 +38,7 @@ async function newProject(page, name){
   await ready();
   const browser = await chromium.launch({headless:true, ...(chrome ? {executablePath:chrome} : {})});
   try{
-    const context = await browser.newContext({viewport:{width:1280,height:850}, acceptDownloads:true});
+    const context = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES', acceptDownloads:true});
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -118,7 +118,7 @@ async function newProject(page, name){
     assert.deepEqual(errors, [], 'sin excepciones JavaScript en el recorrido');
     await context.close();
 
-    const mobile = await browser.newContext({viewport:{width:390,height:844}, isMobile:true, hasTouch:true});
+    const mobile = await browser.newContext({viewport:{width:390,height:844}, locale:'es-ES', isMobile:true, hasTouch:true});
     const small = await mobile.newPage();
     await small.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
     await small.locator('#dlgProject').waitFor({state:'visible'});

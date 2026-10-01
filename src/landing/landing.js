@@ -35,7 +35,7 @@
     document.querySelectorAll('.grid3,.more,.steps').forEach(function(group){
       Array.from(group.children).forEach(function(child, index){ child.style.setProperty('--reveal-delay', (index % 3) * 85 + 'ms'); });
     });
-    document.querySelectorAll('.section-head,.feat,.split,.more li,.steps li,.faq,.flow-copy,.flow-stage,.closing .wrap').forEach(function(el){
+    document.querySelectorAll('.section-head,.feat,.split,.more li,.steps li,.faq,.flow-copy,.flow-stage,.closing .wrap,.demo-intro,.client-options,.client-detail,.context-benefits,.team-preview,.plugin-menu,.plugin-window,.anywhere-grid article').forEach(function(el){
       el.classList.add('reveal');
       if(!motion.matches && el.getBoundingClientRect().top > window.innerHeight) el.classList.add('is-waiting');
       reveal.observe(el);

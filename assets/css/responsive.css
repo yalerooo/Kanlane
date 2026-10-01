@@ -45,6 +45,13 @@
   .tab{position:relative;width:44px;height:40px;padding:0;justify-content:center;}
   .tab > span:first-of-type{display:none;}
   .tab svg{width:18px;height:18px;}
+  .plugin-nav{width:44px;}
+  .plugin-nav > .tab{width:44px;padding:0;}
+  .plugin-nav-toggle{top:25px;right:0;width:16px;height:15px;}
+  .plugin-nav-toggle svg{width:11px;height:11px;}
+  .plugin-nav-list{width:44px;margin:2px 0 5px;padding:0;align-items:center;}
+  .plugin-nav-item{justify-content:center;width:40px;height:36px;padding:0;}
+  .plugin-nav-name{display:none;}
   .tab-count{
     position:absolute;
     top:3px;
@@ -137,6 +144,12 @@
   .tab > span:first-of-type{display:none;}
   .tab::after{content:attr(data-short);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .tab svg{width:20px;height:20px;}
+  .plugin-nav{position:relative;min-width:0;}
+  .plugin-nav > .tab{width:100%;}
+  .plugin-nav-toggle{top:0;right:0;width:18px;height:18px;z-index:1;}
+  .plugin-nav-toggle svg{width:12px;height:12px;}
+  .plugin-nav-list{position:fixed;right:12px;bottom:calc(var(--nav-h) + 8px);z-index:55;width:min(280px, calc(100vw - 24px));max-height:50vh;margin:0;padding:6px;overflow-y:auto;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);}
+  .plugin-nav-item{height:40px;font-size:13px;}
   .tab:hover{background:transparent;}
   .tab.active{background:transparent;box-shadow:none;color:var(--accent);}
   .tab.active svg{color:var(--accent);}

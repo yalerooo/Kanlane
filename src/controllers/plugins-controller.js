@@ -93,6 +93,7 @@
         url: o.url, manifest: o.manifest, installed: !!this.plugins.find(o.manifest.id)
       }));
       this.view.render(installed, official, this.canManage());
+      this.app.shell.renderPluginNav(installed, this.active && this.active.id);
     }
 
     canManage(){
@@ -342,6 +343,7 @@
       });
       frame.iframe.title = (p.manifest || {}).name || 'Plugin';
       this.active = {id:id, frame:frame};
+      this.app.shell.renderPluginNav(this.installedList(), id);
     }
 
     /* El plugin se presenta: tiene que ser el que se instaló. Recibe los

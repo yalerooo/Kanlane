@@ -26,6 +26,11 @@
 .pf-new{display:grid;gap:10px;margin-top:8px;}
 .pf-new[hidden]{display:none;}
 .pf-swatches{display:flex;flex-wrap:wrap;gap:8px;}
+.pf-colors{display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+.pf-custom-color{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);cursor:pointer;}
+.pf-custom-color input[type="color"]{width:28px;height:28px;padding:2px;min-height:28px;border:1px solid var(--line-strong);border-radius:50%;background:var(--surface);cursor:pointer;}
+.pf-custom-color input[type="color"]::-webkit-color-swatch-wrapper{padding:0;}
+.pf-custom-color input[type="color"]::-webkit-color-swatch{border:0;border-radius:50%;}
 .pf-swatch{
   width:22px;
   height:22px;

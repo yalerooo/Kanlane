@@ -1,14 +1,13 @@
-/* Plugins instalados por el usuario (colección 'plugins' de su cuenta, común a
-   todos sus proyectos). Cada documento: {url, manifest, granted, official,
-   installedAt, updatedAt}; el id del documento es el del plugin.
-
-   Los datos que guarda cada plugin (storage) van por proyecto, en
-   plugin_data/{idDelPlugin}: {values:{clave: JSON}, updatedAt}; los comunes a
-   todos los proyectos (storage.user), en el propio registro: {userValues}. */
+/* Instalaciones por proyecto. El principal conserva la colección raíz 'plugins'
+   para respetar lo ya instalado; los demás guardan cada instalación en
+   plugin_data/install:{id}, distinguida por _kind. Los datos de wh.storage
+   siguen en plugin_data/{id}; wh.storage.user vive en settings/plugin-user:{id}. */
 (function(){
   const KEY_RE = /^[A-Za-z0-9_.-]{1,64}$/;
   const MAX_VALUE_BYTES = 100 * 1024;
   const MAX_TOTAL_BYTES = 800 * 1024;
+  const INSTALL_KIND = 'plugin-install';
+  const INSTALL_PREFIX = 'install:';
 
   function fail(code, message){
     const e = new Error(message);
@@ -19,6 +18,81 @@
   class PluginModel extends Workhub.models.CollectionModel {
     constructor(){
       super('plugins');
+      this.main = true;
+    }
+
+    connect(db, main){
+      this.disconnect();
+      this.main = !!main;
+      this.migrating = this.main;
+      const gen = ++this.generation;
+      this.db = db;
+      this.col = db.collection(this.main ? 'plugins' : 'plugin_data');
+      const subscribe = () => {
+        if(gen !== this.generation) return;
+        this.migrating = false;
+        const source = this.main ? this.col : this.col.where('_kind', '==', INSTALL_KIND);
+        this.stop = source.onSnapshot((snap) => {
+          if(gen !== this.generation) return;
+          this.items = snap.docs.map((d) => {
+            const data = d.data() || {};
+            data.id = this.main ? d.id : (data.pluginId || d.id.slice(INSTALL_PREFIX.length));
+            return data;
+          });
+          this.emit('change');
+        }, (err) => { if(gen === this.generation) this.emit('error', err); });
+      };
+      if(this.main) PluginModel.migrateLegacyMain(db).catch((err) => {
+        if(gen === this.generation) this.emit('error', err);
+      }).then(subscribe);
+      else subscribe();
+    }
+
+    isReady(){
+      return !!this.col && !this.migrating;
+    }
+
+    /* Smart GP y Apariencia guardaban su estado en storage.user. Copia íntegra
+       al proyecto principal antes de arrancar sus marcos. El origen
+       se conserva como respaldo; un proyecto que ya tiene datos no se pisa. */
+    static migrateLegacyMain(db){
+      return db.doc('projects/main').get().then((project) => {
+        if(project.exists && (project.data() || {}).deleted) return;
+        return Promise.all(['workhub.smartgp', 'workhub.apariencia'].map((id) => {
+          const dest = db.doc('plugin_data/' + id);
+          const marker = db.doc('settings/plugin-migrated:' + id);
+          return marker.get().then((done) => {
+            if(done.exists) return;
+            return dest.get().then((current) => {
+              if(current.exists) return;
+              return db.doc('plugins/' + id).get().then((legacy) => {
+                const old = legacy.exists ? legacy.data() || {} : {};
+                if(old.userValues && Object.keys(old.userValues).length) return old.userValues;
+                return db.doc('settings/plugin-user:' + id).get().then((saved) => {
+                  const data = saved.exists ? saved.data() || {} : {};
+                  return data.userValues || {};
+                });
+              }).then((values) => Object.keys(values).length ? dest.set({values:values, updatedAt:Date.now()}) : null);
+            }).then(() => marker.set({done:true, updatedAt:Date.now()}));
+          });
+        }));
+      });
+    }
+
+    doc(id){
+      return this.col.doc(this.main ? id : INSTALL_PREFIX + id);
+    }
+
+    set(id, data){
+      return this.doc(id).set(this.main ? data : Object.assign({_kind:INSTALL_KIND, pluginId:id}, data));
+    }
+
+    update(id, patch){
+      return this.doc(id).update(patch);
+    }
+
+    remove(id){
+      return this.doc(id).delete();
     }
 
     list(){
@@ -46,8 +120,8 @@
     /* ---------- Datos propios de cada plugin ----------
        Un "cajón" es {read() → Promise<values>, write(values) → Promise}:
        - por proyecto: plugin_data/{id} → {values}
-       - por usuario (común a todos los proyectos): plugins/{id} → {userValues}
-         (el propio registro del plugin; se actualiza sin tocar el resto). */
+       - por usuario (común a todos los proyectos): settings/plugin-user:{id}.
+         Se leen los datos antiguos de plugins/{id} si aún no se migraron. */
 
     static projectBucket(db, pluginId){
       const ref = db.doc('plugin_data/' + pluginId);
@@ -61,13 +135,21 @@
     }
 
     static userBucket(rootDb, pluginId){
-      const ref = rootDb.doc('plugins/' + pluginId);
+      const ref = rootDb.doc('settings/plugin-user:' + pluginId);
+      const old = rootDb.doc('plugins/' + pluginId);
       return {
         read: () => ref.get().then((snap) => {
-          const d = snap.exists ? snap.data() || {} : {};
-          return d.userValues && typeof d.userValues === 'object' ? d.userValues : {};
+          if(snap.exists){
+            const d = snap.data() || {};
+            return d.userValues && typeof d.userValues === 'object' ? d.userValues : {};
+          }
+          return old.get().then((legacy) => {
+            const d = legacy.exists ? legacy.data() || {} : {};
+            const values = d.userValues && typeof d.userValues === 'object' ? d.userValues : {};
+            return Object.keys(values).length ? ref.set({userValues:values, updatedAt:Date.now()}).then(() => values).catch(() => values) : {};
+          });
         }),
-        write: (values) => ref.update({userValues:values, updatedAt:Date.now()})
+        write: (values) => ref.set({userValues:values, updatedAt:Date.now()})
       };
     }
 

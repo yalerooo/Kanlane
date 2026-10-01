@@ -330,6 +330,7 @@
   <section id="viewPlugins" hidden>
     <div id="pluginsHome">
       <p class="plugin-file-notice" id="pluginsFileNotice" hidden><strong>Los plugins no funcionan al abrir Workhub como archivo.</strong> El navegador no deja que una página aislada cargue archivos del disco. Abre Workhub con <code>start-workhub.bat</code> (o desde tu web publicada) para usarlos.</p>
+      <p class="plugin-file-notice" id="pluginsReadonlyNotice" hidden>En este proyecto de equipo solo el propietario y los editores pueden instalar o quitar plugins.</p>
       <form class="plugin-add" id="formPluginUrl">
         <div class="plugin-add-field">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -338,12 +339,12 @@
         <button type="submit" class="btn btn-primary">Añadir</button>
       </form>
       <p class="plugin-url-msg" id="pluginUrlMsg" role="status" hidden></p>
-      <p class="plugin-add-hint">Cada plugin se ejecuta aislado: solo ve lo que le permitas y nunca tus contraseñas. <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Crear un plugin</a></p>
+      <p class="plugin-add-hint">Los plugins se instalan solo en el proyecto abierto. Cada uno se ejecuta aislado: solo ve lo que le permitas y nunca tus contraseñas. <a href="https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Crear un plugin</a></p>
 
-      <div class="plugins-head"><h2>Instalados</h2><span class="plugins-count" id="pluginsInstalledCount"></span></div>
+      <div class="plugins-head"><h2>Instalados en este proyecto</h2><span class="plugins-count" id="pluginsInstalledCount"></span></div>
       <div class="plugins-empty" id="pluginsInstalledEmpty">
         <span class="plugins-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.4 11H18V7a1 1 0 0 0-1-1h-4V4.6a2.1 2.1 0 1 0-4 0V6H5a1 1 0 0 0-1 1v3.6h1.4a2.1 2.1 0 1 1 0 4H4V19a1 1 0 0 0 1 1h3.6v-1.4a2.1 2.1 0 1 1 4 0V20H17a1 1 0 0 0 1-1v-4h1.4a2.1 2.1 0 1 0 0-4Z"/></svg></span>
-        <div><strong>Aún no tienes plugins</strong><p>Instala uno oficial de la lista de abajo o añade uno por enlace.</p></div>
+        <div><strong>Este proyecto aún no tiene plugins</strong><p>Instala uno oficial de la lista de abajo o añade uno por enlace.</p></div>
       </div>
       <div class="plugin-grid" id="pluginsInstalled" hidden></div>
 
@@ -690,7 +691,7 @@
     <input type="hidden" id="pId">
     <div class="field">
       <label for="pNombre">Nombre</label>
-      <input id="pNombre" maxlength="60" autocomplete="off" placeholder="Por ejemplo: Agencia, Freelance, Personal…">
+      <input id="pNombre" maxlength="160" autocomplete="off" placeholder="Por ejemplo: Agencia, Freelance, Personal…">
     </div>
     <div class="field">
       <span class="field-label" id="pColorsLabel">Color</span>

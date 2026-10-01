@@ -244,6 +244,18 @@
         const col = db.collection(name);
         return col.get().then((snap) => Promise.all(snap.docs.map((d) => col.doc(d.id).delete())));
       });
+      /* El proyecto principal conserva las instalaciones antiguas en esta
+         colección raíz; borrarlo también debe quitar sus plugins. */
+      if(id === MAIN_ID){
+        const col = rootDb.collection('plugins');
+        wipeOthers.push(col.get().then((snap) => Promise.all(snap.docs.map((d) => {
+          const data = d.data() || {};
+          const keepUserData = data.userValues && Object.keys(data.userValues).length
+            ? rootDb.doc('settings/plugin-user:' + d.id).get().then((old) => old.exists ? null : rootDb.doc('settings/plugin-user:' + d.id).set({userValues:data.userValues, updatedAt:Date.now()}))
+            : Promise.resolve();
+          return keepUserData.then(() => col.doc(d.id).delete());
+        }))));
+      }
       /* En un equipo no hay gestor de contraseñas, y las reglas no lo permiten. */
       const wipeMeta = isTeam ? Promise.resolve() : db.doc(VAULT_META_PATH).delete();
       return Promise.all([wipeTasks, wipeMeta].concat(wipeOthers)).then(() => {

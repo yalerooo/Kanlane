@@ -21,6 +21,7 @@
 
 /* Añadir por enlace */
 .plugin-add{display:flex;gap:8px;max-width:640px;}
+.plugin-add[hidden],.plugin-file-notice[hidden]{display:none;}
 .plugin-add-field{position:relative;flex:1;min-width:0;display:flex;}
 .plugin-add-field svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-faint);pointer-events:none;}
 .plugin-add-field input{flex:1;min-width:0;padding-left:34px !important;}

@@ -14,7 +14,7 @@ Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare
 ## 1. Crear el proyecto
 
 1. Entra en <https://dash.cloudflare.com> → **Workers y Pages** (*Workers & Pages*) → **Crear** (*Create application*) → **Importar un repositorio** (*Connect to Git*).
-2. Autoriza a Cloudflare en GitHub y elige el repositorio **yalerooo/Workhub**.
+2. Autoriza a Cloudflare en GitHub y elige el repositorio **yalerooo/Kanlane**.
 3. **Nombre del proyecto: `workhub`.** Tiene que ser igual al campo `"name"` de `wrangler.jsonc`; si usas otro nombre, cambia ese campo (o el compilado falla).
 4. Rama de producción: **`main`**.
 5. Configuración de compilación:

@@ -1,6 +1,6 @@
 /* Plantilla de plugin para Kanlane. Cópiala, cambia el manifiesto y publica la
    carpeta en cualquier web con https (GitHub Pages, Cloudflare Pages…). Guía completa:
-   https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md
+   https://github.com/yalerooo/Kanlane/blob/main/docs/PLUGINS.md
 
    La misma página se carga de dos formas:
    - wh.isBackground === true: oculta, al abrir Kanlane (porque pide

@@ -8,10 +8,56 @@
       this.importInput = $('importFileInput');
       this.error = $('dataError');
       this.status = $('dataStatus');
+      this.history = $('backupHistory');
+      this.btnSaveVersion = $('btnSaveBackupVersion');
       this.exportLabel = this.btnExport.textContent;
     }
 
     bindExport(handler){ this.btnExport.addEventListener('click', handler); }
+    bindSaveVersion(handler){ this.btnSaveVersion.addEventListener('click', handler); }
+    bindHistory(handler){
+      this.history.addEventListener('click', (ev) => {
+        const button = ev.target.closest('button[data-backup-action]');
+        if(button) handler(button.getAttribute('data-backup-action'), button.getAttribute('data-id'));
+      });
+    }
+
+    renderHistory(entries){
+      this.history.replaceChildren();
+      if(!entries.length){
+        const empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.textContent = 'Todavía no hay versiones guardadas en este navegador.';
+        this.history.appendChild(empty);
+        return;
+      }
+      entries.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'backup-version';
+        const info = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = new Date(entry.createdAt).toLocaleString();
+        const detail = document.createElement('span');
+        const c = entry.counts || {};
+        detail.textContent = (c.tasks || 0) + ' tareas · ' + (c.contacts || 0) + ' contactos · ' + (c.vault || 0) + ' credenciales cifradas';
+        info.append(title, detail);
+        const actions = document.createElement('div');
+        actions.className = 'backup-version-actions';
+        [['download','Descargar'], ['restore','Importar'], ['delete','Borrar']].forEach(([action, label]) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-ghost btn-sm';
+          button.dataset.backupAction = action;
+          button.dataset.id = entry.id;
+          button.textContent = label;
+          actions.appendChild(button);
+        });
+        row.append(info, actions);
+        this.history.appendChild(row);
+      });
+    }
+
+    setSavingVersion(busy){ this.btnSaveVersion.disabled = busy; this.btnSaveVersion.textContent = busy ? 'Guardando…' : 'Guardar versión'; }
 
     /* handler(parsedJson); los errores de lectura se muestran aquí mismo. */
     bindImport(handler){

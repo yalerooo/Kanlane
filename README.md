@@ -10,7 +10,6 @@ https://workhub.yalero.net/
 - `index.html` — la página: estructura HTML de la app y carga de estilos y scripts.
 - `assets/css/` — estilos, separados en tokens de diseño, base, layout, componentes y vistas.
 - `src/` — el código JavaScript, organizado en MVC (ver abajo).
-- `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
 - `start-workhub.bat` — doble clic y ya está (ver abajo).
 - `firebase.json`, `firestore.rules`, `firestore.indexes.json` y `src/config/firebase-config.js` — publicación en la web con inicio de sesión (ver abajo).
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
@@ -59,7 +58,9 @@ Detalles de interfaz:
 - **Idiomas**: español e inglés (Ajustes → Idioma, o el selector de la pantalla de inicio de sesión). La primera vez se usa el idioma del navegador; después, el elegido, que se guarda en la cuenta. La app está escrita en español y `src/i18n/i18n.js` traduce cada texto al pintarse (diccionario y patrones en `src/i18n/en.js`), así las vistas no saben nada de idiomas. Los datos del usuario (tareas, clientes, notas…) van marcados con `translate="no"` y nunca se traducen. Para añadir un idioma: crea `src/i18n/<código>.js` con `Workhub.i18n.add('<código>', {...}, [...])`, añádelo a `LANGS` en `i18n.js`, cárgalo en `index.html` y ponlo en el selector de Ajustes. `Workhub.i18n.missing()` lista en la consola los textos que aún no tienen traducción.
 - **Paleta de comandos** (`Ctrl K` / `⌘K` o el botón *Buscar…* de la barra lateral): busca tareas, contactos, reuniones y clientes, y lanza acciones (nueva tarea/reunión/contacto/credencial/cliente, nuevo proyecto o cambiar a otro, ir a una sección, cambiar el tema, exportar la copia).
 - **Atajos**: `N` crea una tarea y `/` enfoca el buscador de la sección actual (no se activan mientras escribes ni con un diálogo abierto).
-- **Avisos**: confirmación breve al crear, guardar, mover o eliminar, y aviso si algo falla.
+- **Avisos**: aparecen ante errores, acciones que se pueden deshacer y confirmaciones importantes; las acciones habituales se reflejan en la propia interfaz.
+- **Accesibilidad del tablero**: una tarjeta se abre con Intro o espacio; Alt + flechas la mueve entre columnas o dentro de ellas. Las pestañas de columnas responden a las flechas izquierda/derecha.
+- **Equipos**: la ficha de tarea permite publicar comentarios y muestra la actividad básica (creación, edición, movimientos y subtareas) con autor y fecha.
 - **Ficha de tarea**: al hacer clic en una tarea (en el tablero o en el calendario) se abre una ficha de solo lectura con estado, cliente, fecha límite (con días restantes), contacto, descripción, notas y vínculos. Desde ella se puede cambiar el estado o pulsar **Editar tarea**; al guardar o cancelar la edición se vuelve a la ficha.
 - **Colores de cliente**: en Clientes, el botón de paleta (o el avatar) permite elegir el color de cada cliente; se usa en etiquetas, avatares y desplegables. "Auto" vuelve al color derivado del nombre. Se guarda en el campo `color` (tono HSL) del cliente.
 - **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.
@@ -129,7 +130,24 @@ Los datos de esta copia local y los de la versión en vivo (claude.ai) son **ind
 
 ## Restaurar los datos
 
-Desde la pestaña **"Copia de seguridad"** del tablero, botón **"Importar copia de seguridad"**, seleccionando `data-backup.json`. Añade los datos a lo que ya haya en el tablero (no borra nada). Las contraseñas del archivo solo se importan si el tablero de destino todavía no tiene su propia contraseña maestra configurada.
+Desde la pestaña **"Copia de seguridad"** del tablero, botón **"Importar copia de seguridad"**, selecciona un archivo exportado previamente. Añade los datos a lo que ya haya en el tablero (no borra nada). Las contraseñas del archivo solo se importan si el tablero de destino todavía no tiene su propia contraseña maestra configurada.
+
+La misma pestaña conserva en este navegador hasta siete versiones por cuenta y proyecto. Se crea una versión diaria tras abrir la app (si permanece abierta unos segundos), y **Guardar versión** permite crear otra a mano. Puedes descargar o importar cualquiera; importar añade datos. Este historial es local y desaparece al borrar los datos del navegador, así que conviene descargar las copias importantes.
+
+## Comprobaciones automáticas
+
+Cada pull request ejecuta análisis de sintaxis, traducciones, compilación, pruebas del cofre y del service worker, reglas de Firestore en el emulador y recorridos de navegador con Chromium. Para ejecutarlas localmente:
+
+```bash
+node scripts/check-js.js
+node scripts/check-i18n.js --strict
+node tests/vault/vault.test.js
+node tests/backup/backup.test.js
+node tests/sw/sw.test.js
+cd tests/rules && npm install && npm test
+cd ../e2e && npm install && npm test
+cd ../.. && npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
+```
 
 ## Subir esto a GitHub
 
@@ -142,4 +160,4 @@ git branch -M main
 git push -u origin main
 ```
 
-Si el repositorio en GitHub es público, ten en cuenta que `data-backup.json` contiene nombres de clientes, contactos y tareas reales (las contraseñas van cifradas, pero el resto no) — usa un repositorio **privado** si no quieres que esa información sea visible.
+Las copias exportadas no se guardan en el repositorio. `data-backup.json` está excluido por `.gitignore`; guarda cualquier copia fuera de Git.

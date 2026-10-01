@@ -44,6 +44,7 @@ invites/{idDelEquipo}_{correo}  ← invitación pendiente: {teamId, teamName, em
 - `ProjectModel.set` **no reescribe** `ownerUid`, `memberIds` ni `members`: solo envía los campos de configuración que han cambiado, para no pisar a alguien que acaba de entrar.
 - Cada tarea guarda `assignees: [uid]`. Si alguien sale del equipo, su asignación se ignora al pintar.
 - Las imágenes de las notas de un equipo van a `teams/{id}/assets` (las ven todos los miembros).
+- En la ficha de cada tarea, propietarios y editores pueden comentar. La ficha muestra comentarios y actividad básica (creación, edición, movimientos, asignación y subtareas) con autor y fecha. Se guardan en `teams/{id}/tasks/{taskId}/notes` y los lectores pueden consultarlos. Es un historial de colaboración, no un registro inmutable de auditoría.
 
 Código: `src/models/project-model.js` (equipos en la lista), `src/models/team-model.js` (invitaciones, miembros, conversión), `src/controllers/team-controller.js` y `src/views/share-view.js` (diálogo de compartir), `src/views/team-ui.js` (contexto de equipo para las vistas) y `src/services/firebase-backend.js` (`db.team(id)` y `db.teams`).
 

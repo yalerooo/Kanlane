@@ -50,7 +50,7 @@
       this.board.bindFilters(() => this.render());
       this.board.bindOpen((id) => this.openDetail(id));
       this.board.bindQuickAdd((status) => this.openNew(status));
-      this.board.bindMove((id, status, beforeId) => this.tasks.move(id, status, beforeId));
+      this.board.bindMove((id, status, beforeId) => this.moveWithActivity(id, status, beforeId));
       this.columns = new Workhub.views.ColumnView();
       this.bindColumns();
 
@@ -76,10 +76,13 @@
         this.openEdit(id, true);
       });
       this.detail.bindStatus((id, status) => {
-        this.tasks.move(id, status);
+        this.moveWithActivity(id, status);
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
-      this.detail.bindChecklist((id, itemId, done) => this.tasks.toggleCheck(id, itemId, done));
+      this.detail.bindChecklist((id, itemId, done) => {
+        this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
+      });
+      this.detail.bindComment((id, text) => this.postComment(id, text));
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       this.detail.bindAssignMe((id) => this.toggleMine(id));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
@@ -92,6 +95,25 @@
       const f = this.board.filters();
       this.board.setHidden(this.hiddenColumns());
       this.board.render(this.tasks.filter(f.query, f.cliente, f.assignee), this.tasks.items);
+    }
+
+    logActivity(id, text){
+      if(!Workhub.views.team.enabled()) return;
+      this.tasks.addActivity(id, text).catch(() => toast.error('El cambio se guardó, pero no se pudo registrar la actividad.'));
+    }
+
+    moveWithActivity(id, status, beforeId){
+      const before = this.tasks.find(id);
+      const oldStatus = before && before.status;
+      this.tasks.move(id, status, beforeId);
+      if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).label + '»');
+    }
+
+    postComment(id, text){
+      if(!Workhub.views.team.enabled() || !Workhub.views.team.canEdit()) return;
+      this.detail.setCommentBusy(true);
+      this.tasks.addNote(id, text, '').then(() => this.detail.commentSaved(),
+        () => this.detail.commentFailed()).finally(() => this.detail.setCommentBusy(false));
     }
 
     /* Cambió el equipo del proyecto abierto (miembros, mi rol): filtro, tarjetas y ficha. */
@@ -116,7 +138,7 @@
       const now = T.assigned(t);
       const next = now.indexOf(me) === -1 ? now.concat(me) : now.filter((u) => u !== me);
       this.tasks.save(id, {assignees:next}).then(
-        () => toast.success(next.indexOf(me) === -1 ? 'Ya no la tienes asignada' : 'Te la has asignado'),
+        () => { this.logActivity(id, next.indexOf(me) === -1 ? 'se quitó la asignación' : 'se asignó la tarea'); toast.success(next.indexOf(me) === -1 ? 'Ya no la tienes asignada' : 'Te la has asignado'); },
         () => toast.error('No se pudo cambiar la asignación')
       );
     }
@@ -387,7 +409,8 @@
         values.cliente = prev ? (prev.cliente || '') : '';
       }
       if(values.assignees === undefined) delete values.assignees;
-      this.tasks.save(id, values).then(() => {
+      this.tasks.save(id, values).then((ref) => {
+        this.logActivity(id || ref.id, id ? 'editó la tarea' : 'creó la tarea');
         toast.success(id ? 'Cambios guardados' : 'Tarea creada');
         this.closeDialog(true);
       }, () => {

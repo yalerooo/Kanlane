@@ -1,0 +1,65 @@
+name: Comprobaciones
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Revisar JavaScript
+        run: node scripts/check-js.js
+      - name: Pruebas y traducciones
+        run: |
+          node tests/sw/sw.test.js
+          node tests/plugins/migration.test.js
+          node tests/consent/consent.test.js
+          node tests/vault/vault.test.js
+          node tests/backup/backup.test.js
+          node scripts/check-i18n.js --strict
+      - name: Compilar versión pública
+        run: node scripts/build-public.js
+
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar emulador y pruebas
+        run: npm ci --prefix tests/rules --no-audit --no-fund
+      - name: Probar reglas de Firestore
+        run: npm test --prefix tests/rules
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar Playwright
+        run: npm ci --prefix tests/e2e --no-audit --no-fund
+      - name: Instalar Chromium
+        run: npx --prefix tests/e2e playwright install --with-deps chromium
+      - name: Recorridos de navegador
+        run: npm test --prefix tests/e2e
+      - name: Instalar emuladores de Firebase
+        run: npm ci --prefix tests/rules --no-audit --no-fund
+      - name: Alta y cofre con Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"

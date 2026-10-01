@@ -44,3 +44,12 @@
 .recovery-confirm input{margin-top:2px;}
 
 .data-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.backup-history-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:28px 0 12px;}
+.backup-history-head h3{font-size:15px;margin:0 0 4px;}
+.backup-history-head p{font-size:12px;line-height:1.5;color:var(--ink-soft);margin:0;max-width:700px;}
+.backup-history{display:grid;gap:8px;}
+.backup-version{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);}
+.backup-version strong{font-size:13px;display:block;}
+.backup-version span{font-size:12px;color:var(--ink-soft);}
+.backup-version-actions{display:flex;gap:6px;flex-wrap:wrap;}
+@media(max-width:640px){.backup-history-head,.backup-version{align-items:stretch;flex-direction:column;}.backup-version-actions .btn{flex:1;}}

@@ -10,6 +10,8 @@
 
 ## 1. El proyecto
 
+**Portada interactiva (trabajo de octubre de 2026):** nuevo titular «Muchos clientes. Un solo lugar.», entrada animada, enlace directo a la demo, apariciones escalonadas al bajar y navegación que indica la sección activa. Nueva secuencia de ejemplo con tres botones que mueven una tarea de pendiente a completada; calendario de ejemplo con vistas mes/semana/día funcionales. Implementación en `index.html`, `assets/css/landing.css` y `src/landing/landing.js`, sin dependencias ni almacenamiento nuevo. Respeta `prefers-reduced-motion`; el contenido sigue visible sin JavaScript. Comprobado en navegador de escritorio y móvil de 390 px.
+
 **Kanlane** es un gestor de trabajo por cliente para una persona que trabaja con varios clientes. Los datos reales incluyen Finba – RIBA, Mondragón Unibertsitatea, UNIA, Institut de Teatre e Interno.
 
 Secciones:

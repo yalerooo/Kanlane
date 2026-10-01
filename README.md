@@ -10,7 +10,6 @@ https://workhub.yalero.net/
 - `index.html` — la página: estructura HTML de la app y carga de estilos y scripts.
 - `assets/css/` — estilos, separados en tokens de diseño, base, layout, componentes y vistas.
 - `src/` — el código JavaScript, organizado en MVC (ver abajo).
-- `data-backup.json` — copia de los datos guardados en el momento de exportar (tareas, notas, contactos, clientes y las contraseñas **cifradas**, nunca en texto plano). Tiene el mismo formato que genera el propio botón "Exportar copia de seguridad" del tablero.
 - `start-workhub.bat` — doble clic y ya está (ver abajo).
 - `firebase.json`, `firestore.rules`, `firestore.indexes.json` y `src/config/firebase-config.js` — publicación en la web con inicio de sesión (ver abajo).
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
@@ -129,7 +128,7 @@ Los datos de esta copia local y los de la versión en vivo (claude.ai) son **ind
 
 ## Restaurar los datos
 
-Desde la pestaña **"Copia de seguridad"** del tablero, botón **"Importar copia de seguridad"**, seleccionando `data-backup.json`. Añade los datos a lo que ya haya en el tablero (no borra nada). Las contraseñas del archivo solo se importan si el tablero de destino todavía no tiene su propia contraseña maestra configurada.
+Desde la pestaña **"Copia de seguridad"** del tablero, botón **"Importar copia de seguridad"**, selecciona un archivo exportado previamente. Añade los datos a lo que ya haya en el tablero (no borra nada). Las contraseñas del archivo solo se importan si el tablero de destino todavía no tiene su propia contraseña maestra configurada.
 
 ## Subir esto a GitHub
 
@@ -142,4 +141,4 @@ git branch -M main
 git push -u origin main
 ```
 
-Si el repositorio en GitHub es público, ten en cuenta que `data-backup.json` contiene nombres de clientes, contactos y tareas reales (las contraseñas van cifradas, pero el resto no) — usa un repositorio **privado** si no quieres que esa información sea visible.
+Las copias exportadas no se guardan en el repositorio. `data-backup.json` está excluido por `.gitignore`; guarda cualquier copia fuera de Git.

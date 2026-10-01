@@ -3,7 +3,7 @@
   "private": true,
   "description": "Pruebas de firestore.rules contra el emulador",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-workhub --config ../../firebase.json \"node rules-test.js\""
+    "test": "firebase emulators:exec --only firestore --project demo-workhub --config ../../firebase.test.json \"node rules-test.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",

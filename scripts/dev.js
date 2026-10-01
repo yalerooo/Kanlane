@@ -15,6 +15,7 @@ const path = require('path');
 
 const args = process.argv.slice(2);
 const cloud = args.indexOf('--nube') !== -1;
+const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
@@ -39,7 +40,7 @@ function changed(file){
     clients.forEach((res) => res.write('data: reload\n\n'));
   }, 120);
 }
-SERVED.forEach((item) => {
+if(reload) SERVED.forEach((item) => {
   const p = path.join(ROOT, item);
   if(!fs.existsSync(p)) return;
   try{
@@ -80,7 +81,7 @@ const server = http.createServer((req, res) => {
   const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
   res.setHeader('Content-Type', type);
   res.setHeader('Cache-Control', 'no-store');
-  if(url === '/index.html'){
+  if(url === '/index.html' && reload){
     return res.end(fs.readFileSync(file, 'utf8').replace('</body>', RELOAD_SNIPPET + '</body>'));
   }
   fs.createReadStream(file).pipe(res);

@@ -7,7 +7,7 @@ Necesitan **Java 11 o superior** y Node.
 ```bash
 cd tests/rules
 npm install
-npx firebase emulators:exec --only firestore --project demo-workhub --config ../../firebase.json "node rules-test.js"
+npm test
 ```
 
 `firebase-tools` va fijada a la 13.x porque las versiones nuevas piden Java 21. Si tienes Java 21, puedes usar la última.

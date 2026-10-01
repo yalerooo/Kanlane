@@ -1,0 +1,6 @@
+{
+  "name": "workhub-e2e",
+  "private": true,
+  "scripts": {"test": "node smoke.js"},
+  "devDependencies": {"playwright": "1.63.0"}
+}

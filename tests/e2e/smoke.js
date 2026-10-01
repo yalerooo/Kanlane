@@ -38,6 +38,7 @@ async function newProject(page, name){
   await ready();
   const browser = await chromium.launch({headless:true, ...(chrome ? {executablePath:chrome} : {})});
   try{
+    await require('./landing-check')(browser, 'http://localhost:' + port);
     const context = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES', acceptDownloads:true});
     const page = await context.newPage();
     const errors = [];

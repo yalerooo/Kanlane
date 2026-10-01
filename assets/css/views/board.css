@@ -117,6 +117,7 @@
 }
 .card .meta{
   display:flex;
+  flex-wrap:wrap;
   align-items:center;
   gap:10px;
   font-size:12px;
@@ -124,7 +125,7 @@
   margin-top:9px;
 }
 .card .meta .icon{display:inline-flex;color:var(--ink-faint);margin-right:0;}
-.card .contact{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:1;}
+.card .contact{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:1 1 90px;max-width:100%;}
 .card .contact > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .card .links{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums;}
 .card .meta .due-badge{margin-left:auto;}
@@ -215,8 +216,15 @@
 @media (hover:none){.col-head{cursor:default;}}
 
 /* Subtareas y repetición en la tarjeta. */
-.card .meta .check-progress{display:inline-flex;align-items:center;gap:6px;min-width:72px;font-size:11px;font-variant-numeric:tabular-nums;color:var(--accent);}
-.card .meta .check-progress-track{display:block;width:48px;height:5px;overflow:hidden;border-radius:99px;background:var(--line-strong);}
-.card .meta .check-progress-track > span{display:block;height:100%;border-radius:inherit;background:var(--accent-solid);}
-.card .meta .check-progress-value{min-width:27px;text-align:right;}
+.card-contact{display:flex;align-items:center;gap:5px;min-width:0;margin-top:10px;font-size:12px;color:var(--ink-faint);}
+.card-contact .icon{display:inline-flex;flex:none;margin:0;color:var(--ink-faint);}
+.card-contact > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-bottom{display:flex;align-items:center;gap:8px;min-width:0;margin-top:9px;}
+.card-bottom > .due-badge{margin-left:auto;}
+.card-bottom .card-progress{flex:1 1 70px;min-width:0;}
+.card-progress .check-progress{display:flex;align-items:center;gap:10px;width:100%;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--ink-soft);}
+.card-progress .check-progress-track{display:block;flex:1;min-width:0;height:4px;overflow:hidden;border-radius:99px;background:var(--line-strong);}
+.card-progress .check-progress-track > span{display:block;height:100%;border-radius:inherit;background:var(--accent-solid);}
+.card-progress .check-progress-value{flex:0 0 4ch;text-align:right;white-space:nowrap;}
+.card-bottom .due-badge{flex:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;}
 .card .meta .repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-faint);}

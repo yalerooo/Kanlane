@@ -398,13 +398,12 @@
     const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
     const meta = [
       gh,
-      t.contacto ? '<span class="contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
-      check,
       repeat,
-      due,
       who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');
+    const contact = t.contacto ? '<div class="card-contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></div>' : '';
+    const bottom = check || due ? '<div class="card-bottom">' + (check ? '<div class="card-progress">' + check + '</div>' : '') + due + '</div>' : '';
     return '<article class="card" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
       (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
       '<h3 translate="no">' + esc(t.title) + '</h3>' +
@@ -412,6 +411,8 @@
       (Array.isArray(t.labels) && t.labels.length ? '<div class="card-labels">' + Workhub.views.labels.chips(t.labels, 3) + '</div>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +
+      contact +
+      bottom +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';
   }

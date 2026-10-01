@@ -718,6 +718,9 @@
     'El navegador bloqueó la ventana de acceso. Permite las ventanas emergentes para este sitio.':'The browser blocked the sign-in window. Allow pop-ups for this site.',
 
     /* ---------- Plugins ---------- */
+    'Mostrar plugins instalados':'Show installed plugins',
+    'Ocultar plugins instalados':'Hide installed plugins',
+    'Plugins instalados':'Installed plugins',
     'Pega el enlace de un plugin (https://…)':'Paste a plugin link (https://…)',
     'Enlace del plugin':'Plugin link',
     'Cada plugin se ejecuta aislado: solo ve lo que le permitas y nunca tus contraseñas.':'Each plugin runs isolated: it only sees what you allow and never your passwords.',

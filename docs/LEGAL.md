@@ -4,6 +4,17 @@ Workhub trata datos personales de personas en España y la Unión Europea, así 
 
 > **Importante.** Los textos están redactados siguiendo el RGPD, la LOPDGDD, la LSSI-CE y la guía de cookies de la AEPD, y describen lo que Workhub hace de verdad. Pero **no son asesoramiento jurídico**. Si Workhub va a tener usuarios que no conoces, cobrar, o lo explotas como empresa, haz que los revise un abogado o una gestoría. Eres tú, como titular, quien responde de que sean ciertos y estén al día.
 
+## Que no salgan en Google
+
+Las tres páginas llevan el nombre, el NIF, el domicilio y el correo del titular, así que **no se indexan**:
+
+- cada página tiene `<meta name="robots" content="noindex, nofollow, noarchive">` (y la equivalente para `googlebot`);
+- el sitio las sirve con la cabecera HTTP `X-Robots-Tag: noindex, nofollow, noarchive` (`LEGAL` en `scripts/build-public.js`), que los buscadores obedecen aunque no lean el HTML.
+
+**No añadas un `robots.txt` que las bloquee** (`Disallow: /legal/`): si el robot no puede leer la página, no llega a ver el `noindex` y Google puede seguir listando la dirección. Lo correcto es dejar que las lea y obedezca el `noindex`.
+
+Lo que esto **no** hace: las páginas siguen siendo públicas para cualquiera que tenga o encuentre el enlace (están enlazadas desde la pantalla de acceso, y la ley exige que se puedan consultar). Si no quieres publicar tu domicilio particular, usa una dirección profesional o de contacto (el domicilio es obligatorio en la información del titular, pero puede ser el de tu actividad). Si alguna vez se llegó a indexar una versión anterior, pide su retirada en Google Search Console (Eliminaciones → Eliminar temporalmente); el `noindex` hace el resto al volver a rastrear.
+
 ## Qué hay
 
 | Qué | Dónde | Para qué |

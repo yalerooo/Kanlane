@@ -26,6 +26,9 @@
       this.checklist = [];
       this.checkList = $('fChecklist');
       this.checkNew = $('fCheckNew');
+      this.checkSummary = $('fChecklistSummary');
+      this.checkProgress = $('fChecklistProgress');
+      this.checkProgressFill = $('fChecklistProgressFill');
       this._bindChecklist();
       this.cliente = new Workhub.views.ClientSelect('f');
       this.btnCancel = $('btnCancel');
@@ -270,7 +273,11 @@
       };
       this.checkList.addEventListener('change', (ev) => {
         const c = find(ev.target);
-        if(c && ev.target.matches('input[type=checkbox]')) c.done = ev.target.checked;
+        if(c && ev.target.matches('input[type=checkbox]')){
+          c.done = ev.target.checked;
+          ev.target.closest('.check-row').classList.toggle('is-done', c.done);
+          this._updateChecklistProgress();
+        }
       });
       this.checkList.addEventListener('input', (ev) => {
         const c = find(ev.target);
@@ -280,21 +287,80 @@
         if(ev.key === 'Enter' && ev.target.matches('input[type=text]')){ ev.preventDefault(); this.checkNew.focus(); }
       });
       this.checkList.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('[data-act="check-del"]');
+        const btn = ev.target.closest('[data-act]');
         const c = btn && find(btn);
         if(!c) return;
-        this.checklist = this.checklist.filter((x) => x !== c);
+        const action = btn.getAttribute('data-act');
+        if(action === 'check-del') this.checklist = this.checklist.filter((x) => x !== c);
+        else if(action === 'check-up' || action === 'check-down'){
+          const from = this.checklist.indexOf(c);
+          const to = from + (action === 'check-up' ? -1 : 1);
+          if(to < 0 || to >= this.checklist.length) return;
+          this.checklist.splice(from, 1);
+          this.checklist.splice(to, 0, c);
+        } else return;
         this._renderChecklist();
+        if(action !== 'check-del') this.checkList.querySelector('[data-cid="' + c.id + '"] input[type="text"]').focus();
+      });
+      let dragged = null;
+      this.checkList.addEventListener('dragstart', (ev) => {
+        const handle = ev.target.closest('[data-act="check-drag"]');
+        const c = handle && find(handle);
+        if(!c){ ev.preventDefault(); return; }
+        dragged = c.id;
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', c.id);
+        handle.closest('.check-row').classList.add('is-dragging');
+      });
+      this.checkList.addEventListener('dragover', (ev) => {
+        const row = ev.target.closest('.check-row');
+        if(!dragged || !row || row.getAttribute('data-cid') === dragged) return;
+        ev.preventDefault();
+        this.checkList.querySelectorAll('.drop-before,.drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'));
+        row.classList.add(ev.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2 ? 'drop-before' : 'drop-after');
+      });
+      this.checkList.addEventListener('drop', (ev) => {
+        const row = ev.target.closest('.check-row');
+        if(!dragged || !row) return;
+        ev.preventDefault();
+        const from = this.checklist.findIndex((c) => c.id === dragged);
+        const target = this.checklist.findIndex((c) => c.id === row.getAttribute('data-cid'));
+        if(from >= 0 && target >= 0 && from !== target){
+          const after = ev.clientY >= row.getBoundingClientRect().top + row.offsetHeight / 2;
+          const [item] = this.checklist.splice(from, 1);
+          this.checklist.splice(target + (after && from > target ? 1 : 0) - (!after && from < target ? 1 : 0), 0, item);
+          this._renderChecklist();
+        }
+        dragged = null;
+        this.checkList.querySelectorAll('.drop-before,.drop-after,.is-dragging').forEach((el) => el.classList.remove('drop-before', 'drop-after', 'is-dragging'));
+      });
+      this.checkList.addEventListener('dragend', () => {
+        dragged = null;
+        this.checkList.querySelectorAll('.drop-before,.drop-after,.is-dragging').forEach((el) => el.classList.remove('drop-before', 'drop-after', 'is-dragging'));
       });
     }
 
     _renderChecklist(){
-      this.checkList.innerHTML = this.checklist.map((c) =>
-        '<div class="check-row" data-cid="' + esc(c.id) + '">' +
+      this.checkList.innerHTML = this.checklist.map((c, i) =>
+        '<div class="check-row' + (c.done ? ' is-done' : '') + '" data-cid="' + esc(c.id) + '">' +
+        '<button type="button" class="check-drag" data-act="check-drag" draggable="true" aria-label="Arrastrar subtarea" title="Arrastrar para ordenar"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg></button>' +
         '<input type="checkbox"' + (c.done ? ' checked' : '') + ' aria-label="Hecha">' +
         '<input type="text" maxlength="120" value="' + esc(c.text) + '" aria-label="Subtarea" translate="no" autocomplete="off">' +
+        '<button type="button" class="check-move" data-act="check-up" aria-label="Subir subtarea" title="Subir"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+        '<button type="button" class="check-move" data-act="check-down" aria-label="Bajar subtarea" title="Bajar"' + (i === this.checklist.length - 1 ? ' disabled' : '') + '>↓</button>' +
         '<button type="button" class="icon-btn check-del" data-act="check-del" aria-label="Quitar subtarea" title="Quitar">' + Workhub.utils.html.iconSpan('close') + '</button>' +
         '</div>').join('');
+      this._updateChecklistProgress();
+    }
+
+    _updateChecklistProgress(){
+      const total = this.checklist.length;
+      const done = this.checklist.filter((c) => c.done).length;
+      const percent = total ? Math.round(done / total * 100) : 0;
+      this.checkSummary.hidden = this.checkProgress.hidden = !total;
+      this.checkSummary.textContent = percent + '%';
+      this.checkProgress.setAttribute('aria-valuenow', percent);
+      this.checkProgressFill.style.width = percent + '%';
     }
 
     /* ---------- Estado del formulario ---------- */

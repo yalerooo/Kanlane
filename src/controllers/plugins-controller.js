@@ -92,7 +92,11 @@
       const official = Workhub.services.officialPlugins.map((o) => ({
         url: o.url, manifest: o.manifest, installed: !!this.plugins.find(o.manifest.id)
       }));
-      this.view.render(installed, official);
+      this.view.render(installed, official, this.canManage());
+    }
+
+    canManage(){
+      return !Workhub.views.team.enabled() || Workhub.views.team.canEdit();
     }
 
     onShow(){
@@ -106,13 +110,14 @@
        permisos, se conceden solos (una vez por sesión). */
     upgradeOfficial(){
       this.upgraded = this.upgraded || {};
-      this.plugins.items.forEach((p) => {
-        if(!p.official || this.upgraded[p.id]) return;
+      this.plugins.list().forEach((p) => {
+        const key = this.app.projectId + ':' + p.id;
+        if(!p.official || this.upgraded[key] || !this.canManage()) return;
         const o = Workhub.services.officialPlugins.find((x) => x.manifest.id === p.id);
         if(!o) return;
         const want = o.manifest.permissions;
         if(!sameSet(want, p.granted || []) || JSON.stringify(p.manifest || {}) !== JSON.stringify(o.manifest)){
-          this.upgraded[p.id] = true;
+          this.upgraded[key] = true;
           this.plugins.setGranted(p.id, want.slice(), o.manifest).catch(() => {});
         }
       });
@@ -126,7 +131,7 @@
     syncBackground(){
       if(location.protocol === 'file:' || !this.app.rootDb) return;
       const want = new Map();
-      this.plugins.items.forEach((p) => { if(this.needsBackground(p)) want.set(p.id, p); });
+      this.plugins.list().forEach((p) => { if(this.needsBackground(p)) want.set(p.id, p); });
       this.bg.forEach((entry, id) => {
         const p = want.get(id);
         if(!p || p.url !== entry.url) this.stopBackground(id);
@@ -222,7 +227,8 @@
     /* ---------- Instalar ---------- */
 
     addFromUrl(raw){
-      if(!this.plugins.isReady()) return;
+      if(!this.plugins.isReady() || !this.canManage()) return;
+      const projectId = this.app.projectId;
       const url = host.resolveUrl(raw);
       if(!url){
         this.view.setAdding(false, 'Pega la dirección completa del plugin, empezando por https://', true);
@@ -230,6 +236,7 @@
       }
       this.view.setAdding(true, 'Cargando el plugin para ver qué es y qué permisos pide…');
       host.probe(url, this.view.probeArea, false).then((res) => {
+        if(this.app.projectId !== projectId) return;
         this.view.setAdding(false);
         const existing = this.plugins.find(res.manifest.id);
         if(existing && existing.official){
@@ -239,13 +246,14 @@
         this.pending = {mode:'install', id:res.manifest.id, url:url, manifest:res.manifest, official:false};
         this.view.openDialog('install', this.pending);
       }).catch((err) => {
+        if(this.app.projectId !== projectId) return;
         this.view.setAdding(false, err.message, true);
       });
     }
 
     installOfficial(index){
       const o = Workhub.services.officialPlugins[index];
-      if(!o || !this.plugins.isReady()) return;
+      if(!o || !this.plugins.isReady() || !this.canManage()) return;
       this.pending = {mode:'install', id:o.manifest.id, url:o.url, manifest:o.manifest, official:true};
       this.view.openDialog('install', this.pending);
     }
@@ -258,6 +266,7 @@
         this.open(p.id);
         return;
       }
+      if(!this.canManage()) return;
       this.view.setDialogBusy(true);
       let done;
       if(p.mode === 'install'){
@@ -291,16 +300,19 @@
       this.view.openDialog('details', this.pending);
     }
 
-    /* Quita el plugin y borra sus datos en todos los proyectos. */
+    /* Quita el plugin y sus datos solo del proyecto abierto. */
     remove(id){
       const p = this.plugins.find(id);
-      if(!p) return;
+      if(!p || !this.canManage()) return;
       this.view.setDialogBusy(true);
       if(this.active && this.active.id === id) this.close();
       this.stopBackground(id);
-      const wipes = this.m.projects.list().map((proj) =>
-        PluginModel.clearData(ProjectModel.scope(this.app.rootDb, proj.id), id).catch(() => null));
-      Promise.all(wipes).then(() => this.plugins.remove(id)).then(() => {
+      const db = this.db();
+      const installDoc = this.plugins.doc(id);
+      /* El registro antiguo del principal puede contener wh.storage.user. */
+      const preserve = this.app.projectId === ProjectModel.MAIN_ID
+        ? PluginModel.userBucket(this.app.rootDb, id).read() : Promise.resolve();
+      preserve.then(() => PluginModel.clearData(db, id)).then(() => installDoc.delete()).then(() => {
         this.view.closeDialog();
         toast.success('Plugin «' + ((p.manifest || {}).name || id) + '» quitado');
       }).catch(() => {
@@ -354,7 +366,7 @@
       if(extra.length && panel && !official){
         this.pendingExtra = {mode:'review', id:p.id, url:p.url, manifest:v.manifest, official:official, extra:extra};
         this.view.setNotice('Esta versión del plugin pide permisos nuevos. Funciona con los que ya tenía hasta que los revises. <button type="button" class="btn btn-ghost btn-sm" data-review>Revisar</button>');
-      } else if(!extra.length && panel && (!sameSet(requested, approved) || JSON.stringify(p.manifest || {}) !== JSON.stringify(v.manifest))){
+      } else if(!extra.length && panel && this.canManage() && (!sameSet(requested, approved) || JSON.stringify(p.manifest || {}) !== JSON.stringify(v.manifest))){
         /* Pide menos permisos o cambió su descripción: se guarda tal cual. */
         this.plugins.setGranted(p.id, granted, v.manifest).catch(() => {});
       }
@@ -421,7 +433,18 @@
     }
 
     onProjectChange(){
+      this.render();
       this.schedule('project', () => this.projectInfo());
+    }
+
+    beforeProjectChange(){
+      Object.keys(this.timers).forEach((key) => clearTimeout(this.timers[key]));
+      this.formView._finish(null);
+      this.closeFrame();
+      Array.from(this.bg.keys()).forEach((id) => this.stopBackground(id));
+      this.pending = null;
+      this.view.closeDialog();
+      this.view.showHome();
     }
 
     /* ---------- API ---------- */
@@ -458,16 +481,24 @@
           return m.meetings.items.map(cleanMeeting);
         case 'meetings.create': return this.createMeeting(params);
         case 'storage.get': return PluginModel.storageGet(this.bucket(p.id, params.scope), params.key);
-        case 'storage.set': return this.serial(p.id, () => PluginModel.storageSet(this.bucket(p.id, params.scope), params.key, params.value))
-          .then(() => { this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
-        case 'storage.remove': return this.serial(p.id, () => PluginModel.storageRemove(this.bucket(p.id, params.scope), params.key))
-          .then(() => { this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
+        case 'storage.set': {
+          const projectId = this.app.projectId;
+          const bucket = this.bucket(p.id, params.scope);
+          return this.serial(projectId + ':' + p.id, () => PluginModel.storageSet(bucket, params.key, params.value))
+            .then(() => { if(this.app.projectId === projectId) this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
+        }
+        case 'storage.remove': {
+          const projectId = this.app.projectId;
+          const bucket = this.bucket(p.id, params.scope);
+          return this.serial(projectId + ':' + p.id, () => PluginModel.storageRemove(bucket, params.key))
+            .then(() => { if(this.app.projectId === projectId) this.notifyStorage(p.id, frame, params.key, params.scope); return true; });
+        }
         case 'ui.openPanel':
           this.open(p.id);
           return true;
         case 'ui.form': {
           const spec = cleanForm(params);
-          const run = this.formQueue.then(() => this.formView.open(spec, who));
+          const run = this.formQueue.then(() => this.frames().indexOf(frame) !== -1 ? this.formView.open(spec, who) : null);
           this.formQueue = run.catch(() => null);
           return run;
         }

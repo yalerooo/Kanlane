@@ -48,7 +48,7 @@ La misma página de tu plugin se carga de dos formas:
 | Modo | Cuándo | Para qué | `wh.isBackground` |
 |---|---|---|---|
 | **Panel** | El usuario abre el plugin en la sección Plugins. | Tu interfaz. | `false` |
-| **Segundo plano** | Siempre que Workhub está abierto, oculto. Solo si el plugin pide `ui:extend` o `appearance`. | Añadir botones y etiquetas, reaccionar a sus clics y aplicar la apariencia. | `true` |
+| **Segundo plano** | Mientras está abierto un proyecto que tiene instalado el plugin. Solo si pide `ui:extend` o `appearance`. | Añadir botones y etiquetas, reaccionar a sus clics y aplicar la apariencia. | `true` |
 
 ```js
 WorkhubPlugin.connect(MANIFEST).then((wh) => {
@@ -57,7 +57,7 @@ WorkhubPlugin.connect(MANIFEST).then((wh) => {
 });
 ```
 
-Las dos instancias comparten el almacenamiento. Cuando una guarda algo, la otra recibe el evento `storage` para releerlo.
+Las dos instancias comparten el almacenamiento. Cuando una guarda algo, la otra recibe el evento `storage` para releerlo. La instalación, los permisos y el segundo plano pertenecen al proyecto abierto: al cambiar de proyecto se cierran sus instancias y se cargan las del nuevo proyecto. Las instalaciones antiguas quedan asociadas al proyecto principal; en los demás proyectos hay que instalar los plugins que se quieran usar.
 
 ## Tu primer plugin en 5 minutos
 
@@ -231,7 +231,7 @@ await wh.storage.user.set('tema', 'oscuro')
 await wh.storage.user.get('tema')
 ```
 
-Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Cuando el usuario quita el plugin, sus datos se borran.
+Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Al quitar el plugin se borran sus datos del proyecto abierto. Los datos de `wh.storage.user`, si el plugin usa ese espacio compartido, se conservan para las instalaciones que pueda tener en otros proyectos.
 
 ### Interfaz
 
@@ -267,7 +267,7 @@ if(v){ /* v.hours → 6, v.days → ['2026-10-06', '2026-10-07'], v.project → 
 |---|---|---|
 | `number` | `min`, `max`, `step`, `unit`, `value` | un número |
 | `text` | `value`, `placeholder`, `maxlength` (hasta 200) | texto |
-| `select` | `options:[{value,label}]` (hasta 100), `value`, `allowNew`, `newLabel`, `newPlaceholder`, `newColor` | el `value` elegido, o `{new, color}` si se eligió «añadir nuevo» |
+| `select` | `options:[{value,label}]` (hasta 100; etiquetas de 160 caracteres), `value`, `allowNew`, `newLabel`, `newPlaceholder`, `newColor` (paleta y selector libre; nombre nuevo de 160 caracteres) | el `value` elegido, o `{new, color}` si se eligió «añadir nuevo» |
 | `dates` | `value:[AAAA-MM-DD]`, `max` (hasta 62) | lista ordenada de fechas |
 
 Todos aceptan `label` (60 caracteres), `hint` (140) y `required` (por defecto `true`). Máximo 8 campos; las claves (`key`) son únicas y con letras, números o `_`. Todo se muestra como texto: nada de HTML.
@@ -344,7 +344,7 @@ await wh.ui.resetAppearance();   // volver al aspecto normal
 
 - **Solo esos valores, validados**, y nunca CSS libre: una hoja de estilos arbitraria podría ocultar o imitar botones, o sacar datos de la página.
 - Se aplica mientras el plugin esté instalado. Al quitarlo, Workhub vuelve a su aspecto.
-- Guarda la elección en `wh.storage.user` y aplícala al arrancar en segundo plano (mira el plugin oficial **Apariencia**).
+- Guarda la elección en `wh.storage` y aplícala al arrancar en segundo plano (mira el plugin oficial **Apariencia**). Así cada proyecto conserva su propia apariencia.
 
 ## Eventos
 
@@ -413,8 +413,8 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 |---|---|---|
 | **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV. Añade el botón **Informe** a la barra de Tareas y una acción a `Ctrl K`. | [`plugins/informe`](../plugins/informe) | `tasks:read`, `ui:extend` |
 | **Temporizador** (icono `timer`): cronómetro por tarea y totales. Añade **Iniciar cronómetro** a la ficha de cada tarea, **Detener** a la barra de Tareas y a `Ctrl K` mientras cuenta, y una **etiqueta con el tiempo** en cada tarjeta. | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage`, `ui:extend` |
-| **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Añade **Registrar horas** a la ficha de cada tarea y a `Ctrl K`, y una etiqueta con las horas en cada tarjeta. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
-| **Apariencia** (icono `sparkles`): cualquier color de acento, esquinas rectas o redondeadas y densidad compacta o amplia, iguales en todos los proyectos. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
+| **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Sus datos se guardan por proyecto de Workhub; los registros globales anteriores se copian al proyecto principal la primera vez que se abre allí, sin borrar el origen. Los colores de sus proyectos se pueden elegir libremente y sus nombres admiten 160 caracteres. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
+| **Apariencia** (icono `sparkles`): cualquier color de acento, esquinas rectas o redondeadas y densidad compacta o amplia, propios de cada proyecto de Workhub. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
 
 Para añadir uno oficial al repositorio:
 

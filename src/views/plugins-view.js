@@ -46,6 +46,7 @@
       this.installedEmpty = $('pluginsInstalledEmpty');
       this.installedCount = $('pluginsInstalledCount');
       this.form = $('formPluginUrl');
+      this.readonlyNotice = $('pluginsReadonlyNotice');
       this.urlInput = $('pluginUrl');
       this.formBtn = this.form.querySelector('button[type=submit]');
       this.formMsg = $('pluginUrlMsg');
@@ -153,7 +154,7 @@
       const official = opts.official;
       const perms = (m.permissions || []).map((p) => (pluginHost.PERMISSION_INFO[p] || {short:p}).short);
       const meta = [m.author || 'Autor desconocido', 'v' + (m.version || '1.0.0'), official ? '' : sourceText(opts.url, false)].filter(Boolean).join(' · ');
-      return '<article class="plugin-card" tabindex="0" style="--h:' + hueOf(m) + '" data-plugin-action="' + opts.cardAction + '" ' + opts.dataAttr + ' aria-label="' + esc(m.name) + ': ver detalles">' +
+      return '<article class="plugin-card" tabindex="' + (opts.cardAction ? '0' : '-1') + '" style="--h:' + hueOf(m) + '" data-plugin-action="' + opts.cardAction + '" ' + opts.dataAttr + (opts.cardAction ? ' aria-label="' + esc(m.name) + ': ver detalles"' : '') + '>' +
         '<div class="plugin-card-head">' + tileHtml(m, '', 17) +
           '<div class="plugin-card-title"><h3><span>' + esc(m.name) + '</span>' + (official ? VERIFIED : '') + '</h3>' +
           '<p>' + esc(meta) + '</p></div>' +
@@ -165,7 +166,10 @@
     }
 
     /* installed: [{id, url, manifest, official}], official: [{url, manifest, installed}] */
-    render(installed, official){
+    render(installed, official, canManage){
+      const editable = canManage !== false;
+      this.form.hidden = !editable;
+      this.readonlyNotice.hidden = editable;
       this.installedEmpty.hidden = installed.length > 0;
       this.installed.hidden = !installed.length;
       this.installedCount.textContent = installed.length ? String(installed.length) : '';
@@ -180,9 +184,9 @@
       this.official.innerHTML = official.map((o, i) => this._card(o.manifest, {
         official: true,
         url: o.url,
-        cardAction: o.installed ? 'details' : 'official-details',
+        cardAction: o.installed ? 'details' : (editable ? 'official-details' : ''),
         dataAttr: o.installed ? 'data-id="' + esc(o.manifest.id) + '"' : 'data-index="' + i + '"',
-        actions: this.fileMode ? '' : o.installed
+        actions: this.fileMode || !editable ? '' : o.installed
           ? '<span class="plugin-installed">Instalado</span>'
           : '<button type="button" class="btn btn-ghost btn-sm" data-plugin-action="install" data-index="' + i + '">Instalar</button>'
       })).join('');
@@ -276,7 +280,7 @@
       this.dlgConfirm.hidden = this.fileMode && mode === 'details';
       this.dlgConfirm.textContent = mode === 'install' ? 'Instalar' : mode === 'review' ? 'Permitir' : 'Abrir';
       this.dlgConfirm.disabled = false;
-      this.dlgRemove.hidden = mode !== 'details';
+      this.dlgRemove.hidden = mode !== 'details' || !Workhub.views.team.canEdit();
       this.dlgRemove.disabled = false;
       this.pendingRemove = false;
       this.dlgRemove.textContent = 'Quitar plugin';

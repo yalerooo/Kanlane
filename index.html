@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="assets/css/fonts.css">
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/landing.css">
+  <link rel="stylesheet" href="assets/css/landing-product.css">
   <script src="src/landing/landing-boot.js"></script>
 
   <script type="application/ld+json">
@@ -75,7 +76,7 @@
           {"@type": "Question", "name": "¿Quién puede ver mis contraseñas?", "acceptedAnswer": {"@type": "Answer", "text": "Solo tú. Las contraseñas y sus notas se cifran en tu navegador con tu contraseña maestra antes de guardarse, y esa contraseña nunca sale de tu dispositivo."}},
           {"@type": "Question", "name": "¿Qué pasa si olvido la contraseña maestra?", "acceptedAnswer": {"@type": "Answer", "text": "Al crearla se genera una clave de recuperación que puedes descargar y guardar. Sin la contraseña maestra ni esa clave, nadie puede descifrar tus contraseñas, tampoco Kanlane."}},
           {"@type": "Question", "name": "¿Puedo trabajar en equipo?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes compartir un proyecto, invitar a otras personas por correo y asignar tareas. Cada persona tiene un rol: propietario, editor o lector."}},
-          {"@type": "Question", "name": "¿Puedo llevarme mis datos?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes exportar una copia de seguridad completa de un proyecto en un archivo y restaurarla cuando quieras."}},
+          {"@type": "Question", "name": "¿Puedo llevarme mis datos?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes exportar tareas, notas, clientes, contactos, reuniones y contraseñas cifradas. La exportación no incluye imágenes originales ni datos de plugins. También hay versiones locales y copias cifradas opcionales en tu cuenta."}},
           {"@type": "Question", "name": "¿Qué son los plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Pequeñas extensiones que añaden funciones, como un registro de horas por proyecto o un temporizador. Se ejecutan aisladas y solo acceden a lo que tú les permitas."}}
         ]
       }
@@ -100,6 +101,7 @@
     <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M6.5 8v8M17.5 12v.5a3.5 3.5 0 0 1-3.5 3.5H9"/></symbol>
     <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0V8zM12 17v4"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
@@ -119,6 +121,7 @@
     </a>
     <nav class="top-nav" aria-label="Principal">
       <a href="#funciones">Funciones</a>
+      <a href="#extensiones">Plugins</a>
       <a href="#como-funciona">Cómo funciona</a>
       <a href="#seguridad">Seguridad</a>
       <a href="#preguntas">Preguntas</a>
@@ -134,22 +137,92 @@
 
   <!-- Portada -->
   <section class="hero" aria-labelledby="h-hero">
-    <div class="wrap">
-      <p class="eyebrow">Para quien trabaja con varios clientes</p>
-      <h1 id="h-hero">Todo el trabajo de tus clientes, en un solo sitio.</h1>
-      <p class="lead">Kanlane reúne tareas, calendario, contactos y contraseñas por cliente. Sin ruido ni configuraciones eternas: abres, trabajas y listo.</p>
+    <div class="wrap hero-layout">
+      <div class="hero-copy">
+      <p class="eyebrow hero-eyebrow"><span class="live-dot" aria-hidden="true"></span> Menos pestañas. Más claridad.</p>
+      <h1 id="h-hero">Tu trabajo,<br>por fin<br><span class="hero-word">en su sitio.</span></h1>
+      <p class="lead">Un espacio para las tareas, las personas y los detalles de cada cliente. Del primer encargo a la última entrega, con todo a mano.</p>
       <div class="hero-cta">
         <a class="btn btn-primary btn-lg" href="app/?registro=1">Crear cuenta</a>
-        <a class="btn btn-outline btn-lg" href="app/">Iniciar sesión</a>
+        <a class="btn btn-outline btn-lg" href="#prueba">Explorar el tablero <svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
-      <p class="hero-note">Crear una cuenta es gratis · No pedimos tarjeta · También funciona sin conexión</p>
+      <p class="hero-note">Gratis para empezar. Sin tarjeta. Sin complicaciones.</p>
+      <div class="hero-platforms"><span><svg class="ico" width="15" height="15" aria-hidden="true"><use href="#i-globe"/></svg>En tu navegador</span><span><svg class="ico" width="15" height="15" aria-hidden="true"><use href="#i-phone"/></svg>También como app</span></div>
+      </div>
+      <div class="day-preview" aria-label="Ejemplo interactivo de una jornada de trabajo">
+        <div class="preview-kicker"><span class="live-dot" aria-hidden="true"></span> UN DÍA CON KANLANE <span>Ejemplo</span></div>
+        <div class="day-heading"><div><p>Miércoles, 7 de octubre</p><h2>Vamos, a tu ritmo.</h2></div><span class="day-avatar">AL</span></div>
+        <div class="day-metrics"><div><strong id="dayPending">3</strong><span>por hacer</span></div><div><strong>2</strong><span>clientes</span></div><div><strong>16:30</strong><span>próxima reunión</span></div></div>
+        <div class="day-list" aria-label="Marca las tareas del ejemplo como completadas">
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Dar forma a la nueva portada</strong><small><i class="client-dot north"></i>Estudio Norte <span>Diseño</span></small></span><span class="day-time">09:00</span></label>
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Enviar el presupuesto</strong><small><i class="client-dot coast"></i>Taller Costa <span>Gestión</span></small></span><span class="day-time">11:00</span></label>
+          <label class="day-task"><input type="checkbox" data-day-task><span class="day-check" aria-hidden="true"></span><span><strong>Preparar la entrega</strong><small><i class="client-dot north"></i>Estudio Norte <span>Revisión</span></small></span><span class="day-time">15:00</span></label>
+        </div>
+        <div class="day-meeting"><svg class="ico" width="19" height="19" aria-hidden="true"><use href="#i-calendar"/></svg><div><strong>Revisión con Marta</strong><span>16:30 – 17:00 · Estudio Norte</span></div><span class="meeting-avatars" aria-hidden="true"><i>AL</i><i>MR</i></span></div>
+        <div class="day-bottom"><span id="dayFeedback" aria-live="polite">Prueba a completar una tarea.</span><span id="dayCount">0 / 3</span></div>
+        <div class="day-track" aria-hidden="true"><span id="dayProgress"></span></div>
+      </div>
     </div>
 
-    <div class="wrap demo-wrap">
-      <p class="demo-hint">Pruébalo: arrastra una tarjeta a otra columna o abre una tarea.</p>
+    <div class="wrap demo-wrap" id="prueba">
+      <div class="demo-intro"><div><p class="eyebrow">Tócalo. Es de verdad.</p><h2>Tu próximo tablero,<br>sin tener que imaginarlo.</h2></div><p>Arrastra una tarjeta, abre sus detalles o marca una subtarea. Esta demo usa el tablero real, con datos de ejemplo. No necesitas una cuenta.</p></div>
+      <div class="demo-caption"><span><span class="live-dot" aria-hidden="true"></span> Espacio de demostración</span><a href="demo/" target="_blank" rel="noopener">Abrir demo completa <span aria-hidden="true">↗</span></a></div>
       <div class="demo">
         <iframe id="demoFrame" title="Demo interactiva del tablero de Kanlane" data-src="demo/" width="1120" height="680"></iframe>
         <noscript><p class="demo-nojs">La demo necesita JavaScript. <a href="demo/">Ábrela en una página aparte</a>.</p></noscript>
+      </div>
+      <div class="demo-footnotes"><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-board"/></svg>Arrastra entre columnas</span><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-list"/></svg>Abre una tarea y prueba sus subtareas</span><span><svg class="ico" width="16" height="16" aria-hidden="true"><use href="#i-users"/></svg>Filtra por cliente</span></div>
+    </div>
+  </section>
+
+  <section class="section client-story" id="clientes" aria-labelledby="h-clientes">
+    <div class="wrap">
+      <div class="section-head"><p class="eyebrow">El contexto también importa</p><h2 id="h-clientes">Cambia de cliente.<br>No pierdas el hilo.</h2><p class="section-lead">La reunión del jueves, el contacto de siempre y esa tarea a medias. Todo tiene un sitio, y todo está relacionado.</p></div>
+      <div class="client-explorer">
+        <div class="client-options" aria-label="Explorar clientes de ejemplo">
+          <button class="client-option is-active" type="button" data-client="north" aria-pressed="true"><span class="client-monogram north">N</span><span><strong>Estudio Norte</strong><small>Diseño y comunicación</small></span><span aria-hidden="true">↗</span></button>
+          <button class="client-option" type="button" data-client="coast" aria-pressed="false"><span class="client-monogram coast">C</span><span><strong>Taller Costa</strong><small>Comercio y mantenimiento</small></span><span aria-hidden="true">↗</span></button>
+          <button class="client-option" type="button" data-client="house" aria-pressed="false"><span class="client-monogram house">A</span><span><strong>Casa Aldea</strong><small>Web y contenidos</small></span><span aria-hidden="true">↗</span></button>
+          <p>Un ejemplo de cómo se conecta la información de tus clientes.</p>
+        </div>
+        <div class="client-detail" aria-live="polite" aria-atomic="true">
+          <div class="client-detail-head"><span class="client-monogram north" id="clientInitial">N</span><div><p>TODO A MANO</p><h3 id="clientName">Estudio Norte</h3></div><span class="example-label">Ejemplo</span></div>
+          <div class="context-grid">
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-board"/></svg>El siguiente paso</span><h4 id="clientTask">Maquetar la nueva portada</h4><span class="context-status" id="clientStatus">En proceso</span></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-users"/></svg>La persona adecuada</span><h4 id="clientPerson">Marta Ruiz</h4><p id="clientPersonRole">Responsable de comunicación</p></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-calendar"/></svg>El próximo encuentro</span><h4 id="clientMeeting">Revisión del diseño</h4><p id="clientDate">Miércoles · 16:30</p></article>
+            <article><span class="context-label"><svg class="ico" width="17" height="17" aria-hidden="true"><use href="#i-lock"/></svg>Los accesos, ubicados</span><h4 id="clientAccess">Panel de la web</h4><p>Contraseña cifrada en tu cofre personal</p></article>
+          </div>
+        </div>
+      </div>
+      <div class="context-benefits"><p><strong>Proyectos independientes.</strong> Separa trabajo y clientes con tableros, etapas y datos propios.</p><p><strong>Una búsqueda para encontrarlo.</strong> Tareas, notas, contactos y reuniones desde Ctrl K.</p><p><strong>Menos volver a empezar.</strong> Abre una ficha y recupera el contexto que necesitas.</p></div>
+    </div>
+  </section>
+
+  <section class="section flow-section" aria-labelledby="h-flow">
+    <div class="wrap flow-layout">
+      <div class="flow-copy">
+        <p class="eyebrow">Del pendiente al hecho</p>
+        <h2 id="h-flow">Haz espacio<br>para avanzar.</h2>
+        <p class="section-lead">Un encargo, un cliente, un siguiente paso. Así de sencillo puede ser tu día.</p>
+        <div class="flow-controls" aria-label="Explorar el flujo de trabajo">
+          <button type="button" class="flow-choice is-active" data-flow="0" aria-pressed="true"><span>01</span><span><strong>Captura la idea</strong><small>Todo empieza con una tarea.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="1" aria-pressed="false"><span>02</span><span><strong>Dale su espacio</strong><small>Cliente, fecha y pasos por hacer.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="2" aria-pressed="false"><span>03</span><span><strong>Cierra el círculo</strong><small>Lo terminado también se disfruta.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </div>
+      <div class="flow-stage" data-stage="0">
+        <div class="flow-stage-top"><span>ESTUDIO NORTE / WEB</span><span>Vista de ejemplo</span></div>
+        <div class="flow-lanes" aria-hidden="true"><span>Pendiente</span><span>En curso</span><span>Completada</span></div>
+        <div class="flow-card">
+          <span class="chip" style="--h:210"><i></i>Estudio Norte</span>
+          <h3>Una web que se sienta como tú</h3>
+          <p>Diseñar la nueva página de inicio</p>
+          <div class="flow-checks"><span><i></i>Definir la estructura</span><span><i></i>Dar forma al diseño</span><span><i></i>Preparar la entrega</span></div>
+          <div class="flow-card-bottom"><span class="flow-avatar">AL</span><span>Ana López</span><span class="flow-status">Pendiente</span></div>
+        </div>
+        <div class="flow-result" aria-live="polite"><span class="live-dot" aria-hidden="true"></span><span id="flowMessage">La idea ya tiene su sitio.</span></div>
+        <p class="flow-stage-note">Selecciona un paso y mira cómo cambia.</p>
       </div>
     </div>
   </section>
@@ -159,7 +232,7 @@
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow">Funciones</p>
-        <h2 id="h-funciones">Lo justo para trabajar con orden</h2>
+        <h2 id="h-funciones">Los detalles que hacen<br>más fácil cada día.</h2>
         <p class="section-lead">Cada cosa en su sitio y todo conectado: una tarea sabe de qué cliente es, con quién hablas y qué contraseña necesitas.</p>
       </div>
 
@@ -208,9 +281,9 @@
             <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Avisos de lo que vence y de lo que está a punto de empezar</li>
           </ul>
         </div>
-        <figure class="mock" role="img" aria-label="Calendario semanal con reuniones y tareas con fecha límite">
-          <div class="mock-top" aria-hidden="true"><strong>5 – 11 octubre 2026</strong><span class="seg"><i>Mes</i><i class="on">Semana</i><i>Día</i></span></div>
-          <div class="week" aria-hidden="true">
+        <figure class="mock calendar-preview" aria-label="Ejemplo interactivo de calendario">
+          <div class="mock-top"><strong>Octubre 2026</strong><span class="seg" aria-label="Vista del calendario"><button type="button" data-calendar="month" aria-pressed="false">Mes</button><button type="button" data-calendar="week" class="on" aria-pressed="true">Semana</button><button type="button" data-calendar="day" aria-pressed="false">Día</button></span></div>
+          <div class="week" id="calendarPreview">
             <div class="wd"><span>Lun</span><b>5</b>
               <em class="ev meet"><s>10:00</s>Arranque</em><em class="ev task">Presupuesto</em></div>
             <div class="wd"><span>Mar</span><b>6</b>
@@ -224,6 +297,7 @@
             <div class="wd off"><span>Sáb</span><b>10</b></div>
             <div class="wd off"><span>Dom</span><b>11</b></div>
           </div>
+          <figcaption class="calendar-caption" aria-live="polite">Una semana. Todos tus clientes.</figcaption>
         </figure>
       </div>
 
@@ -262,6 +336,36 @@
       </ul>
     </div>
   </section>
+
+  <!-- Cómo funciona -->
+  <section class="section team-section" id="equipos" aria-labelledby="h-equipo">
+    <div class="wrap team-layout">
+      <div class="section-head"><p class="eyebrow">A solas o en equipo</p><h2 id="h-equipo">Compartir el trabajo.<br>Conservar el control.</h2><p class="section-lead">Invita por correo, asigna tareas y sigue los comentarios en el mismo proyecto. Cada persona ve el tablero actualizado.</p><ul class="ticks"><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Un responsable claro para cada tarea</li><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Comentarios y actividad junto al trabajo</li><li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Permisos según lo que cada persona necesita</li></ul><p class="product-note">Los equipos requieren cuenta. Tu cofre de contraseñas sigue siendo personal.</p></div>
+      <div class="team-preview"><div class="preview-kicker">PROYECTO COMPARTIDO <span>Ejemplo</span></div><h3>Una buena entrega es cosa de equipo.</h3><div class="team-people"><span class="day-avatar">AL</span><span class="day-avatar">MR</span><span class="day-avatar">LC</span><span>3 personas, un mismo tablero</span></div><div class="role-options" aria-label="Explorar permisos de equipo"><button type="button" data-role="owner" aria-pressed="true" class="is-active">Propietario</button><button type="button" data-role="editor" aria-pressed="false">Editor</button><button type="button" data-role="viewer" aria-pressed="false">Lector</button></div><div id="roleDescription" class="role-description" aria-live="polite"><strong>El proyecto, en tus manos.</strong><p>Gestiona el trabajo, invita a otras personas y decide quién puede editar o consultar.</p></div><ul class="role-rights" id="roleRights"><li>Consultar tareas y comentarios <span>Sí</span></li><li>Crear y editar trabajo <span>Sí</span></li><li>Gestionar miembros y permisos <span>Sí</span></li></ul></div>
+    </div>
+  </section>
+
+  <section class="section plugins-section" id="extensiones" aria-labelledby="h-plugins">
+    <div class="wrap"><div class="section-head"><p class="eyebrow">Tu espacio, a tu manera</p><h2 id="h-plugins">Lo esencial de serie.<br>Lo demás, lo eliges tú.</h2><p class="section-lead">Instala plugins solo en los proyectos donde los necesitas. Horas, informes o una apariencia distinta: cada espacio puede trabajar a tu manera.</p></div>
+      <div class="plugin-showcase">
+        <div class="plugin-menu" aria-label="Explorar plugins oficiales">
+          <button class="plugin-option is-active" type="button" data-plugin="smartgp" aria-pressed="true"><span class="plugin-number">01</span><span><strong>Smart GP</strong><small>Las horas, con contexto</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-calendar"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="timer" aria-pressed="false"><span class="plugin-number">02</span><span><strong>Temporizador</strong><small>Cada tarea tiene su tiempo</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-clock"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="report" aria-pressed="false"><span class="plugin-number">03</span><span><strong>Informe de trabajo</strong><small>De los datos a la perspectiva</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-list"/></svg></button>
+          <button class="plugin-option" type="button" data-plugin="appearance" aria-pressed="false"><span class="plugin-number">04</span><span><strong>Apariencia</strong><small>Hazlo sentir tuyo</small></span><svg class="ico" width="20" height="20" aria-hidden="true"><use href="#i-moon"/></svg></button>
+        </div>
+        <div class="plugin-window"><div class="preview-kicker">PLUGINS OFICIALES <span>Vistas de ejemplo</span></div>
+          <div class="plugin-panel" id="plugin-smartgp"><h3>¿Dónde se ha ido tu semana?</h3><p>Registra horas al terminar una tarea, repártelas entre días y consulta tu jornada por proyecto. Define un máximo diario para planificar con criterio.</p><div class="hours-chart" aria-label="Ejemplo: lunes 6 horas, martes 4, miércoles 7, jueves 5 y viernes 3"><div style="--hours:75%"><span>6 h</span><i></i><small>Lun</small></div><div style="--hours:50%"><span>4 h</span><i></i><small>Mar</small></div><div style="--hours:87.5%"><span>7 h</span><i></i><small>Mié</small></div><div style="--hours:62.5%"><span>5 h</span><i></i><small>Jue</small></div><div style="--hours:37.5%"><span>3 h</span><i></i><small>Vie</small></div></div><div class="plugin-summary"><span>Tiempo registrado · ejemplo</span><strong>25 h</strong></div></div>
+          <div class="plugin-panel" id="plugin-timer" hidden><h3>Céntrate en la tarea. El tiempo queda anotado.</h3><p>Mide el tiempo dedicado a cada tarea y consulta los totales por cliente. El temporizador añade sus controles a la propia ficha.</p><div class="timer-example"><span>Maquetar la nueva portada</span><strong>01<span>:</span>24<span>:</span>08</strong><small>Estudio Norte · ejemplo de sesión</small></div><div class="plugin-summary"><span>Horas asociadas al trabajo</span><svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-check"/></svg></div></div>
+          <div class="plugin-panel" id="plugin-report" hidden><h3>Lo que está hecho. Lo que necesita atención.</h3><p>Consulta tareas por cliente y estado, detecta vencimientos y revisa lo completado. Copia el resumen o descárgalo en CSV.</p><div class="report-example"><div><span>Estudio Norte</span><i style="--amount:80%"></i><strong>8 tareas</strong></div><div><span>Taller Costa</span><i style="--amount:50%"></i><strong>5 tareas</strong></div><div><span>Casa Aldea</span><i style="--amount:30%"></i><strong>3 tareas</strong></div></div><div class="plugin-summary"><span>Una visión por cliente</span><strong>CSV</strong></div></div>
+          <div class="plugin-panel" id="plugin-appearance" hidden><h3>Un proyecto que se sienta tuyo.</h3><p>Elige colores, tema, tipografía y densidad para cada proyecto. Prueba aquí un color de acento sobre esta tarjeta.</p><div class="appearance-example" id="appearanceExample"><span>MI ESPACIO</span><h4>Menos ruido.<br>Más foco.</h4><span class="appearance-tag">Diseñado a tu ritmo</span></div><div class="swatch-options" aria-label="Color de la vista de ejemplo"><button type="button" data-accent="blue" aria-label="Azul" aria-pressed="true" style="--swatch:#2F6BFF"></button><button type="button" data-accent="purple" aria-label="Violeta" aria-pressed="false" style="--swatch:#7C5CFF"></button><button type="button" data-accent="green" aria-label="Verde" aria-pressed="false" style="--swatch:#16A36A"></button></div></div>
+        </div>
+      </div>
+      <div class="plugin-footer"><p>Permisos explícitos. Instalación por proyecto. Ningún plugin puede leer tus contraseñas.</p><a href="https://github.com/yalerooo/Kanlane/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener">Crea tu propio plugin <span aria-hidden="true">↗</span></a></div>
+    </div>
+  </section>
+
+  <section class="section anywhere-section" aria-labelledby="h-anywhere"><div class="wrap"><div class="section-head"><p class="eyebrow">Elige cómo empezar</p><h2 id="h-anywhere">Tu escritorio no tiene<br>por qué ser un lugar.</h2><p class="section-lead">En el ordenador, desde el móvil o sin conexión durante un viaje. Kanlane se adapta a cómo trabajas.</p></div><div class="anywhere-grid"><article><span class="chapter-num">01 / EN LA NUBE</span><h3>Abre tu cuenta.<br>Retoma donde estabas.</h3><p>Entra con Google, GitHub o correo. Tus proyectos y ajustes te acompañan entre navegadores y dispositivos.</p><a href="app/?registro=1">Crear mi cuenta <span aria-hidden="true">↗</span></a></article><article><span class="chapter-num">02 / SIN REGISTRO</span><h3>Prueba primero.<br>Decide después.</h3><p>Entra como invitado desde el acceso. Tus datos se guardan en ese navegador; no se sincronizan con otros dispositivos.</p><a href="app/">Ir al acceso de invitado <span aria-hidden="true">↗</span></a></article><article><span class="chapter-num">03 / A TU ALCANCE</span><h3>Instálalo.<br>Llévatelo contigo.</h3><p>Conserva el acceso a tus últimos datos sin conexión. Los cambios se envían al recuperar la red. Los recordatorios requieren tener Kanlane abierto.</p><span class="anywhere-note">Instalable desde navegadores compatibles</span></article></div></div></section>
 
   <!-- Cómo funciona -->
   <section class="section section-alt" id="como-funciona" aria-labelledby="h-como">
@@ -348,7 +452,7 @@
         </details>
         <details>
           <summary>¿Puedo llevarme mis datos?</summary>
-          <p>Sí. Puedes exportar una copia de seguridad completa de un proyecto en un archivo y restaurarla cuando quieras.</p>
+          <p>Sí. Puedes exportar tareas, notas, clientes, contactos, reuniones y contraseñas cifradas. También hay versiones locales y copias cifradas opcionales en tu cuenta. La exportación no incluye imágenes originales ni datos de plugins; conserva por separado lo que necesites.</p>
         </details>
         <details>
           <summary>¿Qué son los plugins?</summary>
@@ -406,5 +510,6 @@
 </footer>
 
 <script src="src/landing/landing.js" defer></script>
+<script src="src/landing/landing-product.js" defer></script>
 </body>
 </html>

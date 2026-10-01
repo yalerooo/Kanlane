@@ -562,7 +562,8 @@
       <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
     </div>
     <div class="field" id="fChecklistField">
-      <span class="field-label" id="fChecklistLabel">Subtareas</span>
+      <div class="check-heading"><span class="field-label" id="fChecklistLabel">Subtareas</span><span class="check-summary" id="fChecklistSummary" hidden></span></div>
+      <div class="check-progress-bar" id="fChecklistProgress" hidden role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="fChecklistProgressFill"></span></div>
       <div class="check-edit" id="fChecklist" role="group" aria-labelledby="fChecklistLabel"></div>
       <div class="check-add">
         <input id="fCheckNew" maxlength="120" autocomplete="off" placeholder="Añadir una subtarea" aria-label="Nueva subtarea">
@@ -621,6 +622,7 @@
     </section>
     <section class="tv-section" id="tvChecklistWrap" hidden>
       <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
+      <div class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></div>
       <ul class="tv-checks" id="tvChecklist"></ul>
     </section>
     <section class="tv-section" id="tvLabelsWrap" hidden>

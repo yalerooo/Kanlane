@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Busca textos en español que no tienen traducción al inglés.
 
-   Workhub traduce por coincidencia exacta con el texto en español (src/i18n/en.js),
+   Kanlane traduce por coincidencia exacta con el texto en español (src/i18n/en.js),
    así que si alguien cambia un texto de la interfaz la traducción se pierde sin
    avisar. Este script lo detecta:
    - textos y atributos (placeholder, title, aria-label, alt) de app/index.html;

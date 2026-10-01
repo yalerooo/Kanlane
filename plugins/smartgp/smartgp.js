@@ -8,7 +8,7 @@
      las horas en las tarjetas.
    - panel (sección Plugins): el calendario, el detalle de cada día y los proyectos.
 
-   Datos del proyecto abierto de Workhub (wh.storage):
+   Datos del proyecto abierto de Kanlane (wh.storage):
      projects   [{id, name, color}]
      log-AAAA-MM [{id, date, hours, project, task, title}]   (uno por día y tarea)
      logged     {idTarea: true}    tareas ya registradas u omitidas
@@ -22,7 +22,7 @@
     name: 'Smart GP',
     version: '1.0.0',
     description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
-    author: 'Workhub',
+    author: 'Kanlane',
     icon: 'clock',
     color: 172,
     permissions: ['tasks:read', 'storage', 'ui:extend']
@@ -34,7 +34,7 @@
   var PENDING_DAYS = 45;           /* «terminadas sin horas»: las de los últimos días */
 
   var tr = WorkhubPlugin.translations({en:{
-    'Conectando con Workhub…':'Connecting to Workhub…',
+    'Conectando con Kanlane…':'Connecting to Kanlane…',
     'Tus horas por día y proyecto':'Your hours by day and project',
     'Registrar horas':'Log hours', 'Proyectos':'Projects', 'Volver':'Back',
     'Tareas terminadas sin horas':'Finished tasks without hours', 'Registrar':'Log', 'Descartar':'Dismiss',
@@ -59,8 +59,8 @@
     'Smart GP: registrar horas':'Smart GP: log hours', 'Abrir Smart GP':'Open Smart GP',
     'Apuntar las horas de esta tarea':'Log the hours of this task',
     'h':'h', 'día':'day', 'días':'days', 'registros':'entries',
-    'No se pudo conectar con Workhub: {error}':'Could not connect to Workhub: {error}',
-    'Este plugin se abre desde Workhub (sección Plugins).':'This plugin opens from Workhub (Plugins section).',
+    'No se pudo conectar con Kanlane: {error}':'Could not connect to Kanlane: {error}',
+    'Este plugin se abre desde Kanlane (sección Plugins).':'This plugin opens from Kanlane (Plugins section).',
     'Jornada':'Schedule',
     'Máximo de horas por día de la semana, según el mes. Si un día se pasa del máximo, no se podrán añadir más horas.':'Maximum hours per weekday, by month. If a day goes over its maximum, no more hours can be added.',
     'Periodo':'Period', 'Añadir periodo':'Add period', 'Sin meses':'No months', 'Quitar periodo':'Remove period',
@@ -105,8 +105,8 @@
   function fail(err){
     var el = document.getElementById('app');
     el.innerHTML = '<p class="wh-muted">' + esc(err && err.message === 'not-in-workhub'
-      ? tr('Este plugin se abre desde Workhub (sección Plugins).')
-      : tr('No se pudo conectar con Workhub: {error}', {error: err && err.message})) + '</p>';
+      ? tr('Este plugin se abre desde Kanlane (sección Plugins).')
+      : tr('No se pudo conectar con Kanlane: {error}', {error: err && err.message})) + '</p>';
   }
 
   /* Reparte las horas entre los días a partes iguales (el último ajusta el resto). */
@@ -255,7 +255,7 @@
     return Promise.resolve(v || '');
   }
 
-  /* ---------- Formularios (los dibuja Workhub) ---------- */
+  /* ---------- Formularios (los dibuja Kanlane) ---------- */
 
   function hoursField(value){
     return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: 0.25, max: 500, step: 0.25, value: value != null ? value : 0};

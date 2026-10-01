@@ -1,9 +1,9 @@
-/* Plantilla de plugin para Workhub. Cópiala, cambia el manifiesto y publica la
+/* Plantilla de plugin para Kanlane. Cópiala, cambia el manifiesto y publica la
    carpeta en cualquier web con https (GitHub Pages, Cloudflare Pages…). Guía completa:
    https://github.com/yalerooo/Workhub/blob/main/docs/PLUGINS.md
 
    La misma página se carga de dos formas:
-   - wh.isBackground === true: oculta, al abrir Workhub (porque pide
+   - wh.isBackground === true: oculta, al abrir Kanlane (porque pide
      "ui:extend"). Aquí se añaden botones y etiquetas a la interfaz.
    - si no: en la sección Plugins, con tu interfaz. */
 const MANIFEST = {
@@ -13,14 +13,14 @@ const MANIFEST = {
   description: 'Qué hace tu plugin, en una frase.',
   author: 'Tu nombre',
   homepage: 'https://github.com/tu-nombre/mi-plugin',
-  icon: 'puzzle',                         // nombre de un icono de Workhub (ver docs/PLUGINS.md)
+  icon: 'puzzle',                         // nombre de un icono de Kanlane (ver docs/PLUGINS.md)
   color: 172,                             // tono del color del icono, de 0 a 359
   permissions: ['tasks:read', 'tasks:write', 'storage', 'ui:extend']   // pide solo lo que uses
 };
 
 const $ = (id) => document.getElementById(id);
 
-/* ---------- Segundo plano: botones dentro de Workhub ---------- */
+/* ---------- Segundo plano: botones dentro de Kanlane ---------- */
 function background(wh){
   // Botón en la barra de Tareas que abre tu panel.
   wh.ui.addButton({id:'abrir', location:'tasks.toolbar', label:'Mi plugin', icon:'puzzle'});
@@ -70,6 +70,6 @@ WorkhubPlugin.connect(MANIFEST)
   .then((wh) => (wh.isBackground ? background(wh) : panel(wh)))
   .catch((err) => {
     $('status').textContent = err.message === 'not-in-workhub'
-      ? 'Abre este plugin desde Workhub: Plugins → pega el enlace de esta página.'
-      : 'No se pudo conectar con Workhub: ' + err.message;
+      ? 'Abre este plugin desde Kanlane: Plugins → pega el enlace de esta página.'
+      : 'No se pudo conectar con Kanlane: ' + err.message;
   });

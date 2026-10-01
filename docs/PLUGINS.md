@@ -1,9 +1,9 @@
-# Crear plugins para Workhub
+# Crear plugins para Kanlane
 
-Un plugin es **una página web** que se integra en Workhub. Siempre con los permisos que el usuario le da al instalarlo, puede:
+Un plugin es **una página web** que se integra en Kanlane. Siempre con los permisos que el usuario le da al instalarlo, puede:
 
 - **Tener su propio panel** en la sección **Plugins** (un informe, un cronómetro, un panel de ajustes…).
-- **Añadir botones y etiquetas dentro de Workhub**: en la barra de Tareas, en la ficha de cada tarea, en el Calendario, en la ficha de cada cliente, en la paleta de comandos (`Ctrl K`) y etiquetas en las tarjetas del tablero.
+- **Añadir botones y etiquetas dentro de Kanlane**: en la barra de Tareas, en la ficha de cada tarea, en el Calendario, en la ficha de cada cliente, en la paleta de comandos (`Ctrl K`) y etiquetas en las tarjetas del tablero.
 - **Cambiar la apariencia**: color de acento, forma de las esquinas y densidad.
 - **Trabajar con los datos**: leer y crear tareas, consultar clientes, contactos y reuniones, guardar sus propios datos y mostrar avisos.
 
@@ -14,9 +14,9 @@ Puedes publicarlo donde quieras (GitHub Pages, Cloudflare Pages, tu propio servi
 - [El manifiesto](#el-manifiesto)
 - [Permisos](#permisos)
 - [Referencia de la API](#referencia-de-la-api)
-- [Integrarse en Workhub: botones, etiquetas y apariencia](#integrarse-en-workhub-botones-etiquetas-y-apariencia)
+- [Integrarse en Kanlane: botones, etiquetas y apariencia](#integrarse-en-workhub-botones-etiquetas-y-apariencia)
 - [Eventos](#eventos)
-- [Estilos: que tu plugin parezca parte de Workhub](#estilos-que-tu-plugin-parezca-parte-de-workhub)
+- [Estilos: que tu plugin parezca parte de Kanlane](#estilos-que-tu-plugin-parezca-parte-de-workhub)
 - [Publicarlo y probarlo](#publicarlo-y-probarlo)
 - [Seguridad y límites](#seguridad-y-límites)
 - [Plugins oficiales](#plugins-oficiales)
@@ -27,7 +27,7 @@ Puedes publicarlo donde quieras (GitHub Pages, Cloudflare Pages, tu propio servi
 ## Cómo funciona
 
 ```
-┌──────────────── Workhub ────────────────┐
+┌──────────────── Kanlane ────────────────┐
 │  Plugins → "Mi plugin"                  │
 │  ┌───────── <iframe sandbox> ─────────┐ │
 │  │  tu página (https://tu-web/…)      │ │
@@ -36,10 +36,10 @@ Puedes publicarlo donde quieras (GitHub Pages, Cloudflare Pages, tu propio servi
 └──────────────────────────────────────────┘   los permisos aprobados
 ```
 
-- Tu página se carga en un `<iframe sandbox>` **aislado**: no puede leer el DOM de Workhub, ni su sesión, cookies o almacenamiento, ni las contraseñas guardadas.
-- Se comunica con Workhub mediante **mensajes**. El SDK (`workhub-plugin.js`) te da una API sencilla basada en promesas.
+- Tu página se carga en un `<iframe sandbox>` **aislado**: no puede leer el DOM de Kanlane, ni su sesión, cookies o almacenamiento, ni las contraseñas guardadas.
+- Se comunica con Kanlane mediante **mensajes**. El SDK (`workhub-plugin.js`) te da una API sencilla basada en promesas.
 - Cada llamada se comprueba contra los **permisos** que declaraste y que el usuario aprobó.
-- **Tu plugin nunca toca el HTML de Workhub.** Para añadir cosas a la interfaz, *declaras* botones y etiquetas (texto, icono del set, ubicación) y Workhub los pinta con sus propios componentes. Así cualquier plugin se ve integrado y nadie puede suplantar botones de Workhub ni leer lo que hay en pantalla.
+- **Tu plugin nunca toca el HTML de Kanlane.** Para añadir cosas a la interfaz, *declaras* botones y etiquetas (texto, icono del set, ubicación) y Kanlane los pinta con sus propios componentes. Así cualquier plugin se ve integrado y nadie puede suplantar botones de Kanlane ni leer lo que hay en pantalla.
 
 ### Dos modos: panel y segundo plano
 
@@ -64,7 +64,7 @@ Las dos instancias comparten el almacenamiento. Cuando una guarda algo, la otra 
 1. Copia la carpeta [`plugins/plantilla`](../plugins/plantilla) de este repositorio. Tiene `index.html` y `plantilla.js`.
 2. En `plantilla.js`, cambia el **manifiesto**: sobre todo `id` y `name`.
 3. Publica la carpeta en una web con **https**, por ejemplo con GitHub Pages: crea un repositorio, sube los archivos y activa *Settings → Pages*.
-4. En Workhub: **Plugins** → pega la dirección de tu `index.html` → **Añadir** → revisa los permisos → **Instalar**.
+4. En Kanlane: **Plugins** → pega la dirección de tu `index.html` → **Añadir** → revisa los permisos → **Instalar**.
 
 El esqueleto mínimo es este:
 
@@ -102,7 +102,7 @@ El esqueleto mínimo es este:
 
 ## El manifiesto
 
-Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra al instalar y lo vuelve a comprobar cada vez que se abre el plugin.
+Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Kanlane lo muestra al instalar y lo vuelve a comprobar cada vez que se abre el plugin.
 
 | Campo | Obligatorio | Descripción |
 |---|---|---|
@@ -112,7 +112,7 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 | `description` | No | Una o dos frases (hasta 200 caracteres). |
 | `author` | No | Tu nombre o el de tu empresa. |
 | `homepage` | No | Web o repositorio del plugin (https). |
-| `icon` | No | Nombre de un icono de Workhub (lista abajo), por ejemplo `chart`. Se dibuja en blanco sobre el color del plugin. Si no existe, se usa `puzzle`. **No se admiten emojis ni imágenes**: así todos los plugins se ven coherentes y ninguno puede inyectar contenido en Workhub. |
+| `icon` | No | Nombre de un icono de Kanlane (lista abajo), por ejemplo `chart`. Se dibuja en blanco sobre el color del plugin. Si no existe, se usa `puzzle`. **No se admiten emojis ni imágenes**: así todos los plugins se ven coherentes y ninguno puede inyectar contenido en Kanlane. |
 | `color` | No | Tono del color del icono, de `0` a `359` (rueda de color HSL: `0` rojo, `24` naranja, `145` verde, `214` azul, `262` violeta, `328` rosa). Si no lo indicas, sale uno a partir del `id`. |
 | `permissions` | No | Lista de permisos (siguiente apartado). Pide **solo** los que uses. |
 
@@ -140,7 +140,7 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 
 | Permiso | Qué permite |
 |---|---|
-| `tasks:read` | Leer las tareas del proyecto abierto (título, descripción, cliente, estado, fecha límite, contacto) y abrir una tarea en Workhub. |
+| `tasks:read` | Leer las tareas del proyecto abierto (título, descripción, cliente, estado, fecha límite, contacto) y abrir una tarea en Kanlane. |
 | `tasks:write` | Crear tareas y modificar las existentes. |
 | `clients:read` | Leer la lista de clientes. |
 | `contacts:read` | Leer los contactos de los clientes (nombre, email, teléfono, notas). |
@@ -148,7 +148,7 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Workhub lo muestra
 | `calendar:write` | Crear reuniones. |
 | `storage` | Guardar datos propios del plugin, por proyecto (`wh.storage`) o comunes a todos (`wh.storage.user`). |
 | `ui:extend` | Añadir botones en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en la paleta de comandos, y etiquetas en las tarjetas. El plugin se carga en segundo plano. |
-| `appearance` | Cambiar el tema, la paleta de interfaz, el color de acento, la tipografía, el tamaño del texto, las esquinas y la densidad de Workhub. El plugin se carga en segundo plano. |
+| `appearance` | Cambiar el tema, la paleta de interfaz, el color de acento, la tipografía, el tamaño del texto, las esquinas y la densidad de Kanlane. El plugin se carga en segundo plano. |
 
 **No existe ningún permiso para las contraseñas guardadas:** ningún plugin puede leerlas.
 
@@ -167,30 +167,30 @@ wh.permissions          // ['tasks:read', ...] permisos concedidos
 wh.has('tasks:write')   // true / false
 wh.context.project      // {id, name} proyecto abierto
 wh.context.theme        // {scheme: 'light' | 'dark', vars: {...}}
-wh.context.locale       // idioma de Workhub: 'es' o 'en' (también wh.lang)
+wh.context.locale       // idioma de Kanlane: 'es' o 'en' (también wh.lang)
 wh.locale               // formato de fechas: 'es-ES' o 'en-US'
 await wh.statuses()     // etapas del proyecto abierto: [{key, label, done, color}, ...]
 ```
 
 Las etapas dependen del tipo de proyecto (soporte, desarrollo, personalizado…), así que **no des por hechas las claves** `pendiente` o `completada`. `done` es `true` en las etapas que cuentan como terminadas; `color` es `gray`, `blue`, `orange`, `green`, `red` o `violet`. Cada tarea trae en `status` la clave de una de esas etapas, y al crear una sin `status` va a la primera. Al cambiar de proyecto llega el evento `project`: vuelve a pedir `wh.statuses()`.
 
-Si la página se abre fuera de Workhub, `connect` falla con el mensaje `not-in-workhub`, así puedes mostrar una explicación.
+Si la página se abre fuera de Kanlane, `connect` falla con el mensaje `not-in-workhub`, así puedes mostrar una explicación.
 
 ### Idiomas
 
-Workhub está en español e inglés. Para que tu plugin hable el idioma del usuario, escribe los textos en español y añade sus traducciones:
+Kanlane está en español e inglés. Para que tu plugin hable el idioma del usuario, escribe los textos en español y añade sus traducciones:
 
 ```js
 const t = WorkhubPlugin.translations({
   en: {'Informe': 'Report', 'Hola, {name}': 'Hello, {name}'}
 });
-const wh = await WorkhubPlugin.connect(manifiesto);   // a partir de aquí t() usa el idioma de Workhub
-t('Informe');                     // 'Report' si Workhub está en inglés
+const wh = await WorkhubPlugin.connect(manifiesto);   // a partir de aquí t() usa el idioma de Kanlane
+t('Informe');                     // 'Report' si Kanlane está en inglés
 t('Hola, {name}', {name: 'Ana'}); // admite datos entre llaves
 new Date().toLocaleDateString(WorkhubPlugin.locale);   // fechas en el formato del idioma
 ```
 
-Si falta una traducción se muestra el texto original. El nombre y la descripción del manifiesto se muestran tal cual (los de los plugins oficiales los traduce Workhub). Cambiar de idioma recarga Workhub, así que tu plugin se vuelve a cargar con el idioma nuevo.
+Si falta una traducción se muestra el texto original. El nombre y la descripción del manifiesto se muestran tal cual (los de los plugins oficiales los traduce Kanlane). Cambiar de idioma recarga Kanlane, así que tu plugin se vuelve a cargar con el idioma nuevo.
 
 ### Tareas
 
@@ -239,13 +239,13 @@ Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Al quitar el plu
 await wh.ui.toast('Guardado')                  // confirmación habitual: no interrumpe al usuario
 await wh.ui.toast('Resumen copiado', {type:'important'}) // resultado que necesita confirmación
 await wh.ui.toast('Algo falló', {type:'error'})
-await wh.ui.openTask(id)                       // abre la ficha de la tarea en Workhub (tasks:read)
+await wh.ui.openTask(id)                       // abre la ficha de la tarea en Kanlane (tasks:read)
 await wh.ui.openPanel()                        // abre tu plugin en la sección Plugins
 ```
 
 #### Formularios (`wh.ui.form`, permiso `ui:extend`)
 
-Un plugin no puede pintar cuadros dentro de Workhub, pero sí **pedir que Workhub muestre un formulario** descrito con datos. Lo dibuja Workhub con sus propios componentes (con el nombre e icono del plugin arriba, para que se sepa quién lo pide) y devuelve lo que la persona rellena, o `null` si cancela. Funciona en el panel y en segundo plano; si hay varios pendientes, salen de uno en uno.
+Un plugin no puede pintar cuadros dentro de Kanlane, pero sí **pedir que Kanlane muestre un formulario** descrito con datos. Lo dibuja Kanlane con sus propios componentes (con el nombre e icono del plugin arriba, para que se sepa quién lo pide) y devuelve lo que la persona rellena, o `null` si cancela. Funciona en el panel y en segundo plano; si hay varios pendientes, salen de uno en uno.
 
 ```js
 const v = await wh.ui.form({
@@ -282,11 +282,11 @@ Todos aceptan `label` (60 caracteres), `hint` (140) y `required` (por defecto `t
 | `not-found` | La tarea no existe. |
 | `bad-key` / `bad-value` / `too-large` / `quota` | Problemas con el almacenamiento. |
 | `rate-limited` | Más de 60 escrituras por minuto. |
-| `not-ready` | Workhub todavía está cargando los datos. |
+| `not-ready` | Kanlane todavía está cargando los datos. |
 | `unknown-method` | El método no existe. |
 | `background-only` | Añadir botones, etiquetas o apariencia desde el panel: hazlo en segundo plano. |
 
-## Integrarse en Workhub: botones, etiquetas y apariencia
+## Integrarse en Kanlane: botones, etiquetas y apariencia
 
 Todo esto se hace **en segundo plano** (`wh.isBackground`).
 
@@ -348,7 +348,7 @@ await wh.ui.resetAppearance();   // volver al aspecto normal
 ```
 
 - **Solo esos valores, validados**, y nunca CSS libre: una hoja de estilos arbitraria podría ocultar o imitar botones, o sacar datos de la página.
-- Se aplica mientras el plugin esté instalado. Al quitarlo, Workhub vuelve a su aspecto.
+- Se aplica mientras el plugin esté instalado. Al quitarlo, Kanlane vuelve a su aspecto.
 - Guarda la elección en `wh.storage` y aplícala al arrancar en segundo plano (mira el plugin oficial **Apariencia**). Así cada proyecto conserva su propia apariencia.
 
 ## Eventos
@@ -369,7 +369,7 @@ off(); // dejar de escuchar
 | `action` | `{id, location, context}`: pulsaron uno de tus botones | `ui:extend` |
 | `storage` | `{key, scope}`: la otra instancia de tu plugin (panel o segundo plano) guardó algo | `storage` |
 
-## Estilos: que tu plugin parezca parte de Workhub
+## Estilos: que tu plugin parezca parte de Kanlane
 
 Incluye `workhub-plugin.css`. El SDK aplica al conectar los colores del usuario (tema claro u oscuro y color de acento) como variables CSS, y los actualiza si cambian.
 
@@ -384,7 +384,7 @@ El atributo `data-theme` de `<html>` vale `light` o `dark` por si quieres ajusta
 
 ## Publicarlo y probarlo
 
-- **Tiene que servirse por https.** Para desarrollar, también vale `http://localhost` o `http://127.0.0.1`: abre Workhub y pega `http://localhost:8080/index.html`, por ejemplo.
+- **Tiene que servirse por https.** Para desarrollar, también vale `http://localhost` o `http://127.0.0.1`: abre Kanlane y pega `http://localhost:8080/index.html`, por ejemplo.
 - **Cualquier hosting estático sirve:** GitHub Pages, Cloudflare Pages, Vercel, Netlify…
 - **No necesitas CORS ni cabeceras especiales.** Tu página se carga en un marco y el SDK usa `postMessage`.
 - **Enlaces que se abren fuera:** usa `<a target="_blank">`, que se abren en otra pestaña.
@@ -400,10 +400,10 @@ El atributo `data-theme` de `<html>` vale `light` o `dark` por si quieres ajusta
   - descargar archivos;
   - escribir en el portapapeles.
 - **Qué no puede hacer:**
-  - navegar la página de Workhub;
+  - navegar la página de Kanlane;
   - usar la cámara, el micrófono o la ubicación.
 - **No expongas secretos en tu plugin:** es una página pública. Si necesitas una clave de API de un servicio externo, pásala por tu propio servidor.
-- **Sin acceso al HTML de Workhub:** botones, etiquetas y apariencia son declarativos. Los textos se muestran siempre como texto (nunca HTML), los iconos salen solo del set y las ubicaciones, tonos y valores de apariencia están cerrados.
+- **Sin acceso al HTML de Kanlane:** botones, etiquetas y apariencia son declarativos. Los textos se muestran siempre como texto (nunca HTML), los iconos salen solo del set y las ubicaciones, tonos y valores de apariencia están cerrados.
 - **Límites:**
   - 60 escrituras por minuto (incluye añadir botones o etiquetas);
   - 100 KB por clave y 800 KB por proyecto en `storage`;
@@ -418,8 +418,8 @@ Están en la carpeta [`plugins/`](../plugins) de este repositorio y se publican 
 |---|---|---|
 | **Informe de trabajo** (icono `chart`): resumen por cliente y estado, vencidas, copiar resumen, descargar CSV. Añade el botón **Informe** a la barra de Tareas y una acción a `Ctrl K`. | [`plugins/informe`](../plugins/informe) | `tasks:read`, `ui:extend` |
 | **Temporizador** (icono `timer`): cronómetro por tarea y totales. Añade **Iniciar cronómetro** a la ficha de cada tarea, **Detener** a la barra de Tareas y a `Ctrl K` mientras cuenta, y una **etiqueta con el tiempo** en cada tarjeta. | [`plugins/temporizador`](../plugins/temporizador) | `tasks:read`, `storage`, `ui:extend` |
-| **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Sus datos se guardan por proyecto de Workhub; los registros globales anteriores se copian al proyecto principal la primera vez que se abre allí, sin borrar el origen. Los colores de sus proyectos se pueden elegir libremente y sus nombres admiten 160 caracteres. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
-| **Apariencia** (icono `sparkles`): tema, paleta de interfaz, color de acento libre, fuente, tamaño del texto, esquinas y densidad propios de cada proyecto de Workhub. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
+| **Smart GP** (icono `clock`): al pasar una tarea a una etapa final abre un formulario (`wh.ui.form`) para anotar las horas, los días y el proyecto; un calendario mensual enseña las horas por día y proyecto. Permite definir una **jornada** (máximo de horas por día de la semana y mes) y no deja registrar horas por encima. Sus datos se guardan por proyecto de Kanlane; los registros globales anteriores se copian al proyecto principal la primera vez que se abre allí, sin borrar el origen. Los colores de sus proyectos se pueden elegir libremente y sus nombres admiten 160 caracteres. | [`plugins/smartgp`](../plugins/smartgp) | `tasks:read`, `storage`, `ui:extend` |
+| **Apariencia** (icono `sparkles`): tema, paleta de interfaz, color de acento libre, fuente, tamaño del texto, esquinas y densidad propios de cada proyecto de Kanlane. | [`plugins/apariencia`](../plugins/apariencia) | `appearance`, `storage` |
 
 Para añadir uno oficial al repositorio:
 
@@ -428,23 +428,23 @@ Para añadir uno oficial al repositorio:
 
 ## Preguntas frecuentes
 
-**¿Por qué mi plugin dice «No se pudo conectar con Workhub: timeout»?**
-Estás abriendo la página fuera de Workhub, o el SDK no se cargó. Revisa la ruta de `workhub-plugin.js`.
+**¿Por qué mi plugin dice «No se pudo conectar con Kanlane: timeout»?**
+Estás abriendo la página fuera de Kanlane, o el SDK no se cargó. Revisa la ruta de `workhub-plugin.js`.
 
-**Workhub dice «Esa dirección no respondió como un plugin».**
+**Kanlane dice «Esa dirección no respondió como un plugin».**
 La página no llama a `WorkhubPlugin.connect()` en los primeros 10 segundos, o el enlace no es el de la página del plugin.
 
-**¿Funcionan los plugins si abro Workhub con doble clic en `index.html`?**
+**¿Funcionan los plugins si abro Kanlane con doble clic en `index.html`?**
 No. El navegador no deja que una página aislada cargue archivos del disco. Usa `start-workhub.bat` o la web publicada.
 
 **¿Cómo actualizo mi plugin?**
 Publica los cambios en la misma dirección: se cargan la próxima vez que se abra. Si pides permisos nuevos, el usuario tendrá que aprobarlos.
 
 **¿Puede mi plugin funcionar en segundo plano?**
-Sí. Si pide `ui:extend` o `appearance`, Workhub lo carga oculto mientras esté abierto (`wh.isBackground === true`). Además, el panel sigue activo aunque el usuario cambie de sección, hasta que pulse «Volver a los plugins».
+Sí. Si pide `ui:extend` o `appearance`, Kanlane lo carga oculto mientras esté abierto (`wh.isBackground === true`). Además, el panel sigue activo aunque el usuario cambie de sección, hasta que pulse «Volver a los plugins».
 
 **¿Puede mi plugin cambiar cualquier parte de la interfaz o inyectar su propio HTML o CSS?**
-No, a propósito. Puede añadir botones y etiquetas en los sitios de la tabla y cambiar la apariencia con los valores permitidos, pero no insertar HTML ni CSS propios en Workhub. Si necesitas una interfaz más compleja, hazla en tu panel y ábrelo con un botón (`wh.ui.openPanel()`).
+No, a propósito. Puede añadir botones y etiquetas en los sitios de la tabla y cambiar la apariencia con los valores permitidos, pero no insertar HTML ni CSS propios en Kanlane. Si necesitas una interfaz más compleja, hazla en tu panel y ábrelo con un botón (`wh.ui.openPanel()`).
 
 **¿Necesitas otro sitio para tus botones?**
 Abre un *issue* en el repositorio proponiendo la nueva ubicación y qué contexto necesitaría.

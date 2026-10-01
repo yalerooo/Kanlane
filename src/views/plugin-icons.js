@@ -1,7 +1,7 @@
 /* Iconos de plugins. Un plugin elige uno por nombre en su manifiesto
    ("icon": "chart") y un tono de color ("color": 0–359). Son trazos SVG del
    mismo estilo que el resto de la interfaz; así ningún plugin puede inyectar
-   imágenes o marcado propio en Workhub. */
+   imágenes o marcado propio en Kanlane. */
 (function(){
   const PATHS = {
     puzzle: '<path d="M19.4 11H18V7a1 1 0 0 0-1-1h-4V4.6a2.1 2.1 0 1 0-4 0V6H5a1 1 0 0 0-1 1v3.6h1.4a2.1 2.1 0 1 1 0 4H4V19a1 1 0 0 0 1 1h3.6v-1.4a2.1 2.1 0 1 1 4 0V20H17a1 1 0 0 0 1-1v-4h1.4a2.1 2.1 0 1 0 0-4Z"/>',

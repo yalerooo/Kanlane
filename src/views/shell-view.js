@@ -5,9 +5,9 @@
     calendar: ['Calendario', 'Fechas límite de las tareas y reuniones programadas con cada cliente.'],
     vault: ['Contraseñas', 'Credenciales cifradas en tu navegador con tu contraseña maestra.'],
     clients: ['Clientes y contactos', 'Cada cliente con sus personas de contacto. Busca por cliente, nombre, email o teléfono.'],
-    plugins: ['Plugins', 'Amplía Workhub con plugins oficiales o de terceros. Cada uno se ejecuta aislado y solo accede a lo que le permitas.'],
+    plugins: ['Plugins', 'Amplía Kanlane con plugins oficiales o de terceros. Cada uno se ejecuta aislado y solo accede a lo que le permitas.'],
     data: ['Copia de seguridad', 'Exporta los datos del proyecto abierto a un archivo o restáuralos desde una copia.'],
-    settings: ['Ajustes', 'Personaliza el aspecto de Workhub.']
+    settings: ['Ajustes', 'Personaliza el aspecto de Kanlane.']
   };
 
   /* Textos de los proyectos sin clientes. */

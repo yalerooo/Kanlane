@@ -1,13 +1,13 @@
-# Publicar Workhub en Cloudflare
+# Publicar Kanlane en Cloudflare
 
 Cloudflare publica la web **desde la nube, cada vez que se fusiona algo en `main`**: no hace falta ningún ordenador encendido. Firebase sigue encargándose del inicio de sesión y de la base de datos (ver [FIREBASE.md](FIREBASE.md)); Cloudflare solo sirve los ficheros de la web, con su red mundial y protección contra ataques.
 
 Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare que pide *Build command*, *Deploy command* y *Preview command*). Qué está ya preparado en el repositorio:
 
 - `scripts/build-public.js` copia **solo** `index.html`, `assets/`, `src/` y `plugins/` a `dist/` (`data-backup.json` y el resto **nunca** se publican) y genera `dist/_headers` con las cabeceras de seguridad (CSP, anti-marcos, HTTPS obligatorio…). Es la **única fuente** de esas cabeceras.
-- `wrangler.jsonc` le dice a Cloudflare qué publicar (`dist/`), qué Worker ejecutar y a qué dominio conectarlo (`workhub.yalero.net`).
+- `wrangler.jsonc` le dice a Cloudflare qué publicar (`dist/`), qué Worker ejecutar y a qué dominios conectarlo (ver «Dominios» más abajo).
 - `worker/index.js` es el Worker: reenvía `/__/auth/*` y `/__/firebase/*` a Firebase sin cambiar la dirección. Así el inicio de sesión (Google, GitHub) se completa en tu propio dominio y funciona también en Safari, Firefox estricto o Chrome con cookies de terceros bloqueadas. Solo reenvía esas rutas; no es un proxy abierto. Todo lo demás lo sirven los recursos estáticos.
-- `src/config/firebase-config.js` lista `workhub.yalero.net` en `hostingDomains`, para que la app use ese dominio como `authDomain`.
+- `src/config/firebase-config.js` lista los dominios en `hostingDomains`, para que la app use ese dominio como `authDomain`.
 
 ---
 
@@ -30,7 +30,34 @@ Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare
    El comando de despliegue publica la rama `main`; el de vista previa se usa para las demás ramas y las PR, sin tocar producción.
 6. **Guardar y desplegar**. Al terminar, la web está en `https://workhub.<tu-subdominio>.workers.dev` y, si el paso 2 va bien, en `https://workhub.yalero.net`.
 
-## 2. El dominio `workhub.yalero.net`
+## Dominios (migración de Workhub a Kanlane)
+
+La web se sirve ahora desde **cuatro dominios que apuntan al mismo Worker** (`wrangler.jsonc`):
+
+| Dominio | Qué hace |
+|---|---|
+| **kanlane.com** | El definitivo: el que ve la gente y el que indexa Google. |
+| **kanlane.yalero.net** | Respaldo: sirve la misma web con `X-Robots-Tag: noindex` (Google solo ve el definitivo). |
+| **www.kanlane.com** | Redirige a kanlane.com. |
+| **workhub.yalero.net** | Nombre antiguo: redirige a kanlane.com (y entrega un service worker que se desinstala solo, para quien tenga la app instalada). |
+
+- **Redirección temporal (302)** mientras se prueba; cuando todo funcione se pone `"LEGACY_STATUS": "301"` en `wrangler.jsonc`. Una 301 se queda en la caché del navegador y es difícil de deshacer.
+- **Marcha atrás si kanlane.com da problemas:** en `wrangler.jsonc` cambia `"REDIRECT_TARGET": "https://kanlane.com"` por `"https://kanlane.yalero.net"` y despliega. Los antiguos pasan a redirigir al respaldo y este deja de llevar `noindex`. **No es automática**: una redirección no sabe si su destino está caído.
+- `run_worker_first` hace que **solo las páginas** pasen por el Worker (`/`, `/app/*`, `/demo/*`, `/legal/*`, `/sw.js`); los scripts, estilos e imágenes no gastan peticiones del plan gratuito (100 000 al día).
+- Cada dominio es un **origen distinto** para el navegador: sesión, modo invitado, datos locales y app instalada no se comparten entre ellos. Los datos de la nube (Firebase) son los mismos.
+- Pruebas: `node tests/worker/domains.test.js`.
+
+### Lo que hay que hacer a mano (en las consolas)
+
+1. **Cloudflare:** el dominio `kanlane.com` tiene que estar en tu cuenta (si lo compraste en otro registrador, añade el sitio a Cloudflare y cambia los servidores de nombres). Al desplegar, el Worker conecta solo `kanlane.com`, `www.kanlane.com`, `kanlane.yalero.net` y `workhub.yalero.net`. Comprueba en el Worker → **Configuración** → **Dominios y rutas**.
+2. **Firebase** → Authentication → Settings → **Authorized domains**: añade `kanlane.com` y `kanlane.yalero.net` (deja `workhub.yalero.net` mientras redirija).
+3. **Google** (Cloud Console, proyecto **workhub-26f50** → Credenciales → *Web client*): en *Orígenes de JavaScript autorizados* añade `https://kanlane.com` y `https://kanlane.yalero.net`; en *URIs de redireccionamiento* añade `https://kanlane.com/__/auth/handler` y `https://kanlane.yalero.net/__/auth/handler`.
+4. **GitHub** (OAuth App): *Authorization callback URL* = `https://kanlane.com/__/auth/handler`. **Una OAuth App solo admite una dirección**: si algún día usas el respaldo (`kanlane.yalero.net`), el acceso con GitHub allí no funcionará hasta que cambies esa dirección. Google y el correo sí funcionan en todos.
+5. **reCAPTCHA Enterprise / App Check** (clave `appCheckSiteKey`): añade `kanlane.com` y `kanlane.yalero.net` a los **dominios permitidos** de la clave; si no, App Check rechazará al cliente nuevo.
+6. **Restricción de la clave de API** (si la activaste, [SEGURIDAD.md](SEGURIDAD.md) punto 7): añade `https://kanlane.com/*` y `https://kanlane.yalero.net/*`.
+7. **Search Console**: da de alta `kanlane.com` (verificación por registro TXT en el DNS de Cloudflare), envía `https://kanlane.com/sitemap.xml` y pide indexar `/`. Para el sitio antiguo, usa la herramienta de *cambio de dirección* de Search Console cuando pases a 301.
+
+## 2. El dominio `workhub.yalero.net` (antiguo)
 
 `wrangler.jsonc` ya incluye el dominio, así que el despliegue lo conecta solo (crea el registro DNS y el certificado; tarda unos minutos). Compruébalo en el Worker → **Configuración** → **Dominios y rutas**. Si prefieres hacerlo a mano, borra el bloque `routes` de `wrangler.jsonc` y añade el dominio ahí.
 
@@ -44,7 +71,7 @@ Hazlo **todo antes** de probar el acceso; si falta algo, Google o GitHub darán 
 2. **Google**: <https://console.cloud.google.com/apis/credentials> (proyecto **workhub-26f50**) → *IDs de clientes de OAuth 2.0* → **Web client (auto created by Google Service)**:
    - *Orígenes de JavaScript autorizados*: `https://workhub.yalero.net`
    - *URIs de redireccionamiento autorizados*: `https://workhub.yalero.net/__/auth/handler`
-3. **GitHub**: <https://github.com/settings/developers> → tu OAuth App **Workhub** → en *Authorization callback URL* pon `https://workhub.yalero.net/__/auth/handler`. Una OAuth App de GitHub puede aceptar **una sola** URL de callback: si cambias la de Netlify por la nueva, la de Netlify deja de funcionar (es lo esperado si ya no lo usas). Esa misma app es la de «Conectar con GitHub» en Ajustes (integración con GitHub Projects).
+3. **GitHub**: <https://github.com/settings/developers> → tu OAuth App **Kanlane** → en *Authorization callback URL* pon `https://workhub.yalero.net/__/auth/handler`. Una OAuth App de GitHub puede aceptar **una sola** URL de callback: si cambias la de Netlify por la nueva, la de Netlify deja de funcionar (es lo esperado si ya no lo usas). Esa misma app es la de «Conectar con GitHub» en Ajustes (integración con GitHub Projects).
 4. *(Opcional)* Restringe la clave de API a `https://workhub.yalero.net/*` (ver [SEGURIDAD.md](SEGURIDAD.md), punto 7).
 
 ## 4. Comprobar

@@ -1,5 +1,5 @@
 /* Smart GP: calendario de horas por día y proyecto. Solo colores sólidos, sin
-   sombras ni degradados; usa las variables de Workhub (tema claro y oscuro). */
+   sombras ni degradados; usa las variables de Kanlane (tema claro y oscuro). */
 #app{max-width:1040px;margin:0 auto;}
 .sg-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
 .sg-head h1{font-size:20px;margin:0;}

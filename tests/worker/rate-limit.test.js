@@ -11,14 +11,14 @@ const path = require('node:path');
     AUTH_RATE_LIMIT:{limit:async ({key}) => { calls++; assert.equal(key, '192.0.2.1'); return {success:false}; }}
   };
   const headers = {'CF-Connecting-IP':'192.0.2.1'};
-  const page = await worker.fetch(new Request('https://workhub.yalero.net/index.html', {headers}), env);
+  const page = await worker.fetch(new Request('https://kanlane.com/index.html', {headers}), env);
   assert.equal(page.status, 200);
   assert.equal(calls, 0, 'el límite no consume recursos estáticos');
-  const blocked = await worker.fetch(new Request('https://workhub.yalero.net/__/auth/handler', {headers}), env);
+  const blocked = await worker.fetch(new Request('https://kanlane.com/__/auth/handler', {headers}), env);
   assert.equal(blocked.status, 429);
   assert.equal(blocked.headers.get('Retry-After'), '60');
   assert.equal(calls, 1);
-  const invalid = await worker.fetch(new Request('https://workhub.yalero.net/__/otro/ruta', {headers}), env);
+  const invalid = await worker.fetch(new Request('https://kanlane.com/__/otro/ruta', {headers}), env);
   assert.equal(invalid.status, 404);
   assert.equal(calls, 1, 'las rutas no permitidas se rechazan antes de consumir el límite');
   console.log('OK   Worker: límite del proxy de acceso');

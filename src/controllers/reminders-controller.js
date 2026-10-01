@@ -1,5 +1,5 @@
 /* Recordatorios: avisa de las tareas que vencen y de las reuniones próximas
-   mientras Workhub está abierto (aviso dentro de la app y, si el usuario lo
+   mientras Kanlane está abierto (aviso dentro de la app y, si el usuario lo
    permite, notificación del navegador cuando la pestaña está en segundo plano).
    Solo mira el proyecto abierto. Cada aviso se da una sola vez: lo ya avisado
    se recuerda en este navegador (workhub_reminded). */
@@ -130,7 +130,7 @@
       toast.success(text, {duration:9000, action:{label:Workhub.t('Ver'), run}});
       if(this.permission() === 'granted' && document.hidden){
         try{
-          const n = new Notification('Workhub', {body:text, tag:'workhub-' + text});
+          const n = new Notification('Kanlane', {body:text, tag:'workhub-' + text});
           n.onclick = () => { window.focus(); run(); n.close(); };
         }catch(e){}
       }

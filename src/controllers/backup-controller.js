@@ -21,7 +21,7 @@
         enable: () => this.enableCloud(),
         useKey: (key) => this.useCloudKey(key),
         forget: () => this.forgetCloudKey(),
-        copy: (key) => navigator.clipboard.writeText(key).then(() => this.view.showStatus('Clave copiada. Guárdala fuera de Workhub.')).catch(() => this.view.showError('No se pudo copiar la clave. Selecciónala y cópiala manualmente.')),
+        copy: (key) => navigator.clipboard.writeText(key).then(() => this.view.showStatus('Clave copiada. Guárdala fuera de Kanlane.')).catch(() => this.view.showError('No se pudo copiar la clave. Selecciónala y cópiala manualmente.')),
         save: () => this.saveCloudVersion(),
         action: (action, id) => this.cloudAction(action, id)
       });

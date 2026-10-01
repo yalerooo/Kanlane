@@ -1,6 +1,6 @@
 /* Portada pública: se ejecuta en <head>, antes de pintar nada.
    - Aplica el tema elegido en la aplicación (si lo hay) para que no haya parpadeo.
-   - Si esta persona ya usa Workhub en este navegador (sesión, invitado o aplicación
+   - Si esta persona ya usa Kanlane en este navegador (sesión, invitado o aplicación
      instalada), la lleva directa a la aplicación. Quien llega por primera vez, y los
      buscadores, ven la portada. Con «?portada» se puede ver aunque se tenga sesión. */
 (function(){

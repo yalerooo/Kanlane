@@ -1,6 +1,6 @@
 /* Anfitrión de plugins: cada plugin es una página web que se carga en un
    <iframe sandbox> sin "allow-same-origin". Así corre en un origen opaco: no
-   puede leer el DOM de Workhub, su sesión, sus cookies ni su almacenamiento.
+   puede leer el DOM de Kanlane, su sesión, sus cookies ni su almacenamiento.
    La única vía de comunicación son mensajes (protocolo v1 de
    plugins/sdk/workhub-plugin.js), y cada llamada se comprueba contra los
    permisos que el usuario aprobó al instalarlo.
@@ -24,7 +24,7 @@
     'calendar:write': 'Crear reuniones en el calendario',
     'storage': 'Guardar sus propios datos en tu cuenta',
     'ui:extend': 'Añadir botones y etiquetas en Tareas, Calendario, Clientes y la paleta de comandos',
-    'appearance': 'Cambiar el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de Workhub'
+    'appearance': 'Cambiar el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de Kanlane'
   };
 
   /* Nombre corto e icono de cada permiso (etiquetas de las tarjetas). */
@@ -40,7 +40,7 @@
     'appearance': {short:'Apariencia', icon:'sparkles'}
   };
 
-  /* Permisos que hacen que el plugin se cargue oculto al abrir Workhub
+  /* Permisos que hacen que el plugin se cargue oculto al abrir Kanlane
      (modo "background") para poder añadir cosas a la interfaz. */
   const BACKGROUND_PERMISSIONS = ['ui:extend', 'appearance'];
 
@@ -65,7 +65,7 @@
     'ui.removeButton': 'ui:extend',
     'ui.setTaskBadges': 'ui:extend',
     'ui.setAppearance': 'appearance',
-    /* Cuadro de formulario que dibuja Workhub (no cuenta como escritura). */
+    /* Cuadro de formulario que dibuja Kanlane (no cuenta como escritura). */
     'ui.form': 'ui:extend'
   };
   const WRITE_METHODS = ['tasks.create', 'tasks.update', 'meetings.create', 'storage.set', 'storage.remove',
@@ -102,7 +102,7 @@
     if(!name) return {error:'El plugin no tiene nombre.'};
     const perms = Array.isArray(m.permissions) ? m.permissions : [];
     const unknown = perms.filter((p) => !Object.prototype.hasOwnProperty.call(PERMISSIONS, p));
-    if(unknown.length) return {error:'El plugin pide permisos que Workhub no conoce: ' + unknown.join(', ') + '.'};
+    if(unknown.length) return {error:'El plugin pide permisos que Kanlane no conoce: ' + unknown.join(', ') + '.'};
     return {manifest:{
       id: id,
       name: name,
@@ -110,7 +110,7 @@
       description: text(m.description, 200),
       author: text(m.author, 60),
       homepage: Workhub.utils.urls.safeUrl(text(m.homepage, 300)),
-      /* Nombre de un icono del set de Workhub (src/views/plugin-icons.js);
+      /* Nombre de un icono del set de Kanlane (src/views/plugin-icons.js);
          si no existe se usa el genérico. Nada de emojis ni imágenes. */
       icon: /^[a-z]{2,20}$/.test(text(m.icon, 20)) ? text(m.icon, 20) : 'puzzle',
       /* Tono del color del icono (0–359); si no, uno derivado del id. */
@@ -128,7 +128,7 @@
     try{ u = new URL(s, Workhub.utils.urls.rootUrl()); }catch(e){ return null; }
     const local = /^(localhost|127\.0\.0\.1)$/.test(u.hostname);
     if(u.protocol === 'https:' || (u.protocol === 'http:' && local)) return u.href;
-    /* Plugins oficiales al abrir Workhub como archivo (modo local). */
+    /* Plugins oficiales al abrir Kanlane como archivo (modo local). */
     if(u.protocol === 'file:' && location.protocol === 'file:' && !/^[a-z]+:/i.test(s)) return u.href;
     return null;
   }
@@ -247,7 +247,7 @@
       let frame = null;
       const timer = setTimeout(() => {
         if(frame) frame.destroy();
-        reject(new Error('Esa dirección no respondió como un plugin de Workhub. Comprueba el enlace (tiene que ser la página del plugin, que use el SDK).'));
+        reject(new Error('Esa dirección no respondió como un plugin de Kanlane. Comprueba el enlace (tiene que ser la página del plugin, que use el SDK).'));
       }, PROBE_TIMEOUT_MS);
       frame = new PluginFrame({
         url: url,

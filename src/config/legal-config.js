@@ -16,7 +16,7 @@ window.WORKHUB_LEGAL = {
   /* Correo de contacto, también para ejercer derechos de protección de datos. */
   email: '',
   /* Dirección de la web. */
-  sitio: 'https://workhub.yalero.net',
+  sitio: 'https://kanlane.com',
   /* Dónde se guardan los datos de las cuentas. Comprueba la región con la que creaste
      la base de datos de Firestore (consola de Firebase → Firestore → Datos; la guía
      docs/FIREBASE.md recomienda «eur3», que es la Unión Europea). */

@@ -1,6 +1,6 @@
-# Publicar Workhub en la web con Firebase
+# Publicar Kanlane en la web con Firebase
 
-Esta guía deja Workhub publicado en `https://TU-PROYECTO.web.app` con:
+Esta guía deja Kanlane publicado en `https://TU-PROYECTO.web.app` con:
 
 - inicio de sesión con **Google, GitHub, Microsoft y correo/contraseña**;
 - los datos de cada usuario en **Firestore**, separados y protegidos por reglas;
@@ -19,7 +19,7 @@ Se tarda unos 20–30 minutos. Todo se hace desde la consola de Firebase y una t
 ## 2. Registrar la app web y copiar la configuración
 
 1. En el panel del proyecto pulsa el icono **Web** (`</>`) para añadir una app.
-2. Nombre: `Workhub`. **No** marques "Firebase Hosting" en este paso; lo haremos con la terminal.
+2. Nombre: `Kanlane`. **No** marques "Firebase Hosting" en este paso; lo haremos con la terminal.
 3. Firebase te muestra un bloque `const firebaseConfig = { … }`. Copia esos valores en
    `src/config/firebase-config.js`:
 
@@ -54,7 +54,7 @@ Consola → **Authentication** → **Comenzar** → pestaña **Sign-in method**.
 1. En Firebase: **Añadir proveedor** → **GitHub** → activar. Copia la **URL de devolución de llamada** que te muestra, del tipo
    `https://workhub-1a2b3.firebaseapp.com/__/auth/handler`. Deja la ventana abierta.
 2. En GitHub: <https://github.com/settings/developers> → **OAuth Apps** → **New OAuth App**.
-   - *Application name*: `Workhub`
+   - *Application name*: `Kanlane`
    - *Homepage URL*: `https://workhub-1a2b3.web.app`
    - *Authorization callback URL*: la URL del paso anterior.
 3. Pulsa **Register application**, luego **Generate a new client secret**.
@@ -63,14 +63,14 @@ Consola → **Authentication** → **Comenzar** → pestaña **Sign-in method**.
 ### Microsoft (cuentas personales y de empresa)
 1. En Firebase: **Añadir proveedor** → **Microsoft** → activar. Copia la **URL de devolución de llamada** (la misma forma que la de GitHub).
 2. En Azure: <https://portal.azure.com> → **Microsoft Entra ID** → **Registros de aplicaciones** → **Nuevo registro**.
-   - *Nombre*: `Workhub`
+   - *Nombre*: `Kanlane`
    - *Tipos de cuenta admitidos*: **Cuentas de cualquier directorio organizativo y cuentas personales de Microsoft**.
    - *URI de redirección*: plataforma **Web** y la URL copiada de Firebase.
 3. Tras crearla, copia el **Id. de aplicación (cliente)**.
 4. **Certificados y secretos** → **Nuevo secreto de cliente** → copia el **Valor** (solo se muestra una vez).
 5. En Firebase pega el Id. de aplicación y el secreto → Guardar.
 
-> **Una cuenta por correo, y se pueden unir.** Firebase no deja tener dos cuentas con el mismo correo. Si alguien entró con Google y luego prueba con GitHub usando el mismo correo, Workhub le explica que entre ahora con el método original (Google, o correo y contraseña); al hacerlo, GitHub se une **a esa misma cuenta** (mismo usuario, mismos datos) y desde entonces puede entrar con cualquiera de los dos. Solo se une si el correo coincide y después de entrar con la cuenta original, así nadie puede apoderarse de una cuenta ajena. Si la segunda vez que intenta entrar cierra la página antes de hacerlo, tendrá que repetir el intento con GitHub.
+> **Una cuenta por correo, y se pueden unir.** Firebase no deja tener dos cuentas con el mismo correo. Si alguien entró con Google y luego prueba con GitHub usando el mismo correo, Kanlane le explica que entre ahora con el método original (Google, o correo y contraseña); al hacerlo, GitHub se une **a esa misma cuenta** (mismo usuario, mismos datos) y desde entonces puede entrar con cualquiera de los dos. Solo se une si el correo coincide y después de entrar con la cuenta original, así nadie puede apoderarse de una cuenta ajena. Si la segunda vez que intenta entrar cierra la página antes de hacerlo, tendrá que repetir el intento con GitHub.
 
 ### Dominios autorizados
 En **Authentication** → **Settings** → **Authorized domains** ya están `localhost`, `TU-PROYECTO.web.app` y `TU-PROYECTO.firebaseapp.com`. Si usas un dominio propio (paso 7), añádelo aquí.
@@ -84,7 +84,7 @@ Consola → **Firestore Database** → **Crear base de datos**.
 
 ## 5. Publicar la web y las reglas de seguridad
 
-Necesitas [Node.js](https://nodejs.org) instalado. En una terminal, dentro de la carpeta de Workhub:
+Necesitas [Node.js](https://nodejs.org) instalado. En una terminal, dentro de la carpeta de Kanlane:
 
 ```bash
 npm install -g firebase-tools     # una sola vez
@@ -119,7 +119,7 @@ Consola → **Hosting** → **Añadir dominio personalizado** y sigue las instru
 
 ## Cómo funciona por dentro
 
-- `src/config/firebase-config.js`: si `apiKey` está vacío, Workhub funciona como siempre (modo local en el navegador, o dentro de claude.ai). Abierto como archivo (`file://`) también usa el modo local, porque el acceso con Google y compañía necesita una web `http(s)`.
+- `src/config/firebase-config.js`: si `apiKey` está vacío, Kanlane funciona como siempre (modo local en el navegador, o dentro de claude.ai). Abierto como archivo (`file://`) también usa el modo local, porque el acceso con Google y compañía necesita una web `http(s)`.
 - `src/services/firebase-backend.js`: carga el SDK de Firebase (versión *compat*) desde el CDN de Google, gestiona la sesión y entrega a la app la misma interfaz de datos que ya usaba: `collection`, `doc`, `where`, `orderBy` y `onSnapshot`. Los modelos, vistas y controladores no saben que hay Firebase detrás.
 - **Datos:** todo cuelga de `users/{uid}`: `tasks` (con la subcolección `notes`), `clients`, `contacts`, `meetings`, `vault`, `vault_meta` y `assets`, además de `settings/preferences` (color de acento y tema) y `plugins` (plugins instalados), comunes a todos los proyectos. Los datos que guarda cada plugin van en `plugin_data`, por proyecto. Esos datos son los del **proyecto principal**; los **proyectos de equipo** (compartidos) viven aparte, en `teams/{id}` (ver [EQUIPOS.md](EQUIPOS.md)); cada proyecto adicional está en `projects/{id}` (nombre y color) y guarda las mismas colecciones debajo: `projects/{id}/tasks`, `projects/{id}/clients`, etc. Las reglas ya cubren todo lo que hay bajo `users/{uid}`, así que no hay que cambiarlas.
 - **Imágenes de las notas:** se comprimen en el navegador (lado máximo 1600 px, JPEG) y se guardan en `users/{uid}/assets` dentro de Firestore. Así no hace falta Cloud Storage, que exige el plan de pago.

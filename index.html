@@ -135,21 +135,49 @@
   <!-- Portada -->
   <section class="hero" aria-labelledby="h-hero">
     <div class="wrap">
-      <p class="eyebrow">Para quien trabaja con varios clientes</p>
-      <h1 id="h-hero">Todo el trabajo de tus clientes, en un solo sitio.</h1>
+      <p class="eyebrow hero-eyebrow"><span class="live-dot" aria-hidden="true"></span> Menos pestañas. Más claridad.</p>
+      <h1 id="h-hero">Muchos clientes.<br>Un solo <span class="hero-word">lugar.</span></h1>
       <p class="lead">Kanlane reúne tareas, calendario, contactos y contraseñas por cliente. Sin ruido ni configuraciones eternas: abres, trabajas y listo.</p>
       <div class="hero-cta">
         <a class="btn btn-primary btn-lg" href="app/?registro=1">Crear cuenta</a>
-        <a class="btn btn-outline btn-lg" href="app/">Iniciar sesión</a>
+        <a class="btn btn-outline btn-lg" href="#prueba">Explorar el tablero <svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
       <p class="hero-note">Crear una cuenta es gratis · No pedimos tarjeta · También funciona sin conexión</p>
     </div>
 
-    <div class="wrap demo-wrap">
-      <p class="demo-hint">Pruébalo: arrastra una tarjeta a otra columna o abre una tarea.</p>
+    <div class="wrap demo-wrap" id="prueba">
+      <div class="demo-caption"><span><span class="live-dot" aria-hidden="true"></span> Tu próximo espacio de trabajo</span><span class="demo-hint">Es real. Arrastra, abre, explora.</span></div>
       <div class="demo">
         <iframe id="demoFrame" title="Demo interactiva del tablero de Kanlane" data-src="demo/" width="1120" height="680"></iframe>
         <noscript><p class="demo-nojs">La demo necesita JavaScript. <a href="demo/">Ábrela en una página aparte</a>.</p></noscript>
+      </div>
+    </div>
+  </section>
+
+  <section class="section flow-section" aria-labelledby="h-flow">
+    <div class="wrap flow-layout">
+      <div class="flow-copy">
+        <p class="eyebrow">Del pendiente al hecho</p>
+        <h2 id="h-flow">Haz espacio<br>para avanzar.</h2>
+        <p class="section-lead">Un encargo, un cliente, un siguiente paso. Así de sencillo puede ser tu día.</p>
+        <div class="flow-controls" aria-label="Explorar el flujo de trabajo">
+          <button type="button" class="flow-choice is-active" data-flow="0" aria-pressed="true"><span>01</span><span><strong>Captura la idea</strong><small>Todo empieza con una tarea.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="1" aria-pressed="false"><span>02</span><span><strong>Dale su espacio</strong><small>Cliente, fecha y pasos por hacer.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+          <button type="button" class="flow-choice" data-flow="2" aria-pressed="false"><span>03</span><span><strong>Cierra el círculo</strong><small>Lo terminado también se disfruta.</small></span><svg class="ico" width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+      </div>
+      <div class="flow-stage" data-stage="0">
+        <div class="flow-stage-top"><span>ESTUDIO NORTE / WEB</span><span>Vista de ejemplo</span></div>
+        <div class="flow-lanes" aria-hidden="true"><span>Pendiente</span><span>En curso</span><span>Completada</span></div>
+        <div class="flow-card">
+          <span class="chip" style="--h:210"><i></i>Estudio Norte</span>
+          <h3>Una web que se sienta como tú</h3>
+          <p>Diseñar la nueva página de inicio</p>
+          <div class="flow-checks"><span><i></i>Definir la estructura</span><span><i></i>Dar forma al diseño</span><span><i></i>Preparar la entrega</span></div>
+          <div class="flow-card-bottom"><span class="flow-avatar">AL</span><span>Ana López</span><span class="flow-status">Pendiente</span></div>
+        </div>
+        <div class="flow-result" aria-live="polite"><span class="live-dot" aria-hidden="true"></span><span id="flowMessage">La idea ya tiene su sitio.</span></div>
+        <p class="flow-stage-note">Selecciona un paso y mira cómo cambia.</p>
       </div>
     </div>
   </section>
@@ -208,9 +236,9 @@
             <li><svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>Avisos de lo que vence y de lo que está a punto de empezar</li>
           </ul>
         </div>
-        <figure class="mock" role="img" aria-label="Calendario semanal con reuniones y tareas con fecha límite">
-          <div class="mock-top" aria-hidden="true"><strong>5 – 11 octubre 2026</strong><span class="seg"><i>Mes</i><i class="on">Semana</i><i>Día</i></span></div>
-          <div class="week" aria-hidden="true">
+        <figure class="mock calendar-preview" aria-label="Ejemplo interactivo de calendario">
+          <div class="mock-top"><strong>Octubre 2026</strong><span class="seg" aria-label="Vista del calendario"><button type="button" data-calendar="month" aria-pressed="false">Mes</button><button type="button" data-calendar="week" class="on" aria-pressed="true">Semana</button><button type="button" data-calendar="day" aria-pressed="false">Día</button></span></div>
+          <div class="week" id="calendarPreview">
             <div class="wd"><span>Lun</span><b>5</b>
               <em class="ev meet"><s>10:00</s>Arranque</em><em class="ev task">Presupuesto</em></div>
             <div class="wd"><span>Mar</span><b>6</b>
@@ -224,6 +252,7 @@
             <div class="wd off"><span>Sáb</span><b>10</b></div>
             <div class="wd off"><span>Dom</span><b>11</b></div>
           </div>
+          <figcaption class="calendar-caption" aria-live="polite">Una semana. Todos tus clientes.</figcaption>
         </figure>
       </div>
 

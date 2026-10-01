@@ -236,7 +236,8 @@ Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Al quitar el plu
 ### Interfaz
 
 ```js
-await wh.ui.toast('Guardado')                  // aviso en Workhub ("Tu plugin: Guardado")
+await wh.ui.toast('Guardado')                  // confirmación habitual: no interrumpe al usuario
+await wh.ui.toast('Resumen copiado', {type:'important'}) // resultado que necesita confirmación
 await wh.ui.toast('Algo falló', {type:'error'})
 await wh.ui.openTask(id)                       // abre la ficha de la tarea en Workhub (tasks:read)
 await wh.ui.openPanel()                        // abre tu plugin en la sección Plugins

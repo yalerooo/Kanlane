@@ -48,7 +48,7 @@
       toast().error(t('Sin conexión: verás los últimos datos guardados y los cambios se enviarán al volver.'), {duration: 6000});
     });
     window.addEventListener('online', () => {
-      if(wasOffline) toast().success(t('De nuevo en línea'));
+      if(wasOffline) toast().success(t('De nuevo en línea'), {important:true});
       wasOffline = false;
     });
   }

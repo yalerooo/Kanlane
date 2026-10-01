@@ -22,7 +22,7 @@ const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
 const ROOT = path.resolve(__dirname, '..');
 /* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
-const SERVED = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
+const SERVED = ['index.html', 'app', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
   const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
   res.setHeader('Content-Type', type);
   res.setHeader('Cache-Control', 'no-store');
-  if(url === '/index.html' && reload){
+  if(/\.html$/.test(url) && reload){
     return res.end(fs.readFileSync(file, 'utf8').replace('</body>', RELOAD_SNIPPET + '</body>'));
   }
   fs.createReadStream(file).pipe(res);
@@ -101,7 +101,7 @@ server.on('error', (err) => {
 });
 
 server.listen(PORT, () => {
-  console.log('\nWorkhub en local: http://localhost:' + PORT);
+  console.log('\nWorkhub en local: http://localhost:' + PORT + '/app/   (la portada pública está en http://localhost:' + PORT + '/)');
   console.log(cloud
     ? 'Modo NUBE: Firebase real. Lo que cambies se guarda en tus datos de verdad.'
     : 'Modo local: sin cuenta; los datos se guardan solo en este navegador.');

@@ -104,7 +104,7 @@ Para desarrollar sin esperar a que Cloudflare despliegue nada, hay un servidor l
 node scripts/dev.js
 ```
 
-o doble clic en **`start-dev.bat`** (Windows). Abre `http://localhost:5500` y **la página se recarga sola cada vez que guardas** un archivo de `index.html`, `assets/`, `src/` o `plugins/`.
+o doble clic en **`start-dev.bat`** (Windows). Abre `http://localhost:5500/app/` (la aplicación; la portada pública está en `/`) y **la página se recarga sola cada vez que guardas** un archivo de `index.html`, `assets/`, `src/` o `plugins/`.
 
 - **Modo local (por defecto):** sin inicio de sesión; los datos se guardan solo en ese navegador. Es el modo seguro para probar cosas.
 - **Modo nube:** `node scripts/dev.js --nube` usa el Firebase real (te pide iniciar sesión, y **lo que cambies se guarda en tus datos de verdad**). `localhost` ya está autorizado en Firebase.
@@ -125,7 +125,7 @@ Otras formas:
   cd Tablero
   python -m http.server 5500
   ```
-  y abre `http://localhost:5500` en el navegador.
+  y abre `http://localhost:5500/app/` en el navegador.
 
 Los datos de esta copia local y los de la versión en vivo (claude.ai) son **independientes** — usa la pestaña "Copia de seguridad" de cada una para exportar/importar y mantenerlas igualadas si lo necesitas.
 

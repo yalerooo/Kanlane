@@ -77,7 +77,7 @@
           el('img', {src: '/assets/img/favicon.svg', width: '28', height: '28', alt: ''}),
           el('span', {text: 'Workhub'})
         ]),
-        el('a', {'class': 'legal-back', href: '/', text: 'Volver a la app'})
+        el('a', {'class': 'legal-back', href: '/app/', text: 'Volver a la app'})
       ]));
       top.appendChild(el('nav', {'class': 'legal-nav', 'aria-label': 'Documentos legales'}, links));
     }

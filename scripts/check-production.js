@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 
 const origin = process.env.WORKHUB_HEALTH_ORIGIN || 'https://workhub.yalero.net';
 const checks = [
-  {path:'/', marker:'id="authPanel"', type:'text/html'},
+  {path:'/', marker:'Workhub', type:'text/html'},
+  {path:'/app/', marker:'id="authPanel"', type:'text/html'},
+  {path:'/robots.txt', marker:'Sitemap:', type:'text/plain'},
   {path:'/sw.js', marker:'self.addEventListener', type:'javascript'},
   {path:'/legal/privacidad/', marker:'Política de privacidad', type:'text/html'}
 ];

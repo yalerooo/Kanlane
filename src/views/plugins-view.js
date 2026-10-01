@@ -14,7 +14,7 @@
 
   function hostOf(url){
     try{
-      const u = new URL(url, location.href);
+      const u = new URL(url, Workhub.utils.urls.rootUrl());
       return u.protocol === 'file:' || u.origin === location.origin ? '' : u.host;
     }catch(e){ return ''; }
   }

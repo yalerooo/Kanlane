@@ -119,6 +119,23 @@ async function t(name, fn){
   await t('bob no lee la cuenta de alice', () => assertFails(bob.collection('users').doc('alice').collection('tasks').doc('q').get()));
   await t('bob no escribe en la cuenta de alice', () => assertFails(bob.collection('users').doc('alice').collection('tasks').doc('q').set({title: 'x'})));
 
+  console.log('Límites y copias cifradas');
+  const own = alice.collection('users').doc('alice');
+  const other = bob.collection('users').doc('alice');
+  await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
+  await t('una tarea con campos ajenos se rechaza', () => assertFails(own.collection('tasks').doc('unknown').set({title:'x', permisoInventado:true})));
+  await t('una nota demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('oversize').set({text:'a'.repeat(20001)})));
+  await t('una tarea normal sigue permitida', () => assertSucceeds(own.collection('tasks').doc('normal').set({title:'Tarea normal', checklist:[{text:'Paso',done:false}]})));
+  const backup = {projectId:'main', createdAt:Date.now(), iv:'abc', chunkCount:1, complete:false,
+    counts:{tasks:1, meetings:0, contacts:0, vault:0, clients:0}};
+  await t('alice crea una versión cifrada', () => assertSucceeds(own.collection('backup_versions').doc('v1').set(backup)));
+  await t('bob no lee la copia de alice', () => assertFails(other.collection('backup_versions').doc('v1').get()));
+  await t('bob no escribe fragmentos en la copia de alice', () => assertFails(other.collection('backup_versions').doc('v1').collection('chunks').doc('0').set({index:0,data:'abc'})));
+  await t('alice escribe un fragmento válido', () => assertSucceeds(own.collection('backup_versions').doc('v1').collection('chunks').doc('0').set({index:0,data:'abc'})));
+  await t('fragmento excesivo se rechaza', () => assertFails(own.collection('backup_versions').doc('v1').collection('chunks').doc('1').set({index:1,data:'a'.repeat(300001)})));
+  await t('alice cierra la versión', () => assertSucceeds(own.collection('backup_versions').doc('v1').update({complete:true})));
+  await t('la copia cerrada es inmutable', () => assertFails(own.collection('backup_versions').doc('v1').collection('chunks').doc('1').set({index:1,data:'abc'})));
+
   await env.cleanup();
   console.log('\n' + pass + ' correctas, ' + fail + ' fallidas');
   process.exit(fail ? 1 : 0);

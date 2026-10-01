@@ -14,6 +14,7 @@ https://workhub.yalero.net/
 - `firebase.json`, `firestore.rules`, `firestore.indexes.json` y `src/config/firebase-config.js` — publicación en la web con inicio de sesión (ver abajo).
 - `docs/FIREBASE.md` — guía paso a paso para publicarlo con Firebase.
 - `docs/LEGAL.md` — páginas legales (privacidad, términos y cookies), aviso de cookies y lo que hay que rellenar antes de publicar.
+- `docs/ROBUSTEZ.md` — App Check, límites contra abusos, copias cifradas recuperables y comprobaciones de producción.
 - `docs/EQUIPOS.md` — proyectos de equipo: miembros, roles, invitaciones y asignación de tareas.
 - `tests/rules/` — pruebas de `firestore.rules` contra el emulador.
 - `scripts/build-public.js`, `wrangler.jsonc`, `worker/` y `docs/CLOUDFLARE.md` — publicación en Cloudflare (la web se publica sola al fusionar en `main`).

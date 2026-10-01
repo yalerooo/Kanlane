@@ -2,7 +2,9 @@
 
 > Pega esto al empezar: *"Lee CONTEXT.md del repo yalerooo/Workhub y continúa desde ahí."*
 >
-> Última revisión: 1-oct-2026 (PR #46–#61 fusionados en `main`; quedan pruebas con servicios y dispositivos reales).
+> Última revisión: 1-oct-2026 (PR #46–#61 y #72–#73 fusionados en `main`; quedan pruebas con servicios y dispositivos reales).
+
+**Trabajo actual:** rama `codex/robustez-antibots` desde `main` tras fusionarse #72 y #73. Se prepararon App Check con una clave reCAPTCHA Enterprise registrada (todavía sin aplicación obligatoria), reglas de Firestore más estrictas, límite del proxy OAuth, copias cifradas en Firestore y comprobación programada de la web. Véase `docs/ROBUSTEZ.md`. Publicar `firestore.rules` tras fusionar el cambio y observar métricas de App Check antes de imponerlo en Authentication y Firestore. El proyecto Firebase sigue en Spark sin facturación.
 
 ---
 
@@ -26,7 +28,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Ramas de trabajo de Claude:** se trabaja en un worktree con su propia rama y se sube ahí; después se abre (o el usuario abre) el pull request contra `main`.
   - Ramas usadas hasta ahora: `claude/sleepy-brown-tdi6yq`, `claude/read-context-md-df6b13` (PR #24–#30 y #46–#59: Cloudflare, servidor local, logo, Smart GP y mejoras de oct-2026), `claude/context-docs-review-985e75` (PR #31–#45), `claude/legal-pages-privacy` (PR #60) y `claude/legal-noindex` (PR #61). Todos esos PR están fusionados en `main`.
   - Si el último pull request ya está fusionado, se reinicia la rama desde `origin/main` (`git checkout -B <rama> origin/main`) o se hace `git merge origin/main`.
-  - **En el equipo Windows del usuario no hay `gh`**: no se pueden abrir PR desde aquí. Se sube la rama y se da el enlace (el usuario lo abre y lo fusiona él). **El enlace debe llevar ya el título y la descripción** (si no, GitHub pone el nombre de la rama, «Claude/read context md…», y al usuario no le gusta): `https://github.com/yalerooo/Workhub/compare/main...<rama>?quick_pull=1&title=<título>&body=<descripción>` con ambos valores pasados por `encodeURIComponent` (un script de Node lo genera; cabe hasta unos 6 000 caracteres). Título corto y descriptivo en español; cuerpo con *Qué cambia*, *Cómo funciona*, *Pruebas* (decir qué NO se probó) y la línea «🤖 Generated with Claude Code». Además se da el texto suelto por si el usuario prefiere pegarlo.
+  - En el equipo Windows no hay `gh`, pero los PR #72 y #73 se crearon con la API de GitHub usando la credencial ya guardada por Git. No imprimir el token al obtenerlo con `git credential fill`; usarlo solo en memoria para la llamada REST. Si la credencial no está disponible, dar el enlace `pull/new/<rama>` con título y descripción.
 - **Estado del despliegue (oct-2026):** la web se publica en **Cloudflare** (Workers con recursos estáticos; proyecto `workhub`, Build `node scripts/build-public.js`, Deploy `npx wrangler deploy`, Preview `npx wrangler versions upload`; dominio `workhub.yalero.net` como `custom_domain` en `wrangler.jsonc`). Se migró desde Netlify, que se quedó sin créditos de build. Funciona y el usuario la usa: acceso con Google y GitHub, unir accesos con el mismo correo, etc. **Cada push a una rama con PR abierto lanza un despliegue de vista previa y Cloudflare solo hace un build a la vez**: hay que **subir una sola vez por pull request** (reunir los cambios y hacer un único push) para no hacer cola. Para ver cambios al momento se usa el servidor local (`node scripts/dev.js`, ver §9). **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue como alternativa de emergencia (`firebase deploy --only hosting`), sin las cabeceras de `_headers`. El sitio antiguo de Netlify queda como respaldo hasta que se borre.
 - **Firebase:** proyecto `workhub-26f50` (Auth + Firestore).
 - **Correo del usuario:** yaleros2@gmail.com.

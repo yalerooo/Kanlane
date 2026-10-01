@@ -90,6 +90,7 @@
 
       <h3>Modo invitado y modo local</h3>
       <p>Si usas la aplicación como invitado, o sin iniciar sesión, los datos se guardan únicamente en el almacenamiento de tu navegador (IndexedDB). No se envían a nuestros servidores, no se sincronizan con otros dispositivos y se pierden si borras los datos del navegador, por lo que conviene exportar una copia de seguridad.</p>
+      <p>Si activas las copias cifradas de tu cuenta, el navegador cifra la copia con una clave aleatoria antes de guardarla en Firebase. Firebase recibe el contenido cifrado, el identificador del proyecto, la fecha y el número de elementos de cada tipo. La clave permanece en tu navegador y puedes guardarla para recuperar las copias en otro dispositivo. Se mantienen hasta siete versiones por proyecto. Sin la clave no podemos descifrar esas copias. Puedes borrar versiones y detener las copias automáticas desde Workhub.</p>
 
       <h3>Integración con GitHub</h3>
       <p>Si conectas un GitHub Project, tu navegador habla directamente con la API de GitHub usando tu autorización. El acceso (token) se guarda <strong>solo en tu navegador</strong>, nunca en nuestros servidores. Lo que sincronizas con GitHub queda sujeto además a las condiciones y a la política de privacidad de GitHub.</p>
@@ -135,7 +136,7 @@
       <div class="legal-table"><table>
         <thead><tr><th>Proveedor</th><th>Para qué</th><th>Qué datos recibe</th></tr></thead>
         <tbody>
-          <tr><td>Google Ireland Limited / Google LLC (Firebase Authentication y Cloud Firestore)</td><td>Inicio de sesión y base de datos donde se guarda tu cuenta y tu contenido. Datos alojados en <span data-legal="ubicacionDatos"></span>.</td><td>Datos de la cuenta, contenido y datos técnicos. El código de Firebase se descarga de <code>www.gstatic.com</code> (Google) solo cuando inicias sesión.</td></tr>
+          <tr><td>Google Ireland Limited / Google LLC (Firebase Authentication, Cloud Firestore y, cuando se active, reCAPTCHA Enterprise/App Check)</td><td>Inicio de sesión, base de datos y protección frente a accesos automatizados. Datos alojados en <span data-legal="ubicacionDatos"></span> para Firestore.</td><td>Datos de la cuenta, contenido, copias cifradas opcionales y datos técnicos. El código de Firebase se descarga de <code>www.gstatic.com</code> (Google) solo cuando inicias sesión.</td></tr>
           <tr><td>Cloudflare, Inc.</td><td>Alojamiento de la web, red de distribución y el reenvío del inicio de sesión.</td><td>Dirección IP y datos técnicos de la petición.</td></tr>
           <tr><td>Google (Google Sign-In) o GitHub, Inc. (Microsoft)</td><td>Solo si eliges entrar con ese proveedor.</td><td>Los datos que ese proveedor comparte con Workhub (correo, nombre y foto). Se rigen además por su propia política de privacidad.</td></tr>
           <tr><td>GitHub, Inc. (Microsoft)</td><td>Solo si activas la integración con GitHub Projects: tu navegador la usa directamente.</td><td>Lo que sincronices. Workhub no recibe tu token.</td></tr>
@@ -153,7 +154,7 @@
     <section id="conservacion">
       <h2>8. Cuánto tiempo conservamos tus datos</h2>
       <ul>
-        <li><strong>Cuenta y contenido:</strong> mientras mantengas tu cuenta. Puedes borrar proyectos y su contenido desde la aplicación en cualquier momento.</li>
+        <li><strong>Cuenta y contenido:</strong> mientras mantengas tu cuenta. Puedes borrar proyectos y su contenido desde la aplicación en cualquier momento. Las copias cifradas que actives se conservan hasta que las borres o se sustituyan por versiones más recientes; se guardan siete por proyecto.</li>
         <li><strong>Baja de la cuenta:</strong> si nos pides cerrarla, eliminamos tu cuenta y tu contenido en un plazo máximo de 30 días. Los proveedores pueden conservar copias de seguridad cifradas durante un periodo limitado antes de eliminarlas definitivamente.</li>
         <li><strong>Datos técnicos y registros de seguridad:</strong> el tiempo que fijan nuestros proveedores, que es breve.</li>
         <li><strong>Obligaciones legales:</strong> si una ley exige conservar algún dato, lo mantendremos bloqueado, solo a disposición de las autoridades, durante los plazos de prescripción que correspondan, y después lo suprimiremos.</li>

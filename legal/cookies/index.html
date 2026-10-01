@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de cookies · Workhub</title>
+  <meta name="description" content="Qué cookies y tecnologías similares usa Workhub, para qué sirven, cuánto duran y cómo gestionarlas.">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
+  <link rel="stylesheet" href="/assets/css/fonts.css">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/legal.css">
+  <link rel="stylesheet" href="/assets/css/components/consent.css">
+</head>
+<body class="legal" data-page="cookies">
+<div class="legal-wrap">
+  <div id="legalTop"></div>
+  <main class="legal">
+    <h1>Política de cookies</h1>
+    <p class="legal-lead">Esta política explica qué cookies y tecnologías similares usa Workhub, para qué sirven y cómo puedes gestionarlas. Cumple el artículo 22.2 de la Ley 34/2002 (LSSI-CE) y la guía de la Agencia Española de Protección de Datos.</p>
+    <p class="legal-meta">Última actualización: <span data-legal="actualizado"></span></p>
+
+    <section id="que-son">
+      <h2>1. Qué son las cookies y el almacenamiento local</h2>
+      <p>Las cookies son pequeños archivos que un sitio web guarda en tu dispositivo. Workhub, como casi todas las aplicaciones web modernas, usa sobre todo otras tecnologías equivalentes del navegador: <strong>almacenamiento local</strong> (<code>localStorage</code>), <strong>bases de datos del navegador</strong> (<code>IndexedDB</code>) y la <strong>caché del service worker</strong>. A todo ello nos referimos aquí como «cookies».</p>
+    </section>
+
+    <section id="resumen">
+      <h2>2. Lo que usamos, en resumen</h2>
+      <div class="legal-box">
+        <ul>
+          <li><strong>Solo almacenamiento técnico.</strong> Es imprescindible para que puedas iniciar sesión, usar la aplicación y recordar lo que tú eliges (idioma, tema, proyecto abierto…).</li>
+          <li><strong>Ninguna cookie de analítica, publicidad ni seguimiento</strong>, propia o de terceros.</li>
+          <li><strong>Sin terceros que te sigan.</strong> Las tipografías se sirven desde este mismo sitio y no se carga ningún script de publicidad.</li>
+        </ul>
+      </div>
+      <p>El almacenamiento técnico, y el que guarda una opción que tú has elegido, está exento del deber de pedir consentimiento (art. 22.2 LSSI-CE), por eso no se bloquea nada a la espera de tu respuesta. Aun así te damos el control: puedes <button type="button" class="legal-link-btn is-inline" data-cookie-settings>configurar tus preferencias</button> en cualquier momento, y si en el futuro añadiéramos algo que sí requiera consentimiento (como analítica), no se activaría sin tu permiso.</p>
+    </section>
+
+    <section id="tabla">
+      <h2>3. Qué guardamos exactamente</h2>
+      <p>Todos los elementos son <strong>propios</strong> (los guarda Workhub en tu navegador) y de la categoría <strong>técnica o de personalización elegida por ti</strong>. Ninguno se comparte con terceros ni sirve para identificarte fuera de la aplicación.</p>
+      <div class="legal-table"><table>
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Para qué sirve</th><th>Duración</th></tr></thead>
+        <tbody>
+          <tr><td><code>firebaseLocalStorageDb</code> (clave <code>firebase:authUser…</code>)</td><td>IndexedDB, creada por Firebase Authentication (Google)</td><td>Mantener tu sesión iniciada.</td><td>Hasta que cierres sesión.</td></tr>
+          <tr><td><code>firestore/…</code></td><td>IndexedDB, creada por Cloud Firestore (Google)</td><td>Copia local de tus datos para que carguen rápido y puedas trabajar sin conexión.</td><td>Hasta que cierres sesión (se borra al cerrarla).</td></tr>
+          <tr><td><code>workhub_session</code></td><td>localStorage</td><td>Recordar que ya habías entrado en este navegador, para mostrar la pantalla de carga correcta.</td><td>Hasta que cierres sesión.</td></tr>
+          <tr><td><code>tablero_local_db</code></td><td>IndexedDB</td><td>Guardar tus datos en el modo invitado y en el modo local.</td><td>Hasta que borres los datos del navegador.</td></tr>
+          <tr><td><code>workhub_guest</code></td><td>localStorage</td><td>Recordar tu nombre de invitado.</td><td>Hasta que salgas del modo invitado.</td></tr>
+          <tr><td><code>workhub_lang</code>, <code>workhub_lang_adopted</code></td><td>localStorage</td><td>El idioma que has elegido.</td><td>Persistente (hasta que lo borres).</td></tr>
+          <tr><td><code>workhub_theme</code>, <code>workhub_accent</code></td><td>localStorage</td><td>El tema (claro u oscuro) y el color de acento que has elegido.</td><td>Persistente.</td></tr>
+          <tr><td><code>workhub_project</code>, <code>tablero_tab</code></td><td>localStorage</td><td>El último proyecto y la sección que tenías abiertos.</td><td>Persistente (<code>workhub_project</code> se borra al cerrar sesión).</td></tr>
+          <tr><td><code>workhub_hidden_…</code>, <code>workhub_cal_mode</code></td><td>localStorage</td><td>Las columnas que has ocultado y la vista del calendario (mes, semana o día).</td><td>Persistente.</td></tr>
+          <tr><td><code>workhub_reminders</code>, <code>workhub_reminded</code></td><td>localStorage</td><td>Tus ajustes de recordatorios y los avisos ya mostrados, para no repetirlos.</td><td>Persistente (los avisos mostrados, 10 días).</td></tr>
+          <tr><td><code>workhub_gh_token</code></td><td>localStorage</td><td>El acceso a GitHub, solo si conectas la integración. Nunca sale de tu navegador hacia nuestros servidores.</td><td>Hasta que lo quites en Ajustes.</td></tr>
+          <tr><td><code>workhub_consent</code></td><td>localStorage</td><td>Guardar tu decisión sobre esta política de cookies.</td><td>12 meses.</td></tr>
+          <tr><td><code>workhub-shell-…</code>, <code>workhub-runtime</code></td><td>Caché del service worker</td><td>Guardar los archivos de la aplicación y de Firebase para abrirla más rápido y sin conexión (aplicación instalable).</td><td>Hasta que haya una versión nueva o borres los datos del sitio.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="terceros">
+      <h2>4. Terceros</h2>
+      <ul>
+        <li><strong>Google (Firebase).</strong> Cuando inicias sesión, el navegador descarga el código de Firebase desde <code>www.gstatic.com</code> y habla con los servidores de Google. El almacenamiento de sesión y de datos de la tabla anterior lo crea ese código en tu navegador, pero con la única finalidad técnica de mantener tu sesión y tus datos.</li>
+        <li><strong>Google y GitHub al iniciar sesión.</strong> Si eliges entrar con Google o GitHub, esas empresas pueden usar sus propias cookies en su ventana de acceso. Se rigen por sus políticas, no por esta.</li>
+        <li><strong>Cloudflare.</strong> Aloja la web. Si tiene activadas sus protecciones de seguridad, puede usar una cookie técnica (por ejemplo, <code>__cf_bm</code>) para distinguir el tráfico legítimo de los robots; no sirve para identificarte ni para publicidad.</li>
+      </ul>
+    </section>
+
+    <section id="consentimiento">
+      <h2>5. Tu consentimiento y tus preferencias</h2>
+      <p>La primera vez que entras te mostramos un aviso para que elijas. Puedes <strong>aceptar</strong>, <strong>rechazar</strong> lo no imprescindible o <strong>configurar</strong> las categorías. Rechazar no te quita ninguna función: lo imprescindible sigue funcionando porque la ley no exige tu consentimiento para ello.</p>
+      <div class="legal-table"><table>
+        <thead><tr><th>Categoría</th><th>Estado</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td>Técnicas y de personalización elegida por ti</td><td>Siempre activas</td><td>Todo lo de la tabla del apartado 3. Sin ellas no se puede iniciar sesión ni recordar tus opciones.</td></tr>
+          <tr><td>Analítica y medición</td><td>No se usa · desactivada</td><td>Hoy Workhub no usa ninguna. Si algún día se añadiera, solo se activaría si lo aceptas.</td></tr>
+          <tr><td>Publicidad</td><td>No se usa</td><td>Workhub no muestra publicidad ni usa cookies publicitarias.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Guardamos tu elección durante 12 meses y volveremos a preguntarte pasado ese tiempo, si cambiamos algo relevante o si borras los datos del sitio. Puedes cambiarla o retirarla cuando quieras con el botón «Configurar cookies» que verás al final de cada página legal, en la pantalla de acceso y en <em>Ajustes → Privacidad</em>.</p>
+      <p><button type="button" class="legal-link-btn is-inline" data-cookie-settings>Abrir la configuración de cookies</button></p>
+    </section>
+
+    <section id="gestion">
+      <h2>6. Cómo borrar o bloquear cookies desde tu navegador</h2>
+      <p>Además, puedes eliminar el almacenamiento del sitio o bloquearlo desde tu navegador. Ten en cuenta que, si lo haces, tendrás que volver a iniciar sesión y se perderán tus preferencias; y, en modo invitado, <strong>los datos que solo estén en el navegador</strong>, así que exporta antes una copia de seguridad. Guías oficiales:</p>
+      <ul>
+        <li><a href="https://support.google.com/chrome/answer/95647" rel="noopener noreferrer">Google Chrome</a></li>
+        <li><a href="https://support.mozilla.org/es/kb/Borrar%20cookies" rel="noopener noreferrer">Mozilla Firefox</a></li>
+        <li><a href="https://support.apple.com/es-es/guide/safari/sfri11471/mac" rel="noopener noreferrer">Safari</a></li>
+        <li><a href="https://support.microsoft.com/es-es/microsoft-edge/eliminar-las-cookies-en-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" rel="noopener noreferrer">Microsoft Edge</a></li>
+      </ul>
+    </section>
+
+    <section id="cambios">
+      <h2>7. Cambios en esta política</h2>
+      <p>Si cambiamos las cookies que usamos, actualizaremos esta página y la fecha de arriba y, si hace falta tu consentimiento, volveremos a pedírtelo. Más información sobre el tratamiento de tus datos en la <a href="/legal/privacidad/">política de privacidad</a>.</p>
+    </section>
+  </main>
+  <footer id="legalBottom" class="legal-foot"></footer>
+</div>
+<script src="/src/config/legal-config.js"></script>
+<script src="/src/legal/legal.js"></script>
+<script src="/src/consent/consent.js"></script>
+</body>
+</html>

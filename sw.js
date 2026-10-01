@@ -17,7 +17,7 @@ const FILES = [];
 
 const SHELL = 'workhub-shell-' + BUILD;
 const RUNTIME = 'workhub-runtime';
-const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
+const RUNTIME_HOSTS = ['www.gstatic.com'];
 const NETWORK_WAIT_MS = 4000;
 
 self.addEventListener('install', (event) => {
@@ -77,7 +77,12 @@ self.addEventListener('fetch', (event) => {
   if(url.origin === self.location.origin){
     if(url.pathname.indexOf('/__/') === 0) return;   /* inicio de sesión de Firebase */
     if(request.mode === 'navigate'){
-      event.respondWith(networkFirst(request, '/index.html'));
+      /* Cada página se guarda con su propia clave. Antes todas se guardaban como
+         /index.html y abrir otra (la política de privacidad, por ejemplo) pisaba la
+         copia de la app que se usa sin conexión. */
+      const isApp = url.pathname === '/' || url.pathname === '/index.html';
+      const key = isApp ? '/index.html' : (url.pathname.slice(-1) === '/' ? url.pathname + 'index.html' : url.pathname);
+      event.respondWith(networkFirst(request, key));
       return;
     }
     event.respondWith(
@@ -87,6 +92,5 @@ self.addEventListener('fetch', (event) => {
   }
 
   const isSdk = url.hostname === 'www.gstatic.com' && url.pathname.indexOf('/firebasejs/') === 0;
-  const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-  if(isSdk || isFont) event.respondWith(staleWhileRevalidate(request));
+  if(isSdk) event.respondWith(staleWhileRevalidate(request));
 });

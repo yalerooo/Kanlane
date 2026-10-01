@@ -1,6 +1,6 @@
 /* SDK de plugins de Kanlane (protocolo v1).
    Inclúyelo en la página de tu plugin:
-     <script src="https://workhub.yalero.net/plugins/sdk/workhub-plugin.js"></script>
+     <script src="https://kanlane.com/plugins/sdk/workhub-plugin.js"></script>
    y conéctate con:
      const wh = await WorkhubPlugin.connect({id:'com.tu-nombre.mi-plugin', name:'Mi plugin', ...});
 

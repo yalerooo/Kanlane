@@ -400,7 +400,6 @@
       gh,
       t.contacto ? '<span class="contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></span>' : '',
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
-      check,
       repeat,
       due,
       who ? '<span class="card-assignees">' + who + '</span>' : ''
@@ -411,6 +410,7 @@
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
       (Array.isArray(t.labels) && t.labels.length ? '<div class="card-labels">' + Workhub.views.labels.chips(t.labels, 3) + '</div>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
+      (check ? '<div class="card-progress">' + check + '</div>' : '') +
       (meta ? '<div class="meta">' + meta + '</div>' : '') +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';

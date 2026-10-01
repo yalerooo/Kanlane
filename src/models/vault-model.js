@@ -39,8 +39,10 @@
 
     /* ---------- Metadatos y claves ---------- */
 
-    getMeta(){
-      return this.db.doc(META_PATH).get();
+    getMeta(requireServer){
+      const ref = this.db.doc(META_PATH);
+      return requireServer && Workhub.services.platform.mode() === 'firebase'
+        ? ref.get({source:'server'}) : ref.get();
     }
 
     setMeta(data){
@@ -50,11 +52,11 @@
     checkMeta(){
       if(this.metaState !== null) return Promise.resolve(this.metaState);
       return this.getMeta().then((snap) => {
+        if(!snap.exists && Workhub.services.platform.mode() === 'firebase') return this.getMeta(true);
+        return snap;
+      }).then((snap) => {
         if(!snap.exists) this.metaState = 'none';
         else this.metaState = (snap.data() || {}).saltPassword ? 'current' : 'legacy';
-        return this.metaState;
-      }).catch(() => {
-        this.metaState = 'none';
         return this.metaState;
       });
     }
@@ -91,7 +93,13 @@
     create(password){
       const dek = cryptoSvc.randomBytes(32);
       let recoveryKey;
-      return this._writeWrappedDek(password, cryptoSvc.b64encode(dek)).then((rk) => {
+      return this.getMeta(true).then((snap) => {
+        if(snap.exists) {
+          this.metaState = (snap.data() || {}).saltPassword ? 'current' : 'legacy';
+          throw new Error('vault-exists');
+        }
+        return this._writeWrappedDek(password, cryptoSvc.b64encode(dek));
+      }).then((rk) => {
         recoveryKey = rk;
         return cryptoSvc.importAesKeyRaw(dek);
       }).then((key) => {
@@ -119,8 +127,9 @@
       });
     }
 
-    /* Desbloquea un tablero antiguo y lo migra: vuelve a cifrar todas las
-       credenciales con una DEK nueva. Devuelve la clave de recuperación. */
+    /* La migración conserva iv/cipher antiguos. Solo después de guardar todas
+       las copias v2 sustituye los metadatos. Así cualquier fallo deja el
+       tablero antiguo recuperable con su contraseña. */
     unlockLegacy(password){
       let meta, oldKey, newDekBytes, newKey;
       return this.getMeta().then((snap) => {
@@ -140,7 +149,13 @@
             const edata = d.data() || {};
             return cryptoSvc.decryptJSON(oldKey, edata.iv, edata.cipher).then((plain) => {
               return cryptoSvc.encryptJSON(newKey, {password:plain.password || '', notas:plain.notas || ''});
-            }).then((enc) => this.update(d.id, {iv:enc.iv, cipher:enc.cipher, updatedAt:Date.now()}));
+            }).then((enc) => {
+              const patch = {ivV2:enc.iv, cipherV2:enc.cipher, updatedAt:Date.now()};
+              return this.update(d.id, patch).then(() => {
+                const item = this.find(d.id);
+                if(item) Object.assign(item, patch);
+              });
+            });
           }));
         });
       }).then(() => {
@@ -191,7 +206,8 @@
     /* ---------- Credenciales ---------- */
 
     decrypt(entry){
-      return cryptoSvc.decryptJSON(this.key, entry.iv, entry.cipher);
+      const upgraded = this.metaState === 'current' && entry.ivV2 && entry.cipherV2;
+      return cryptoSvc.decryptJSON(this.key, upgraded ? entry.ivV2 : entry.iv, upgraded ? entry.cipherV2 : entry.cipher);
     }
 
     /* Descifra (con caché) los datos secretos de una credencial. */

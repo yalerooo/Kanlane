@@ -265,7 +265,17 @@
     }
 
     addNote(taskId, text, imageAssetId){
-      return this.notes(taskId).add({text:text, imageAssetId:imageAssetId || '', createdAt:Date.now()});
+      const team = Workhub.views.team;
+      const actorUid = team.enabled() ? team.meUid() : '';
+      return this.notes(taskId).add({text:text, imageAssetId:imageAssetId || '', createdAt:Date.now(),
+        kind:actorUid ? 'comment' : 'note', actorUid:actorUid, actorName:actorUid ? team.name(actorUid) : ''});
+    }
+
+    addActivity(taskId, text){
+      const team = Workhub.views.team;
+      if(!team.enabled() || !team.meUid()) return Promise.resolve();
+      return this.notes(taskId).add({kind:'activity', text:text, actorUid:team.meUid(),
+        actorName:team.name(team.meUid()), createdAt:Date.now()});
     }
 
     removeNote(taskId, noteId){

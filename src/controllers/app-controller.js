@@ -150,6 +150,7 @@
       if(view === 'clients') c.clients.render();
       if(view === 'vault') c.vault.onShow();
       if(view === 'plugins') c.plugins.onShow();
+      if(view === 'data') c.backup.onShow();
     }
 
     /* ---------- Proyectos ---------- */
@@ -200,6 +201,7 @@
       if(p.nombre) this.rememberProject(p);
       this.shell.resetFilters();
       this.connectProject();
+      this.controllers.backup.scheduleAuto();
       /* Primero el tipo del proyecto (etapas, clientes): lo que sigue ya lo usa. */
       this.controllers.projects.render();
       this.controllers.vault.onProjectChange();
@@ -238,6 +240,7 @@
         this.models.projects.connect(db);
         this.models.team.connect();
         this.connectProject();
+        this.controllers.backup.scheduleAuto();
 
         /* "Contactos" ahora está dentro de "Clientes". */
         let savedTab = prefs.read(TAB_PREF, null);

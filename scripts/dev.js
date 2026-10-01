@@ -15,6 +15,8 @@ const path = require('path');
 
 const args = process.argv.slice(2);
 const cloud = args.indexOf('--nube') !== -1;
+const emulator = args.indexOf('--emulador') !== -1;
+const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
@@ -39,7 +41,7 @@ function changed(file){
     clients.forEach((res) => res.write('data: reload\n\n'));
   }, 120);
 }
-SERVED.forEach((item) => {
+if(reload) SERVED.forEach((item) => {
   const p = path.join(ROOT, item);
   if(!fs.existsSync(p)) return;
   try{
@@ -65,6 +67,12 @@ const server = http.createServer((req, res) => {
   if(url.slice(-1) === '/') url += 'index.html';
 
   /* Modo local: la configuración de Firebase va vacía y la app arranca sin cuenta. */
+  if(url === '/src/config/firebase-config.js' && emulator){
+    res.writeHead(200, {'Content-Type': TYPES['.js'], 'Cache-Control': 'no-store'});
+    return res.end('window.WORKHUB_FIREBASE = ' + JSON.stringify({apiKey:'demo-key', authDomain:'demo-workhub.firebaseapp.com',
+      projectId:'demo-workhub', appId:'demo-app', providers:['password'], allowSignup:true,
+      useEmulators:true, authEmulatorPort:9197, firestoreEmulatorPort:8187}) + ';\n');
+  }
   if(url === '/src/config/firebase-config.js' && !cloud){
     res.writeHead(200, {'Content-Type': TYPES['.js'], 'Cache-Control': 'no-store'});
     return res.end("window.WORKHUB_FIREBASE = {apiKey: '', projectId: ''};\n");
@@ -80,7 +88,7 @@ const server = http.createServer((req, res) => {
   const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
   res.setHeader('Content-Type', type);
   res.setHeader('Cache-Control', 'no-store');
-  if(url === '/index.html'){
+  if(url === '/index.html' && reload){
     return res.end(fs.readFileSync(file, 'utf8').replace('</body>', RELOAD_SNIPPET + '</body>'));
   }
   fs.createReadStream(file).pipe(res);

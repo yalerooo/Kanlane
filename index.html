@@ -194,6 +194,8 @@
       <div class="state-msg" id="stateMsg" hidden></div>
       <div class="bsk" id="boardSkeleton" aria-hidden="true"><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:80px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:62%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:78%"></span><span class="sk l2" style="width:50%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:86%"></span><span class="sk l2" style="width:70%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:96px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:84%"></span><span class="sk l2" style="width:58%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:120px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:92%"></span><span class="sk l2" style="width:66%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:70%"></span><span class="sk l2" style="width:48%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:88%"></span><span class="sk l2" style="width:60%"></span></div></div><div class="bsk-col"><div class="bsk-head"><span class="sk dot"></span><span class="sk lbl" style="width:84px"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:80%"></span><span class="sk l2" style="width:54%"></span></div><div class="bsk-card"><span class="sk chip"></span><span class="sk l1" style="width:90%"></span><span class="sk l2" style="width:64%"></span></div></div></div>
       <div class="board-tabs" id="boardTabs" role="tablist" aria-label="Columnas del tablero"></div>
+      <p class="sr-only" id="boardKeyboardHelp">Pulsa Intro para abrir una tarea. Pulsa Alt y una flecha para moverla.</p>
+      <p class="sr-only" id="boardKeyboardStatus" role="status" aria-live="polite"></p>
       <div class="board" id="board" hidden></div>
     </div>
   </section>
@@ -376,6 +378,8 @@
       <input type="file" id="importFileInput" accept="application/json,.json" hidden>
     </div>
     <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
+    <div class="backup-history-head"><div><h3>Versiones de este navegador</h3><p>Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button></div>
+    <div class="backup-history" id="backupHistory" aria-live="polite"></div>
     <p class="lock-error" id="dataError" hidden></p>
     <p class="hint" id="dataStatus" hidden></p>
   </section>
@@ -640,8 +644,9 @@
       <div class="tv-chips" id="tvPrs"></div>
     </section>
     <section class="tv-section">
-      <h3>Notas <span class="tv-count" id="tvNotesCount"></span></h3>
+      <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
       <div class="tv-notes" id="tvNotes"></div>
+      <form class="tv-comment-form" id="tvCommentForm" hidden><label for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="3" placeholder="Comparte una actualización con el equipo…" required></textarea><div><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button><p class="lock-error" id="tvCommentError" role="alert" hidden></p></div></form>
     </section>
     <section class="tv-section" id="tvGhWrap" hidden>
       <h3>Actividad de GitHub</h3>
@@ -1123,6 +1128,7 @@
 <script src="src/utils/ui.js"></script>
 <script src="src/services/preferences.js"></script>
 <script src="src/services/platform.js"></script>
+<script src="src/services/backup-history.js"></script>
 <script src="src/services/crypto.js"></script>
 <script src="src/services/firebase-backend.js"></script>
 <script src="src/services/github-api.js"></script>

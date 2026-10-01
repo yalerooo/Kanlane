@@ -29,6 +29,7 @@
       this.model.on('change', () => {
         this.view.applyAccent(this.model.currentAccent());
         this.view.applyTheme(this.model.theme, true);
+        this.reapplyPlugins();
         this.render();
       });
     }

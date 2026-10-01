@@ -1,0 +1,70 @@
+/* Paletas y tamaño de texto que puede aplicar un plugin con permiso appearance.
+   Solo se aceptan nombres de paleta validados en PluginsController. */
+:root[data-palette="warm"]{
+  --bg:#FCFAF7;--sidebar:#F7F2EC;--surface:#FFFDFB;--surface-2:#F5EEE6;
+  --surface-3:#EDE3D8;--line:#E9DFD3;--line-strong:#D8C9B9;
+}
+:root[data-palette="cool"]{
+  --bg:#F7FAFD;--sidebar:#EDF3F9;--surface:#FFFFFF;--surface-2:#EBF2F8;
+  --surface-3:#DFEAF4;--line:#DDE7F0;--line-strong:#C9D8E5;
+}
+:root[data-palette="slate"]{
+  --bg:#F5F6F8;--sidebar:#ECEEF2;--surface:#FFFFFF;--surface-2:#E9ECF1;
+  --surface-3:#DCE1E8;--line:#DFE3E9;--line-strong:#C9D0DA;
+}
+@media (prefers-color-scheme:dark){
+  :root[data-palette="warm"]:not([data-theme="light"]){
+    --bg:#151210;--sidebar:#100E0D;--surface:#1E1916;--surface-2:#28211D;
+    --surface-3:#332923;--line:#352C26;--line-strong:#473A31;
+  }
+  :root[data-palette="cool"]:not([data-theme="light"]){
+    --bg:#0D1319;--sidebar:#090F15;--surface:#151D25;--surface-2:#1D2731;
+    --surface-3:#283440;--line:#293743;--line-strong:#394B59;
+  }
+  :root[data-palette="slate"]:not([data-theme="light"]){
+    --bg:#111318;--sidebar:#0C0E12;--surface:#1A1D24;--surface-2:#222630;
+    --surface-3:#2C323D;--line:#2E3440;--line-strong:#404957;
+  }
+}
+:root[data-theme="dark"][data-palette="warm"]{
+  --bg:#151210;--sidebar:#100E0D;--surface:#1E1916;--surface-2:#28211D;
+  --surface-3:#332923;--line:#352C26;--line-strong:#473A31;
+}
+:root[data-theme="dark"][data-palette="cool"]{
+  --bg:#0D1319;--sidebar:#090F15;--surface:#151D25;--surface-2:#1D2731;
+  --surface-3:#283440;--line:#293743;--line-strong:#394B59;
+}
+:root[data-theme="dark"][data-palette="slate"]{
+  --bg:#111318;--sidebar:#0C0E12;--surface:#1A1D24;--surface-2:#222630;
+  --surface-3:#2C323D;--line:#2E3440;--line-strong:#404957;
+}
+
+:root[data-text-size="small"]{--ui-text-scale:.93;}
+:root[data-text-size="large"]{--ui-text-scale:1.1;}
+:root[data-text-size] body{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .page-head h1{font-size:calc(19px * var(--ui-text-scale));}
+:root[data-text-size] .page-head p{font-size:calc(13px * var(--ui-text-scale));}
+:root[data-text-size] .btn{font-size:calc(13px * var(--ui-text-scale));}
+:root[data-text-size] .btn-sm{font-size:calc(12.5px * var(--ui-text-scale));}
+:root[data-text-size] .field > label{font-size:calc(12.5px * var(--ui-text-scale));}
+:root[data-text-size] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+:root[data-text-size] select,
+:root[data-text-size] textarea{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .card h3{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .card .meta{font-size:calc(12px * var(--ui-text-scale));}
+:root[data-text-size] .tv-desc{font-size:calc(14px * var(--ui-text-scale));}
+:root[data-text-size] .tv-note-text{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .crm-item-name{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .person-main strong{font-size:calc(14px * var(--ui-text-scale));}
+:root[data-text-size] .agenda-title{font-size:calc(13.5px * var(--ui-text-scale));}
+:root[data-text-size] .plugin-card-title h3{font-size:calc(14px * var(--ui-text-scale));}
+:root[data-text-size] .plugin-card-desc{font-size:calc(13px * var(--ui-text-scale));}
+@media (min-width:901px){
+  :root[data-text-size] .tab{font-size:calc(13.5px * var(--ui-text-scale));}
+  :root[data-text-size] .plugin-nav-item{font-size:calc(12.5px * var(--ui-text-scale));}
+}
+@media (max-width:600px){
+  :root[data-text-size] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]),
+  :root[data-text-size] select,
+  :root[data-text-size] textarea{font-size:max(16px, calc(16px * var(--ui-text-scale)));}
+}

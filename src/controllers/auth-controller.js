@@ -177,7 +177,7 @@
     linkedNotice(res){
       if(!res || !res.linked) return;
       const provider = PROVIDER_NAMES[res.linked] || Workhub.t('el nuevo método');
-      try{ Workhub.views.toast.success(Workhub.t('Listo: ahora también puedes entrar con {provider}.', {provider:provider})); }catch(e){}
+      try{ Workhub.views.toast.success(Workhub.t('Listo: ahora también puedes entrar con {provider}.', {provider:provider}), {important:true}); }catch(e){}
     }
 
     signInWith(key){

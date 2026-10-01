@@ -24,7 +24,7 @@
         canShare: this.app.models.team.enabled()
       }));
       this.view.bindMenu({
-        pick: (id) => this.app.switchProject(id, true),
+        pick: (id) => this.app.switchProject(id),
         edit: (id) => this.openEdit(id),
         create: () => this.openNew(),
         share: () => this.app.controllers.team.open(),
@@ -175,14 +175,14 @@
           this.finishFirstRun();
         }
         this.justCreated = key;
-        this.app.switchProject(key, true);
+        this.app.switchProject(key);
         return;
       }
       const id = this.app.projectId;
       if(this.projects.loaded && !this.projects.exists(id) && id !== this.justCreated){
         const next = this.projects.list()[0];
         if(next){
-          this.app.switchProject(next.id, false);
+          this.app.switchProject(next.id);
           return;
         }
       }
@@ -254,7 +254,7 @@
       return this.projects.create(nombre, color, config).then((ref) => {
         this.justCreated = ref.id;
         this.app.rememberProject(Object.assign({id:ref.id, nombre:nombre, color:color}, config));
-        this.app.switchProject(ref.id, false);
+        this.app.switchProject(ref.id);
         return ref;
       });
     }

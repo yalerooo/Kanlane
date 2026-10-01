@@ -147,7 +147,7 @@
   function bind(){
     var copy = document.getElementById('copy');
     if(copy) copy.onclick = function(){
-      navigator.clipboard.writeText(summaryText()).then(function(){ wh.ui.toast(tr('Resumen copiado')); }, function(){ wh.ui.toast(tr('No se pudo copiar'), {type:'error'}); });
+      navigator.clipboard.writeText(summaryText()).then(function(){ wh.ui.toast(tr('Resumen copiado'), {type:'important'}); }, function(){ wh.ui.toast(tr('No se pudo copiar'), {type:'error'}); });
     };
     var dl = document.getElementById('csv');
     if(dl) dl.onclick = function(){

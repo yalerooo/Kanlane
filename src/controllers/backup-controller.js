@@ -2,7 +2,9 @@
 (function(){
   const platform = Workhub.services.platform;
   const toast = Workhub.views.toast;
+  const history = Workhub.services.backupHistory;
   const NOT_READY = 'El tablero todavía se está cargando, prueba de nuevo en unos segundos.';
+  const DAY = 24 * 60 * 60 * 1000;
 
   class BackupController {
     constructor(app, view){
@@ -12,6 +14,80 @@
 
       this.view.bindExport(() => this.exportData());
       this.view.bindImport((data) => this.importData(data));
+      this.view.bindSaveVersion(() => this.saveVersion());
+      this.view.bindHistory((action, id) => this.historyAction(action, id));
+      setInterval(() => this.autoSave(), 60 * 60 * 1000);
+    }
+
+    scope(){
+      if(!this.app.rootDb || !this.app.projectId) return '';
+      const account = this.app.rootDb.me && this.app.rootDb.me.uid || 'local';
+      return Workhub.services.platform.mode() + ':' + account + ':' + this.app.projectId;
+    }
+
+    onShow(){ this.refreshHistory(); }
+
+    refreshHistory(){
+      const scope = this.scope();
+      if(!scope) return;
+      history.list(scope).then((entries) => {
+        if(this.scope() === scope) this.view.renderHistory(entries);
+      }).catch(() => this.view.showError('No se pueden leer las versiones guardadas en este navegador.'));
+    }
+
+    scheduleAuto(){
+      clearTimeout(this.autoTimer);
+      this.autoTimer = setTimeout(() => this.autoSave(), 20000);
+    }
+
+    autoSave(){
+      if(document.hidden || !this.backup.isReady()) return;
+      if(this.app.controllers.projects.firstRun ||
+          !this.app.models.projects.list().some((project) => project.id === this.app.projectId)) return;
+      const scope = this.scope();
+      if(!scope || this.savingVersion) return;
+      this.savingVersion = true;
+      history.list(scope).then((entries) => {
+        if(entries.length && Date.now() - entries[0].createdAt < DAY) return;
+        const project = this.app.controllers.projects.current();
+        if(!project) return;
+        return this.backup.build(project.nombre).then((copy) => {
+          if(this.scope() !== scope) return;
+          return history.save(scope, copy).then(() => {
+            if(this.app.shell.isVisible('data')) this.refreshHistory();
+          });
+        });
+      }).catch(() => {}).finally(() => { this.savingVersion = false; });
+    }
+
+    saveVersion(){
+      if(!this.backup.isReady()){ this.view.showError(NOT_READY); return; }
+      const scope = this.scope();
+      const project = this.app.controllers.projects.current();
+      if(!scope || !project || this.savingVersion) return;
+      this.savingVersion = true;
+      this.view.setSavingVersion(true);
+      this.backup.build(project.nombre).then((copy) => {
+        if(this.scope() !== scope) throw new Error('project-changed');
+        return history.save(scope, copy);
+      }).then(() => {
+        this.view.showStatus('Versión guardada en este navegador.');
+        this.refreshHistory();
+      }).catch(() => this.view.showError('No se pudo guardar la versión en este navegador.'))
+        .finally(() => { this.savingVersion = false; this.view.setSavingVersion(false); });
+    }
+
+    historyAction(action, id){
+      const scope = this.scope();
+      history.get(id).then((entry) => {
+        if(!entry || entry.scope !== scope || this.scope() !== scope) throw new Error('missing-version');
+        if(action === 'download') return platform.download(entry.filename, entry.json);
+        if(action === 'restore'){
+          this.importData(JSON.parse(entry.json));
+          return;
+        }
+        if(action === 'delete') return history.remove(id).then(() => this.refreshHistory());
+      }).catch(() => this.view.showError('No se pudo abrir esta versión.'));
     }
 
     exportData(){

@@ -137,7 +137,9 @@
         this.view.showLockError('No hay conexión con el almacenamiento.');
         return;
       }
-      this.vault.checkMeta().then((state) => this.view.setLockMode(state));
+      this.vault.checkMeta().then((state) => this.view.setLockMode(state)).catch(() => {
+        this.view.showLockError('No se pudo comprobar el gestor. Revisa la conexión e inténtalo de nuevo.');
+      });
     }
 
     showContent(){
@@ -177,12 +179,13 @@
       if(state === 'none'){
         if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
         if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
-        this.vault.create(pass).then((key) => this.presentRecoveryKey(key, false)).catch(() => {
-          this.view.showLockError('No se pudo crear la contraseña maestra. Inténtalo de nuevo.');
+        this.vault.create(pass).then((key) => this.presentRecoveryKey(key, false)).catch((err) => {
+          if(err && err.message === 'vault-exists') this.view.setLockMode(this.vault.metaState);
+          this.view.showLockError('No se pudo crear la contraseña maestra. Comprueba la conexión y vuelve a intentarlo.');
         }).finally(done);
       } else if(state === 'legacy'){
         this.vault.unlockLegacy(pass).then((key) => this.presentRecoveryKey(key, false)).catch(() => {
-          this.view.showLockError('Contraseña maestra incorrecta.');
+          this.view.showLockError('No se pudo desbloquear o migrar el gestor. Comprueba la contraseña y la conexión.');
         }).finally(done);
       } else {
         this.vault.unlock(pass).then(() => {

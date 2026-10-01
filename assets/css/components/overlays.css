@@ -102,12 +102,12 @@ dialog.cmdk::backdrop{background:rgba(10,10,12,0.32);backdrop-filter:none;}
   color:var(--ink);
   background:var(--surface);
   border:1px solid var(--line-strong);
-  border-left:3px solid var(--accent-solid);
+  border:1px solid var(--accent-solid);
   border-radius:var(--r-lg);
   box-shadow:var(--shadow-lg);
   animation:toast-in .18s cubic-bezier(.2,.8,.2,1);
 }
-.toast.is-error{border-left-color:var(--danger);}
+.toast.is-error{border-color:var(--danger);}
 .toast.is-leaving{animation:toast-out .16s ease forwards;}
 .toast-icon{display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-sm);flex:none;color:var(--accent);background:var(--accent-soft);}
 .toast.is-error .toast-icon{color:var(--danger);background:var(--danger-bg);}

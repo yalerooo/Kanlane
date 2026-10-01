@@ -95,7 +95,10 @@
             return ref.collection('notes').add({
               text: n.text || '',
               imageAssetId: n.imageAssetId || '',
-              createdAt: n.createdAt || Date.now()
+              createdAt: n.createdAt || Date.now(),
+              kind: ['comment','activity'].includes(n.kind) ? n.kind : 'note',
+              actorUid: typeof n.actorUid === 'string' ? n.actorUid : '',
+              actorName: typeof n.actorName === 'string' ? n.actorName : ''
             });
           }));
         });
@@ -146,7 +149,8 @@
              volver a comprobarlo: ahora tiene la del archivo importado. */
           m.vault.metaState = null;
           return Promise.all(entries.map((v) => {
-            if(!v || !v.cliente || !v.iv || !v.cipher) return Promise.resolve();
+            if(!v || !v.cliente || !v.iv || !v.cipher ||
+                (!!v.ivV2 !== !!v.cipherV2)) return Promise.resolve();
             counts.vault++;
             const entry = {
               tipo: v.tipo || 'correo',
@@ -163,6 +167,7 @@
               createdAt: v.createdAt || Date.now(),
               updatedAt: Date.now()
             };
+            if(v.ivV2 && v.cipherV2){ entry.ivV2 = v.ivV2; entry.cipherV2 = v.cipherV2; }
             /* Sin 'order' numérico, VaultModel.orderOf() cae en createdAt. */
             if(typeof v.order === 'number' && isFinite(v.order)) entry.order = v.order;
             return m.vault.add(entry);

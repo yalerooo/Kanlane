@@ -23,6 +23,7 @@
       this.filterAssignee = document.getElementById('filterAssignee');
       this.btnNew = document.getElementById('btnNew');
       this.tabs = document.getElementById('boardTabs');
+      this.keyboardStatus = document.getElementById('boardKeyboardStatus');
 
       /* Línea que marca dónde caerá la tarea al soltarla. */
       this.indicator = document.createElement('div');
@@ -38,6 +39,16 @@
       this.tabs.addEventListener('click', (ev) => {
         const tab = closest(ev.target, '[data-goto]');
         if(tab) this.scrollToColumn(tab.getAttribute('data-goto'));
+      });
+      this.tabs.addEventListener('keydown', (ev) => {
+        if(ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+        const tabs = Array.from(this.tabs.querySelectorAll('[data-goto]'));
+        const i = tabs.indexOf(document.activeElement);
+        if(i < 0) return;
+        ev.preventDefault();
+        const next = tabs[(i + (ev.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+        next.focus();
+        this.scrollToColumn(next.getAttribute('data-goto'));
       });
       let raf = 0;
       this.board.addEventListener('scroll', () => {
@@ -66,6 +77,7 @@
         const on = t.getAttribute('data-goto') === active;
         t.classList.toggle('is-active', on);
         t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
       });
     }
 
@@ -104,6 +116,40 @@
 
     /* handler(id, status, beforeId) */
     bindMove(handler){
+      this.board.addEventListener('keydown', (ev) => {
+        if(!ev.altKey || ev.ctrlKey || ev.metaKey || !Workhub.views.team.canEdit()) return;
+        if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.key)) return;
+        const card = closest(ev.target, '.card');
+        if(!card) return;
+        const col = closest(card, '.col');
+        const cols = Array.from(this.board.querySelectorAll('.col'));
+        const cards = Array.from(col.querySelectorAll('.card'));
+        const index = cards.indexOf(card);
+        const colIndex = cols.indexOf(col);
+        const targetCol = ev.key === 'ArrowLeft' ? cols[colIndex - 1] :
+          ev.key === 'ArrowRight' ? cols[colIndex + 1] : col;
+        if(!targetCol) return;
+        let beforeId = null;
+        if(ev.key === 'ArrowUp'){
+          if(index === 0) return;
+          beforeId = cards[index - 1].getAttribute('data-id');
+        }else if(ev.key === 'ArrowDown'){
+          if(index === cards.length - 1) return;
+          beforeId = cards[index + 2] ? cards[index + 2].getAttribute('data-id') : null;
+        }
+        ev.preventDefault();
+        const id = card.getAttribute('data-id');
+        const status = targetCol.getAttribute('data-status');
+        this.focusCardId = id;
+        clearTimeout(this.focusCardTimer);
+        this.focusCardTimer = setTimeout(() => { this.focusCardId = null; }, 2000);
+        handler(id, status, beforeId);
+        this.keyboardStatus.textContent = 'Tarea movida a ' + targetCol.querySelector('.col-label').textContent + '.';
+        requestAnimationFrame(() => {
+          const moved = Array.from(this.board.querySelectorAll('.card')).find((item) => item.getAttribute('data-id') === id);
+          if(moved) moved.focus({preventScroll:true});
+        });
+      });
       bindDragAndDrop(this.board, {
         itemSelector: '.card',
         targetSelector: '.col',
@@ -319,6 +365,10 @@
       this.board.querySelectorAll('.col').forEach((c) => {
         c.querySelector('.cards').scrollTop = scrolls[c.getAttribute('data-status')] || 0;
       });
+      if(this.focusCardId){
+        const focused = Array.from(this.board.querySelectorAll('.card')).find((card) => card.getAttribute('data-id') === this.focusCardId);
+        if(focused) focused.focus({preventScroll:true});
+      }
       this.tabs.innerHTML = stages.map((s) => {
         const count = tasks.filter((t) => TaskModel.stageKey(t) === s.key).length;
         return '<button type="button" class="board-tab" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
@@ -355,7 +405,7 @@
       due,
       who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');
-    return '<article class="card" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" data-id="' + esc(t.id) + '">' +
+    return '<article class="card" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
       (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
       '<h3 translate="no">' + esc(t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +

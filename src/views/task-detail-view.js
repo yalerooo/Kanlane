@@ -37,6 +37,11 @@
       this.desc = $('tvDesc');
       this.notes = $('tvNotes');
       this.notesCount = $('tvNotesCount');
+      this.notesTitle = $('tvNotesTitle');
+      this.commentForm = $('tvCommentForm');
+      this.commentText = $('tvCommentText');
+      this.commentSend = $('tvCommentSend');
+      this.commentError = $('tvCommentError');
       this.linksWrap = $('tvLinksWrap');
       this.links = $('tvLinks');
       this.labelsWrap = $('tvLabelsWrap');
@@ -64,6 +69,16 @@
     /* ---------- Eventos hacia el controlador ---------- */
 
     bindClose(handler){ this.btnClose.addEventListener('click', handler); }
+    bindComment(handler){
+      this.commentForm.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const value = this.commentText.value.trim();
+        if(value && this.taskId) handler(this.taskId, value);
+      });
+    }
+    setCommentBusy(busy){ this.commentSend.disabled = busy; this.commentSend.textContent = busy ? 'Publicando…' : 'Publicar comentario'; }
+    commentSaved(){ this.commentText.value = ''; this.commentError.hidden = true; }
+    commentFailed(){ this.commentError.textContent = 'No se pudo publicar el comentario.'; this.commentError.hidden = false; }
 
     /* «Asignarme» / «Quitar mi asignación» en la ficha. */
     bindAssignMe(handler){
@@ -134,6 +149,9 @@
       slot.setAttribute('data-ext-context', JSON.stringify({taskId:t.id}));
       Workhub.views.extensions.fillSlots(slot.parentNode);
       this.taskId = t.id;
+      const team = Workhub.views.team;
+      this.commentForm.hidden = !team.enabled() || !team.canEdit();
+      this.notesTitle.firstChild.textContent = Workhub.t(team.enabled() ? 'Actividad y comentarios' : 'Notas') + ' ';
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);
       this.top.innerHTML =
@@ -347,12 +365,13 @@
 
   function noteHtml(d){
     const n = d.data() || {};
+    const actor = n.actorName ? '<span class="tv-note-author" translate="no">' + esc(n.actorName) + '</span> · ' : '';
     const img = n.imageAssetId
       ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="Imagen de la nota">'
       : '';
-    return '<article class="tv-note">' +
-      '<div class="tv-note-date">' + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (n.text ? '<div class="tv-note-text" translate="no">' + esc(n.text) + '</div>' : '') +
+    return '<article class="tv-note' + (n.kind === 'activity' ? ' is-activity' : '') + '">' +
+      '<div class="tv-note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
+      (n.text ? '<div class="tv-note-text" translate="no">' + esc(n.kind === 'activity' ? Workhub.t(n.text) : n.text) + '</div>' : '') +
       img +
       '</article>';
   }

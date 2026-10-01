@@ -23,7 +23,7 @@ const NETWORK_WAIT_MS = 4000;
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(SHELL)
-      .then((cache) => Promise.allSettled(FILES.map((f) => cache.add(new Request(f, {cache: 'reload'})))))
+      .then((cache) => Promise.all(FILES.map((f) => cache.add(new Request(f, {cache: 'reload'})))))
       .then(() => self.skipWaiting())
   );
 });

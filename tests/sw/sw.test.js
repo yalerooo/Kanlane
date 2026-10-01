@@ -23,19 +23,22 @@ const caches = {
 };
 
 let online = true;
+let failPath = '';
 const calls = [];
 async function netFetch(req){
   const url = typeof req === 'string' ? req : req.url;
   calls.push(url);
   if(!online) throw new TypeError('offline');
+  if(failPath && url.endsWith(failPath)) throw new TypeError('partial download');
   return new Response('net:' + url, {status: 200});
 }
 
 const listeners = {};
+let activated = 0;
 const self = {
   location: new URL('https://w.test/sw.js'),
   addEventListener: (t, f) => { listeners[t] = f; },
-  skipWaiting: async () => {},
+  skipWaiting: async () => { activated++; },
   clients: {claim: async () => {}}
 };
 class SwRequest extends Request{ constructor(i, o){ super(typeof i === 'string' ? new URL(i, 'https://w.test').href : i, o); } }
@@ -51,6 +54,11 @@ const req = (url, o) => Object.assign(new Request(url), {}, o);
 
 (async () => {
   stores['workhub-shell-viejo'] = new Map();
+  failPath = '/src/a.js';
+  let installFailed = false;
+  try{ await fire('install'); }catch(e){ installFailed = true; }
+  ok(installFailed && activated === 0 && !!stores['workhub-shell-viejo'], 'instalación incompleta no activa ni borra la versión anterior');
+  failPath = '';
   await fire('install');
   ok([...stores['workhub-shell-test1'].keys()].length === 4, 'install guarda los 4 archivos');
   await fire('activate');
@@ -60,7 +68,7 @@ const req = (url, o) => Object.assign(new Request(url), {}, o);
   const nav = new Request('https://w.test/', {headers: {}});
   Object.defineProperty(nav, 'mode', {value: 'navigate'});
   const rNav = await fire('fetch', {request: nav});
-  ok((await rNav.text()) === 'net:https://w.test/index.html' || true, 'navegación sin red responde');
+  ok((await rNav.text()) === 'net:https://w.test/index.html', 'navegación sin red responde con el HTML guardado');
   ok(rNav.ok, 'navegación sin conexión usa /index.html guardado');
 
   const rAsset = await fire('fetch', {request: new Request('https://w.test/src/a.js?v=2')});

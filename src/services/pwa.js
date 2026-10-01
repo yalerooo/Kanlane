@@ -64,7 +64,7 @@
       if(!hadController || reloading) return;
       toast().success(t('Hay una versión nueva de Workhub'), {duration: 15000, action: {label: t('Recargar'), run: () => { reloading = true; location.reload(); }}});
     });
-    navigator.serviceWorker.register('sw.js').then((reg) => {
+    navigator.serviceWorker.register(Workhub.utils.urls.rootUrl('sw.js')).then((reg) => {
       /* Comprueba si hay versión nueva al volver a la pestaña. */
       document.addEventListener('visibilitychange', () => { if(!document.hidden) reg.update().catch(() => {}); });
     }).catch(() => {});

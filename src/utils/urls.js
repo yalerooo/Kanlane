@@ -36,5 +36,12 @@
     return rule ? rule.name : 'Videollamada';
   }
 
-  Workhub.utils.urls = {normalizeUrl, safeUrl, platformOf};
+  /* Raíz del sitio: la aplicación está en /app/ (o, al abrirla como archivo, en app/),
+   y lo que ella carga (sw.js, plugins/…) cuelga de la carpeta de arriba. */
+function rootUrl(rel){
+  const inApp = /\/app\/(index\.html)?$/.test(location.pathname);
+  return new URL((inApp ? '../' : './') + (rel || ''), location.href).href;
+}
+
+Workhub.utils.urls = {rootUrl, normalizeUrl, safeUrl, platformOf};
 })();

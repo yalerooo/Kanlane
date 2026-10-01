@@ -125,7 +125,7 @@
     const s = String(raw || '').trim();
     if(!s) return null;
     let u;
-    try{ u = new URL(s, location.href); }catch(e){ return null; }
+    try{ u = new URL(s, Workhub.utils.urls.rootUrl()); }catch(e){ return null; }
     const local = /^(localhost|127\.0\.0\.1)$/.test(u.hostname);
     if(u.protocol === 'https:' || (u.protocol === 'http:' && local)) return u.href;
     /* Plugins oficiales al abrir Workhub como archivo (modo local). */

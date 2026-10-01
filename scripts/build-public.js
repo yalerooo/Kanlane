@@ -11,7 +11,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
+const INCLUDE = ['index.html', 'app', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -61,13 +61,17 @@ const PAGE = {
    el noindex y Google puede indexar igualmente la dirección. */
 const LEGAL = Object.assign({}, PAGE, {'X-Robots-Tag': 'noindex, nofollow, noarchive'});
 
+/* La aplicación (/app/) necesita sesión: no tiene nada que indexar. A diferencia de las
+   páginas legales NO se bloquea en robots.txt, para que el robot pueda leer el noindex. */
+const APP = Object.assign({}, PAGE, {'X-Robots-Tag': 'noindex, follow'});
+
 /* Formato de _headers de Cloudflare: una ruta y, debajo, sus cabeceras
    con sangría. Si varias rutas coinciden, se suman. */
 function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/app/*', APP), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
 }
 
 /* ---------- dist/ ---------- */

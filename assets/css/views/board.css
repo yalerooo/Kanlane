@@ -215,5 +215,8 @@
 @media (hover:none){.col-head{cursor:default;}}
 
 /* Subtareas y repetición en la tarjeta. */
-.card .meta .check-badge,.card .meta .repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-faint);}
-.card .meta .check-badge.is-complete{color:var(--st-done);}
+.card .meta .check-progress{display:inline-flex;align-items:center;gap:6px;min-width:72px;font-size:11px;font-variant-numeric:tabular-nums;color:var(--accent);}
+.card .meta .check-progress-track{display:block;width:48px;height:5px;overflow:hidden;border-radius:99px;background:var(--line-strong);}
+.card .meta .check-progress-track > span{display:block;height:100%;border-radius:inherit;background:var(--accent-solid);}
+.card .meta .check-progress-value{min-width:27px;text-align:right;}
+.card .meta .repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-faint);}

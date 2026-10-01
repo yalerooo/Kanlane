@@ -66,9 +66,31 @@ textarea::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8p
 @media (max-width:520px){ .row2{grid-template-columns:1fr;gap:0;} }
 
 /* Subtareas en el formulario de la tarea. */
-.check-edit{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.check-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.check-summary{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);}
+.check-progress-bar,.tv-check-progress{height:5px;border-radius:99px;background:var(--line);overflow:hidden;}
+.check-progress-bar > span,.tv-check-progress > span{display:block;height:100%;width:0;background:var(--accent-solid);border-radius:inherit;transition:width .2s ease;}
+.check-progress-bar[hidden]{display:none;}
+.check-edit{display:flex;flex-direction:column;gap:5px;margin:3px 0 7px;}
 .check-edit:empty{display:none;}
-.check-row{display:flex;align-items:center;gap:8px;}
-.check-row input[type="text"]{flex:1;min-width:0;}
+.check-row{display:flex;align-items:center;gap:5px;min-width:0;padding:4px 5px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);transition:border-color .12s ease,background .12s ease;}
+.check-row:hover,.check-row:focus-within{border-color:var(--line-strong);}
+.check-row.is-done{background:var(--surface-2);}
+.check-row.is-done input[type="text"]{color:var(--ink-faint);text-decoration:line-through;}
+.check-row input[type="text"]{flex:1;min-width:0;min-height:30px;padding:4px 6px;border-color:transparent;box-shadow:none;background:transparent;}
+.check-row input[type="text"]:hover{border-color:transparent;}
+.check-row input[type="checkbox"]{flex:none;margin:0 3px;}
+.check-drag,.check-move{display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:28px;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-faint);font:inherit;cursor:pointer;}
+.check-drag{cursor:grab;}
+.check-drag:active{cursor:grabbing;}
+.check-move{font-size:17px;line-height:1;}
+.check-drag:hover,.check-move:hover:not(:disabled),.check-drag:focus-visible,.check-move:focus-visible{background:var(--accent-soft);color:var(--accent);}
+.check-move:disabled{opacity:.3;cursor:default;}
+.check-row .check-del{flex:none;width:28px;height:28px;}
+.check-row.is-dragging{opacity:.55;}
+.check-row.drop-before{border-top:2px solid var(--accent-solid);}
+.check-row.drop-after{border-bottom:2px solid var(--accent-solid);}
+.check-row button:focus-visible{outline:2px solid var(--accent-solid);outline-offset:1px;}
 .check-add{display:flex;align-items:center;gap:8px;}
 .check-add input{flex:1;min-width:0;}
+@media (max-width:520px){.check-row{gap:2px;padding:3px}.check-drag,.check-move{width:24px}.check-row input[type="text"]{padding:4px 2px}}

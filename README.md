@@ -146,6 +146,7 @@ node tests/backup/backup.test.js
 node tests/sw/sw.test.js
 cd tests/rules && npm install && npm test
 cd ../e2e && npm install && npm test
+cd ../.. && npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
 ```
 
 ## Subir esto a GitHub

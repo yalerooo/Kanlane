@@ -54,13 +54,20 @@ const PAGE = {
   'Content-Security-Policy': CSP
 };
 
+/* Páginas legales: llevan el nombre, NIF, domicilio y correo del titular, así que no
+   deben salir en buscadores ni guardarse en su caché. Siguen siendo públicas para
+   quien tenga el enlace (la ley exige que se puedan consultar).
+   OJO: no bloquear /legal/ en robots.txt. Si el robot no puede leer la página, no ve
+   el noindex y Google puede indexar igualmente la dirección. */
+const LEGAL = Object.assign({}, PAGE, {'X-Robots-Tag': 'noindex, nofollow, noarchive'});
+
 /* Formato de _headers de Cloudflare: una ruta y, debajo, sus cabeceras
    con sangría. Si varias rutas coinciden, se suman. */
 function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/legal/*', PAGE), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
 }
 
 /* ---------- dist/ ---------- */

@@ -55,6 +55,7 @@
     'Aún no hay proyectos. Crea el primero abajo.':'No projects yet. Create the first one below.',
     'Nuevo proyecto':'New project', 'Añadir':'Add', 'Cambiar color':'Change color',
     'Color del proyecto':'Project color',
+    'Otro color':'Other color',
     'Smart GP: registrar horas':'Smart GP: log hours', 'Abrir Smart GP':'Open Smart GP',
     'Apuntar las horas de esta tarea':'Log the hours of this task',
     'h':'h', 'día':'day', 'días':'days', 'registros':'entries',
@@ -82,7 +83,7 @@
     projects: [], logged: {}, taskHours: {}, prefs: {project: ''}, schedule: [],
     tasks: [], doneKeys: [],
     month: {y: now.getFullYear(), m: now.getMonth()}, selected: '', hidden: {},
-    view: 'calendar', entries: [], armed: ''
+    view: 'calendar', entries: [], armed: '', colorPicker: '', newColor: '', newName: ''
   };
   var queue = Promise.resolve();
 
@@ -523,15 +524,27 @@
     var hours = {};
     st.entries.forEach(function(e){ hours[e.project] = (hours[e.project] || 0) + e.hours; });
     var rows = st.projects.length ? st.projects.map(function(p){
-      return '<div class="sg-proj"><input class="sg-swatch" type="color" data-act="color" data-id="' + esc(p.id) + '" value="' + projectColor(p.id) + '" title="' + esc(tr('Cambiar color')) + '" aria-label="' + esc(tr('Cambiar color')) + '">' +
+      var color = projectColor(p.id);
+      return '<div class="sg-proj-wrap"><div class="sg-proj"><button type="button" class="sg-color-trigger" data-act="show-color" data-id="' + esc(p.id) + '" style="--c:' + color + '" aria-label="' + esc(tr('Cambiar color')) + '" aria-expanded="' + (st.colorPicker === p.id) + '"><span></span></button>' +
         '<input class="wh-input" data-act="rename" data-id="' + esc(p.id) + '" value="' + esc(p.name) + '" maxlength="160" aria-label="' + esc(tr('Nombre del proyecto')) + '">' +
-        '<button type="button" class="sg-link is-muted" data-act="proj-del" data-id="' + esc(p.id) + '">' + (st.armed === p.id ? tr('¿Seguro?') : tr('Eliminar')) + '</button></div>';
+        '<button type="button" class="sg-link is-muted" data-act="proj-del" data-id="' + esc(p.id) + '">' + (st.armed === p.id ? tr('¿Seguro?') : tr('Eliminar')) + '</button></div>' +
+        (st.colorPicker === p.id ? colorChoices(p.id, color) : '') + '</div>';
     }).join('') : '<p class="sg-empty">' + tr('Aún no hay proyectos. Crea el primero abajo.') + '</p>';
+    var newColor = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[st.projects.length % PALETTE.length];
     return '<header class="sg-head"><div><h1>' + tr('Proyectos') + '</h1><p class="wh-muted">' + tr('Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).') + '</p></div>' +
       '<div class="sg-actions"><button type="button" class="wh-btn" data-act="back">' + tr('Volver') + '</button></div></header>' +
-      '<div class="sg-box">' + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="160" placeholder="' + esc(tr('Nuevo proyecto')) + '" aria-label="' + esc(tr('Nuevo proyecto')) + '">' +
-      '<input class="sg-swatch" id="newProjectColor" type="color" value="' + PALETTE[st.projects.length % PALETTE.length] + '" title="' + esc(tr('Color del proyecto')) + '" aria-label="' + esc(tr('Color del proyecto')) + '">' +
-      '<button type="button" class="wh-btn is-primary" data-act="proj-add">' + tr('Añadir') + '</button></div></div>';
+      '<div class="sg-box">' + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="160" value="' + esc(st.newName) + '" placeholder="' + esc(tr('Nuevo proyecto')) + '" aria-label="' + esc(tr('Nuevo proyecto')) + '">' +
+      '<button type="button" class="wh-btn is-primary" data-act="proj-add">' + tr('Añadir') + '</button></div>' +
+      '<div class="sg-new-colors"><span class="sg-color-caption">' + tr('Color del proyecto') + '</span>' + colorChoices('', newColor) + '</div></div>';
+  }
+
+  function colorChoices(id, selected){
+    var custom = !PALETTE.some(function(color){ return color.toLowerCase() === selected.toLowerCase(); });
+    return '<div class="sg-color-options" role="group" aria-label="' + esc(tr('Color del proyecto')) + '">' +
+      PALETTE.map(function(color){
+        return '<button type="button" class="sg-color-choice' + (color.toLowerCase() === selected.toLowerCase() ? ' is-selected' : '') + '" style="--c:' + color + '" data-act="choose-color" data-id="' + esc(id) + '" data-color="' + color + '" aria-label="' + color + '" aria-pressed="' + (color.toLowerCase() === selected.toLowerCase()) + '"></button>';
+      }).join('') +
+      '<label class="sg-color-custom' + (custom ? ' is-selected' : '') + '" style="--c:' + selected + '"><span class="sg-custom-dot"></span><span>' + tr('Otro color') + '</span><input type="color" data-act="custom-color" data-id="' + esc(id) + '" value="' + selected + '" aria-label="' + esc(tr('Otro color')) + '"></label></div>';
   }
 
   function render(){
@@ -549,6 +562,15 @@
     st.month = {y: d.getFullYear(), m: d.getMonth()};
     st.selected = '';
     return loadMonth().then(render);
+  }
+
+  function saveProjectColor(id, color){
+    var p = project(id);
+    if(!p || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
+    p.color = color;
+    st.colorPicker = '';
+    render();
+    serial(function(){ return set('projects', st.projects); }).then(refresh).catch(function(err){ wh.ui.toast(err.message || 'Error', {type:'error'}); });
   }
 
   function onClick(ev){
@@ -575,6 +597,11 @@
         busy(deleteEntry(id));
         break;
       case 'projects': st.view = 'projects'; render(); break;
+      case 'show-color': st.colorPicker = st.colorPicker === id ? '' : id; render(); break;
+      case 'choose-color':
+        if(id){ saveProjectColor(id, t.getAttribute('data-color')); }
+        else { st.newColor = t.getAttribute('data-color'); render(); }
+        break;
       case 'schedule': st.view = 'schedule'; render(); break;
       case 'back': st.view = 'calendar'; render(); break;
       case 'rule-add': {
@@ -610,11 +637,11 @@
         var input = document.getElementById('newProject');
         var name = input.value.trim();
         if(!name){ input.focus(); break; }
-        var color = document.getElementById('newProjectColor').value;
+        var color = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[st.projects.length % PALETTE.length];
         busy(serial(function(){
           st.projects.push({id: newId(), name: name, color: color});
           return set('projects', st.projects);
-        }));
+        }).then(function(){ st.newName = ''; st.newColor = ''; }));
         break;
       }
       case 'proj-del':
@@ -628,12 +655,9 @@
 
   function onChange(ev){
     var t = ev.target;
-    if(t.getAttribute('data-act') === 'color'){
-      var colored = project(t.getAttribute('data-id'));
-      if(colored && /^#[0-9a-fA-F]{6}$/.test(t.value)){
-        colored.color = t.value;
-        serial(function(){ return set('projects', st.projects); }).then(refresh).catch(function(err){ wh.ui.toast(err.message || 'Error', {type:'error'}); });
-      }
+    if(t.getAttribute('data-act') === 'custom-color'){
+      if(t.getAttribute('data-id')) saveProjectColor(t.getAttribute('data-id'), t.value);
+      else { st.newColor = t.value; render(); }
       return;
     }
     if(t.getAttribute('data-act') === 'rule-hours'){
@@ -657,6 +681,7 @@
   function startPanel(){
     document.getElementById('app').addEventListener('click', onClick);
     document.getElementById('app').addEventListener('change', onChange);
+    document.getElementById('app').addEventListener('input', function(ev){ if(ev.target.id === 'newProject') st.newName = ev.target.value; });
     st.selected = today();
     wh.on('tasks', function(list){ st.tasks = list; if(st.view === 'calendar') render(); });
     wh.on('storage', function(){ refresh(); });

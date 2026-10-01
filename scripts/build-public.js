@@ -36,8 +36,8 @@ const ALL = {
    Si añades otro servicio externo, añade su dominio aquí. */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://www.gstatic.com https://apis.google.com",
-  "connect-src 'self' https://*.googleapis.com https://apis.google.com https://api.github.com",
+  "script-src 'self' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net",
+  "connect-src 'self' https://*.googleapis.com https://apis.google.com https://api.github.com https://www.google.com https://www.recaptcha.net",
   "frame-src 'self' https: http://localhost:* http://127.0.0.1:*",
   "img-src 'self' data: blob: https:",
   "style-src 'self' 'unsafe-inline'",

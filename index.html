@@ -380,6 +380,15 @@
     <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
     <div class="backup-history-head"><div><h3>Versiones de este navegador</h3><p>Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button></div>
     <div class="backup-history" id="backupHistory" aria-live="polite"></div>
+    <div class="backup-history-head" id="cloudBackupHead" hidden><div><h3>Copias cifradas en tu cuenta</h3><p>Recupéralas desde otro dispositivo con tu clave de recuperación. La clave solo se guarda en este navegador: consérvala fuera de Workhub. Se mantienen siete versiones por proyecto.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveCloudBackup" hidden>Guardar en la nube</button></div>
+    <div class="cloud-backup-setup" id="cloudBackupSetup" hidden>
+      <button type="button" class="btn btn-primary" id="btnEnableCloudBackup">Activar copias cifradas</button>
+      <label for="cloudBackupImportKey">¿Ya tienes una clave? Introdúcela para recuperar las copias</label>
+      <div class="data-actions"><input id="cloudBackupImportKey" type="text" autocomplete="off" spellcheck="false" aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnUseCloudBackupKey">Usar clave</button></div>
+    </div>
+    <div class="cloud-backup-key" id="cloudBackupKeyWrap" hidden><label for="cloudBackupKey">Guarda esta clave fuera de Workhub. Sin ella no podrás abrir las copias en otro dispositivo.</label><div class="data-actions"><input id="cloudBackupKey" type="text" readonly aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnCopyCloudBackupKey">Copiar clave</button><button type="button" class="btn btn-ghost" id="btnHideCloudBackupKey">Ocultar clave</button></div></div>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnForgetCloudBackupKey" hidden>Dejar de guardar copias en la nube</button>
+    <div class="backup-history" id="cloudBackupHistory" aria-live="polite" hidden></div>
     <p class="lock-error" id="dataError" hidden></p>
     <p class="hint" id="dataStatus" hidden></p>
   </section>
@@ -1129,6 +1138,7 @@
 <script src="src/services/preferences.js"></script>
 <script src="src/services/platform.js"></script>
 <script src="src/services/backup-history.js"></script>
+<script src="src/services/cloud-backup.js"></script>
 <script src="src/services/crypto.js"></script>
 <script src="src/services/firebase-backend.js"></script>
 <script src="src/services/github-api.js"></script>

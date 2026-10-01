@@ -15,6 +15,10 @@ window.WORKHUB_FIREBASE = {
   messagingSenderId: '1056897810807',
   appId: '1:1056897810807:web:dacc47f0a05651f91c6172',
 
+  /* Clave pública de sitio reCAPTCHA Enterprise registrada en Firebase App Check.
+     Se configura antes de activar la aplicación obligatoria en Auth/Firestore. */
+  appCheckSiteKey: '6LfshtktAAAAAGvC-OMW5yGx3D7XAwqWtrtawI-H',
+
   /* Dominios desde los que se sirve la web FUERA de Firebase Hosting y que
      reenvían /__/auth/* a Firebase (Cloudflare lo hace con
      worker/index.js). En ellos el inicio de sesión se completa en el

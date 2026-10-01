@@ -59,8 +59,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       // Proyecto principal: sus datos cuelgan directamente de users/{uid}.
-      // 'settings' (color, tema) y 'plugins' (plugins instalados) son del
-      // usuario, comunes a todos sus proyectos.
+      // 'settings' guarda preferencias y storage.user de los plugins.
+      // 'plugins' conserva las instalaciones del proyecto principal.
       match /{col}/{docId} {
         allow read, write: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
       }

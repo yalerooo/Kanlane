@@ -103,12 +103,12 @@
         const startNew = f.allowNew && (onlyNew || f.value === NEW);
         const opts = f.options.map((o) => '<option value="' + esc(o.value) + '"' + (!startNew && o.value === f.value ? ' selected' : '') + ' translate="no">' + esc(o.label) + '</option>').join('') +
           (f.allowNew ? '<option value="' + NEW + '"' + (startNew ? ' selected' : '') + '>' + esc(f.newLabel) + '</option>' : '');
-        const color = PALETTE.indexOf(f.newColorValue) !== -1 ? f.newColorValue : PALETTE[0];
+        const color = /^#[0-9a-fA-F]{6}$/.test(f.newColorValue || '') ? f.newColorValue : PALETTE[0];
         this.state[f.key] = {color:color};
         const swatches = PALETTE.map((c) => '<button type="button" class="pf-swatch' + (c === color ? ' is-selected' : '') + '" data-pf-color="' + c + '" data-pf-key="' + f.key + '" style="--c:' + c + '" role="radio" aria-checked="' + (c === color) + '" aria-label="' + c + '"></button>').join('');
         return '<div class="field">' + label + '<select id="' + id + '"' + (onlyNew ? ' hidden' : '') + ' data-pf-select="' + f.key + '">' + opts + '</select>' +
-          (f.allowNew ? '<div class="pf-new" id="pfNew_' + f.key + '"' + (startNew ? '' : ' hidden') + '><input type="text" id="pfNewName_' + f.key + '" maxlength="60" value="' + esc(f.newName || '') + '" placeholder="' + esc(f.newPlaceholder) + '" autocomplete="off" translate="no">' +
-            (f.newColor ? '<div class="pf-swatches" role="radiogroup">' + swatches + '</div>' : '') + '</div>' : '') + hint + '</div>';
+          (f.allowNew ? '<div class="pf-new" id="pfNew_' + f.key + '"' + (startNew ? '' : ' hidden') + '><input type="text" id="pfNewName_' + f.key + '" maxlength="160" value="' + esc(f.newName || '') + '" placeholder="' + esc(f.newPlaceholder) + '" autocomplete="off" translate="no">' +
+            (f.newColor ? '<div class="pf-colors"><div class="pf-swatches" role="radiogroup">' + swatches + '</div><label class="pf-custom-color"><input type="color" data-pf-custom="' + f.key + '" value="' + color + '"><span>' + Workhub.t('Otro color') + '</span></label></div>' : '') + '</div>' : '') + hint + '</div>';
       }
       /* dates */
       const now = f.value.length ? parse(f.value[0]) : new Date();
@@ -187,11 +187,23 @@
           b.classList.toggle('is-selected', on);
           b.setAttribute('aria-checked', on ? 'true' : 'false');
         });
+        const custom = this.body.querySelector('[data-pf-custom="' + key + '"]');
+        if(custom) custom.value = this.state[key].color;
       }
     }
 
     /* «Añadir nuevo…» en un desplegable enseña el nombre (y el color). */
     _change(ev){
+      const custom = closest(ev.target, '[data-pf-custom]');
+      if(custom){
+        const key = custom.getAttribute('data-pf-custom');
+        this.state[key].color = custom.value;
+        this.body.querySelectorAll('[data-pf-key="' + key + '"][data-pf-color]').forEach((b) => {
+          b.classList.remove('is-selected');
+          b.setAttribute('aria-checked', 'false');
+        });
+        return;
+      }
       const sel = closest(ev.target, '[data-pf-select]');
       if(!sel) return;
       const key = sel.getAttribute('data-pf-select');

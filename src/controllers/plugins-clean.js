@@ -47,12 +47,12 @@
         o.value = str(f.value, 200); o.placeholder = str(f.placeholder, 80); o.maxlength = Math.min(200, Math.max(1, num(f.maxlength) || 120));
       } else if(f.type === 'select'){
         o.options = (Array.isArray(f.options) ? f.options : []).slice(0, 100).map((x) => ({
-          value: str(x && x.value, 64), label: str(x && x.label, 60)
+          value: str(x && x.value, 64), label: str(x && x.label, 160)
         })).filter((x) => x.value && x.label);
         o.value = str(f.value, 64);
         o.allowNew = !!f.allowNew;
         /* Para volver a abrir el formulario con un «nuevo» ya escrito. */
-        o.newName = str(f.newName, 60);
+        o.newName = str(f.newName, 160);
         o.newColorValue = HEX.test(f.newColorValue || '') ? f.newColorValue : '';
         o.newLabel = str(f.newLabel, 60) || Workhub.t('+ Añadir nuevo…');
         o.newPlaceholder = str(f.newPlaceholder, 60) || Workhub.t('Nombre');

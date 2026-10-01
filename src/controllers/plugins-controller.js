@@ -112,7 +112,7 @@
 
     /* ---------- Segundo plano ---------- */
 
-    /* Los plugins oficiales son de Workhub: si una versión nueva pide más
+    /* Los plugins oficiales son de Kanlane: si una versión nueva pide más
        permisos, se conceden solos (una vez por sesión). */
     upgradeOfficial(){
       this.upgraded = this.upgraded || {};
@@ -448,7 +448,7 @@
     }
 
     context(){
-      return {theme:this.theme(), project:this.projectInfo(), locale:Workhub.i18n.lang, app:{name:'Workhub', protocol:1}};
+      return {theme:this.theme(), project:this.projectInfo(), locale:Workhub.i18n.lang, app:{name:'Kanlane', protocol:1}};
     }
 
     /* Evento a todos los marcos vivos (cada uno solo lo recibe si tiene permiso). */

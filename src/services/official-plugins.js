@@ -10,7 +10,7 @@ Workhub.services.officialPlugins = [
       name: 'Informe de trabajo',
       version: '1.1.0',
       description: 'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.',
-      author: 'Workhub',
+      author: 'Kanlane',
       icon: 'chart',
       color: 238,
       permissions: ['tasks:read', 'ui:extend']
@@ -23,7 +23,7 @@ Workhub.services.officialPlugins = [
       name: 'Temporizador',
       version: '1.1.0',
       description: 'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.',
-      author: 'Workhub',
+      author: 'Kanlane',
       icon: 'timer',
       color: 24,
       permissions: ['tasks:read', 'storage', 'ui:extend']
@@ -36,7 +36,7 @@ Workhub.services.officialPlugins = [
       name: 'Apariencia',
       version: '1.1.0',
       description: 'Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.',
-      author: 'Workhub',
+      author: 'Kanlane',
       icon: 'sparkles',
       color: 328,
       permissions: ['appearance', 'storage']
@@ -49,7 +49,7 @@ Workhub.services.officialPlugins = [
       name: 'Smart GP',
       version: '1.0.0',
       description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
-      author: 'Workhub',
+      author: 'Kanlane',
       icon: 'clock',
       color: 172,
       permissions: ['tasks:read', 'storage', 'ui:extend']

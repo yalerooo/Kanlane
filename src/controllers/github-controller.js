@@ -1,6 +1,6 @@
 /* Integración con GitHub Projects: conecta la vista con el motor de
    sincronización y lo lanza al abrir, al volver a la pestaña, cada pocos
-   minutos y poco después de cambiar algo en Workhub. */
+   minutos y poco después de cambiar algo en Kanlane. */
 (function(){
   const api = Workhub.services.github;
   const toast = Workhub.views.toast;
@@ -33,7 +33,7 @@
       this.sync.on('change', () => this.render());
       /* Un instante después: ProjectModel marca "loaded" en su propio listener, que va detrás de este. */
       app.models.projects.on('change', () => Promise.resolve().then(() => { this.render(); this.schedule(); }));
-      /* Lo borrado en Workhub no vuelve a importarse desde GitHub. */
+      /* Lo borrado en Kanlane no vuelve a importarse desde GitHub. */
       app.models.tasks.on('removed', (t) => this.sync.ignore(t));
       /* Cambios locales: se envían enseguida (con un pequeño retraso). */
       app.models.tasks.on('change', () => this.queuePush());

@@ -1,11 +1,11 @@
-/* SDK de plugins de Workhub (protocolo v1).
+/* SDK de plugins de Kanlane (protocolo v1).
    Inclúyelo en la página de tu plugin:
      <script src="https://workhub.yalero.net/plugins/sdk/workhub-plugin.js"></script>
    y conéctate con:
      const wh = await WorkhubPlugin.connect({id:'com.tu-nombre.mi-plugin', name:'Mi plugin', ...});
 
    El plugin corre en un marco aislado (sandbox) y solo puede hablar con
-   Workhub mediante mensajes. Cada llamada exige el permiso correspondiente,
+   Kanlane mediante mensajes. Cada llamada exige el permiso correspondiente,
    que el usuario aprueba al instalarlo. Guía completa: docs/PLUGINS.md. */
 (function(global){
   'use strict';
@@ -14,11 +14,11 @@
   var CONNECT_TIMEOUT_MS = 8000;
   var LOCALES = {es:'es-ES', en:'en-US'};
 
-  /* Idioma de Workhub ('es', 'en'…). Hasta conectar, el del navegador. */
+  /* Idioma de Kanlane ('es', 'en'…). Hasta conectar, el del navegador. */
   var lang = /^es\b/i.test(global.navigator.language || 'es') ? 'es' : 'en';
 
   /* Traducciones del plugin: const t = WorkhubPlugin.translations({en:{'Hola':'Hello'}});
-     t('Hola') devuelve el texto en el idioma de Workhub (o el original si
+     t('Hola') devuelve el texto en el idioma de Kanlane (o el original si
      no hay traducción). Admite datos: t('Hola, {name}', {name:'Ana'}). */
   function translations(dicts){
     dicts = dicts || {};
@@ -32,12 +32,12 @@
 
   function send(msg){
     msg.wh = PROTOCOL;
-    /* El marco no conoce el origen de Workhub (puede estar en cualquier
+    /* El marco no conoce el origen de Kanlane (puede estar en cualquier
        dominio); solo la ventana que lo contiene recibe el mensaje. */
     global.parent.postMessage(msg, '*');
   }
 
-  /* Aplica los colores y el tema de Workhub a la página del plugin. */
+  /* Aplica los colores y el tema de Kanlane a la página del plugin. */
   function applyTheme(theme){
     if(!theme) return;
     var root = document.documentElement;
@@ -123,14 +123,14 @@
               }
             },
             /* 'panel': abierto en la sección Plugins. 'background': cargado oculto
-               al abrir Workhub (plugins con permiso ui:extend o appearance). */
+               al abrir Kanlane (plugins con permiso ui:extend o appearance). */
             mode: (msg.context && msg.context.mode) || 'panel',
             isBackground: ((msg.context && msg.context.mode) || 'panel') === 'background',
             ui: {
               toast: function(message, opts){ return call('ui.toast', {message:message, type:(opts && opts.type) || 'success'}); },
               openTask: function(id){ return call('ui.openTask', {id:id}); },
               openPanel: function(){ return call('ui.openPanel'); },
-              /* Cuadro de formulario que dibuja Workhub (permiso ui:extend). Devuelve
+              /* Cuadro de formulario que dibuja Kanlane (permiso ui:extend). Devuelve
                  {clave: valor} o null si la persona lo cancela. spec: {title, subtitle,
                  intro, submit, cancel, fields:[{key, type:'number'|'text'|'select'|'dates',
                  label, hint, required, value, ...}]}. Ver docs/PLUGINS.md. */

@@ -1,6 +1,6 @@
 # Trabajo en equipo
 
-Un proyecto de Workhub puede compartirse con otras personas: cada una entra con su propia cuenta, ve el mismo tablero en tiempo real y las tareas se pueden **asignar** (a otras personas o a uno mismo), como en Trello.
+Un proyecto de Kanlane puede compartirse con otras personas: cada una entra con su propia cuenta, ve el mismo tablero en tiempo real y las tareas se pueden **asignar** (a otras personas o a uno mismo), como en Trello.
 
 Requiere cuenta (Firebase). El modo invitado y el modo local no tienen equipos.
 

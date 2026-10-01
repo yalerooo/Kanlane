@@ -1,4 +1,4 @@
-/* Acceso con cuenta cuando Workhub está publicado con Firebase.
+/* Acceso con cuenta cuando Kanlane está publicado con Firebase.
    gate() devuelve una promesa que se resuelve cuando la app puede arrancar:
    al instante si Firebase no está configurado (modo local / claude.ai), o
    cuando hay una sesión iniciada. Cerrar sesión o cambiar de cuenta recarga
@@ -31,7 +31,7 @@
     'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Inicia sesión.',
     'auth/weak-password': 'La contraseña debe tener al menos 8 caracteres.',
     'auth/password-does-not-meet-requirements': 'La contraseña no cumple los requisitos: usa al menos 8 caracteres, con mayúsculas, minúsculas y números.',
-    'auth/admin-restricted-operation': 'Esta cuenta no tiene acceso a Workhub.',
+    'auth/admin-restricted-operation': 'Esta cuenta no tiene acceso a Kanlane.',
     'auth/user-disabled': 'Esta cuenta está desactivada.',
     'auth/account-exists-with-different-credential': 'Ya tienes una cuenta con ese correo usando otro método de acceso. Entra con ese método.',
     'auth/operation-not-allowed': 'Este método de acceso no está activado en Firebase (Authentication → Sign-in method).',

@@ -1,9 +1,9 @@
-# Workhub
+# Kanlane
 
 Gestor de trabajo por cliente: tareas, calendario con reuniones, contactos, contraseñas cifradas y clientes (Finba, Mondragón Unibertsitatea, UNIA, Institut de Teatre, etc.). En Ajustes se puede elegir el color de acento, el tema claro/oscuro y el idioma (español o inglés).
 
 **Versión en vivo:**
-https://workhub.yalero.net/
+https://kanlane.com/
 
 ## Qué hay en esta carpeta
 
@@ -66,11 +66,11 @@ Detalles de interfaz:
 - **Colores de cliente**: en Clientes, el botón de paleta (o el avatar) permite elegir el color de cada cliente; se usa en etiquetas, avatares y desplegables. "Auto" vuelve al color derivado del nombre. Se guarda en el campo `color` (tono HSL) del cliente.
 - **Desplegables**: cada `<select>` se muestra con `Dropdown` (lista flotante, buscador a partir de 8 opciones, teclado). El `<select>` real sigue existiendo oculto y es el que leen los controladores.
 
-Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Workhub`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.
+Los scripts son clásicos (no módulos ES) y comparten el espacio de nombres global `Kanlane`, para que `index.html` siga funcionando abierto directamente desde el disco. El orden de los `<script>` en `index.html` importa: núcleo → utilidades → servicios → modelos → vistas → controladores → `main.js`.
 
 ## Publicarlo en la web con inicio de sesión (Firebase)
 
-Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión (Google, GitHub, Microsoft y correo) y los datos de cada usuario en Firestore, con el plan gratuito de Firebase, que no se pausa por inactividad. Sigue **[docs/FIREBASE.md](docs/FIREBASE.md)**; en resumen:
+Kanlane se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión (Google, GitHub, Microsoft y correo) y los datos de cada usuario en Firestore, con el plan gratuito de Firebase, que no se pausa por inactividad. Sigue **[docs/FIREBASE.md](docs/FIREBASE.md)**; en resumen:
 
 1. Crea el proyecto en la consola de Firebase y copia su configuración en `src/config/firebase-config.js`.
 2. Activa los métodos de acceso (Authentication → Sign-in method) y crea la base de datos Firestore.
@@ -78,15 +78,15 @@ Workhub se puede publicar en `https://TU-PROYECTO.web.app` con inicio de sesión
 
 La web de producción se publica en **Cloudflare** (Workers con recursos estáticos; publicación automática al fusionar en `main`, sin ningún ordenador encendido), usando Firebase solo para el acceso y los datos: ver **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
 
-Con `apiKey` vacío (como viene), Workhub sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
+Con `apiKey` vacío (como viene), Kanlane sigue funcionando exactamente igual que antes: en local o dentro de claude.ai.
 
 ## Plugins
 
-Workhub se puede ampliar con **plugins**: páginas web que se abren dentro de la sección **Plugins**, aisladas en un `<iframe sandbox>`, y que solo acceden a los datos que el usuario les permite al instalarlas (nunca a las contraseñas guardadas).
+Kanlane se puede ampliar con **plugins**: páginas web que se abren dentro de la sección **Plugins**, aisladas en un `<iframe sandbox>`, y que solo acceden a los datos que el usuario les permite al instalarlas (nunca a las contraseñas guardadas).
 
 Los plugins se **instalan en el proyecto abierto**. Si quieres usar uno en otro proyecto, instálalo allí también. Al cambiar de proyecto se cierran sus paneles y botones y se cargan únicamente los plugins del nuevo proyecto. Al quitar uno se borran solo sus datos de ese proyecto. En equipos, propietarios y editores gestionan las instalaciones; los lectores pueden usar las ya instaladas.
 
-- **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (tema, paleta, acento, tipografía, tamaño del texto, esquinas y densidad). No toca el HTML de Workhub: declara lo que quiere añadir y Workhub lo pinta.
+- **Qué pueden hacer:** además de su propio panel, un plugin puede añadir **botones** en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en `Ctrl K`, **etiquetas** en las tarjetas del tablero, y cambiar la **apariencia** (tema, paleta, acento, tipografía, tamaño del texto, esquinas y densidad). No toca el HTML de Kanlane: declara lo que quiere añadir y Kanlane lo pinta.
 - **Oficiales** (carpeta [`plugins/`](plugins)): **Informe de trabajo**, **Temporizador** (cronómetro desde la ficha de cada tarea y tiempo en cada tarjeta), **Smart GP** (al terminar una tarea pide las horas, los días y el proyecto, y las muestra en un calendario) y **Apariencia**. Se instalan con un clic desde la sección Plugins.
 - **De terceros:** cualquiera puede publicar el suyo en una web con https, y se instala pegando su enlace.
 

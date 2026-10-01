@@ -2,9 +2,9 @@
    web o los recursos imprescindibles dejan de responder correctamente. */
 const assert = require('node:assert/strict');
 
-const origin = process.env.WORKHUB_HEALTH_ORIGIN || 'https://workhub.yalero.net';
+const origin = process.env.WORKHUB_HEALTH_ORIGIN || 'https://kanlane.com';
 const checks = [
-  {path:'/', marker:'Workhub', type:'text/html'},
+  {path:'/', marker:'Kanlane', type:'text/html'},
   {path:'/app/', marker:'id="authPanel"', type:'text/html'},
   {path:'/robots.txt', marker:'Sitemap:', type:'text/plain'},
   {path:'/sw.js', marker:'self.addEventListener', type:'javascript'},

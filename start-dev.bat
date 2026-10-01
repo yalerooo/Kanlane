@@ -10,7 +10,7 @@ if not %ERRORLEVEL%==0 (
     exit /b 1
 )
 
-echo Iniciando Workhub en local (se recarga solo al guardar archivos)...
+echo Iniciando Kanlane en local (se recarga solo al guardar archivos)...
 start "" http://localhost:5500/app/
 node scripts\dev.js %*
 pause

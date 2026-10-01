@@ -1,4 +1,4 @@
-/* Punto de entrada. Si Workhub está publicado con Firebase, primero se pide
+/* Punto de entrada. Si Kanlane está publicado con Firebase, primero se pide
    iniciar sesión; si no, arranca directamente (modo local o claude.ai). */
 (function(){
   /* Primero se traduce la página (si el idioma no es español). */

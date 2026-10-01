@@ -30,6 +30,8 @@
       this.facts = $('tvFacts');
       this.checkWrap = $('tvChecklistWrap');
       this.checkCount = $('tvChecklistCount');
+      this.checkProgress = $('tvChecklistProgress');
+      this.checkProgressFill = $('tvChecklistProgressFill');
       this.checks = $('tvChecklist');
       this.descWrap = $('tvDescWrap');
       this.desc = $('tvDesc');
@@ -157,7 +159,10 @@
       const items = Array.isArray(t.checklist) ? t.checklist : [];
       const prog = TaskModel.checklistProgress(t);
       this.checkWrap.hidden = !items.length;
-      this.checkCount.textContent = items.length ? prog.done + '/' + prog.total : '';
+      const percent = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
+      this.checkCount.textContent = items.length ? percent + '%' : '';
+      this.checkProgress.setAttribute('aria-valuenow', percent);
+      this.checkProgressFill.style.width = percent + '%';
       this.checks.innerHTML = items.map((c) =>
         '<li data-cid="' + esc(c.id) + '"><label><input type="checkbox"' + (c.done ? ' checked' : '') + '>' +
         '<span translate="no"' + (c.done ? ' class="is-done"' : '') + '>' + esc(c.text) + '</span></label></li>').join('');

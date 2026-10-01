@@ -338,7 +338,8 @@
       due = '<span class="' + dueCls + '">' + iconSpan('calendar') + esc(dueTxt) + '</span>';
     }
     const prog = TaskModel.checklistProgress(t);
-    const check = prog.total ? '<span class="check-badge' + (prog.done === prog.total ? ' is-complete' : '') + '" title="Subtareas">' + iconSpan('check') + prog.done + '/' + prog.total + '</span>' : '';
+    const percent = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
+    const check = prog.total ? '<span class="check-progress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + percent + '"><span class="check-progress-track"><span style="width:' + percent + '%"></span></span><span class="check-progress-value">' + percent + '%</span></span>' : '';
     const repeat = t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '';
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
     const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';

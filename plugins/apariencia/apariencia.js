@@ -2,7 +2,7 @@
    Permisos: appearance, storage.
    - En segundo plano: aplica la apariencia guardada al abrir Workhub.
    - En el panel: elegir color, esquinas y densidad (con vista previa).
-   Se guarda en storage.user ('look'), igual en todos los proyectos. */
+   Se guarda en storage ('look') del proyecto abierto. */
 (function(){
   var MANIFEST = {
     id: 'workhub.apariencia',
@@ -21,7 +21,7 @@
 
   var tr = WorkhubPlugin.translations({en:{
     'No se pudo guardar: {error}':'Could not save: {error}', 'Apariencia':'Appearance',
-    'Los cambios se aplican al momento en todo Workhub y en todos tus proyectos. Mientras este plugin esté instalado, su color manda sobre el elegido en Ajustes.':'Changes apply instantly across Workhub and all your projects. While this plugin is installed, its color overrides the one chosen in Settings.',
+    'Los cambios se aplican al proyecto abierto. Mientras este plugin esté instalado aquí, su color manda sobre el elegido en Ajustes.':'Changes apply to the current project. While this plugin is installed here, its color overrides the one chosen in Settings.',
     'Color de acento':'Accent color', 'Botones principales, sección activa y elementos seleccionados.':'Primary buttons, active section and selected items.',
     'El de Ajustes':'From Settings', 'Otro':'Other', 'Esquinas':'Corners', 'Forma de tarjetas, botones y campos.':'Shape of cards, buttons and fields.',
     'Rectas':'Sharp', 'Normales':'Normal', 'Redondeadas':'Rounded', 'Densidad':'Density',
@@ -55,7 +55,7 @@
 
   function save(){
     render();
-    wh.storage.user.set('look', look).catch(function(err){ wh.ui.toast(tr('No se pudo guardar: {error}', {error:err.message}), {type:'error'}); });
+    wh.storage.set('look', look).catch(function(err){ wh.ui.toast(tr('No se pudo guardar: {error}', {error:err.message}), {type:'error'}); });
   }
 
   function seg(name, options){
@@ -68,7 +68,7 @@
     var r = RADIUS[look.radius], d = DENSITY[look.density];
     var pv = '--pv-sm:' + r.sm + 'px;--pv-md:' + r.md + 'px;--pv-lg:' + r.lg + 'px;--pv-xl:' + r.xl + 'px;--pv-pad:' + d.pad + ';--pv-gap:' + d.gap + ';' + (look.accent ? '--pv-accent:' + look.accent + ';' : '');
     app.innerHTML =
-      '<h1>' + tr('Apariencia') + '</h1><p class="wh-muted">' + tr('Los cambios se aplican al momento en todo Workhub y en todos tus proyectos. Mientras este plugin esté instalado, su color manda sobre el elegido en Ajustes.') + '</p>' +
+      '<h1>' + tr('Apariencia') + '</h1><p class="wh-muted">' + tr('Los cambios se aplican al proyecto abierto. Mientras este plugin esté instalado aquí, su color manda sobre el elegido en Ajustes.') + '</p>' +
       '<div class="layout"><div>' +
         '<div class="group"><h2>' + tr('Color de acento') + '</h2><p>' + tr('Botones principales, sección activa y elementos seleccionados.') + '</p><div class="swatches">' +
           '<button type="button" class="sw-default' + (look.accent ? '' : ' is-on') + '" data-accent="">' + tr('El de Ajustes') + '</button>' +
@@ -97,14 +97,14 @@
 
   WorkhubPlugin.connect(MANIFEST).then(function(client){
     wh = client;
-    return wh.storage.user.get('look');
+    return wh.storage.get('look');
   }).then(function(saved){
     look = norm(saved);
     if(wh.isBackground){
       apply();
       /* El panel guardó cambios: aplicarlos. */
       wh.on('storage', function(ev){
-        if(ev.scope === 'user') wh.storage.user.get('look').then(function(v){ look = norm(v); apply(); });
+        if(ev.scope === 'project') wh.storage.get('look').then(function(v){ look = norm(v); apply(); });
       });
     } else {
       render();

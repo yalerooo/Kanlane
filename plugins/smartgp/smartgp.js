@@ -8,7 +8,7 @@
      las horas en las tarjetas.
    - panel (sección Plugins): el calendario, el detalle de cada día y los proyectos.
 
-   Datos (comunes a todos los proyectos de Workhub, wh.storage.user):
+   Datos del proyecto abierto de Workhub (wh.storage):
      projects   [{id, name, color}]
      log-AAAA-MM [{id, date, hours, project, task, title}]   (uno por día y tarea)
      logged     {idTarea: true}    tareas ya registradas u omitidas
@@ -54,6 +54,7 @@
     'Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).':'Add projects to group your hours (clients, lines of work…).',
     'Aún no hay proyectos. Crea el primero abajo.':'No projects yet. Create the first one below.',
     'Nuevo proyecto':'New project', 'Añadir':'Add', 'Cambiar color':'Change color',
+    'Color del proyecto':'Project color',
     'Smart GP: registrar horas':'Smart GP: log hours', 'Abrir Smart GP':'Open Smart GP',
     'Apuntar las horas de esta tarea':'Log the hours of this task',
     'h':'h', 'día':'day', 'días':'days', 'registros':'entries',
@@ -99,7 +100,7 @@
   function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function project(id){ return st.projects.filter(function(p){ return p.id === id; })[0] || null; }
   function projectName(id){ var p = project(id); return p ? p.name : tr('Sin proyecto'); }
-  function projectColor(id){ var p = project(id); return p ? p.color : GRAY; }
+  function projectColor(id){ var p = project(id); return p && /^#[0-9a-fA-F]{6}$/.test(p.color) ? p.color : GRAY; }
   function fail(err){
     var el = document.getElementById('app');
     el.innerHTML = '<p class="wh-muted">' + esc(err && err.message === 'not-in-workhub'
@@ -202,8 +203,8 @@
 
   /* ---------- Datos ---------- */
 
-  function get(key, dflt){ return wh.storage.user.get(key).then(function(v){ return v == null ? dflt : v; }); }
-  function set(key, value){ return wh.storage.user.set(key, value); }
+  function get(key, dflt){ return wh.storage.get(key).then(function(v){ return v == null ? dflt : v; }); }
+  function set(key, value){ return wh.storage.set(key, value); }
   /* Todas las escrituras de una en una: leen y reescriben el mismo documento. */
   function serial(fn){
     var run = queue.then(fn);
@@ -522,13 +523,14 @@
     var hours = {};
     st.entries.forEach(function(e){ hours[e.project] = (hours[e.project] || 0) + e.hours; });
     var rows = st.projects.length ? st.projects.map(function(p){
-      return '<div class="sg-proj"><button type="button" class="sg-swatch" data-act="color" data-id="' + esc(p.id) + '" style="--c:' + esc(p.color) + '" title="' + esc(tr('Cambiar color')) + '" aria-label="' + esc(tr('Cambiar color')) + '"></button>' +
-        '<input class="wh-input" data-act="rename" data-id="' + esc(p.id) + '" value="' + esc(p.name) + '" maxlength="60" aria-label="' + esc(tr('Nombre del proyecto')) + '">' +
+      return '<div class="sg-proj"><input class="sg-swatch" type="color" data-act="color" data-id="' + esc(p.id) + '" value="' + projectColor(p.id) + '" title="' + esc(tr('Cambiar color')) + '" aria-label="' + esc(tr('Cambiar color')) + '">' +
+        '<input class="wh-input" data-act="rename" data-id="' + esc(p.id) + '" value="' + esc(p.name) + '" maxlength="160" aria-label="' + esc(tr('Nombre del proyecto')) + '">' +
         '<button type="button" class="sg-link is-muted" data-act="proj-del" data-id="' + esc(p.id) + '">' + (st.armed === p.id ? tr('¿Seguro?') : tr('Eliminar')) + '</button></div>';
     }).join('') : '<p class="sg-empty">' + tr('Aún no hay proyectos. Crea el primero abajo.') + '</p>';
     return '<header class="sg-head"><div><h1>' + tr('Proyectos') + '</h1><p class="wh-muted">' + tr('Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).') + '</p></div>' +
       '<div class="sg-actions"><button type="button" class="wh-btn" data-act="back">' + tr('Volver') + '</button></div></header>' +
-      '<div class="sg-box">' + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="60" placeholder="' + esc(tr('Nuevo proyecto')) + '" aria-label="' + esc(tr('Nuevo proyecto')) + '">' +
+      '<div class="sg-box">' + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="160" placeholder="' + esc(tr('Nuevo proyecto')) + '" aria-label="' + esc(tr('Nuevo proyecto')) + '">' +
+      '<input class="sg-swatch" id="newProjectColor" type="color" value="' + PALETTE[st.projects.length % PALETTE.length] + '" title="' + esc(tr('Color del proyecto')) + '" aria-label="' + esc(tr('Color del proyecto')) + '">' +
       '<button type="button" class="wh-btn is-primary" data-act="proj-add">' + tr('Añadir') + '</button></div></div>';
   }
 
@@ -608,17 +610,11 @@
         var input = document.getElementById('newProject');
         var name = input.value.trim();
         if(!name){ input.focus(); break; }
+        var color = document.getElementById('newProjectColor').value;
         busy(serial(function(){
-          st.projects.push({id: newId(), name: name, color: PALETTE[st.projects.length % PALETTE.length]});
+          st.projects.push({id: newId(), name: name, color: color});
           return set('projects', st.projects);
         }));
-        break;
-      }
-      case 'color': {
-        var p = project(id);
-        if(!p) break;
-        p.color = PALETTE[(PALETTE.indexOf(p.color) + 1) % PALETTE.length];
-        busy(serial(function(){ return set('projects', st.projects); }));
         break;
       }
       case 'proj-del':
@@ -632,6 +628,14 @@
 
   function onChange(ev){
     var t = ev.target;
+    if(t.getAttribute('data-act') === 'color'){
+      var colored = project(t.getAttribute('data-id'));
+      if(colored && /^#[0-9a-fA-F]{6}$/.test(t.value)){
+        colored.color = t.value;
+        serial(function(){ return set('projects', st.projects); }).then(refresh).catch(function(err){ wh.ui.toast(err.message || 'Error', {type:'error'}); });
+      }
+      return;
+    }
     if(t.getAttribute('data-act') === 'rule-hours'){
       var rule = st.schedule.filter(function(r){ return r.id === t.getAttribute('data-rule'); })[0];
       if(!rule) return;

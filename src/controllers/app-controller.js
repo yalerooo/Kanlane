@@ -177,12 +177,14 @@
       window.__teamId = M.ProjectModel.isTeam(this.projectId) ? M.ProjectModel.teamId(this.projectId) : '';
       const db = M.ProjectModel.scope(this.rootDb, this.projectId);
       PROJECT_MODELS.forEach((name) => this.models[name].connect(db));
+      this.models.plugins.connect(db, this.projectId === M.ProjectModel.MAIN_ID);
     }
 
     /* Cambia de proyecto sin recargar: cierra lo que hubiera abierto, vacía los
        filtros y reconecta los modelos a los datos del otro proyecto. */
     switchProject(id, announce){
       if(!this.rootDb || id === this.projectId) return;
+      this.controllers.plugins.beforeProjectChange();
       /* El diálogo de proyectos se queda: desde él se puede estar eliminando este. */
       document.querySelectorAll('dialog[open]:not(#dlgProject)').forEach((dlg) => {
         const dismiss = dlg.querySelector('[data-dismiss]');
@@ -232,7 +234,6 @@
         this.models.settings.connect(db);
         this.models.projects.connect(db);
         this.models.team.connect();
-        this.models.plugins.connect(db);
         this.connectProject();
 
         /* "Contactos" ahora está dentro de "Clientes". */

@@ -1,4 +1,5 @@
-.layout{max-width:780px;margin-top:16px;}
+#app{width:100%;max-width:780px;margin-inline:auto;}
+.layout{margin-top:16px;}
 .group{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;}
 .group h2{font-size:13.5px;margin:0 0 3px;}
 .group p{font-size:12.5px;margin:0 0 12px;color:var(--ink-faint);}

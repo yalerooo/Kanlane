@@ -23,7 +23,7 @@
 
   var KEY = 'workhub_consent';
   /* Súbela cuando cambien las categorías o lo que se hace con ellas: volverá a preguntar. */
-  var VERSION = 1;
+  var VERSION = 2;
   var MAX_AGE = 365 * 24 * 60 * 60 * 1000;   /* 12 meses */
 
   var TEXT = {

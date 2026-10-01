@@ -59,7 +59,7 @@ e = env();
 e.C.accept();
 ok(e.C.has('analytics') === true, 'aceptar: la analítica queda permitida');
 const saved = JSON.parse(e.store.workhub_consent);
-ok(saved.v === 1 && saved.analytics === true && Math.abs(Date.now() - saved.at) < 5000, 'aceptar: se guarda versión, elección y fecha');
+ok(saved.v === 2 && saved.analytics === true && Math.abs(Date.now() - saved.at) < 5000, 'aceptar: se guarda versión, elección y fecha');
 ok(banners(e) === 0, 'aceptar: el aviso desaparece');
 
 /* 3. Rechazar */
@@ -76,10 +76,10 @@ ok(e.C.has('analytics') === false, 'se puede retirar el consentimiento después 
 
 /* 5. Caducidad y versión */
 const e300 = env();
-e300.store.workhub_consent = JSON.stringify({v: 1, at: Date.now() - 300 * DAY, analytics: true});
+e300.store.workhub_consent = JSON.stringify({v: 2, at: Date.now() - 300 * DAY, analytics: true});
 ok(e300.C.has('analytics') === true, 'a los 300 días la decisión sigue vigente');
 const eOld = env();
-eOld.store.workhub_consent = JSON.stringify({v: 1, at: Date.now() - 366 * DAY, analytics: true});
+eOld.store.workhub_consent = JSON.stringify({v: 2, at: Date.now() - 366 * DAY, analytics: true});
 ok(eOld.C.get() === null && eOld.C.has('analytics') === false, 'a los 12 meses caduca: se vuelve a preguntar');
 const eVer = env();
 eVer.store.workhub_consent = JSON.stringify({v: 99, at: Date.now(), analytics: true});

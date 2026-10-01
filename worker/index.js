@@ -37,6 +37,16 @@ export default {
       return new Response('No encontrado', {status: 404});
     }
 
+    /* Protección adicional del proxy OAuth. Un umbral alto evita penalizar
+       redes compartidas; la protección de la API directa corresponde a Firebase. */
+    if (env.AUTH_RATE_LIMIT) {
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+      if (!success) return new Response('Demasiadas peticiones', {
+        status: 429, headers: {'Retry-After': '60', 'Cache-Control': 'no-store'}
+      });
+    }
+
     const target = 'https://' + FIREBASE_HOST + '/__/' + rest + url.search;
 
     /* Sin cookies de este dominio hacia Google. */

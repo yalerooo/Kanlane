@@ -52,4 +52,8 @@
 .backup-version strong{font-size:13px;display:block;}
 .backup-version span{font-size:12px;color:var(--ink-soft);}
 .backup-version-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.cloud-backup-setup,.cloud-backup-key{padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:12px;}
+.cloud-backup-setup label,.cloud-backup-key label{display:block;font-size:13px;color:var(--ink-soft);margin:12px 0 8px;}
+.cloud-backup-setup .data-actions,.cloud-backup-key .data-actions{margin-bottom:0;}
+.cloud-backup-setup input,.cloud-backup-key input{flex:1;min-width:180px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 12px;}
 @media(max-width:640px){.backup-history-head,.backup-version{align-items:stretch;flex-direction:column;}.backup-version-actions .btn{flex:1;}}

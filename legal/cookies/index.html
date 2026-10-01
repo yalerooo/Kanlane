@@ -56,6 +56,8 @@
           <tr><td><code>workhub_hidden_…</code>, <code>workhub_cal_mode</code></td><td>localStorage</td><td>Las columnas que has ocultado y la vista del calendario (mes, semana o día).</td><td>Persistente.</td></tr>
           <tr><td><code>workhub_reminders</code>, <code>workhub_reminded</code></td><td>localStorage</td><td>Tus ajustes de recordatorios y los avisos ya mostrados, para no repetirlos.</td><td>Persistente (los avisos mostrados, 10 días).</td></tr>
           <tr><td><code>workhub_gh_token</code></td><td>localStorage</td><td>El acceso a GitHub, solo si conectas la integración. Nunca sale de tu navegador hacia nuestros servidores.</td><td>Hasta que lo quites en Ajustes.</td></tr>
+          <tr><td><code>workhub_cloud_backup_key:…</code></td><td>localStorage</td><td>Clave de cifrado de las copias de tu cuenta, solo si las activas. La clave no se envía a Firebase.</td><td>Hasta que desactives las copias en este navegador o borres sus datos.</td></tr>
+          <tr><td><code>workhub-backup-history</code></td><td>IndexedDB</td><td>Conservar hasta siete versiones locales por proyecto.</td><td>Hasta que borres una versión o los datos del navegador.</td></tr>
           <tr><td><code>workhub_consent</code></td><td>localStorage</td><td>Guardar tu decisión sobre esta política de cookies.</td><td>12 meses.</td></tr>
           <tr><td><code>workhub-shell-…</code>, <code>workhub-runtime</code></td><td>Caché del service worker</td><td>Guardar los archivos de la aplicación y de Firebase para abrirla más rápido y sin conexión (aplicación instalable).</td><td>Hasta que haya una versión nueva o borres los datos del sitio.</td></tr>
         </tbody>
@@ -65,7 +67,7 @@
     <section id="terceros">
       <h2>4. Terceros</h2>
       <ul>
-        <li><strong>Google (Firebase).</strong> Cuando inicias sesión, el navegador descarga el código de Firebase desde <code>www.gstatic.com</code> y habla con los servidores de Google. El almacenamiento de sesión y de datos de la tabla anterior lo crea ese código en tu navegador, pero con la única finalidad técnica de mantener tu sesión y tus datos.</li>
+        <li><strong>Google (Firebase y, cuando se active, reCAPTCHA Enterprise/App Check).</strong> Cuando inicias sesión, el navegador descarga el código de Firebase desde <code>www.gstatic.com</code> y habla con los servidores de Google. App Check puede tratar señales técnicas del navegador para frenar accesos automatizados. El almacenamiento de sesión y de datos de la tabla anterior sirve para mantener tu sesión, proteger el acceso y conservar tus datos.</li>
         <li><strong>Google y GitHub al iniciar sesión.</strong> Si eliges entrar con Google o GitHub, esas empresas pueden usar sus propias cookies en su ventana de acceso. Se rigen por sus políticas, no por esta.</li>
         <li><strong>Cloudflare.</strong> Aloja la web. Si tiene activadas sus protecciones de seguridad, puede usar una cookie técnica (por ejemplo, <code>__cf_bm</code>) para distinguir el tráfico legítimo de los robots; no sirve para identificarte ni para publicidad.</li>
       </ul>

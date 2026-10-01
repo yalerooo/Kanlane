@@ -58,13 +58,19 @@
   /* Carga el SDK (en orden: app, auth, firestore) e inicializa el proyecto. */
   function init(){
     if(fb) return Promise.resolve();
-    return SDK_FILES.reduce((p, f) => p.then(() => loadScript(SDK_BASE + f)), Promise.resolve()).then(() => {
+    const c = config();
+    const files = c.appCheckSiteKey && !c.useEmulators ? SDK_FILES.concat('firebase-app-check-compat.js') : SDK_FILES;
+    return files.reduce((p, f) => p.then(() => loadScript(SDK_BASE + f)), Promise.resolve()).then(() => {
       fb = window.firebase;
-      const c = config();
       fb.initializeApp({
         apiKey: c.apiKey, authDomain: resolveAuthDomain(c, location.host), projectId: c.projectId,
         storageBucket: c.storageBucket, messagingSenderId: c.messagingSenderId, appId: c.appId
       });
+      /* Antes de inicializar Auth o Firestore: ambos deben incluir App Check
+         cuando se active la protección en la consola. Nunca en emuladores. */
+      if(c.appCheckSiteKey && !c.useEmulators){
+        fb.appCheck().activate(new fb.appCheck.ReCaptchaEnterpriseProvider(c.appCheckSiteKey), true);
+      }
       auth = fb.auth();
       auth.languageCode = 'es';
       firestore = fb.firestore();

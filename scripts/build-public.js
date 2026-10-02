@@ -108,6 +108,7 @@ try{
   process.exit(1);
 }
 fs.writeFileSync(path.join(out, 'sitemap.xml'), sitemap.xml);
+if(sitemap.missing.length) console.warn('⚠ sin <meta name="last-modified"> (el sitemap no tendrá lastmod si no hay historial de git): ' + sitemap.missing.join(', '));
 console.log('sitemap.xml: ' + sitemap.count + ' URLs (fecha de git: ' + sitemap.sources.git + ', de meta last-modified: ' + sitemap.sources.meta + ', sin fecha: ' + sitemap.sources['sin fecha'] + ')');
 
 /* Service worker: se le inyecta la lista de archivos de esta versión y una marca

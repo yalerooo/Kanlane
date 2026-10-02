@@ -40,6 +40,26 @@ function indexRoutes(dir, rel, acc){
 
 /* ---------- Fecha de modificación ---------- */
 
+/* Formato de <meta name="last-modified" content="YYYY-MM-DD">: debe ser una fecha real. */
+function validDate(v){
+  if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v || "")) return false;
+  const d = new Date(v + 'T00:00:00Z');
+  return !isNaN(d) && d.toISOString().slice(0, 10) === v;
+}
+
+/* Ficheros index.html (relativos a root, con "/") de las páginas indexables del repositorio:
+   la portada y las carpetas de pageDirs() con sus subcarpetas, sin las que llevan noindex. */
+function pageFiles(root){
+  const files = [];
+  const add = (rel) => {
+    const html = fs.readFileSync(path.join(root, rel), 'utf8');
+    if(!/noindex/i.test(metaContent(html, 'robots') || '')) files.push(rel);
+  };
+  add('index.html');
+  pageDirs(root).forEach((d) => indexRoutes(root, d + '/', []).forEach((r) => add(r + 'index.html')));
+  return files.sort();
+}
+
 let gitUsable = null;
 function git(root, args){
   return cp.execFileSync('git', args, {cwd: root, stdio: ['ignore', 'pipe', 'ignore']}).toString().trim();
@@ -64,6 +84,7 @@ function buildSitemap(dist, srcRoot, pages){
   gitUsable = null;
   const routes = indexRoutes(dist, '', []).filter((r) => r === '' || pages.indexOf(r.split('/')[0]) !== -1);
   const entries = [];
+  const missing = [];
   const seen = {};
   routes.forEach((route) => {
     const where = '/' + route + 'index.html';
@@ -82,11 +103,13 @@ function buildSitemap(dist, srcRoot, pages){
       if(alternates.some((a) => a.lang === lang)) throw new Error('sitemap: hreflang="' + lang + '" repetido en ' + where);
       alternates.push({lang: lang, href: attr(t, 'href')});
     });
+    const meta = metaContent(html, 'last-modified');
+    if(meta !== null && !validDate(meta)) throw new Error('sitemap: <meta name="last-modified"> de ' + where + ' vale "' + meta + '" y debe ser una fecha YYYY-MM-DD válida');
+    if(meta === null) missing.push(where);
     let lastmod = gitDate(srcRoot, route + 'index.html');
     let source = 'git';
     if(!lastmod){
-      const meta = metaContent(html, 'last-modified');
-      lastmod = meta && /^\d{4}-\d\d-\d\d$/.test(meta) ? meta : null;
+      lastmod = meta;
       source = lastmod ? 'meta' : 'sin fecha';
     }
     entries.push({loc: canon[0], where: where, alternates: alternates, lastmod: lastmod, source: source});
@@ -111,7 +134,7 @@ function buildSitemap(dist, srcRoot, pages){
         .concat(e.alternates.map((a) => '    <xhtml:link rel="alternate" hreflang="' + esc(a.lang) + '" href="' + esc(a.href) + '"/>'))
         .concat(['  </url>']).join('\n');
     }), ['</urlset>', '']).join('\n');
-  return {xml: xml, count: entries.length, sources: sources};
+  return {xml: xml, count: entries.length, sources: sources, missing: missing};
 }
 
-module.exports = {ORIGIN, NOT_PAGES, pageDirs, buildSitemap};
+module.exports = {ORIGIN, NOT_PAGES, pageDirs, pageFiles, buildSitemap, validDate, metaContent, gitDate, git};

@@ -21,6 +21,7 @@ const checks = [
   {path:'/sitemap.xml', marker:'https://kanlane.com/gestor-de-clientes/', type:'xml'},
   {path:'/app/', marker:'id="authPanel"', type:'text/html'},
   {path:'/robots.txt', marker:'Sitemap:', type:'text/plain'},
+  {path:'/llms.txt', marker:'# Kanlane', type:'text/plain'},
   {path:'/sw.js', marker:'self.addEventListener', type:'javascript'},
   {path:'/legal/privacidad/', marker:'Política de privacidad', type:'text/html'}
 ];

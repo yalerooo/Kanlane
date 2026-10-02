@@ -27,6 +27,7 @@ jobs:
           node tests/worker/domains.test.js
           node tests/e2e/hreflang-check.js
           node tests/e2e/sitemap-check.js
+          node tests/e2e/seo-check.js
           node scripts/check-i18n.js --strict
       - name: Compilar versión pública
         run: node scripts/build-public.js

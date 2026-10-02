@@ -1,0 +1,57 @@
+# Kanlane
+
+> Kanlane es un gestor de tareas y proyectos con tableros kanban, calendario, clientes, contactos, contraseñas cifradas en el navegador, trabajo en equipo y uso sin conexión. Se puede empezar gratis.
+
+Última actualización: 2026-10-02
+
+Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvil y el ordenador. La portada incluye una demo interactiva del tablero que no pide registro. El sitio está en español y en inglés.
+
+## Portada y aplicación
+
+- [Kanlane (español)](https://kanlane.com/): portada con la demo interactiva del tablero, funciones, seguridad y preguntas frecuentes.
+- [Kanlane (English)](https://kanlane.com/en/): home page with the interactive board demo, features, security and FAQ.
+
+## Comparativas
+
+- [Alternativa a Trello](https://kanlane.com/alternativa-a-trello/): en qué se parece y en qué se diferencia Kanlane de Trello para equipos y profesionales.
+- [Alternativa a Asana](https://kanlane.com/alternativa-a-asana/): Kanlane como herramienta más sencilla y centrada en el proyecto.
+- [Alternativa a Notion](https://kanlane.com/alternativa-a-notion/): Kanlane ya organizado, sin montarlo todo desde cero.
+
+## Casos de uso
+
+- [Gestión de proyectos](https://kanlane.com/gestion-de-proyectos/): tableros kanban, tareas, calendario, clientes y equipos.
+- [Gestor de clientes](https://kanlane.com/gestor-de-clientes/): clientes, contactos, tareas y reuniones relacionados en un solo sitio.
+- [CRM para autónomos](https://kanlane.com/crm-para-autonomos/): un CRM ligero para quien trabaja por cuenta propia.
+
+## English
+
+- [Trello alternative](https://kanlane.com/en/trello-alternative/): how Kanlane compares with Trello for teams and professionals.
+- [Asana alternative](https://kanlane.com/en/asana-alternative/): a simpler, project-focused alternative to Asana.
+- [Notion alternative](https://kanlane.com/en/notion-alternative/): kanban boards, clients, calendar and passwords already organized.
+- [Project management](https://kanlane.com/en/project-management/): kanban boards, tasks, calendar, clients and teams.
+- [Client manager](https://kanlane.com/en/client-manager/): clients, contacts, tasks and meetings in one place.
+- [CRM for freelancers](https://kanlane.com/en/freelancer-crm/): a lightweight CRM for freelancers.
+
+## Documentación
+
+- [Guía de plugins](https://github.com/yalerooo/Kanlane/blob/main/docs/PLUGINS.md): cómo crear un plugin (API, permisos, eventos y publicación).
+- [Repositorio en GitHub](https://github.com/yalerooo/Kanlane): código y README en español e inglés.
+
+## Qué es y qué no es
+
+Qué es:
+
+- Tableros kanban por proyecto con etapas personalizables, subtareas y tareas que se repiten.
+- Calendario de fechas límite y reuniones, y una sección de clientes y contactos.
+- Contraseñas cifradas en el navegador con una contraseña maestra que no sale del dispositivo. Sin esa contraseña ni la clave de recuperación, nadie puede descifrarlas, tampoco Kanlane.
+- Proyectos compartidos con roles (propietario, editor y lector) e invitaciones a la dirección de correo de cada persona, que las acepta desde el menú de proyectos (no se envía ningún correo).
+- Uso sin conexión: se abre con los últimos datos y los cambios se envían al volver la red.
+- Plugins en páginas aisladas que solo acceden a lo que el usuario permite, y sincronización con GitHub Projects.
+- Exportación de tareas, notas, clientes, contactos, reuniones y contraseñas cifradas.
+
+Qué no es:
+
+- No importa tableros de otras herramientas: no hay importación directa desde Trello, Asana ni Notion. Se empieza con un proyecto nuevo.
+- No tiene aplicación nativa en tiendas de aplicaciones: se usa en el navegador o instalada como PWA.
+- Los recordatorios de tareas y reuniones solo funcionan con Kanlane abierto; no hay avisos por correo con la aplicación cerrada.
+- La exportación no incluye las imágenes originales de las notas ni los datos de los plugins.

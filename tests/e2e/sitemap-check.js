@@ -3,8 +3,11 @@
    - están las 14 URLs, todas con https://kanlane.com/ y barra final, sin app/demo/legal;
    - cada xhtml:link es recíproco y apunta a una URL del propio sitemap;
    - el XML está bien formado y las fechas, si las hay, son YYYY-MM-DD;
+   - las 14 páginas llevan <meta name="last-modified"> con una fecha YYYY-MM-DD válida;
+   - una copia SIN .git (git archive), como el clon de Cloudflare, genera <lastmod> en las 14 URLs
+     con la fecha de esa meta;
    - en negativo: una copia sin canonical, con canonical equivocado, duplicado o con hreflang
-     no recíproco hace fallar el build.
+     no recíproco, o con una meta last-modified mal formada, hace fallar el build; sin la meta solo avisa.
    No necesita navegador: node tests/e2e/sitemap-check.js */
 'use strict';
 const assert = require('node:assert/strict');
@@ -74,6 +77,17 @@ for(const u of urls){
 }
 ok('xhtml:link recíprocos (' + urls.reduce((n, u) => n + u.alternates.length, 0) + ' enlaces)');
 
+/* ---------- last-modified en las 14 páginas ---------- */
+const PAGE_FILES = EXPECTED.map(u => u.slice(ORIGIN.length) + 'index.html');
+const metaOf = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([^"]*)"/i) || [])[1];
+const validDate = (v) => /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v || '') && new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
+const metas = {};
+for(const f of PAGE_FILES){
+  metas[f] = metaOf(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+  assert.ok(validDate(metas[f]), f + ' tiene <meta name="last-modified"> con fecha válida (vale ' + metas[f] + ')');
+}
+ok('las ' + PAGE_FILES.length + ' páginas tienen <meta name="last-modified"> con fecha válida');
+
 /* ---------- Negativo: copias temporales con un defecto ---------- */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kanlane-sitemap-'));
 try{
@@ -99,6 +113,54 @@ try{
   const good = build(fixture, {});
   assert.equal(good.status, 0, 'la copia sin defectos compila:\n' + good.stderr);
   ok('la copia sin defectos compila (sin .git: ' + good.stdout.split('\n').find(l => l.startsWith('sitemap.xml')) + ')');
+
+  /* last-modified mal formada: el build falla con un mensaje claro. */
+  const metaTag = /<meta\s+name="last-modified"[^>]*>/;
+  assert.match(original, metaTag, 'la página de prueba lleva la meta');
+  for(const bad of ['2026-13-45', '02/10/2026', '']){
+    fs.writeFileSync(page, original.replace(metaTag, '<meta name="last-modified" content="' + bad + '">'));
+    const r = build(fixture, {});
+    assert.notEqual(r.status, 0, 'el build debe fallar con last-modified "' + bad + '"');
+    assert.match(r.stderr, /last-modified.*debe ser una fecha YYYY-MM-DD válida/, 'mensaje claro para "' + bad + '"\n' + r.stderr);
+  }
+  ok('el build falla con last-modified mal formada (2026-13-45, 02/10/2026, vacía)');
+
+  /* Sin la meta: avisa pero no falla. */
+  fs.writeFileSync(page, original.replace(metaTag, ''));
+  const noMeta = build(fixture, {});
+  assert.equal(noMeta.status, 0, 'sin la meta el build no falla:\n' + noMeta.stderr);
+  assert.match(noMeta.stderr + noMeta.stdout, /sin <meta name="last-modified">.*alternativa-a-trello/, 'avisa de la página sin meta');
+  fs.writeFileSync(page, original);
+  ok('sin la meta el build avisa y no falla');
+
+  /* Copia SIN .git (como el clon de Cloudflare): las fechas salen de la meta. */
+  let inGit = true;
+  try{ cp.execFileSync('git', ['rev-parse', '--git-dir'], {cwd: ROOT, stdio: 'ignore'}); }catch(e){ inGit = false; }
+  if(!inGit){
+    console.log('AVISO no hay git: se omite la prueba con git archive');
+  }else{
+    // Con cambios sin confirmar se archiva el árbol actual (git stash create); en limpio, HEAD.
+    const git = (args) => cp.execFileSync('git', args, {cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore']}).toString().trim();
+    const tree = git(['stash', 'create']) || 'HEAD';
+    const bare = path.join(tmp, 'sin-git');
+    fs.mkdirSync(bare);
+    const archive = cp.execFileSync('git', ['archive', '--format=tar', tree], {cwd: ROOT, maxBuffer: 1 << 28});
+    cp.execFileSync('tar', ['-xf', '-'], {cwd: bare, input: archive});
+    assert.ok(!fs.existsSync(path.join(bare, '.git')), 'la copia no tiene .git');
+    const r = build(bare, {});
+    assert.equal(r.status, 0, 'el build de la copia sin .git termina bien:\n' + r.stdout + r.stderr);
+    assert.match(r.stdout, /sitemap\.xml: 14 URLs \(fecha de git: 0, de meta last-modified: 14, sin fecha: 0\)/, 'las 14 fechas vienen de la meta');
+    const bareXml = fs.readFileSync(path.join(bare, 'dist/sitemap.xml'), 'utf8');
+    for(const f of PAGE_FILES){
+      const loc = ORIGIN + f.slice(0, -'index.html'.length);
+      const at = bareXml.indexOf('<loc>' + loc + '</loc>');
+      assert.ok(at >= 0, loc + ' está en el sitemap sin .git');
+      const m = bareXml.slice(at, bareXml.indexOf('</url>', at)).match(/<lastmod>([^<]+)<\/lastmod>/);
+      assert.ok(m, loc + ' lleva <lastmod> sin .git');
+      assert.equal(m[1], metas[f], 'lastmod de ' + loc + ' es la fecha de su meta');
+    }
+    ok('sin .git: <lastmod> en las 14 URLs con la fecha de su meta');
+  }
 }finally{
   fs.rmSync(tmp, {recursive: true, force: true});
 }

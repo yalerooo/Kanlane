@@ -29,6 +29,28 @@ const linksWith = (html, rel) => tagsOf(html, 'link').filter((t) => (attr(t, 're
 const metaContent = (html, name) => { const t = tagsOf(html, 'meta').find((x) => (attr(x, 'name') || '').toLowerCase() === name); return t ? attr(t, 'content') : null; };
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* Bloques JSON-LD de una página, ya interpretados. Lanza Error si alguno no es JSON válido. */
+function jsonLd(html, where){
+  return (html.match(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g) || []).map((s) => {
+    try{ return JSON.parse(s.replace(/^<script[^>]*>|<\/script>$/g, '')); }
+    catch(e){ throw new Error((where || 'página') + ': el JSON-LD no es JSON válido (' + e.message + ')'); }
+  });
+}
+
+/* Valores de "dateModified" de todos los nodos del JSON-LD de una página. */
+function jsonLdDates(html, where){
+  const dates = [];
+  const walk = (n) => {
+    if(Array.isArray(n)) return n.forEach(walk);
+    if(n && typeof n === 'object'){
+      if(typeof n.dateModified === 'string') dates.push(n.dateModified);
+      Object.keys(n).forEach((k) => walk(n[k]));
+    }
+  };
+  jsonLd(html, where).forEach(walk);
+  return dates;
+}
+
 /* Rutas (con barra final; '' = portada) de todos los index.html que cuelgan de una carpeta. */
 function indexRoutes(dir, rel, acc){
   fs.readdirSync(path.join(dir, rel), {withFileTypes: true}).forEach((d) => {
@@ -106,6 +128,12 @@ function buildSitemap(dist, srcRoot, pages){
     const meta = metaContent(html, 'last-modified');
     if(meta !== null && !validDate(meta)) throw new Error('sitemap: <meta name="last-modified"> de ' + where + ' vale "' + meta + '" y debe ser una fecha YYYY-MM-DD válida');
     if(meta === null) missing.push(where);
+    /* El JSON-LD debe ser válido y su dateModified (si lo hay) coincidir con la meta: si no, el dato
+       estructurado diría una fecha distinta a la del sitemap. node scripts/update-lastmod.js los sincroniza. */
+    jsonLdDates(html, where).forEach((d) => {
+      if(meta === null) return; /* sin meta solo avisa (ver `missing`) */
+      if(d !== meta) throw new Error('sitemap: el "dateModified" del JSON-LD de ' + where + ' es "' + d + '" y <meta name="last-modified"> es "' + meta + '". Ejecuta: node scripts/update-lastmod.js');
+    });
     let lastmod = gitDate(srcRoot, route + 'index.html');
     let source = 'git';
     if(!lastmod){
@@ -137,4 +165,4 @@ function buildSitemap(dist, srcRoot, pages){
   return {xml: xml, count: entries.length, sources: sources, missing: missing};
 }
 
-module.exports = {ORIGIN, NOT_PAGES, pageDirs, pageFiles, buildSitemap, validDate, metaContent, gitDate, git};
+module.exports = {ORIGIN, NOT_PAGES, pageDirs, pageFiles, buildSitemap, validDate, metaContent, jsonLd, jsonLdDates, gitDate, git};

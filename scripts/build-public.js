@@ -16,7 +16,7 @@ const out = path.join(root, 'dist');
 /* Páginas de captación e idiomas: toda carpeta de primer nivel con index.html que no sea app, demo,
    legal o un directorio de recursos (ver scripts/site-pages.js). Añadir una página = crear su carpeta. */
 const PAGES = pageDirs(root);
-const INCLUDE = ['index.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
+const INCLUDE = ['index.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'llms.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
 
 /* ---------- Cabeceras de seguridad ---------- */
 

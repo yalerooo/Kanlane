@@ -1,7 +1,7 @@
 /* Mantiene al día <meta name="last-modified" content="YYYY-MM-DD"> en las páginas indexables.
    Cloudflare clona sin historial de git, así que el sitemap saca `lastmod` de esa meta.
 
-     node scripts/update-lastmod.js          pone la fecha de hoy en las páginas con cambios
+     node scripts/update-lastmod.js          pone la fecha de hoy (meta y "dateModified" del JSON-LD) en las páginas con cambios
                                              (respecto a origin/main o sin confirmar)
      node scripts/update-lastmod.js --check  no escribe; sale con código 1 si alguna meta falta,
                                              es más antigua que el último cambio en git o la
@@ -10,7 +10,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const {pageFiles, validDate, metaContent, gitDate, git} = require('./site-pages');
+const {pageFiles, validDate, metaContent, jsonLdDates, gitDate, git} = require('./site-pages');
 
 const ROOT = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..');
 const CHECK = process.argv.includes('--check');
@@ -33,8 +33,10 @@ function changedFiles(){
   return set;
 }
 
-/* Cambia el valor de la meta (o la inserta tras description), respetando saltos de línea y sangría. */
+/* Cambia el valor de la meta (o la inserta tras description), respetando saltos de línea y sangría.
+   También pone la misma fecha en el "dateModified" del JSON-LD, para que ambos no se desincronicen. */
 function withMeta(html, date){
+  html = html.replace(/("dateModified"\s*:\s*")[^"]*(")/g, '$1' + date + '$2');
   if(/<meta\s+name="last-modified"/i.test(html)) return html.replace(/(<meta\s+name="last-modified"\s+content=")[^"]*(")/i, '$1' + date + '$2');
   const n = html.replace(/^([ \t]*)(<meta name="description"[^\r\n]*>)(\r?\n)/m,
     (m, i, t, e) => i + t + e + i + '<meta name="last-modified" content="' + date + '">' + e);
@@ -67,6 +69,8 @@ files.forEach((f) => {
   if(meta === null) return problems.push(f + ': no tiene <meta name="last-modified">');
   if(!validDate(meta)) return problems.push(f + ': la meta vale "' + meta + '" y no es una fecha YYYY-MM-DD válida');
   const last = hasHistory ? gitDate(ROOT, f) : null;
+  const ld = jsonLdDates(fs.readFileSync(path.join(ROOT, f), 'utf8'), f).filter((d) => d !== meta);
+  if(ld.length) return problems.push(f + ': el "dateModified" del JSON-LD (' + ld[0] + ') no coincide con la meta (' + meta + ')');
   if(last && meta < last) return problems.push(f + ': la meta (' + meta + ') es más antigua que su último cambio en git (' + last + ')');
   if(changed && changed.has(f) && meta !== TODAY) problems.push(f + ': tiene cambios y la meta (' + meta + ') no es de hoy (' + TODAY + ')');
 });

@@ -22,6 +22,7 @@ Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvi
 - [Gestión de proyectos](https://kanlane.com/gestion-de-proyectos/): tableros kanban, tareas, calendario, clientes y equipos.
 - [Gestor de clientes](https://kanlane.com/gestor-de-clientes/): clientes, contactos, tareas y reuniones relacionados en un solo sitio.
 - [CRM para autónomos](https://kanlane.com/crm-para-autonomos/): un CRM ligero para quien trabaja por cuenta propia.
+- [Gestor de contraseñas para clientes](https://kanlane.com/gestor-de-contrasenas-para-clientes/): los accesos de cada cliente junto a su trabajo, con la contraseña y las notas cifradas en el navegador (AES-256, PBKDF2) y lo que no cubre: sin autocompletado, sin extensión y sin compartir con el equipo.
 
 ## English
 
@@ -31,6 +32,7 @@ Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvi
 - [Project management](https://kanlane.com/en/project-management/): kanban boards, tasks, calendar, clients and teams.
 - [Client manager](https://kanlane.com/en/client-manager/): clients, contacts, tasks and meetings in one place.
 - [CRM for freelancers](https://kanlane.com/en/freelancer-crm/): a lightweight CRM for freelancers.
+- [Client password manager](https://kanlane.com/en/client-password-manager/): store client credentials next to their work, with passwords and notes encrypted in the browser; no autofill, no browser extension and no team sharing.
 
 ## Documentación
 
@@ -43,7 +45,7 @@ Qué es:
 
 - Tableros kanban por proyecto con etapas personalizables, subtareas y tareas que se repiten.
 - Calendario de fechas límite y reuniones, y una sección de clientes y contactos.
-- Contraseñas cifradas en el navegador con una contraseña maestra que no sale del dispositivo. Sin esa contraseña ni la clave de recuperación, nadie puede descifrarlas, tampoco Kanlane.
+- Contraseñas cifradas en el navegador con una contraseña maestra que no sale del dispositivo. Sin esa contraseña ni la clave de recuperación, nadie puede descifrarlas, tampoco Kanlane. Se cifran la contraseña y las notas de cada credencial; el resto (cliente, usuario, web, IP) se guarda sin cifrar.
 - Proyectos compartidos con roles (propietario, editor y lector) e invitaciones a la dirección de correo de cada persona, que las acepta desde el menú de proyectos (no se envía ningún correo).
 - Uso sin conexión: se abre con los últimos datos y los cambios se envían al volver la red.
 - Plugins en páginas aisladas que solo acceden a lo que el usuario permite, y sincronización con GitHub Projects.
@@ -55,3 +57,4 @@ Qué no es:
 - No tiene aplicación nativa en tiendas de aplicaciones: se usa en el navegador o instalada como PWA.
 - Los recordatorios de tareas y reuniones solo funcionan con Kanlane abierto; no hay avisos por correo con la aplicación cerrada.
 - La exportación no incluye las imágenes originales de las notas ni los datos de los plugins.
+- El cofre de contraseñas no autocompleta, no tiene extensión de navegador, no se comparte con el equipo (los proyectos de equipo no tienen cofre) ni importa desde otros gestores.

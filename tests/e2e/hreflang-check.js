@@ -21,6 +21,7 @@ const PAIRS = {
   'gestion-de-proyectos/': 'en/project-management/',
   'gestor-de-clientes/': 'en/client-manager/',
   'crm-para-autonomos/': 'en/freelancer-crm/',
+  'gestor-de-contrasenas-para-clientes/': 'en/client-password-manager/',
 };
 
 const ok = (m) => console.log('OK   ' + m);

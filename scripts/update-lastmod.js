@@ -1,7 +1,8 @@
 /* Mantiene al día <meta name="last-modified" content="YYYY-MM-DD"> en las páginas indexables.
    Cloudflare clona sin historial de git, así que el sitemap saca `lastmod` de esa meta.
 
-     node scripts/update-lastmod.js          pone la fecha de hoy (meta y "dateModified" del JSON-LD) en las páginas con cambios
+     node scripts/update-lastmod.js          pone la fecha de hoy (meta, "dateModified" del JSON-LD y la fecha visible
+                                             <time datetime="…" data-lastmod>, si la hay) en las páginas con cambios
                                              (respecto a origin/main o sin confirmar)
      node scripts/update-lastmod.js --check  no escribe; sale con código 1 si alguna meta falta,
                                              es más antigua que el último cambio en git o la
@@ -33,10 +34,24 @@ function changedFiles(){
   return set;
 }
 
+/* Fecha visible («Actualizado: 2 de octubre de 2026» / «Updated: October 2, 2026») según <html lang>. */
+const MONTHS = {
+  es: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+};
+function visibleDate(html, date){
+  const [y, m, d] = date.split('-').map(Number);
+  const lang = ((html.match(/<html[^>]*\slang="([a-z]+)/i) || [])[1] || 'es').toLowerCase();
+  return lang === 'en' ? MONTHS.en[m - 1] + ' ' + d + ', ' + y : d + ' de ' + MONTHS.es[m - 1] + ' de ' + y;
+}
+const TIME_RE = /(<time datetime=")([^"]*)(" data-lastmod>)([^<]*)(<\/time>)/g;
+
 /* Cambia el valor de la meta (o la inserta tras description), respetando saltos de línea y sangría.
-   También pone la misma fecha en el "dateModified" del JSON-LD, para que ambos no se desincronicen. */
+   También pone la misma fecha en el "dateModified" del JSON-LD y en la fecha visible
+   <time datetime="…" data-lastmod>, para que no se desincronicen. */
 function withMeta(html, date){
   html = html.replace(/("dateModified"\s*:\s*")[^"]*(")/g, '$1' + date + '$2');
+  html = html.replace(TIME_RE, (m, a, v, b, t, c) => a + date + b + visibleDate(html, date) + c);
   if(/<meta\s+name="last-modified"/i.test(html)) return html.replace(/(<meta\s+name="last-modified"\s+content=")[^"]*(")/i, '$1' + date + '$2');
   const n = html.replace(/^([ \t]*)(<meta name="description"[^\r\n]*>)(\r?\n)/m,
     (m, i, t, e) => i + t + e + i + '<meta name="last-modified" content="' + date + '">' + e);
@@ -71,6 +86,9 @@ files.forEach((f) => {
   const last = hasHistory ? gitDate(ROOT, f) : null;
   const ld = jsonLdDates(fs.readFileSync(path.join(ROOT, f), 'utf8'), f).filter((d) => d !== meta);
   if(ld.length) return problems.push(f + ': el "dateModified" del JSON-LD (' + ld[0] + ') no coincide con la meta (' + meta + ')');
+  const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const shown = [...html.matchAll(TIME_RE)].find((t) => t[2] !== meta || t[4] !== visibleDate(html, meta));
+  if(shown) return problems.push(f + ': la fecha visible (' + shown[2] + ', «' + shown[4] + '») no coincide con la meta (' + meta + ')');
   if(last && meta < last) return problems.push(f + ': la meta (' + meta + ') es más antigua que su último cambio en git (' + last + ')');
   if(changed && changed.has(f) && meta !== TODAY) problems.push(f + ': tiene cambios y la meta (' + meta + ') no es de hoy (' + TODAY + ')');
 });

@@ -8,10 +8,15 @@
    Firebase Hosting lo ejecuta antes de "firebase deploy" (predeploy). */
 const fs = require('fs');
 const path = require('path');
+const {pageDirs, buildSitemap} = require('./site-pages');
 
-const root = path.join(__dirname, '..');
+/* KANLANE_ROOT solo lo usan las pruebas (tests/e2e/sitemap-check.js) para construir una copia. */
+const root = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..');
 const out = path.join(root, 'dist');
-const INCLUDE = ['index.html', 'app', 'demo', 'alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'en', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal'];
+/* Páginas de captación e idiomas: toda carpeta de primer nivel con index.html que no sea app, demo,
+   legal o un directorio de recursos (ver scripts/site-pages.js). Añadir una página = crear su carpeta. */
+const PAGES = pageDirs(root);
+const INCLUDE = ['index.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -79,17 +84,31 @@ function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE), block('/alternativa-a-trello/*', PAGE), block('/alternativa-a-asana/*', PAGE), block('/alternativa-a-notion/*', PAGE), block('/gestion-de-proyectos/*', PAGE), block('/gestor-de-clientes/*', PAGE), block('/crm-para-autonomos/*', PAGE), block('/en/*', PAGE), block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)].join('\n');
+  /* Una entrada por página de captación o idioma, detectadas de las carpetas (PAGES). */
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].concat(PAGES.map((p) => block('/' + p + '/*', PAGE)), [block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)]).join('\n');
 }
 
 /* ---------- dist/ ---------- */
 
-fs.rmSync(out, {recursive:true, force:true});
-fs.mkdirSync(out);
+/* Se vacía el contenido en lugar de borrar la carpeta: en Windows falla (EPERM) si algún proceso la tiene abierta. */
+fs.mkdirSync(out, {recursive:true});
+fs.readdirSync(out).forEach((name) => fs.rmSync(path.join(out, name), {recursive:true, force:true}));
 for(const item of INCLUDE){
   fs.cpSync(path.join(root, item), path.join(out, item), {recursive:true});
 }
 fs.writeFileSync(path.join(out, '_headers'), headersFile());
+
+/* sitemap.xml se genera aquí (no hay copia manual): URL y alternativas de idioma salen del
+   canonical y los hreflang de cada página. Si algo no cuadra, el build falla. */
+let sitemap;
+try{
+  sitemap = buildSitemap(out, root, PAGES);
+}catch(e){
+  console.error('✖ ' + e.message);
+  process.exit(1);
+}
+fs.writeFileSync(path.join(out, 'sitemap.xml'), sitemap.xml);
+console.log('sitemap.xml: ' + sitemap.count + ' URLs (fecha de git: ' + sitemap.sources.git + ', de meta last-modified: ' + sitemap.sources.meta + ', sin fecha: ' + sitemap.sources['sin fecha'] + ')');
 
 /* Service worker: se le inyecta la lista de archivos de esta versión y una marca
    (un resumen de su contenido). Si cambia un solo archivo, la marca cambia y los
@@ -120,4 +139,4 @@ if(missingLegal.length) console.warn('⚠  src/config/legal-config.js: faltan da
 const cfg = fs.readFileSync(path.join(root, 'src/config/firebase-config.js'), 'utf8');
 if(/apiKey:\s*''/.test(cfg)) console.warn('⚠  src/config/firebase-config.js no tiene apiKey: la web funcionará en modo local, sin inicio de sesión.');
 if(/useEmulators:\s*true/.test(cfg)) console.warn('⚠  useEmulators está en true: ponlo en false antes de publicar.');
-console.log('dist/ listo: ' + INCLUDE.join(', ') + ' + _headers (' + files.length + ' archivos en el service worker, versión ' + build + ')');
+console.log('dist/ listo: ' + INCLUDE.join(', ') + ' + _headers + sitemap.xml (' + files.length + ' archivos en el service worker, versión ' + build + ')');

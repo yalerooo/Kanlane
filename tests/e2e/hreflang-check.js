@@ -1,6 +1,7 @@
 /* Comprueba que el hreflang entre las páginas en español y en inglés es recíproco.
    Para cada par, las dos páginas declaran es, en y x-default con las mismas URLs,
-   cada URL coincide con el canonical de la página a la que apunta y está en sitemap.xml.
+   cada URL coincide con el canonical de la página a la que apunta. (El sitemap.xml lo genera el build
+   y lo comprueba tests/e2e/sitemap-check.js.)
    Además, el selector de idioma ES | EN de cada página (cabecera y pie) apunta a su equivalente
    y coincide con el hreflang alternativo.
    No necesita navegador: node tests/e2e/hreflang-check.js */
@@ -38,7 +39,6 @@ const alternatesOf = (html, route) => {
   return map;
 };
 
-const sitemap = new Set([...fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]));
 const pages = {};
 for(const [es, en] of Object.entries(PAIRS)){
   for(const route of [es, en]){
@@ -60,7 +60,6 @@ for(const [es, en] of Object.entries(PAIRS)){
       const target = url.slice(ORIGIN.length);
       assert.ok(url.startsWith(ORIGIN) && pages[target], 'hreflang="' + lang + '" de /' + route + ' apunta a una página conocida');
       assert.equal(url, pages[target].canonical, 'hreflang="' + lang + '" de /' + route + ' coincide con el canonical de destino');
-      assert.ok(sitemap.has(url), url + ' está en sitemap.xml');
     }
   }
   /* Selector de idioma: marca el idioma actual y enlaza (con hreflang/lang) al equivalente declarado en hreflang. */

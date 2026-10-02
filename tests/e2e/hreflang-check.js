@@ -1,6 +1,8 @@
 /* Comprueba que el hreflang entre las páginas en español y en inglés es recíproco.
    Para cada par, las dos páginas declaran es, en y x-default con las mismas URLs,
    cada URL coincide con el canonical de la página a la que apunta y está en sitemap.xml.
+   Además, el selector de idioma ES | EN de cada página (cabecera y pie) apunta a su equivalente
+   y coincide con el hreflang alternativo.
    No necesita navegador: node tests/e2e/hreflang-check.js */
 'use strict';
 const assert = require('node:assert/strict');
@@ -61,5 +63,24 @@ for(const [es, en] of Object.entries(PAIRS)){
       assert.ok(sitemap.has(url), url + ' está en sitemap.xml');
     }
   }
-  ok('/' + es + ' <-> /' + en);
+  /* Selector de idioma: marca el idioma actual y enlaza (con hreflang/lang) al equivalente declarado en hreflang. */
+  for(const [route, other, self, otherLang] of [[es, en, 'es', 'en'], [en, es, 'en', 'es']]){
+    const html = read(route);
+    const header = (html.match(/<div class="lang-switch"[\s\S]*?<\/div>/) || [])[0];
+    assert.ok(header, '/' + route + ' tiene el selector de idioma en la cabecera');
+    assert.equal((html.match(/class="lang-switch"/g) || []).length, 1, '/' + route + ' tiene un único selector');
+    assert.match(header, new RegExp('<span class="lang-opt" lang="' + self + '" aria-current="true">' + self.toUpperCase() + '</span>'), '/' + route + ' marca ' + self.toUpperCase() + ' como idioma actual');
+    const links = [...header.matchAll(/<a class="lang-opt" href="([^"]+)" hreflang="([^"]+)" lang="([^"]+)"[^>]*aria-label="[^"]+">([^<]+)<\/a>/g)];
+    assert.equal(links.length, 1, '/' + route + ' tiene un único enlace en el selector');
+    const [, href, hreflang, lang, text] = links[0];
+    assert.equal(href, '/' + other, '/' + route + ' enlaza a su equivalente /' + other);
+    assert.equal(ORIGIN + href.slice(1), pages[route].alternates[otherLang], 'el enlace del selector de /' + route + ' coincide con su hreflang="' + otherLang + '"');
+    assert.deepEqual([hreflang, lang, text], [otherLang, otherLang, otherLang.toUpperCase()], 'atributos del enlace del selector de /' + route);
+    const foot = [...html.matchAll(/<a (?:class="foot-lang" )?href="([^"]+)" hreflang="([^"]+)" lang="([^"]+)">(English|Español)<\/a>/g)];
+    assert.equal(foot.length, 1, '/' + route + ' tiene un enlace de idioma en el pie');
+    assert.equal(foot[0][1], href, 'el enlace del pie de /' + route + ' coincide con el del selector');
+    assert.equal(foot[0][4], otherLang === 'en' ? 'English' : 'Español', 'texto del enlace del pie de /' + route);
+    assert.ok(!html.includes('class="lang-link"'), '/' + route + ' no conserva el enlace de idioma antiguo');
+  }
+  ok('/' + es + ' <-> /' + en + ' (selector de idioma incluido)');
 }

@@ -22,3 +22,5 @@
 .seo-context-grid strong{font-size:14px;line-height:1.4}
 .seo-context-mono{font-family:var(--mono,monospace);color:#71717a;font-size:13px}
 @media(max-width:760px){.seo-context-grid{grid-template-columns:1fr 1fr}.seo-compare{font-size:14px}}
+
+.lang-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid #d4d4d8;border-radius:9px;background:#fff;flex:none}.lang-opt{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:30px;padding:0 8px;border-radius:7px;font-size:13px;font-weight:500;letter-spacing:.04em;line-height:1;color:#52525b;text-decoration:none}.seo-page a.lang-opt{color:#52525b}.seo-page a.lang-opt:hover{color:#18181b;background:#f4f4f5}.lang-opt[aria-current="true"]{color:#2457d6;background:#eef3ff;font-weight:600}.seo-page a.lang-opt:focus-visible,.seo-footer a:focus-visible{outline:2px solid #2f6bff;outline-offset:2px}.seo-header-in .seo-nav{margin-left:auto}@media(max-width:700px){.seo-header-in{gap:12px}.seo-header-in .seo-brand{margin-right:auto}}

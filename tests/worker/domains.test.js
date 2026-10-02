@@ -28,7 +28,7 @@ const path = require('node:path');
 
   /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
   const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
-  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm']){
+  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm', 'en/client-password-manager']){
     const top = landing.split('/')[0];
     assert.ok(wrangler.includes('"/' + top + '"'), top + ' sin barra final pasa por el Worker');
     assert.ok(wrangler.includes('"/' + top + '/*"'), landing + ' pasa por el Worker');

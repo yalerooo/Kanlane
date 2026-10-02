@@ -25,6 +25,7 @@ jobs:
           node tests/backup/backup.test.js
           node tests/worker/rate-limit.test.js
           node tests/worker/domains.test.js
+          node tests/e2e/hreflang-check.js
           node scripts/check-i18n.js --strict
       - name: Compilar versión pública
         run: node scripts/build-public.js

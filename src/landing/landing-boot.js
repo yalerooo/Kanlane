@@ -13,6 +13,8 @@
   var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   var forced = /[?&]portada(=|&|$)/.test(location.search);
   if((inApp || guest || standalone) && !forced && /^https?:$/.test(location.protocol)){
-    location.replace('app/');
+    /* La aplicación está junto a src/, no junto a la página: así también funciona desde /en/. */
+    var self = document.currentScript && document.currentScript.src;
+    location.replace(self ? new URL('../../app/', self).href : 'app/');
   }
 })();

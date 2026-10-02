@@ -28,9 +28,10 @@ const path = require('node:path');
 
   /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
   const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
-  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos']){
-    assert.ok(wrangler.includes('"/' + landing + '"'), landing + ' sin barra final pasa por el Worker');
-    assert.ok(wrangler.includes('"/' + landing + '/*"'), landing + ' pasa por el Worker');
+  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm']){
+    const top = landing.split('/')[0];
+    assert.ok(wrangler.includes('"/' + top + '"'), top + ' sin barra final pasa por el Worker');
+    assert.ok(wrangler.includes('"/' + top + '/*"'), landing + ' pasa por el Worker');
     r = await get('https://kanlane.yalero.net/' + landing + '/');
     assert.match(r.headers.get('X-Robots-Tag'), /noindex/);
     r = await get('https://www.kanlane.com/' + landing + '/');

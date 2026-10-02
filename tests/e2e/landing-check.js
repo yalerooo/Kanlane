@@ -1,6 +1,11 @@
 /* Regresión de interacciones públicas y del progreso en tarjetas estrechas. */
 const assert = require('node:assert/strict');
 
+/* Cada página enlaza desde su selector de idioma a su equivalente (es <-> en). */
+const PAIRS = {'/': '/en/', '/alternativa-a-trello/': '/en/trello-alternative/', '/alternativa-a-asana/': '/en/asana-alternative/', '/alternativa-a-notion/': '/en/notion-alternative/', '/gestion-de-proyectos/': '/en/project-management/', '/gestor-de-clientes/': '/en/client-manager/', '/crm-para-autonomos/': '/en/freelancer-crm/'};
+const PAIR_OF = {};
+for(const [es, en] of Object.entries(PAIRS)){ PAIR_OF[es] = en; PAIR_OF[en] = es; }
+
 module.exports = async function checkLanding(browser, origin){
   const context = await browser.newContext({viewport:{width:1280,height:900}, locale:'es-ES', reducedMotion:'reduce'});
   const page = await context.newPage();
@@ -60,12 +65,20 @@ module.exports = async function checkLanding(browser, origin){
     await basic.goto(origin + '/?portada');
     assert.ok(await basic.locator('#h-hero').isVisible());
     assert.ok(await basic.locator('#h-clientes').isVisible());
-    assert.equal(await basic.locator('a[href="alternativa-a-trello/"], a[href="gestion-de-proyectos/"]').count(), 0, 'las páginas de captación no aparecen en la portada');
-    for(const route of ['alternativa-a-trello', 'gestion-de-proyectos']){
+    assert.equal(await basic.locator('a[href*="alternativa-a-"], a[href*="gestion-de-proyectos"], a[href*="gestor-de-clientes"], a[href*="crm-para-autonomos"]').count(), 0, 'las páginas de captación no aparecen en la portada');
+    /* Único enlace permitido hacia otras páginas del sitio: el de idioma (cabecera y pie), siempre hacia /en/ con hreflang="en". */
+    const internal = await basic.$$eval('a[href]', links => links.map(a => ({href:a.getAttribute('href'), hreflang:a.getAttribute('hreflang')})).filter(a => /^\/en(\/|$)/.test(a.href)));
+    assert.ok(internal.length >= 1 && internal.every(a => a.href === '/en/' && a.hreflang === 'en'), 'la portada solo enlaza a /en/ mediante el selector de idioma');
+    assert.equal(await basic.locator('header .lang-switch [aria-current="true"]').innerText(), 'ES', 'la portada marca ES como idioma actual');
+    assert.equal(await basic.locator('header .lang-switch a.lang-opt').getAttribute('href'), '/en/', 'el selector de la portada lleva a /en/');
+    for(const route of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm']){
       const response = await basic.goto(origin + '/' + route + '/');
       assert.equal(response.status(), 200, route + ' responde');
       assert.ok(await basic.locator('h1').isVisible(), route + ' se lee sin JavaScript');
       await basic.setViewportSize({width:390,height:844});
+      const pairLink = basic.locator('header .lang-switch a.lang-opt');
+      assert.ok(await pairLink.isVisible(), route + ' muestra el selector de idioma en móvil');
+      assert.equal(await pairLink.getAttribute('href'), PAIR_OF['/' + route + '/'], route + ' enlaza a su equivalente en el otro idioma');
       assert.equal(await basic.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, route + ' no desborda en móvil');
     }
   }finally{ await noScript.close(); }

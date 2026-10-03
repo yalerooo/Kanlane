@@ -69,8 +69,9 @@
       this.managedOn = !!on && !!managed;
     },
 
-    /* Sección «Privacidad» al editar: null la oculta; {encrypted, managed, canRotate} elige el texto y
-       los botones (canRotate: se puede cambiar la clave del proyecto). */
+    /* Sección «Privacidad» al editar: null la oculta; {encrypted, managed, canRotate, canConvert} elige
+       el texto y los botones (canRotate: se puede cambiar la clave del proyecto; canConvert: se puede
+       convertir a cifrado total). */
     setPrivacyInfo(info){
       this.privacyInfo.hidden = !info;
       if(!info) return;
@@ -80,8 +81,12 @@
           ? 'Cifrado total.'
           : 'Solo contraseñas. El contenido del proyecto no tiene cifrado de extremo a extremo.';
       /* Sin contraseña de cifrado no hay nada que cambiar ni que olvidar. */
-      this.privacyActions.hidden = !info.encrypted || !!info.managed;
-      $('pRotate').hidden = !info.canRotate;
+      const withPassword = !!info.encrypted && !info.managed;
+      this.privacyActions.hidden = !withPassword && !info.canConvert;
+      this.privacyActions.querySelectorAll('button[data-privacy-act]').forEach((b) => {
+        const act = b.getAttribute('data-privacy-act');
+        b.hidden = act === 'convert' ? !info.canConvert : act === 'rotate' ? !info.canRotate : !withPassword;
+      });
     },
 
     _resetPrivacy(){

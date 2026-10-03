@@ -66,7 +66,10 @@
         retryManaged: () => this.retryManaged(),
         rotate: (current) => this.app.controllers.rotation.submit(current),
         rotateConfirm: () => this.app.controllers.rotation.confirm(),
-        rotateClosed: () => this.app.controllers.rotation.closed()
+        rotateClosed: () => this.app.controllers.rotation.closed(),
+        convert: (pw, again) => this.app.controllers.convert.submit(pw, again),
+        convertConfirm: () => this.app.controllers.convert.confirm(),
+        convertClosed: () => this.app.controllers.convert.closed()
       });
       /* Otra pestaña ha guardado u olvidado una clave: se desbloquea o se bloquea sola. */
       if(keystore) keystore.onChange((msg) => this.onKeysChanged(msg));

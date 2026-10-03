@@ -21,7 +21,8 @@ rules_version = '2';
 //    (enc.kid y enc.kcv, con la anterior apuntada en enc.rot mientras se vuelve a
 //    cifrar todo); en un equipo solo el propietario, que deja la clave nueva a
 //    cada miembro en rekey/{uid}, envuelta con la clave pública que ese miembro
-//    publica en pubkeys/{uid}.
+//    publica en pubkeys/{uid}. Un proyecto personal sin cifrar se puede convertir
+//    en cifrado: 'enc' lleva 'conv' mientras se sella lo que estaba en claro.
 // 5. Todo lo demás está cerrado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -207,9 +208,11 @@ service cloud.firestore {
     // contraseña del proyecto) o 'managed' (gestionado: la clave que la envuelve la custodia el
     // Worker de Kanlane). Los equipos solo admiten 'pw'.
     // 'rot' solo existe mientras se cambia la clave: la clave anterior, con la que aún puede haber
-    // documentos sellados.
+    // documentos sellados. 'conv' solo existe mientras se convierte un proyecto que estaba en claro:
+    // aún puede haber documentos sin sellar.
     function validEnc(e) {
-      return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt', 'rot'])
+      return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt', 'rot', 'conv'])
+        && (!('conv' in e) || (e.conv is number && e.mode == 'pw'))
         && e.keys().hasAll(['v', 'mode', 'pid', 'kid', 'kcv'])
         && e.v == 1 && e.mode in ['pw', 'managed']
         && e.pid is string && e.pid.size() >= 16 && e.pid.size() <= 32
@@ -227,21 +230,32 @@ service cloud.firestore {
     function encRotation(next, cur) {
       return cur.mode == 'pw' && next.v == cur.v && next.mode == cur.mode && next.pid == cur.pid
         && next.get('createdAt', 0) == cur.get('createdAt', 0)
+        && !('conv' in cur) && !('conv' in next)
         && ((!('rot' in cur) && 'rot' in next && next.kid != cur.kid
               && next.rot.kid == cur.kid && next.rot.kcv == cur.kcv)
             || ('rot' in cur && !('rot' in next) && next.kid == cur.kid && next.kcv == cur.kcv));
     }
 
+    // Fin de la conversión de un proyecto que estaba en claro: se quita 'conv' y nada más cambia.
+    function encConverted(next, cur) {
+      return 'conv' in cur && !('conv' in next) && !('rot' in next)
+        && next.v == cur.v && next.mode == cur.mode && next.pid == cur.pid
+        && next.kid == cur.kid && next.kcv == cur.kcv
+        && next.get('createdAt', 0) == cur.get('createdAt', 0);
+    }
+
     // 'enc' se pone al crear el proyecto (o al recrear el principal marcado como borrado) y no convive
-    // con 'github'. Después solo cambia para cambiar la clave (encRotation).
+    // con 'github'. A un proyecto que ya existe solo se le añade marcado como en conversión ('conv').
+    // Después solo cambia para terminar la conversión (encConverted) o cambiar la clave (encRotation).
     function validProjectEnc() {
       let d = request.resource.data;
       let had = resource != null && resource.data.get('enc', null) != null;
       let has = d.get('enc', null) != null;
       return (!has || (validEnc(d.enc) && d.get('github', null) == null))
-        && (!had || (has && (d.enc == resource.data.enc || encRotation(d.enc, resource.data.enc)))
+        && (!had || (has && (d.enc == resource.data.enc || encRotation(d.enc, resource.data.enc)
+                             || encConverted(d.enc, resource.data.enc)))
             || (d.get('deleted', false) == true && !has))
-        && (had || !has || resource == null || resource.data.get('deleted', false) == true)
+        && (had || !has || resource == null || resource.data.get('deleted', false) == true || 'conv' in d.enc)
         && (had || !has || !('rot' in d.enc));
     }
 
@@ -388,7 +402,7 @@ service cloud.firestore {
         && request.resource.data.members[request.auth.uid].role == 'owner'
         && (request.resource.data.get('enc', null) == null
             || (validEnc(request.resource.data.enc) && request.resource.data.enc.mode == 'pw'
-                && !('rot' in request.resource.data.enc)
+                && !('rot' in request.resource.data.enc) && !('conv' in request.resource.data.enc)
                 && request.resource.data.get('github', null) == null));
 
       // El cifrado de un equipo no se pone ni se quita después de crearlo y no convive con 'github'.

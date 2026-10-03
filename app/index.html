@@ -816,13 +816,14 @@
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="password">Cambiar la contraseña de cifrado</button>
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="recovery">Crear una clave de recuperación nueva</button>
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="forget" title="Tendrás que escribir la contraseña la próxima vez.">Olvidar la clave en este navegador</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="convert" id="pConvert" title="Cifra todo el contenido del proyecto con una contraseña que solo tú conoces. No se puede deshacer." hidden>Convertir a cifrado total</button>
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="rotate" id="pRotate" title="Crea una clave nueva y vuelve a cifrar todo el proyecto con ella." hidden>Cambiar la clave del proyecto</button>
       </div>
     </div>
     </div>
     <div id="pStep2" class="privacy-step" hidden>
       <h3 class="privacy-title">Privacidad del proyecto</h3>
-      <p class="dlg-lead">Elige cómo se protege lo que guardes en este proyecto. Más adelante no se podrá cambiar.</p>
+      <p class="dlg-lead">Elige cómo se protege lo que guardes en este proyecto. Más adelante solo se podrá pasar de «Solo contraseñas» a «Cifrado total».</p>
       <div class="type-picker" id="pPrivacy" role="radiogroup" aria-label="Privacidad del proyecto"></div>
     </div>
     <div id="pStep3" class="privacy-step" hidden>
@@ -871,8 +872,9 @@
     <h2 id="ekTitle">Cambiar la contraseña de cifrado</h2>
     <p class="dlg-lead" id="ekLead"></p>
     <ul class="rotate-members" id="ekMembers" hidden></ul>
+    <p class="type-note" id="ekWarn" hidden>Convertir protege lo que hay ahora y lo que guardes después, pero no borra lo que ya salió: las copias de seguridad de este proyecto hechas antes (las de tu cuenta y los archivos exportados) siguen sin este cifrado, igual que lo que se hubiera sincronizado con GitHub. El nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas no se cifran.</p>
     <div id="ekFields">
-      <div class="field">
+      <div class="field" id="ekCurrentWrap">
         <label for="ekCurrent">Contraseña de cifrado actual</label>
         <input id="ekCurrent" type="password" autocomplete="off" required>
       </div>
@@ -1471,6 +1473,7 @@
 <script src="../src/controllers/github-controller.js"></script>
 <script src="../src/controllers/team-crypto-controller.js"></script>
 <script src="../src/controllers/key-rotation-controller.js"></script>
+<script src="../src/controllers/project-convert-controller.js"></script>
 <script src="../src/controllers/team-controller.js"></script>
 <script src="../src/controllers/command-controller.js"></script>
 <script src="../src/controllers/auth-controller.js"></script>

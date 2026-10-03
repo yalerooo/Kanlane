@@ -57,6 +57,12 @@
       return ProjectModel.isEncrypted(p) && !!p.enc.rot && typeof p.enc.rot === 'object' && !!p.enc.rot.kid;
     }
 
+    /* Conversión a cifrado total a medias (PR11): enc.conv marca que aún puede haber documentos en
+       claro de cuando el proyecto no estaba cifrado. */
+    static isConverting(p){
+      return ProjectModel.isEncrypted(p) && !!p.enc.conv;
+    }
+
     /* Casilla del almacén de claves del navegador para una clave que no es la vigente del proyecto
        (la anterior, mientras dura un cambio de clave). La vigente se guarda con el pid a secas. */
     static keySlot(pid, kid){

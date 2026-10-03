@@ -51,6 +51,7 @@
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       this.controllers.teamCrypto = new C.TeamCryptoController(this, new V.JoinView());
       this.controllers.rotation = new C.KeyRotationController(this, this.controllers.crypto.view);
+      this.controllers.convert = new C.ProjectConvertController(this, this.controllers.crypto.view);
       this.controllers.team = new C.TeamController(this, new V.ShareView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
@@ -262,6 +263,8 @@
       if(this.controllers && this.controllers.backup) this.controllers.backup.syncEncrypted();
       /* Cifrado: publicar mi clave pública en el equipo y terminar un cambio de clave a medias. */
       if(cipher && this.controllers && this.controllers.rotation) this.controllers.rotation.onOpen();
+      /* Y terminar una conversión a cifrado total que se cortó. */
+      if(cipher && this.controllers && this.controllers.convert) this.controllers.convert.onOpen();
     }
 
     disconnectProject(){

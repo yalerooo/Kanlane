@@ -47,7 +47,7 @@ Workhub.services.officialPlugins = [
     manifest: {
       id: 'workhub.smartgp',
       name: 'Smart GP',
-      version: '1.0.0',
+      version: '1.1.0',
       description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
       author: 'Kanlane',
       icon: 'clock',

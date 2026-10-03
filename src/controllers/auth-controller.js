@@ -61,6 +61,8 @@
       this.view.bindProvider((key) => this.signInWith(key));
       this.view.bindEmail((mode, values) => this.submitEmail(mode, values));
       this.view.bindSignOut(() => this.signOut());
+      /* Antes de entrar no hay cuenta: el tema se queda en este navegador. */
+      this.view.bindTheme((theme) => this.app.controllers.settings.setTheme(theme));
     }
 
     isEnabled(){

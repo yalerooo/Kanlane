@@ -78,57 +78,104 @@
 </div>
 
 <div id="authScreen" class="auth-screen" hidden>
-  <div class="auth-card">
-    <div class="auth-brand">
-      <img class="brand-logo" src="../assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
-      <span class="brand-name">Kanlane</span>
+  <header class="auth-top">
+    <a class="auth-brand" href="/?portada" title="Volver a la portada">
+      <img class="auth-logo" src="../assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
+      <span class="auth-brand-name" translate="no">Kanlane</span>
+    </a>
+    <div class="auth-tools">
+      <div class="segmented auth-lang" id="authLang" role="radiogroup" aria-label="Idioma" translate="no"><button type="button" role="radio" data-lang-choice="es" aria-label="Español">ES</button><button type="button" role="radio" data-lang-choice="en" aria-label="English">EN</button></div>
+      <button type="button" class="icon-only auth-theme" id="authTheme" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar entre tema claro y oscuro"><svg class="ic-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="ic-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     </div>
-    <div id="authLoading" class="auth-loading" role="status" hidden></div>
-    <div id="authPanel" hidden>
-      <h1 id="authTitle">Inicia sesión</h1>
-      <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
-      <div class="auth-notice" id="authNotice" role="status" hidden></div>
-      <div class="auth-providers" id="authProviders"></div>
-      <div class="auth-divider" id="authDivider"><span>o con tu correo</span></div>
-      <form id="authEmailForm" class="auth-form" novalidate>
-        <div class="field" id="authNameField" hidden>
-          <label for="authName">Nombre</label>
-          <input id="authName" autocomplete="name" maxlength="80">
-        </div>
-        <div class="field">
-          <label for="authEmail">Correo electrónico</label>
-          <input id="authEmail" type="email" autocomplete="email" required>
-        </div>
-        <div class="field" id="authPassField">
-          <div class="auth-label-row">
-            <label for="authPass">Contraseña</label>
-            <a href="#" id="authForgot">¿La has olvidado?</a>
+  </header>
+
+  <div class="auth-stage">
+    <div class="auth-shell">
+      <section class="auth-card">
+        <div id="authLoading" class="auth-loading" role="status" hidden></div>
+        <div id="authPanel" hidden>
+          <h1 id="authTitle">Inicia sesión</h1>
+          <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
+          <div class="auth-notice" id="authNotice" role="status" hidden></div>
+          <div class="auth-providers" id="authProviders"></div>
+          <div class="auth-divider" id="authDivider"><span>o con tu correo</span></div>
+          <form id="authEmailForm" class="auth-form" novalidate>
+            <div class="field" id="authNameField" hidden>
+              <label for="authName">Nombre</label>
+              <input id="authName" autocomplete="name" maxlength="80">
+            </div>
+            <div class="field">
+              <label for="authEmail">Correo electrónico</label>
+              <input id="authEmail" type="email" autocomplete="email" required>
+            </div>
+            <div class="field" id="authPassField">
+              <div class="auth-label-row">
+                <label for="authPass">Contraseña</label>
+                <a href="#" id="authForgot">¿La has olvidado?</a>
+              </div>
+              <div class="auth-pass">
+                <input id="authPass" type="password" autocomplete="current-password" minlength="6" required>
+                <button type="button" class="auth-pass-toggle" id="authPassToggle" aria-label="Mostrar contraseña" title="Mostrar contraseña" aria-pressed="false"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="ic-eye-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.5 6.6C3.7 8.5 2 12 2 12s3.6 7 10 7a10.6 10.6 0 0 0 5.4-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
+              </div>
+            </div>
+            <p class="auth-msg" id="authMsg" role="alert" hidden></p>
+            <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
+          </form>
+          <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
+          <div class="auth-guest" id="authGuest">
+            <button type="button" class="auth-guest-row" id="authGuestBtn">
+              <span class="auth-guest-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+              <span class="auth-guest-text"><span class="auth-guest-title">Continuar como invitado</span><span class="auth-guest-sub">Sin cuenta: los datos se quedan en este navegador.</span></span>
+              <svg class="auth-guest-go" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <form id="authGuestForm" class="auth-form" hidden novalidate>
+              <div class="field">
+                <label for="authGuestName">Tu nombre</label>
+                <input id="authGuestName" autocomplete="name" maxlength="40">
+              </div>
+              <p class="auth-msg" id="authGuestMsg" role="alert" hidden></p>
+              <p class="auth-guest-note">Sin cuenta ni conexión con la base de datos: todo se guarda solo en este navegador. Si borras los datos del navegador o entras desde otro, no lo encontrarás. Usa la copia de seguridad para llevarte tus datos.</p>
+              <button type="submit" class="btn btn-primary auth-submit">Entrar como invitado</button>
+              <button type="button" class="btn btn-ghost auth-guest-back" id="authGuestBack">Volver</button>
+            </form>
           </div>
-          <input id="authPass" type="password" autocomplete="current-password" minlength="6" required>
         </div>
-        <p class="auth-msg" id="authMsg" role="alert" hidden></p>
-        <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
-      </form>
-      <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
-      <div class="auth-guest" id="authGuest">
-        <div class="auth-divider"><span>o sin cuenta</span></div>
-        <button type="button" class="auth-provider" id="authGuestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Continuar como invitado</span></button>
-        <form id="authGuestForm" class="auth-form" hidden novalidate>
-          <div class="field">
-            <label for="authGuestName">Tu nombre</label>
-            <input id="authGuestName" autocomplete="name" maxlength="40">
+      </section>
+
+      <aside class="auth-aside">
+        <h2 class="auth-aside-title">Todo tu trabajo, en un solo sitio.</h2>
+        <div class="auth-preview" aria-hidden="true">
+          <div class="auth-pcol">
+            <div class="auth-phead"><span class="auth-pring" style="--c:var(--dot-pend)"></span><span class="auth-pbar" style="width:46%"></span></div>
+            <div class="auth-pcard"><span class="auth-ptag" style="--h:212"></span><span class="auth-pbar" style="width:88%"></span><span class="auth-pbar is-soft" style="width:58%"></span></div>
+            <div class="auth-pcard"><span class="auth-ptag" style="--h:28"></span><span class="auth-pbar" style="width:72%"></span><span class="auth-pbar is-soft" style="width:44%"></span></div>
+            <div class="auth-pcard"><span class="auth-ptag" style="--h:268"></span><span class="auth-pbar" style="width:80%"></span></div>
           </div>
-          <p class="auth-msg" id="authGuestMsg" role="alert" hidden></p>
-          <p class="auth-guest-note">Sin cuenta ni conexión con la base de datos: todo se guarda solo en este navegador. Si borras los datos del navegador o entras desde otro, no lo encontrarás. Usa la copia de seguridad para llevarte tus datos.</p>
-          <button type="submit" class="btn btn-primary auth-submit">Entrar como invitado</button>
-          <button type="button" class="btn btn-ghost auth-guest-back" id="authGuestBack">Volver</button>
-        </form>
-      </div>
+          <div class="auth-pcol">
+            <div class="auth-phead"><span class="auth-pring" style="--c:var(--dot-proc)"></span><span class="auth-pbar" style="width:54%"></span></div>
+            <div class="auth-pcard"><span class="auth-ptag" style="--h:152"></span><span class="auth-pbar" style="width:82%"></span><span class="auth-pbar is-soft" style="width:64%"></span></div>
+            <div class="auth-pcard"><span class="auth-ptag" style="--h:212"></span><span class="auth-pbar" style="width:66%"></span><span class="auth-pbar is-soft" style="width:40%"></span></div>
+          </div>
+          <div class="auth-pcol">
+            <div class="auth-phead"><span class="auth-pring is-done" style="--c:var(--dot-done)"></span><span class="auth-pbar" style="width:50%"></span></div>
+            <div class="auth-pcard is-done"><span class="auth-ptag" style="--h:28"></span><span class="auth-pbar" style="width:76%"></span></div>
+            <div class="auth-pcard is-done"><span class="auth-ptag" style="--h:152"></span><span class="auth-pbar" style="width:60%"></span></div>
+            <div class="auth-pcard is-done"><span class="auth-ptag" style="--h:268"></span><span class="auth-pbar" style="width:84%"></span></div>
+          </div>
+        </div>
+        <ul class="auth-points">
+          <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg></span><span>Tareas, calendario y clientes en el mismo sitio.</span></li>
+          <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span>Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</span></li>
+          <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17.5h2"/></svg></span><span>Funciona sin conexión y se instala como aplicación.</span></li>
+        </ul>
+      </aside>
     </div>
   </div>
-  <p class="auth-foot">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
-  <p class="auth-foot auth-legal">Al continuar aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</p>
-  <p class="auth-lang" id="authLang" translate="no"><button type="button" data-lang-choice="es">Español</button><span aria-hidden="true">·</span><button type="button" data-lang-choice="en">English</button></p>
+
+  <footer class="auth-bottom">
+    <p class="auth-foot auth-foot-crypto">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+    <p class="auth-foot auth-legal">Al continuar aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</p>
+  </footer>
 </div>
 
 <div class="app">

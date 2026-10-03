@@ -65,8 +65,12 @@
         if(b) Workhub.i18n.setLang(b.getAttribute('data-lang-choice'));
       });
       $('authLang').querySelectorAll('button').forEach((b) => {
-        b.classList.toggle('is-on', b.getAttribute('data-lang-choice') === Workhub.i18n.lang);
+        b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
       });
+
+      /* Ver u ocultar la contraseña mientras se escribe. */
+      this.passToggle = $('authPassToggle');
+      this.passToggle.addEventListener('click', () => this.setPassVisible(this.pass.type === 'password'));
 
       this.switchLink.addEventListener('click', (ev) => {
         ev.preventDefault();
@@ -110,6 +114,15 @@
           return;
         }
         handler(name);
+      });
+    }
+
+    /* handler('light' | 'dark'): el botón de sol/luna de la pantalla de acceso. */
+    bindTheme(handler){
+      $('authTheme').addEventListener('click', () => {
+        const attr = document.documentElement.getAttribute('data-theme');
+        const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        handler(dark ? 'light' : 'dark');
       });
     }
 
@@ -244,8 +257,17 @@
       }
     }
 
+    setPassVisible(on){
+      const label = Workhub.t(on ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      this.pass.type = on ? 'text' : 'password';
+      this.passToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+      this.passToggle.setAttribute('aria-label', label);
+      this.passToggle.title = label;
+    }
+
     setMode(mode){
       this.mode = mode;
+      this.setPassVisible(false);
       const t = TEXT[mode];
       this.title.textContent = t.title;
       this.sub.textContent = t.sub;

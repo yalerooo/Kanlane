@@ -8,7 +8,20 @@
     }).catch(() => {});
   }
 
+  const DONE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
+
   function flashLabel(btn, label){
+    /* Botón de solo icono: se cambia el icono por una marca y el nombre accesible por el aviso. */
+    if(btn.querySelector('svg') && !btn.textContent.trim()){
+      const html = btn.innerHTML, name = btn.getAttribute('aria-label');
+      btn.innerHTML = DONE_ICON;
+      btn.setAttribute('aria-label', Workhub.t(label));
+      setTimeout(() => {
+        btn.innerHTML = html;
+        if(name === null) btn.removeAttribute('aria-label'); else btn.setAttribute('aria-label', name);
+      }, 1200);
+      return;
+    }
     const old = btn.textContent;
     btn.textContent = label;
     setTimeout(() => { btn.textContent = old; }, 1200);

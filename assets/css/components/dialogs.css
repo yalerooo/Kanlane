@@ -1,24 +1,28 @@
 /* ---------- Diálogos ---------- */
+/* Diálogos: cristal de ficha (--sheet) sobre un velo que desenfoca lo de detrás. */
 dialog{
-  border:none;
-  border-radius:var(--r-xl);
+  border:1px solid var(--glass-line);
+  border-radius:var(--r-sheet);
   padding:0;
-  background:var(--surface);
+  background:var(--sheet);
+  -webkit-backdrop-filter:var(--sheet-blur);
+  backdrop-filter:var(--sheet-blur);
   color:var(--ink);
   box-shadow:var(--shadow-lg);
   width:min(520px, calc(100vw - 32px));
   max-height:calc(100vh - 48px);
   overflow-y:auto;
 }
-dialog::backdrop{background:rgba(10,10,12,0.4);}
+dialog::backdrop{background:var(--overlay);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
 dialog[open]{animation:dlg-in .16s cubic-bezier(.2,.8,.2,1);}
 dialog[open]::backdrop{animation:fade-in .16s ease;}
-@keyframes dlg-in{from{opacity:0;transform:translateY(6px) scale(.99);}to{opacity:1;transform:none;}}
+@keyframes dlg-in{from{opacity:0;transform:translateY(10px) scale(.985);}to{opacity:1;transform:none;}}
 @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
 #dlg{width:min(600px, calc(100vw - 32px));}
 
 .dlg-inner{position:relative;padding:20px 22px 18px;}
 .dlg-inner > h2{font-size:16px;font-weight:600;margin:0 0 18px;letter-spacing:-0.015em;padding-right:40px;}
+/* Dentro de un diálogo (cristal) no se anida cristal: los campos y bloques van sobre superficie. */
 .dlg-close{
   position:absolute;
   top:14px;
@@ -47,8 +51,9 @@ body.is-onboarding .app{visibility:hidden;}
   margin:20px -22px -18px;
   padding:12px 22px;
   border-top:1px solid var(--line);
-  background:var(--surface);
-  border-radius:0 0 var(--r-xl) var(--r-xl);
+  /* Opaca: tapa el contenido que se desplaza por debajo. */
+  background:var(--surface-solid);
+  border-radius:0 0 calc(var(--r-sheet) - 1px) calc(var(--r-sheet) - 1px);
   /* Guardar/Cancelar siempre a la vista aunque el diálogo tenga scroll. */
   position:sticky;
   bottom:0;
@@ -92,7 +97,7 @@ dialog .dlg-inner > .cat{padding-right:40px;margin-bottom:10px;}
 .note-item img{display:block;max-width:180px;max-height:130px;border-radius:var(--r-md);margin-top:8px;cursor:zoom-in;object-fit:cover;border:1px solid var(--line);}
 .note-del{float:right;font-family:inherit;font-size:11.5px;color:var(--ink-faint);background:none;border:none;cursor:pointer;padding:0;}
 .note-del:hover{color:var(--danger);}
-.note-add-box{border:1px solid var(--line-strong);border-radius:var(--r-lg);padding:6px;background:var(--surface);box-shadow:var(--shadow-sm);}
+.note-add-box{border:1px solid var(--line-strong);border-radius:var(--r-lg);padding:6px;background:var(--surface);}
 .note-add-box:focus-within{border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
 .note-add-box textarea{width:100%;border:none;box-shadow:none;background:transparent;padding:4px 6px;min-height:52px;}
 .note-add-box textarea:focus{box-shadow:none;}
@@ -121,7 +126,9 @@ dialog .dlg-inner > .cat{padding-right:40px;margin-bottom:10px;}
 .lightbox{
   position:fixed;
   inset:0;
-  background:rgba(8,8,10,0.88);
+  background:rgba(8,8,10,0.86);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
   display:flex;
   align-items:center;
   justify-content:center;

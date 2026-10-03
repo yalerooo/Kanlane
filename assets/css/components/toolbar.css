@@ -1,4 +1,6 @@
 /* ---------- Barras de herramientas ---------- */
+/* Las herramientas de cada sección van en la barra de la vista (layout.css, .bar-tools).
+   .toolbar queda para barras dentro del contenido. */
 .toolbar{
   display:flex;
   gap:8px;
@@ -7,57 +9,65 @@
   margin-bottom:14px;
 }
 .toolbar input[type="search"]{flex:1 1 240px;max-width:420px;}
-#viewClients .toolbar{justify-content:space-between;}
 .toolbar .dd{flex:0 1 210px;min-width:170px;}
 
-/* Resumen del tablero ("17 tareas · 2 vencidas · 1 para hoy") */
+/* Resumen del tablero ("6 abiertas · 1 para hoy · 1 vencida") */
 .summary{
   display:flex;
   align-items:center;
-  gap:14px;
+  gap:12px;
   margin-left:auto;
+  flex:none;
   font-size:12.5px;
   color:var(--ink-faint);
   font-variant-numeric:tabular-nums;
 }
-.summary .stat{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-.summary .stat b{font-weight:600;color:var(--ink-soft);}
-.summary .stat .dot{width:6px;height:6px;}
-.summary .stat.is-danger b{color:var(--danger);}
-.summary .stat.is-warn b{color:var(--st-wait);}
+.summary .stat{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.summary .stat b{font-weight:500;color:var(--ink-soft);}
+.summary .stat.is-danger,.summary .stat.is-danger b{color:var(--late);}
+.summary .stat.is-warn,.summary .stat.is-warn b{color:var(--today);}
 
-/* Pastillas genéricas */
+/* Etiqueta genérica: 22px, relleno suave; variantes vencida, hoy y hecha. */
 .pill{
   display:inline-flex;
   align-items:center;
+  gap:5px;
+  height:22px;
+  padding:0 8px;
   font-size:12px;
-  font-weight:500;
-  padding:2px 8px;
-  border-radius:999px;
+  color:var(--ink-soft);
+  background:var(--surface-2);
+  border-radius:var(--r-sm);
+  white-space:nowrap;
   font-variant-numeric:tabular-nums;
 }
+.pill svg{width:12px;height:12px;flex:none;}
+.pill.is-late{background:var(--late-bg);color:var(--late);}
+.pill.is-today{background:var(--today-bg);color:var(--today);}
+.pill.is-ok{background:var(--st-done-bg);color:var(--st-done);}
 
+/* Aviso informativo: bloque plano con borde fino (sin raya lateral). */
 .hint{
   position:relative;
   font-size:12.5px;
   line-height:1.5;
   color:var(--ink-soft);
-  background:var(--surface-2);
+  background:transparent;
   border:1px solid var(--line);
   border-radius:var(--r-lg);
-  padding:9px 12px 9px 36px;
+  padding:10px 14px 10px 38px;
   margin:0 0 14px;
 }
 .hint::before{
   content:"";
   position:absolute;
-  left:12px;
-  top:11px;
+  left:14px;
+  top:12px;
   width:15px;
   height:15px;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E97' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center/15px;
 }
-.hint strong{color:var(--ink);font-weight:600;}
+.hint strong{color:var(--ink);font-weight:550;}
 
 .state-msg{
   text-align:center;
@@ -68,8 +78,13 @@
   border-radius:var(--r-xl);
 }
 
+/* Panel: superficie con borde fino. Las filas internas se separan con una línea, no con cajas. */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-sm);}
+
+/* Punto de cliente: cuadrado de 8px del color del cliente. */
+.client-dot{display:inline-block;width:8px;height:8px;border-radius:3px;background:hsl(var(--h) 62% var(--chip-dot-l));flex:none;}
+
 @media (max-width:900px){
   .toolbar input[type="search"]{max-width:none;flex-basis:100%;}
   .toolbar .dd{flex:1 1 180px;}
-  .summary{margin-left:0;flex-basis:100%;gap:12px;}
 }

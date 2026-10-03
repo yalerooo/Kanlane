@@ -88,6 +88,20 @@ Hazlo **todo antes** de probar el acceso; si falta algo, Google o GitHub darán 
 - **Reglas de seguridad de Firestore**: siguen subiéndose con `firebase deploy --only firestore:rules` (o pegándolas en la consola), solo cuando cambia `firestore.rules`. Ver [SEGURIDAD.md](SEGURIDAD.md).
 - **Cabeceras de seguridad**: se cambian en `scripts/build-public.js` (constantes `ALL`, `PAGE` y `CSP`) y se aplican solas en la siguiente publicación. Si añades un servicio externo, añade su dominio a `CSP`.
 
+## Secreto del modo «Gestionado por Kanlane» (KMS_MASTER_V1)
+
+Los proyectos creados como **«Gestionado por Kanlane»** (ver [CIFRADO-PROYECTOS.md](CIFRADO-PROYECTOS.md), apartado 12) guardan su clave envuelta con otra que calcula el Worker (`POST /__/kms/v1/kek`) a partir de un secreto, `KMS_MASTER_V1`. Ese secreto **no está en el repositorio ni en `wrangler.jsonc`**: se pone una sola vez a mano.
+
+1. Genera 32 bytes aleatorios en base64: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+2. **Antes de nada, guarda una copia fuera de Cloudflare** (gestor de contraseñas y papel en un lugar seguro). **Si el secreto se pierde o se cambia, todos los proyectos gestionados quedan ilegibles para siempre**: no hay contraseña ni clave de recuperación que los abra. Cloudflare no permite volver a leer un secreto una vez guardado.
+3. Guárdalo en el Worker: `npx wrangler secret put KMS_MASTER_V1` y pega el valor (o, en el panel: Worker `workhub` → **Configuración** → **Variables y secretos** → *Añadir* → tipo **Secreto**). Los despliegues no lo tocan.
+4. Publica las reglas de Firestore de esta versión (admiten `enc.mode: 'managed'` y el envoltorio `kms`).
+5. Comprueba en producción: crear un proyecto «Gestionado por Kanlane», recargar, cerrar sesión, volver a entrar y abrirlo en otro navegador.
+
+Mientras el secreto no esté puesto, el Worker responde 503 y crear un proyecto gestionado falla con el mensaje «El servidor de claves de Kanlane no está disponible ahora» (no se crea nada a medias). Para retirar la opción sin tocar lo ya creado: `managedEncryption: false` en `src/config/features.js` (la tarjeta vuelve a «Próximamente»; los proyectos gestionados que existan se siguen abriendo y siguen necesitando el Worker y su secreto).
+
+La ruta solo acepta `POST` del propio dominio con un ID token de Firebase válido (firma, proyecto, caducidad y correo verificado), comparte el límite de peticiones `AUTH_RATE_LIMIT` y no guarda nada. No se debe poner nunca el secreto en `vars`, en el código ni en un PR.
+
 ## 6. Recomendado en el panel de Cloudflare
 
 Todo esto es gratis y opcional:

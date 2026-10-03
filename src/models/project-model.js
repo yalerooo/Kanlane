@@ -46,6 +46,11 @@
       return !!(p && p.enc && typeof p.enc === 'object' && p.enc.pid && p.enc.kid);
     }
 
+    /* Cifrado «Gestionado por Kanlane»: sin contraseña, la clave la entrega el servidor (enc.mode 'managed'). */
+    static isManaged(p){
+      return ProjectModel.isEncrypted(p) && p.enc.mode === 'managed';
+    }
+
     /* "Cargado" cuando han llegado los proyectos personales y los equipos. */
     _updateLoaded(){
       this.loaded = this.personalLoaded && this.teamsLoaded;

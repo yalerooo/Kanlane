@@ -199,11 +199,13 @@ service cloud.firestore {
         && b.ct is string && b.ct.size() > 0 && b.ct.size() <= max;
     }
 
-    // Campo 'enc' del documento del proyecto (modo 'pw'; 'managed' llegará con el modo gestionado).
+    // Campo 'enc' del documento del proyecto. Modo 'pw' (cifrado total: la clave se abre con la
+    // contraseña del proyecto) o 'managed' (gestionado: la clave que la envuelve la custodia el
+    // Worker de Kanlane). Los equipos solo admiten 'pw'.
     function validEnc(e) {
       return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt'])
         && e.keys().hasAll(['v', 'mode', 'pid', 'kid', 'kcv'])
-        && e.v == 1 && e.mode == 'pw'
+        && e.v == 1 && e.mode in ['pw', 'managed']
         && e.pid is string && e.pid.size() >= 16 && e.pid.size() <= 32
         && e.kid is string && e.kid.size() >= 8 && e.kid.size() <= 32
         && e.kcv is string && e.kcv.size() > 0 && e.kcv.size() <= 128;
@@ -220,8 +222,25 @@ service cloud.firestore {
         && (had || !has || resource == null || resource.data.get('deleted', false) == true);
     }
 
-    // Envoltorio de la clave de datos de una persona: crypto/{uid}.
+    // Envoltorio de la clave de datos de una persona: crypto/{uid}. Con la contraseña y la clave de
+    // recuperación (cifrado total) o con la clave del Worker (gestionado), nunca las dos cosas.
     function validCrypto() {
+      return ('kms' in request.resource.data) ? validKmsCrypto() : validPwCrypto();
+    }
+
+    function validKmsCrypto() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['v', 'kid', 'kms', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['v', 'kid', 'kms'])
+        && d.v == 1
+        && d.kid is string && d.kid.size() >= 8 && d.kid.size() <= 32
+        && d.kms is map && d.kms.keys().hasOnly(['iv', 'ct', 'kmsv']) && d.kms.keys().hasAll(['iv', 'ct', 'kmsv'])
+        && d.kms.iv is string && d.kms.iv.size() >= 12 && d.kms.iv.size() <= 32
+        && d.kms.ct is string && d.kms.ct.size() > 0 && d.kms.ct.size() <= 256
+        && d.kms.kmsv is int && d.kms.kmsv >= 1 && d.kms.kmsv <= 1000;
+    }
+
+    function validPwCrypto() {
       let d = request.resource.data;
       return d.keys().hasOnly(['v', 'kid', 'kdf', 'pw', 'rk', 'pub', 'priv', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['v', 'kid', 'kdf', 'pw', 'rk'])
@@ -323,7 +342,8 @@ service cloud.firestore {
         && request.resource.data.memberIds.size() <= 50
         && request.resource.data.members[request.auth.uid].role == 'owner'
         && (request.resource.data.get('enc', null) == null
-            || (validEnc(request.resource.data.enc) && request.resource.data.get('github', null) == null));
+            || (validEnc(request.resource.data.enc) && request.resource.data.enc.mode == 'pw'
+                && request.resource.data.get('github', null) == null));
 
       // El cifrado de un equipo no cambia después de crearlo y no convive con 'github'.
       allow update: if verified()
@@ -378,7 +398,7 @@ service cloud.firestore {
     // Envoltorio de la clave del proyecto de cada miembro: lo lee y escribe cada uno; el propietario puede borrar los de otros.
     match /teams/{tid}/crypto/{who} {
       allow read: if verified() && who == request.auth.uid && isMember(tid);
-      allow create, update: if verified() && who == request.auth.uid && validCrypto()
+      allow create, update: if verified() && who == request.auth.uid && validPwCrypto()
         && (isMember(tid)
             || request.auth.uid in getAfter(/databases/$(database)/documents/teams/$(tid)).data.memberIds);
       allow delete: if verified() && (who == request.auth.uid || isOwner(tid));

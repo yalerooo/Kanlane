@@ -197,6 +197,10 @@
         <p class="lock-error" id="plError" hidden></p>
         <button type="submit" class="btn btn-primary" id="plUnlock" style="width:100%">Desbloquear</button>
       </form>
+      <div id="plManaged" hidden>
+        <p class="lock-error" id="plManagedError" hidden></p>
+        <button type="button" class="btn btn-primary" id="plManagedRetry" style="width:100%">Reintentar</button>
+      </div>
       <p class="lock-forgot" id="plForgotWrap"><a href="#" id="plForgot">He olvidado la contraseña</a></p>
       <form id="plRecoverForm" class="lock-recover" hidden>
         <div class="field">
@@ -934,6 +938,7 @@
         <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
         <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo y el original deja de sincronizar. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
         <li id="shEncNote" hidden>El equipo tendrá su propia clave. A cada persona que invites le darás un código de acceso de un solo uso por otro canal (en persona, por mensaje…). Caduca en 24 horas.</li>
+        <li id="shManagedNote" hidden>Este proyecto está gestionado por Kanlane: su clave está ligada a tu cuenta y, por ahora, no se puede convertir en un proyecto de equipo.</li>
       </ul>
       <div class="field" id="shConvertPassWrap" hidden>
         <label for="shConvertPass">Contraseña de cifrado del proyecto</label>

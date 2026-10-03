@@ -59,6 +59,9 @@
       this.keyCard = $('plKeyCard');
       this.btnKeyContinue = $('plKeyContinue');
       this.keyError = $('plKeyError');
+      this.managed = $('plManaged');
+      this.managedError = $('plManagedError');
+      this.btnManagedRetry = $('plManagedRetry');
 
       this.dlg = $('dlgEncKey');
       this.ekForm = $('ekForm');
@@ -77,9 +80,11 @@
     }
 
     /* handlers: {unlock(pw, trusted), recover(clave, pw, pw2, trusted), keyDone(), check(pw) → resultado,
-       download(clave) → Promise, change(actual, nueva, repetida), newRecovery(actual), recoveryDone()} */
+       download(clave) → Promise, change(actual, nueva, repetida), newRecovery(actual), recoveryDone(),
+       retryManaged()} */
     bind(handlers){
       this.handlers = handlers;
+      this.btnManagedRetry.addEventListener('click', () => handlers.retryManaged());
       this.unlockForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         if(this.pass.value) handlers.unlock(this.pass.value, this.trusted.checked);
@@ -117,6 +122,9 @@
       this.desc.textContent = Workhub.t('Escribe la contraseña de cifrado de «{nombre}». Solo se usa en tu navegador.', {nombre:name || ''});
       this.card.hidden = false;
       this.keyCard.hidden = true;
+      this.unlockForm.hidden = false;
+      this.forgotWrap.hidden = false;
+      this.managed.hidden = true;
       this.recoverForm.hidden = true;
       this.pass.value = '';
       this.recovery.value = '';
@@ -129,6 +137,22 @@
       paintMeter(this.meter, null);
       this.lockKey.clear();
       this.setBusy(false);
+    }
+
+    /* Proyecto gestionado por Kanlane: no hay contraseña que pedir. Mientras llega la clave del
+       servidor (busy) solo se dice que se está abriendo; si falla, el motivo y «Reintentar». */
+    showManaged(name, busy, msg){
+      this.desc.textContent = busy
+        ? Workhub.t('Abriendo «{nombre}» con la clave que guarda Kanlane…', {nombre:name || ''})
+        : Workhub.t('No se ha podido abrir «{nombre}».', {nombre:name || ''});
+      this.card.hidden = false;
+      this.keyCard.hidden = true;
+      this.unlockForm.hidden = true;
+      this.forgotWrap.hidden = true;
+      this.recoverForm.hidden = true;
+      this.managed.hidden = !!busy;
+      this.managedError.textContent = busy ? '' : (msg || '');
+      this.managedError.hidden = !!busy || !msg;
     }
 
     focus(){

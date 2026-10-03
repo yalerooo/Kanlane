@@ -391,6 +391,33 @@ const VECTOR = {
   assert.deepEqual(gcmOpen(kekCode, codeBlob, 'kanlane/wrap/v1|code|' + vpid + '|' + vkid + '|uid-vector'), dekBuf);
   ok('vector fijo estable y verificado con node:crypto (blob, kcv, envoltorios pw, rk y code)');
 
+  /* ---------- modo gestionado: la clave la da el servidor ---------- */
+  {
+    const p = await newProject();
+    const kek = nodeCrypto.randomBytes(32);
+    const copy = () => new Uint8Array(kek);
+    const given = copy();
+    const w = await PC.wrapManaged(p.raw, given, p.ctx, 1);
+    assert.deepEqual(Object.keys(w.kms).sort(), ['ct', 'iv', 'kmsv']);
+    assert.equal(w.kms.kmsv, 1);
+    assert.ok(given.every((b) => b === 0), 'los bytes de la clave recibida se borran al importarla');
+    const key = await PC.unwrapManaged(w, copy(), p.ctx);
+    assert.equal(key.extractable, false, 'la clave de datos no es extraíble');
+    assert.ok(await PC.checkKcv(key, p.ctx.pid, p.ctx.kid, await PC.kcv(key, p.ctx.pid, p.ctx.kid)));
+    const a = PC.aad({pid:p.ctx.pid, kid:p.ctx.kid, path:'tasks', id:'t1', ev:1});
+    assert.deepEqual(await PC.open(key, a, await PC.seal(await PC.importDek(p.raw), a, {title:'hola'})), {title:'hola'}, 'es la misma clave de datos');
+    await assert.rejects(PC.unwrapManaged(w, new Uint8Array(nodeCrypto.randomBytes(32)), p.ctx), code('bad-kms'));
+    await assert.rejects(PC.unwrapManaged(w, copy(), Object.assign({}, p.ctx, {uid:'otra-cuenta'})), code('bad-kms'));
+    await assert.rejects(PC.unwrapManaged(w, copy(), Object.assign({}, p.ctx, {kid:PC.newKid()})), code('bad-kms'));
+    await assert.rejects(PC.unwrapManaged({}, copy(), p.ctx), code('bad-format'));
+    await assert.rejects(PC.unwrapManaged(w, new Uint8Array(16), p.ctx), code('bad-format'));
+    await assert.rejects(PC.wrapManaged(p.raw, copy(), p.ctx, 0), code('bad-format'));
+    /* Un envoltorio gestionado no se abre como si fuera el de la clave de recuperación, ni al revés. */
+    const rec = PC.newRecoveryKey();
+    await assert.rejects(PC.unwrapRecovery({rk:{iv:w.kms.iv, ct:w.kms.ct}}, rec.bytes, p.ctx), code('bad-recovery'));
+    ok('modo gestionado: envolver y abrir con la clave del servidor');
+  }
+
   /* ---------- código fuente ---------- */
   for(const rel of ['src/services/project-crypto.js', 'src/services/keystore.js']){
     const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '');

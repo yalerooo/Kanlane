@@ -181,6 +181,7 @@
     convert(password){
       const p = this.current();
       if(!p || p.team) return;
+      if(P.isManaged(p)){ this.view.showError('Los proyectos gestionados por Kanlane todavía no se pueden compartir.'); return; }
       if(!P.isEncrypted(p)){ this.runConvert(p, null); return; }
       if(this.app.projectId !== p.id || !this.app.cipher){ this.view.showError('Abre y desbloquea este proyecto para poder compartirlo.'); return; }
       if(!password){ this.view.showError('Escribe la contraseña de cifrado del proyecto.'); return; }

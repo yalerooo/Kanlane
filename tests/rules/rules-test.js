@@ -157,7 +157,12 @@ async function t(name, fn){
   console.log('Cifrado: documento del proyecto (enc)');
   await t('zed crea un proyecto cifrado', () => assertSucceeds(zu.collection('projects').doc('pb').set(proj({enc: ENC()}))));
   await t('un proyecto sin enc se crea como siempre', () => assertSucceeds(zu.collection('projects').doc('pa').set(proj())));
-  await t('el modo gestionado todavía no está permitido', () => assertFails(zu.collection('projects').doc('pm').set(proj({enc: ENC({mode: 'managed'})}))));
+  await t('zed crea un proyecto gestionado por Kanlane', () => assertSucceeds(zu.collection('projects').doc('pm').set(proj({enc: ENC({mode: 'managed'})}))));
+  await t('un modo de cifrado desconocido se rechaza', () => assertFails(zu.collection('projects').doc('pz').set(proj({enc: ENC({mode: 'otro'})}))));
+  await t('un proyecto gestionado no pasa a cifrado total', () => assertFails(zu.collection('projects').doc('pm').set(proj({enc: ENC()}))));
+  await t('un proyecto gestionado no enlaza github', () => assertFails(zu.collection('projects').doc('pm').update({github: {login: 'x', number: 1}})));
+  await t('tarea en claro en un proyecto gestionado se rechaza', () => assertFails(zu.collection('projects').doc('pm').collection('tasks').doc('c1').set({title: 'en claro'})));
+  await t('tarea sellada en un proyecto gestionado', () => assertSucceeds(zu.collection('projects').doc('pm').collection('tasks').doc('s1').set(sealed({status: 'todo', order: 1, assignees: []}))));
   await t('enc con una versión desconocida se rechaza', () => assertFails(zu.collection('projects').doc('pv').set(proj({enc: ENC({v: 2})}))));
   await t('enc con un campo de más se rechaza', () => assertFails(zu.collection('projects').doc('px').set(proj({enc: ENC({extra: 1})}))));
   await t('enc sin kcv se rechaza', () => { const e = ENC(); delete e.kcv; return assertFails(zu.collection('projects').doc('pk').set(proj({enc: e}))); });
@@ -230,6 +235,22 @@ async function t(name, fn){
   await t('otro algoritmo de derivación se rechaza', () => assertFails(zu.collection('crypto').doc('zed').set(cryptoDoc({kdf: {name: 'scrypt', hash: 'SHA-256', iter: 600000, salt: 's'.repeat(22)}}))));
   await t('un envoltorio con campos de más se rechaza', () => assertFails(zu.collection('crypto').doc('zed').set(cryptoDoc({extra: 'x'}))));
   await t('un envoltorio sin clave de recuperación se rechaza', () => { const d = cryptoDoc(); delete d.rk; return assertFails(zu.collection('crypto').doc('zed').set(d)); });
+  /* Modo gestionado: la clave del proyecto envuelta con la clave que da el Worker. */
+  const kmsDoc = (over) => Object.assign({v: 1, kid: 'kid-12345', kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64), kmsv: 1}, createdAt: 1, updatedAt: 1}, over || {});
+  const pm = zu.collection('projects').doc('pm');
+  await t('zed guarda el envoltorio gestionado de un proyecto', () => assertSucceeds(pm.collection('crypto').doc('zed').set(kmsDoc())));
+  await t('zed lee su envoltorio gestionado', () => assertSucceeds(pm.collection('crypto').doc('zed').get()));
+  await t('bob no lee el envoltorio gestionado de zed', () => assertFails(bob.collection('users').doc('zed').collection('projects').doc('pm').collection('crypto').doc('zed').get()));
+  await t('bob no escribe el envoltorio gestionado de zed', () => assertFails(bob.collection('users').doc('zed').collection('projects').doc('pm').collection('crypto').doc('zed').set(kmsDoc())));
+  await t('un envoltorio gestionado del principal se acepta', () => assertSucceeds(zu.collection('crypto').doc('zed').set(kmsDoc())));
+  await t('el principal vuelve a su envoltorio con contraseña', () => assertSucceeds(zu.collection('crypto').doc('zed').set(cryptoDoc())));
+  await t('un envoltorio gestionado con contraseña a la vez se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(Object.assign(cryptoDoc(), {kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64), kmsv: 1}}))));
+  await t('un envoltorio gestionado sin versión del secreto se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}}))));
+  await t('un envoltorio gestionado con versión 0 se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64), kmsv: 0}}))));
+  await t('un envoltorio gestionado con campos de más en kms se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64), kmsv: 1, kek: 'x'}}))));
+  await t('un envoltorio gestionado con campos de más se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({extra: 'x'}))));
+  await t('un envoltorio gestionado demasiado grande se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(257), kmsv: 1}}))));
+  await t('kms que no es un mapa se rechaza', () => assertFails(pm.collection('crypto').doc('zed').set(kmsDoc({kms: 'texto'}))));
   await t('un envoltorio con la clave pública y la privada envuelta (D9) se acepta', () => assertSucceeds(zu.collection('crypto').doc('zed').set(cryptoDoc({
     pub: {kty: 'EC', crv: 'P-256', x: 'x'.repeat(43), y: 'y'.repeat(43)}, priv: {iv: 'i'.repeat(16), ct: 'c'.repeat(200)}}))));
   await t('zed borra su envoltorio', () => assertSucceeds(pb.collection('crypto').doc('zed').delete()));
@@ -238,7 +259,8 @@ async function t(name, fn){
   const tb = alice.collection('teams').doc('tb');
   await t('alice crea un equipo cifrado', () => assertSucceeds(tb.set(Object.assign(team('alice'), {enc: ENC()}))));
   await t('un equipo con enc y github no se crea', () => assertFails(alice.collection('teams').doc('tg').set(Object.assign(team('alice'), {enc: ENC(), github: {login: 'x', number: 1}}))));
-  await t('un equipo con enc inválido no se crea', () => assertFails(alice.collection('teams').doc('tf').set(Object.assign(team('alice'), {enc: ENC({mode: 'managed'})}))));
+  await t('un equipo no puede ser gestionado por Kanlane', () => assertFails(alice.collection('teams').doc('tm').set(Object.assign(team('alice'), {enc: ENC({mode: 'managed'})}))));
+  await t('un equipo con enc inválido no se crea', () => assertFails(alice.collection('teams').doc('tf').set(Object.assign(team('alice'), {enc: ENC({v: 2})}))));
   await t('un equipo sin cifrar sigue aceptando tareas en claro', async () => {
     await assertSucceeds(alice.collection('teams').doc('tc').set(team('alice')));
     await assertSucceeds(alice.collection('teams').doc('tc').collection('tasks').doc('x').set({title: 'en claro'}));
@@ -270,6 +292,7 @@ async function t(name, fn){
   await t('imagen sellada en un equipo cifrado', () => assertSucceeds(bob.collection('teams').doc('tb').collection('assets').doc('i1').set({createdAt: 1, e: 'A'.repeat(1000), ev: 1, kid: 'kid-12345'})));
   await t('un lector no escribe tareas selladas', () => assertFails(carol.collection('teams').doc('tb').collection('tasks').doc('x2').set(sealed())));
   await t('un miembro (lector) guarda su envoltorio', () => assertSucceeds(carol.collection('teams').doc('tb').collection('crypto').doc('carol').set(cryptoDoc())));
+  await t('en un equipo no se guarda un envoltorio gestionado', () => assertFails(carol.collection('teams').doc('tb').collection('crypto').doc('carol').set({v: 1, kid: 'kid-12345', kms: {iv: 'i'.repeat(16), ct: 'c'.repeat(64), kmsv: 1}, createdAt: 1, updatedAt: 1})));
   await t('un miembro no guarda el envoltorio de otro', () => assertFails(carol.collection('teams').doc('tb').collection('crypto').doc('bob').set(cryptoDoc())));
   await t('un miembro lee su envoltorio', () => assertSucceeds(carol.collection('teams').doc('tb').collection('crypto').doc('carol').get()));
   await t('un miembro no lee el envoltorio de otro', () => assertFails(bob.collection('teams').doc('tb').collection('crypto').doc('carol').get()));

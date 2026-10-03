@@ -43,7 +43,15 @@
 
     /* Lo llama AppController al abrir, bloquear o cerrar un proyecto. */
     syncEncrypted(){
-      this.view.setEncrypted(!!this.app.cipher);
+      this.view.setEncrypted(this.sealsCopies());
+    }
+
+    /* ¿Las copias descargadas salen cifradas? Solo con cifrado total: el archivo se abre con la
+       contraseña o la clave de recuperación del proyecto. Un proyecto gestionado por Kanlane no tiene
+       ninguna de las dos, así que su copia se descarga sin cifrar, como la de uno sin cifrado. */
+    sealsCopies(){
+      const app = this.app;
+      return !!app.cipher && !Workhub.models.ProjectModel.isManaged(app.models.projects.get(app.projectId));
     }
 
     /* Archivo cifrado de una copia del proyecto abierto. Lee los envoltorios de la clave de la cuenta
@@ -58,7 +66,7 @@
 
     /* Descarga una copia: cifrada si el proyecto abierto tiene cifrado total. */
     downloadCopy(copy){
-      if(!this.app.cipher) return platform.download(copy.filename, copy.json);
+      if(!this.sealsCopies()) return platform.download(copy.filename, copy.json);
       return this.sealCopy(copy).then((file) => platform.download(file.filename, file.json));
     }
 
@@ -258,7 +266,7 @@
         return;
       }
       const cipher = this.app.cipher;
-      const encrypted = !!cipher && plain !== true;
+      const encrypted = this.sealsCopies() && plain !== true;
       this.view.setExporting(true);
       this.backup.build(this.app.controllers.projects.current().nombre).then((copy) => {
         if(this.app.cipher !== cipher) throw new Error('project-changed');
@@ -278,7 +286,7 @@
     }
 
     exportPlain(){
-      if(this.app.cipher && !confirm('El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.')) return;
+      if(this.sealsCopies() && !confirm('El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.')) return;
       this.exportData(true);
     }
 

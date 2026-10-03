@@ -20,6 +20,7 @@
       this.step = 1;
       this.privacy = 'A';
       this.privacyOn = false;
+      this.managedOn = false;
       this.pending = null;
       this.enc = null;
       this.steps = [$('pStep1'), $('pStep2'), $('pStep3'), $('pStep4')];
@@ -54,25 +55,31 @@
       });
     },
 
-    /* handlers: {check(pw, nombre) → resultado, prepare() → clave, reset(), create(datos),
+    /* handlers: {check(pw, nombre) → resultado, prepare() → clave, reset(), create(datos) (con
+       managed:true si es «Gestionado por Kanlane»),
        download(clave, nombre) → Promise, action(tipo, idProyecto)} */
     bindEncryption(handlers){
       this.enc = handlers;
     },
 
-    /* ¿Se ofrece el paso de privacidad? Solo con cuenta (ni en modo local ni como invitado). */
-    setPrivacyAvailable(on){
+    /* ¿Se ofrece el paso de privacidad? Solo con cuenta (ni en modo local ni como invitado).
+       managed: ¿se puede elegir «Gestionado por Kanlane»? Si no, su tarjeta dice «Próximamente». */
+    setPrivacyAvailable(on, managed){
       this.privacyOn = !!on;
+      this.managedOn = !!on && !!managed;
     },
 
-    /* Sección «Privacidad» al editar: null la oculta; {encrypted} elige el texto y los botones. */
+    /* Sección «Privacidad» al editar: null la oculta; {encrypted, managed} elige el texto y los botones. */
     setPrivacyInfo(info){
       this.privacyInfo.hidden = !info;
       if(!info) return;
-      this.privacyText.textContent = info.encrypted
-        ? 'Cifrado total.'
-        : 'Solo contraseñas. El contenido del proyecto no tiene cifrado de extremo a extremo.';
-      this.privacyActions.hidden = !info.encrypted;
+      this.privacyText.textContent = info.managed
+        ? 'Gestionado por Kanlane. El contenido se guarda cifrado y la clave la custodia el servidor de Kanlane, que podría técnicamente descifrarlo.'
+        : info.encrypted
+          ? 'Cifrado total.'
+          : 'Solo contraseñas. El contenido del proyecto no tiene cifrado de extremo a extremo.';
+      /* Sin contraseña de cifrado no hay nada que cambiar ni que olvidar. */
+      this.privacyActions.hidden = !info.encrypted || !!info.managed;
     },
 
     _resetPrivacy(){
@@ -103,6 +110,8 @@
         if(this.privacy === 'B' && !this.pending.github){
           this._goStep(3);
           this.encPass.focus();
+        } else if(this.privacy === 'C' && this.managedOn && !this.pending.github){
+          this.enc.create({nombre:this.pending.nombre, color:this.pending.color, config:this.pending.config, managed:true});
         } else {
           this._dispatch(this.pending);
         }
@@ -159,16 +168,19 @@
     },
 
     setEncBusy(on){
-      this.btnSave.disabled = on || !this.encKey.isSaved();
       this.btnCancel.disabled = on;
-      this.btnSave.textContent = on ? 'Preparando el cifrado…' : 'Crear proyecto cifrado';
+      /* Al terminar, el botón vuelve a ser el del paso en el que se estaba (el 2 o el 4). */
+      if(!on){ this._stepButtons(); return; }
+      this.btnSave.disabled = true;
+      this.btnSave.textContent = 'Preparando el cifrado…';
     },
 
     _renderPrivacy(){
       const gh = !!(this.pending && this.pending.github);
       const b = this.privacy === 'B' && !gh;
+      const c = this.privacy === 'C' && !gh && this.managedOn;
       this.privacyEl.innerHTML =
-        card('A', !b, false, 'Solo contraseñas',
+        card('A', !b && !c, false, 'Solo contraseñas',
           ['Las credenciales del cofre se cifran con tu contraseña maestra. El resto del proyecto (tareas, notas, clientes, contactos, reuniones e imágenes) se guarda sin cifrado de extremo a extremo: Kanlane podría leerlo. Si olvidas una contraseña, no pierdes el proyecto.'],
           ['Compatible con GitHub', 'Sin contraseña extra']) +
         card('B', b, gh, 'Cifrado total',
@@ -176,9 +188,11 @@
             : ['Todo el contenido del proyecto se cifra en tu navegador con una contraseña que solo tú conoces. Kanlane no la tiene y no puede leer el contenido. Si pierdes la contraseña y la clave de recuperación, el proyecto no se puede recuperar.',
               'No se cifran el nombre del proyecto, las columnas, las etiquetas, las fechas ni el estado de las tareas.'],
           ['Contraseña del proyecto', 'Sin GitHub']) +
-        card('C', false, true, 'Gestionado por Kanlane',
-          ['Cifrado sin contraseña extra: Kanlane guarda la clave en su servidor y se la da a tu cuenta al entrar. Es lo más cómodo y protege si alguien copia la base de datos, pero Kanlane podría técnicamente descifrar el proyecto.'],
-          ['Próximamente']);
+        card('C', c, gh || !this.managedOn, 'Gestionado por Kanlane',
+          gh ? ['No disponible con «Desde GitHub»: lo que se sincroniza tiene que llegar a GitHub sin cifrar.']
+            : ['Cifrado sin contraseña extra: Kanlane guarda la clave en su servidor y se la da a tu cuenta al entrar. Es lo más cómodo y protege si alguien copia la base de datos, pero Kanlane podría técnicamente descifrar el proyecto.',
+              'No se cifran el nombre del proyecto, las columnas, las etiquetas, las fechas ni el estado de las tareas. Por ahora no se puede compartir con un equipo.'],
+          this.managedOn ? ['Sin contraseña extra', 'Sin GitHub'] : ['Próximamente']);
     }
   });
 })();

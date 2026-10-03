@@ -29,6 +29,7 @@
       this.btnLeave = $('shLeave');
       /* Proyectos con cifrado total (docs/CIFRADO-PROYECTOS.md, 8.5). */
       this.encNote = $('shEncNote');
+      this.managedNote = $('shManagedNote');
       this.convertPassWrap = $('shConvertPassWrap');
       this.convertPass = $('shConvertPass');
       this.keyBox = $('shKeyPanel');
@@ -108,8 +109,12 @@
       this._resetSecrets();
       this.personal.hidden = false;
       this.githubNote.hidden = !project.github;
-      this.encNote.hidden = !isEncrypted(project);
-      this.convertPassWrap.hidden = !isEncrypted(project);
+      /* Los gestionados por Kanlane todavía no se comparten: sin aviso de código ni contraseña. */
+      const managed = Workhub.models.ProjectModel.isManaged(project);
+      this.encNote.hidden = !isEncrypted(project) || managed;
+      this.convertPassWrap.hidden = !isEncrypted(project) || managed;
+      this.managedNote.hidden = !managed;
+      this.btnConvert.hidden = managed;
       this.teamEl.hidden = true;
       this.btnLeave.hidden = true;
       this.setBusy(false);

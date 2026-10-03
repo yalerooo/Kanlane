@@ -32,6 +32,7 @@ jobs:
           node tests/backup/backup.test.js
           node tests/assets/limits.test.js
           node tests/worker/rate-limit.test.js
+          node tests/worker/kms.test.js
           node tests/worker/domains.test.js
           node tests/e2e/hreflang-check.js
           node tests/e2e/sitemap-check.js
@@ -83,5 +84,7 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-smoke.js"
       - name: Equipo con cifrado total en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-team.js"
+      - name: Proyecto gestionado por Kanlane en Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-managed.js"
       - name: Asistente de cifrado total en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-wizard.js"

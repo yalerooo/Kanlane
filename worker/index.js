@@ -11,7 +11,9 @@
    dirección, y la app usa su propio dominio como authDomain (hostingDomains
    en src/config/firebase-config.js). Es lo que antes hacía netlify.toml.
 
-   Solo se reenvían las rutas de Firebase indicadas; no es un proxy abierto. */
+   Solo se reenvían las rutas de Firebase indicadas; no es un proxy abierto.
+
+   Además atiende /__/kms/v1/kek: la clave de los proyectos «Gestionado por Kanlane». */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -41,6 +43,132 @@ const SELF_REMOVING_SW = [
   '));'
 ].join('\n');
 
+/* ---------- Modo gestionado (docs/CIFRADO-PROYECTOS.md, apartado 12) ----------
+   POST /__/kms/v1/kek con «Authorization: Bearer <ID token de Firebase>» y el cuerpo {pid, kid}
+   devuelve la clave que envuelve la clave de datos de un proyecto «Gestionado por Kanlane»:
+     KEK = HKDF-SHA256(secreto KMS_MASTER_V1, sal «kanlane-kms-v1», info «u:{uid}|{pid}|{kid}»)
+   El uid sale del token verificado, nunca de la petición: cada cuenta solo obtiene sus claves.
+   La clave de datos (aleatoria, envuelta en Firestore) no pasa por aquí, pero con el secreto y el
+   envoltorio se puede abrir: por eso este modo no protege frente a Kanlane. Perder el secreto es
+   perder todos los proyectos gestionados. */
+const KMS_PATH = '/__/kms/v1/kek';
+const KMS_VERSION = 1;
+const KMS_SALT = 'kanlane-kms-v1';
+const FIREBASE_PROJECT = 'workhub-26f50';
+const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+const KMS_PID = /^[A-Za-z0-9_-]{22}$/;
+const KMS_KID = /^[A-Za-z0-9_-]{11}$/;
+const CLOCK_SKEW = 300;
+
+const text = new TextEncoder();
+let jwks = {keys: null, until: 0};
+
+function json(status, body, extra) {
+  return new Response(JSON.stringify(body), {status, headers: Object.assign({
+    'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'
+  }, extra || {})});
+}
+
+function fromB64(str) {
+  let s = String(str).replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function toB64url(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/* Claves públicas con las que Google firma los ID token; se guardan lo que diga su Cache-Control. */
+async function signingKeys(force) {
+  const now = Date.now();
+  if (!force && jwks.keys && now < jwks.until) return jwks.keys;
+  const res = await fetch(JWKS_URL);
+  if (!res.ok) throw new Error('jwks');
+  const data = await res.json();
+  const age = /max-age=(\d+)/.exec(res.headers.get('Cache-Control') || '');
+  jwks = {keys: Array.isArray(data.keys) ? data.keys : [], until: now + Math.min(age ? +age[1] : 3600, 86400) * 1000};
+  return jwks.keys;
+}
+
+/* Devuelve el uid de un ID token de Firebase válido, o null. */
+async function verifiedUid(token) {
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  let header, claims, signature;
+  try {
+    header = JSON.parse(new TextDecoder().decode(fromB64(parts[0])));
+    claims = JSON.parse(new TextDecoder().decode(fromB64(parts[1])));
+    signature = fromB64(parts[2]);
+  } catch (e) {
+    return null;
+  }
+  if (!header || header.alg !== 'RS256' || typeof header.kid !== 'string' || !claims) return null;
+
+  let jwk = (await signingKeys(false)).find((k) => k.kid === header.kid);
+  /* Google rota las claves: si no está, se vuelven a pedir una vez. */
+  if (!jwk) jwk = (await signingKeys(true)).find((k) => k.kid === header.kid);
+  if (!jwk) return null;
+  const key = await crypto.subtle.importKey('jwk', {kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256', ext: true},
+    {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'}, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, signature, text.encode(parts[0] + '.' + parts[1]));
+  if (!ok) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.iss !== 'https://securetoken.google.com/' + FIREBASE_PROJECT || claims.aud !== FIREBASE_PROJECT) return null;
+  if (typeof claims.exp !== 'number' || claims.exp <= now) return null;
+  if (typeof claims.iat !== 'number' || claims.iat > now + CLOCK_SKEW) return null;
+  if (typeof claims.auth_time !== 'number' || claims.auth_time > now + CLOCK_SKEW) return null;
+  if (typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128) return null;
+  /* Como las reglas de Firestore: con correo y contraseña, el correo tiene que estar verificado. */
+  const provider = claims.firebase && claims.firebase.sign_in_provider;
+  if (provider === 'password' && claims.email_verified !== true) return null;
+  return claims.sub;
+}
+
+async function kms(request, env, url) {
+  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+  /* Solo la propia web: una página de otro origen no puede pedir claves. */
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+
+  if (env.AUTH_RATE_LIMIT) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+  }
+
+  let master;
+  try { master = fromB64(env.KMS_MASTER_V1 || ''); } catch (e) { master = new Uint8Array(0); }
+  if (master.length < 32) return json(503, {error: 'not-configured'});
+
+  const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
+  let uid = null;
+  try {
+    uid = auth ? await verifiedUid(auth[1]) : null;
+  } catch (e) {
+    return json(503, {error: 'unavailable'});
+  }
+  if (!uid) return json(401, {error: 'auth'});
+
+  let body = null;
+  try {
+    const raw = await request.text();
+    if (raw.length <= 512) body = JSON.parse(raw);
+  } catch (e) { /* cuerpo no válido */ }
+  if (!body || typeof body !== 'object' || typeof body.pid !== 'string' || typeof body.kid !== 'string' || !KMS_PID.test(body.pid) || !KMS_KID.test(body.kid)) return json(400, {error: 'request'});
+
+  const ikm = await crypto.subtle.importKey('raw', master, 'HKDF', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({name: 'HKDF', hash: 'SHA-256', salt: text.encode(KMS_SALT),
+    info: text.encode('u:' + uid + '|' + body.pid + '|' + body.kid)}, ikm, 256);
+  return json(200, {v: 1, kmsv: KMS_VERSION, kek: toB64url(new Uint8Array(bits))});
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -69,6 +197,9 @@ export default {
       }
       return res;
     }
+
+    /* Modo gestionado: la clave que envuelve la del proyecto (ver más abajo). */
+    if (url.pathname === KMS_PATH) return kms(request, env, url);
 
     if (METHODS.indexOf(request.method) === -1) {
       return new Response('Método no permitido', {status: 405});

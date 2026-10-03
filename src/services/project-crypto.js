@@ -374,6 +374,33 @@
     return unwrapWith(await recoveryKek(bytes, ctx.pid), doc.rk, 'rk', ctx, extractable, 'bad-recovery');
   }
 
+  /* Modo gestionado (apartado 12 del plan): la clave que envuelve la DEK la da el Worker de Kanlane
+     (32 bytes, derivados de su secreto para esta cuenta, este proyecto y esta clave). Los bytes
+     recibidos se borran al importarlos. */
+  async function managedKek(kek){
+    if(!(kek instanceof Uint8Array) || kek.length !== DEK_BYTES) throw fail('bad-format');
+    try{
+      return await subtle().importKey('raw', kek, {name:'AES-GCM', length:256}, false, ['encrypt', 'unwrapKey']);
+    }finally{
+      kek.fill(0);
+    }
+  }
+  /* wrapManaged(dek, kek, ctx, kmsv) → {kms:{iv, ct, kmsv}}. kmsv es la versión del secreto del Worker. */
+  async function wrapManaged(dek, kek, ctx, kmsv){
+    checkCtx(ctx);
+    if(!Number.isInteger(kmsv) || kmsv < 1) throw fail('bad-format');
+    const w = await wrapWith(await managedKek(kek), dek, 'kms', ctx);
+    return {kms:{iv:w.iv, ct:w.ct, kmsv:kmsv}};
+  }
+  /* unwrapManaged(doc, kek, ctx, extractable) → CryptoKey ('bad-kms' si no abre). */
+  async function unwrapManaged(doc, kek, ctx, extractable){
+    checkCtx(ctx);
+    if(!doc || !doc.kms) throw fail('bad-format');
+    fromB64url(doc.kms.iv, IV_BYTES);
+    fromB64url(doc.kms.ct, DEK_BYTES + TAG_BYTES);
+    return unwrapWith(await managedKek(kek), doc.kms, 'kms', ctx, extractable, 'bad-kms');
+  }
+
   /* Código de acceso de las invitaciones (D1): 20 símbolos base32 = 100 bits, 5 grupos de 4.
      256 es múltiplo de 32, así que «byte & 31» da símbolos uniformes. */
   function newAccessCode(){
@@ -527,6 +554,7 @@
     wrapPassword, unwrapPassword,
     newKeyPair, unwrapPrivate,
     newRecoveryKey, parseRecoveryKey, wrapRecovery, unwrapRecovery,
+    wrapManaged, unwrapManaged,
     newAccessCode, parseAccessCode, wrapCode, unwrapCode,
     aad, seal, open, ivOf, sealBytes, openBytes,
     passwordCheck,

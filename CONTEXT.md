@@ -649,7 +649,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 | 116 | Rediseño «cristal limpio»: mejoras de la vista de móvil de la aplicación |
 | 117 | **Portada rehecha de cero** en «cristal limpio» (`/` y `/en/`), con movimiento al avanzar y sin barra de progreso; se borran `landing-product.*` y `landing-motion.*`; el `<head>` y las preguntas frecuentes no cambian |
 | 118 | Portada: ventana del tablero entera y estable, con los iconos de la aplicación; recorrido más grande; calendario de ejemplo con Mes, Semana y Día; demo con la barra lateral siempre desplegada. **Páginas de captación en «cristal limpio»** (solo `seo-pages.css`, sin tocar el HTML ni el SEO) |
-| — | **Pantalla de acceso rehecha en «cristal limpio»** (rama `claude/login-cristal`): hoja de cristal a dos columnas con panel de presentación, barra con marca, idioma y tema, ver/ocultar contraseña e invitado como fila; mismos `id` y misma lógica de acceso |
+| 120 | **Pantalla de acceso rehecha en «cristal limpio»**: hoja de cristal a dos columnas con panel de presentación, barra con marca, idioma y tema, ver/ocultar contraseña e invitado como fila; mismos `id` y misma lógica de acceso |
+| — | **Animaciones y pulido de «cristal limpio»** (rama `claude/pulido-cristal`): cambio de tema y de pestaña animados; tablero con animación al mover, agarrar y arrastrar una tarjeta (copia opaca bajo el cursor y mano cerrada); Copia de seguridad rehecha, Ajustes y GitHub reordenados, pantallas de bloqueo centradas, Ctrl K al día; plugin Apariencia 2.0 (temas listos, cristal, velo, animaciones), Smart GP 1.1.0 y plugins sin caja |
 
 ## 9. Cómo trabajar y probar
 

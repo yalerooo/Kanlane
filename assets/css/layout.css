@@ -268,4 +268,21 @@ header.page-head{
   :root[data-nav="top"] .brand-row{padding:0 8px 0 4px;}
 }
 
+/* Cambio de pestaña (ShellView._animateIn): la sección entra deslizándose y fundiéndose.
+   Sin relleno al terminar, para no dejar un transform que estorbe a lo fijo o a arrastrar. */
+.view-in{animation:view-in .3s cubic-bezier(.2, .7, .2, 1) backwards;}
+.view-fade{animation:view-fade .24s ease backwards;}
+@keyframes view-in{
+  from{opacity:0;transform:translate3d(0, calc(12px * var(--view-dir, 1)), 0);}
+}
+@keyframes view-in-x{
+  from{opacity:0;transform:translate3d(calc(16px * var(--view-dir, 1)), 0, 0);}
+}
+@keyframes view-fade{from{opacity:0;}}
+/* Con la navegación en horizontal (arriba o, en móvil, abajo) la sección entra de lado. */
+:root[data-nav="top"] .view-in{animation-name:view-in-x;}
+@media (max-width: 900px){
+  .view-in{animation-name:view-in-x;}
+}
+
 /* Tamaños de pantalla: ver assets/css/responsive.css. */

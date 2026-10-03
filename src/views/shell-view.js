@@ -126,6 +126,7 @@
     }
 
     show(view){
+      const prev = this.currentView;
       if(view !== 'plugins' && window.matchMedia('(max-width:900px)').matches) this.setPluginNavExpanded(false);
       this.tabs.forEach((t) => {
         const active = t.getAttribute('data-view') === view;
@@ -143,6 +144,31 @@
       this.currentView = view;
       document.body.classList.toggle('plugin-open', view === 'plugins' && !document.getElementById('pluginStage').hidden);
       this._renderInfo();
+      if(prev !== view) this._animateIn(view, prev);
+    }
+
+    /* Entrada de la sección al cambiar de pestaña: aparece deslizándose desde el lado hacia
+       el que se navega (abajo o arriba con la barra lateral; derecha o izquierda con la
+       navegación arriba o en móvil). El título y las herramientas de la barra solo se funden. */
+    _animateIn(view, prev){
+      const order = Object.keys(SECTION_IDS);
+      const dir = order.indexOf(view) > order.indexOf(prev) ? 1 : -1;
+      const play = (el, cls) => {
+        if(!el) return;
+        el.classList.remove('view-in', 'view-fade');
+        /* Leer una medida reinicia la animación si se cambia de pestaña a mitad de otra. */
+        void el.offsetWidth;
+        el.style.setProperty('--view-dir', dir);
+        el.classList.add(cls);
+        el.addEventListener('animationend', (ev) => {
+          if(ev.target !== el) return;
+          el.classList.remove(cls);
+          el.style.removeProperty('--view-dir');
+        }, {once:true});
+      };
+      play(this.sections[view], 'view-in');
+      play(this.pageTitle, 'view-fade');
+      this.bars.forEach((b) => { if(!b.hidden) play(b, 'view-fade'); });
     }
 
     _renderInfo(){

@@ -315,6 +315,13 @@
       /* Las que he enviado yo desde un equipo. */
       invitesFrom: (tid) => firestore.collection('invites').where('teamId', '==', tid).where('invitedByUid', '==', uid),
       invite: (id) => firestore.collection('invites').doc(id),
+      /* Equipos con cifrado total: la clave del proyecto envuelta con el código de acceso de una
+         invitación, y la clave envuelta de un miembro (para escribirla en el lote de aceptar). */
+      inviteKey: (id) => firestore.collection('invites').doc(id).collection('key').doc('wrap'),
+      cryptoDoc: (tid, who) => firestore.collection('teams').doc(tid).collection('crypto').doc(who),
+      serverTimestamp: () => fb.firestore.FieldValue.serverTimestamp(),
+      /* Cambios de campos secretos en un equipo cifrado: leer, mezclar y escribir sin pisar a otro. */
+      runTransaction: (fn) => firestore.runTransaction(fn),
       FieldValue: fb.firestore.FieldValue,
       batch: () => firestore.batch()
     };

@@ -286,8 +286,12 @@
       }).then(() => {
         /* Las invitaciones pendientes de un equipo que ya no existe se cancelan. */
         if(!isTeam) return null;
+        /* Las de un equipo cifrado llevan la clave envuelta con el código: se borra antes que la invitación. */
         return rootDb.teams.invitesFrom(ProjectModel.teamId(id)).get()
-          .then((snap) => Promise.all(snap.docs.map((d) => d.ref.delete())))
+          .then((snap) => Promise.all(snap.docs.map((d) => {
+            const key = (d.data() || {}).enc && rootDb.teams.inviteKey ? rootDb.teams.inviteKey(d.id).delete().catch(() => null) : Promise.resolve();
+            return key.then(() => d.ref.delete());
+          })))
           .catch(() => null);
       }).then(() => id === MAIN_ID ? this.set(MAIN_ID, {deleted:true, createdAt:0}) : this.remove(id));
     }

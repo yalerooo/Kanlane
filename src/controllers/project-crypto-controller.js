@@ -255,8 +255,11 @@
       if(!s) return Promise.resolve();
       const ctx = this.ctx(s.enc);
       this.view.setBusy(true, 'recover');
-      return Promise.all([PC.wrapPassword(s.dek, s.password, ctx), PC.wrapRecovery(s.dek, s.recovery.bytes, ctx)])
-        .then((w) => this.wrapRef(s.id).set(Object.assign({}, s.doc, {kdf:w[0].kdf, pw:w[0].pw, rk:w[1].rk, updatedAt:Date.now()})))
+      /* El par de claves de un miembro de equipo iba envuelto con la contraseña olvidada: se crea otro. */
+      return (s.doc.priv || s.doc.pub ? PC.newKeyPair() : Promise.resolve(null))
+        .then((pair) => Promise.all([PC.wrapPassword(s.dek, s.password, ctx, pair ? pair.priv : undefined), PC.wrapRecovery(s.dek, s.recovery.bytes, ctx)])
+          .then((w) => this.wrapRef(s.id).set(Object.assign({}, s.doc, {kdf:w[0].kdf, pw:w[0].pw, rk:w[1].rk, updatedAt:Date.now()},
+            pair ? {pub:pair.pub, priv:w[0].priv} : {}))))
         .then(() => PC.importDek(s.dek))
         .then((key) => this.keep(s.id, s.enc, key, s.trusted))
         .then(() => {
@@ -293,8 +296,10 @@
       this.view.setDialogBusy(true);
       return this.readWrap(p.id, p.enc)
         .then((d) => { doc = d; return PC.unwrapPassword(doc, current, ctx, true); })
-        .then((dek) => PC.wrapPassword(dek, next, ctx))
-        .then((w) => this.wrapRef(p.id).set(Object.assign({}, doc, {kdf:w.kdf, pw:w.pw, updatedAt:Date.now()})))
+        /* La clave privada del miembro (equipos) va envuelta con la contraseña: se envuelve con la nueva. */
+        .then((dek) => (doc.priv ? PC.unwrapPrivate(doc, current, ctx) : Promise.resolve(null))
+          .then((priv) => PC.wrapPassword(dek, next, ctx, priv || undefined)))
+        .then((w) => this.wrapRef(p.id).set(Object.assign({}, doc, {kdf:w.kdf, pw:w.pw, updatedAt:Date.now()}, w.priv ? {priv:w.priv} : {})))
         .then(() => {
           this.view.closeDialog();
           toast.success('Contraseña de cifrado cambiada', {important:true});

@@ -933,9 +933,35 @@
         <li>Las contraseñas guardadas no se copian: todavía no se pueden compartir con seguridad.</li>
         <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
         <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo y el original deja de sincronizar. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
+        <li id="shEncNote" hidden>El equipo tendrá su propia clave. A cada persona que invites le darás un código de acceso de un solo uso por otro canal (en persona, por mensaje…). Caduca en 24 horas.</li>
       </ul>
+      <div class="field" id="shConvertPassWrap" hidden>
+        <label for="shConvertPass">Contraseña de cifrado del proyecto</label>
+        <input id="shConvertPass" type="password" autocomplete="off">
+      </div>
+      <div id="shKeyPanel" hidden>
+        <p class="dlg-lead">Esta es la clave de recuperación del equipo: es distinta de la del proyecto original. Guárdala fuera de Kanlane antes de continuar.</p>
+        <div class="recovery-key-box" id="shKey" translate="no"></div>
+        <div class="recovery-actions">
+          <button type="button" class="btn btn-ghost" id="shKeyCopy">Copiar</button>
+          <button type="button" class="btn btn-ghost" id="shKeyDownload">Descargar .txt</button>
+        </div>
+        <p class="type-note">Si pierdes la contraseña y esta clave, perderás el proyecto y tendrás que crear otro.</p>
+        <label class="recovery-confirm">
+          <input type="checkbox" id="shKeySaved">
+          La he guardado en un lugar seguro
+        </label>
+      </div>
       <p class="type-note" id="shProgress" role="status" hidden></p>
       <button type="button" class="btn btn-primary" id="shConvert">Convertir en proyecto de equipo</button>
+    </div>
+    <div id="shCodePanel" hidden>
+      <p class="dlg-lead">Dáselo por un canal distinto del correo de la invitación. Solo sirve una vez, caduca en 24 horas y no se vuelve a mostrar.</p>
+      <div class="recovery-key-box" id="shCode" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="shCodeCopy">Copiar código</button>
+        <button type="button" class="btn btn-primary" id="shCodeDone">Hecho</button>
+      </div>
     </div>
     <div id="shTeam" hidden>
       <div class="field">
@@ -952,6 +978,11 @@
           </select>
           <button type="submit" class="btn btn-primary" id="shInviteBtn">Invitar</button>
         </div>
+        <div class="field invite-pass" id="shInvitePassWrap" hidden>
+          <label for="shInvitePass">Tu contraseña de cifrado</label>
+          <input id="shInvitePass" type="password" autocomplete="off">
+          <p class="field-help">Este proyecto tiene cifrado total: al invitar se crea un código de acceso que tendrás que darle a esa persona.</p>
+        </div>
         <p class="field-help">La persona verá la invitación al entrar en Kanlane con ese correo. Tiene que tener una cuenta con ese mismo correo.</p>
       </form>
       <div class="field" id="shPendingWrap" hidden>
@@ -967,6 +998,48 @@
       </div>
     </div>
   </div>
+</dialog>
+
+<dialog id="dlgJoin" aria-labelledby="jnTitle">
+  <form class="dlg-inner" id="jnForm" method="dialog">
+    <h2 id="jnTitle" translate="no"></h2>
+    <p class="dlg-lead" id="jnLead"></p>
+    <div id="jnFields">
+      <div class="field">
+        <label for="jnCode">Código de acceso</label>
+        <input id="jnCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" required>
+      </div>
+      <div class="field">
+        <label for="jnPass">Tu contraseña de cifrado</label>
+        <input id="jnPass" type="password" autocomplete="off" required>
+        <div class="pw-meter" id="jnMeter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+        <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+      </div>
+      <div class="field">
+        <label for="jnPass2">Repite la contraseña</label>
+        <input id="jnPass2" type="password" autocomplete="off" required>
+      </div>
+    </div>
+    <div id="jnKeyPanel" hidden>
+      <div class="recovery-key-box" id="jnKey" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="jnKeyCopy">Copiar</button>
+        <button type="button" class="btn btn-ghost" id="jnKeyDownload">Descargar .txt</button>
+      </div>
+      <p class="type-note">Si pierdes la contraseña y esta clave, dejarás de poder abrir este proyecto y tendrán que invitarte de nuevo.</p>
+      <label class="recovery-confirm">
+        <input type="checkbox" id="jnKeySaved">
+        La he guardado en un lugar seguro
+      </label>
+    </div>
+    <p class="lock-error" id="jnError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="jnCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="jnSubmit">Continuar</button>
+      </div>
+    </div>
+  </form>
 </dialog>
 
 <dialog id="dlgColumn">
@@ -1364,6 +1437,7 @@
 <script src="../src/views/plugin-form-view.js"></script>
 <script src="../src/views/github-view.js"></script>
 <script src="../src/views/share-view.js"></script>
+<script src="../src/views/join-view.js"></script>
 <script src="../src/views/reminders-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
@@ -1381,6 +1455,7 @@
 <script src="../src/controllers/plugins-data-api.js"></script>
 <script src="../src/controllers/reminders-controller.js"></script>
 <script src="../src/controllers/github-controller.js"></script>
+<script src="../src/controllers/team-crypto-controller.js"></script>
 <script src="../src/controllers/team-controller.js"></script>
 <script src="../src/controllers/command-controller.js"></script>
 <script src="../src/controllers/auth-controller.js"></script>

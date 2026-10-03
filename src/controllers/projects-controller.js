@@ -45,7 +45,11 @@
         reset: () => crypto.resetWizard(),
         download: (text, nombre) => crypto.download(text, nombre),
         create: (d) => this.createEncrypted(d),
-        action: (kind, id) => { if(kind === 'forget') this.view.closeDialog(); crypto.action(kind, id); }
+        action: (kind, id) => {
+          if(kind === 'convert'){ this.app.controllers.convert.start(id); return; }
+          if(kind === 'forget') this.view.closeDialog();
+          crypto.action(kind, id);
+        }
       });
       /* «Conectar con GitHub» sin pegar un token. */
       this.view.bindGithubOAuth(() => {
@@ -266,9 +270,11 @@
       const p = this.projects.get(id || this.app.projectId);
       if(!p) return;
       this.view.openEdit(p, true, this.projects.configOf(p));
-      /* La privacidad se elige al crear el proyecto y no se cambia; solo existe con cuenta. */
+      /* La privacidad se elige al crear el proyecto; después solo se puede pasar de «Solo contraseñas»
+         a «Cifrado total». Solo existe con cuenta. */
       this.view.setPrivacyInfo(this.app.controllers.crypto.me
-        ? {encrypted:ProjectModel.isEncrypted(p), managed:ProjectModel.isManaged(p), canRotate:this.app.controllers.rotation.canRotate(p)} : null);
+        ? {encrypted:ProjectModel.isEncrypted(p), managed:ProjectModel.isManaged(p), canRotate:this.app.controllers.rotation.canRotate(p),
+          canConvert:this.app.controllers.convert.canConvert(p)} : null);
     }
 
     /* Proyecto con cifrado total, desde el último paso del asistente: d = {nombre, color, config,

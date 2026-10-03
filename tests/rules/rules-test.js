@@ -169,7 +169,7 @@ async function t(name, fn){
   await t('enc y github no conviven al crear', () => assertFails(zu.collection('projects').doc('pg').set(proj({enc: ENC(), github: {login: 'x', number: 1}}))));
   await t('quitar enc de un proyecto cifrado se rechaza', () => assertFails(zu.collection('projects').doc('pb').set(proj())));
   await t('cambiar el kid de enc se rechaza', () => assertFails(zu.collection('projects').doc('pb').set(proj({enc: ENC({kid: 'otro-kid-1'})}))));
-  await t('añadir enc a un proyecto existente se rechaza', () => assertFails(zu.collection('projects').doc('pa').set(proj({enc: ENC()}))));
+  await t('añadir enc a un proyecto existente sin marcarlo como en conversión se rechaza', () => assertFails(zu.collection('projects').doc('pa').set(proj({enc: ENC()}))));
   await t('añadir github a un proyecto cifrado se rechaza', () => assertFails(zu.collection('projects').doc('pb').update({github: {login: 'x', number: 1}})));
   await t('renombrar un proyecto cifrado sin tocar enc se permite', () => assertSucceeds(zu.collection('projects').doc('pb').update({nombre: 'Renombrado'})));
   await t('un proyecto sin enc puede enlazar github como siempre', () => assertSucceeds(zu.collection('projects').doc('pa').update({github: {login: 'x', number: 1}})));
@@ -453,6 +453,56 @@ async function t(name, fn){
   await t('el miembro borra la clave que recibió', () => assertSucceeds(tbOf(bob).collection('rekey').doc('bob').delete()));
   await t('un editor no borra la clave pública de otro', () => assertFails(tbOf(bob).collection('pubkeys').doc('carol').delete()));
   await t('el propietario borra la clave pública de quien quita', () => assertSucceeds(tb.collection('pubkeys').doc('carol').delete()));
+
+  /* ---------- Convertir un proyecto en claro en uno cifrado (PR11 del plan, apartado 13.2) ---------- */
+  console.log('Cifrado: convertir un proyecto que estaba en claro');
+  const CONV = (over) => ENC(Object.assign({conv: 5}, over || {}));
+  const pcDoc = zu.collection('projects').doc('pc');
+  const pc = pcDoc;
+  await t('zed tiene un proyecto en claro con datos', async () => {
+    await assertSucceeds(pcDoc.set(proj()));
+    await assertSucceeds(pc.collection('tasks').doc('a').set({title: 'en claro'}));
+    await assertSucceeds(pc.collection('tasks').doc('a').collection('notes').doc('n').set({text: 'en claro'}));
+    await assertSucceeds(pc.collection('clients').doc('c').set({nombre: 'Cliente'}));
+  });
+  await t('convertir un proyecto enlazado con GitHub se rechaza', async () => {
+    await assertSucceeds(zu.collection('projects').doc('pgh').set(proj({github: {login: 'x', number: 1}})));
+    await assertFails(zu.collection('projects').doc('pgh').update({enc: CONV()}));
+  });
+  await t('convertir a gestionado por Kanlane se rechaza', () => assertFails(pcDoc.update({enc: CONV({mode: 'managed'})})));
+  await t('conv que no es un número se rechaza', () => assertFails(pcDoc.update({enc: CONV({conv: 'sí'})})));
+  await t('convertir con un cambio de clave a medias a la vez se rechaza', () => assertFails(pcDoc.update({enc: CONV({rot: {kid: 'otro-kid-9', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('otra cuenta no convierte el proyecto de zed', () => assertFails(bob.collection('users').doc('zed').collection('projects').doc('pc').update({enc: CONV()})));
+  await t('zed empieza la conversión', () => assertSucceeds(pcDoc.update({enc: CONV()})));
+  await t('durante la conversión lo nuevo tiene que ir sellado', () => assertFails(pc.collection('tasks').doc('b').set({title: 'en claro'})));
+  await t('durante la conversión se crean tareas selladas', () => assertSucceeds(pc.collection('tasks').doc('b').set(sealed({status: 'todo'}))));
+  await t('durante la conversión una nota nueva en claro se rechaza', () => assertFails(pc.collection('tasks').doc('a').collection('notes').doc('n2').set({text: 'en claro'})));
+  await t('lo que estaba en claro se sella', async () => {
+    await assertSucceeds(pc.collection('tasks').doc('a').set(sealed({status: 'todo'})));
+    await assertSucceeds(pc.collection('tasks').doc('a').collection('notes').doc('n').set(sealed({createdAt: 1})));
+    await assertSucceeds(pc.collection('clients').doc('c').set(sealed({color: 1})));
+  });
+  await t('lo sellado no vuelve a quedar en claro', () => assertFails(pc.collection('tasks').doc('a').set({title: 'en claro otra vez'})));
+  await t('durante la conversión no se cambia la clave', () => assertFails(pcDoc.update({enc: CONV({kid: 'kid-nuevo2', kcv: KCV2, rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('durante la conversión no se cambia la clave quitando la marca', () => assertFails(pcDoc.update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2, rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('durante la conversión no se quita el cifrado', () => assertFails(pcDoc.set(proj())));
+  await t('durante la conversión no se enlaza con GitHub', () => assertFails(pcDoc.update({github: {login: 'x', number: 1}})));
+  await t('terminar la conversión con otra clave se rechaza', () => assertFails(pcDoc.update({enc: ENC({kid: 'kid-nuevo2'})})));
+  await t('terminar la conversión con otro proyecto (pid) se rechaza', () => assertFails(pcDoc.update({enc: ENC({pid: 'q'.repeat(22)})})));
+  await t('zed termina la conversión', () => assertSucceeds(pcDoc.update({enc: ENC()})));
+  await t('un proyecto ya cifrado no vuelve a marcarse como en conversión', () => assertFails(pcDoc.update({enc: CONV()})));
+  await t('un cambio de clave no marca el proyecto como en conversión', () => assertFails(pcDoc.update({enc: CONV({kid: 'kid-nuevo2', kcv: KCV2, rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('tras la conversión sigue sin admitirse nada en claro', () => assertFails(pc.collection('tasks').doc('d').set({title: 'en claro'})));
+  await t('el principal que aún no tenía documento se convierte', async () => {
+    const amy = env.authenticatedContext('amy', tok('amy@x.com')).firestore().collection('users').doc('amy');
+    await assertSucceeds(amy.collection('tasks').doc('a').set({title: 'en claro'}));
+    await assertSucceeds(amy.collection('projects').doc('main').set(proj({enc: CONV()})));
+    await assertFails(amy.collection('tasks').doc('b').set({title: 'en claro'}));
+    await assertSucceeds(amy.collection('tasks').doc('a').set(sealed({status: 'todo'})));
+    await assertSucceeds(amy.collection('projects').doc('main').update({enc: ENC()}));
+  });
+  await t('un equipo no nace marcado como en conversión', () => assertFails(alice.collection('teams').doc('tv').set(Object.assign(team('alice'), {enc: CONV()}))));
+  await t('a un equipo sin cifrar no se le añade cifrado', () => assertFails(alice.collection('teams').doc('tc').update({enc: CONV()})));
 
   await env.cleanup();
   console.log('\n' + pass + ' correctas, ' + fail + ' fallidas');

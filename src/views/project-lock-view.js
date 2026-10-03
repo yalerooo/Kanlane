@@ -70,6 +70,8 @@
       this.ekLead = $('ekLead');
       this.ekFields = $('ekFields');
       this.ekCurrent = $('ekCurrent');
+      this.ekCurrentWrap = $('ekCurrentWrap');
+      this.ekWarn = $('ekWarn');
       this.ekNewWrap = $('ekNewWrap');
       this.ekNew = $('ekNew');
       this.ekNew2 = $('ekNew2');
@@ -85,7 +87,8 @@
 
     /* handlers: {unlock(pw, trusted), recover(clave, pw, pw2, trusted), keyDone(), check(pw) → resultado,
        download(clave) → Promise, change(actual, nueva, repetida), newRecovery(actual), recoveryDone(),
-       retryManaged(), rotate(actual), rotateConfirm(), rotateClosed()} */
+       retryManaged(), rotate(actual), rotateConfirm(), rotateClosed(), convert(nueva, repetida),
+       convertConfirm(), convertClosed()} */
     bind(handlers){
       this.handlers = handlers;
       this.btnManagedRetry.addEventListener('click', () => handlers.retryManaged());
@@ -109,7 +112,7 @@
 
       this.ekNew.addEventListener('input', () => paintMeter(this.ekMeter, this.ekNew.value ? handlers.check(this.ekNew.value) : null));
       this.ekKey = keyPanel({box:$('ekKey'), copy:$('ekKeyCopy'), download:$('ekKeyDownload'), saved:$('ekKeySaved')},
-        handlers.download, (on) => { if(this.ekMode === 'recovery-key' || this.ekMode === 'rotate-key') this.ekSubmit.disabled = !on; });
+        handlers.download, (on) => { if(this._keyStep()) this.ekSubmit.disabled = !on; });
       $('ekCancel').addEventListener('click', () => this.closeDialog());
       this.ekForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
@@ -118,13 +121,16 @@
         else if(this.ekMode === 'recovery-key' && this.ekKey.isSaved()) handlers.recoveryDone();
         else if(this.ekMode === 'rotate') handlers.rotate(this.ekCurrent.value);
         else if(this.ekMode === 'rotate-key' && this.ekKey.isSaved()) handlers.rotateConfirm();
+        else if(this.ekMode === 'convert') handlers.convert(this.ekNew.value, this.ekNew2.value);
+        else if(this.ekMode === 'convert-key' && this.ekKey.isSaved()) handlers.convertConfirm();
       });
-      /* Mientras se cambia la clave el diálogo no se cierra con Esc. */
-      this.dlg.addEventListener('cancel', (ev) => { if(this.ekMode === 'rotate-run') ev.preventDefault(); });
+      /* Mientras se cambia la clave o se convierte el proyecto el diálogo no se cierra con Esc. */
+      this.dlg.addEventListener('cancel', (ev) => { if(/-run$/.test(this.ekMode)) ev.preventDefault(); });
       this.dlg.addEventListener('close', () => {
-        const rotating = this.ekMode.indexOf('rotate') === 0;
+        const flow = this.ekMode.split('-')[0];
         this._resetDialog();
-        if(rotating && handlers.rotateClosed) handlers.rotateClosed();
+        if(flow === 'rotate' && handlers.rotateClosed) handlers.rotateClosed();
+        if(flow === 'convert' && handlers.convertClosed) handlers.convertClosed();
       });
     }
 
@@ -242,9 +248,22 @@
           : Workhub.t('Perderá el acceso: aún no ha abierto el proyecto con esta versión de Kanlane. Tendrás que quitarle y volver a invitarle.')) + '</span></li>').join('');
     }
 
-    /* Mientras se cambia la clave: solo el avance. Con '' vuelve al paso de la clave de recuperación. */
-    setRotateProgress(text){
-      this.ekMode = text ? 'rotate-run' : 'rotate-key';
+    /* «Convertir a cifrado total» (PR11): contraseña de cifrado nueva y la advertencia de lo que no cubre. */
+    openConvert(){
+      this._openDialog('convert', 'Convertir a cifrado total',
+        'Todo el contenido de este proyecto se cifrará en tu navegador con una contraseña que solo tú conoces. Kanlane no la tiene: si pierdes la contraseña y la clave de recuperación, el proyecto no se puede recuperar. No se puede deshacer, y un proyecto con cifrado total no se puede enlazar con GitHub.',
+        'Siguiente');
+      this.ekCurrentWrap.hidden = true;
+      this.ekCurrent.required = false;
+      this.ekWarn.hidden = false;
+      this.ekNew.focus();
+    }
+
+    /* Mientras se cambia la clave o se convierte el proyecto: solo el avance. Con '' vuelve al paso
+       de la clave de recuperación. */
+    setRunProgress(text){
+      const flow = this.ekMode.split('-')[0];
+      this.ekMode = flow + (text ? '-run' : '-key');
       this.ekProgress.hidden = !text;
       this.ekProgress.textContent = text || '';
       this.ekKeyPanel.hidden = !!text;
@@ -260,7 +279,7 @@
       this.ekTitle.textContent = title;
       this.ekLead.textContent = lead;
       this.ekSubmit.textContent = button;
-      this.ekNewWrap.hidden = mode !== 'password';
+      this.ekNewWrap.hidden = mode !== 'password' && mode !== 'convert';
       this.dlg.showModal();
       this.ekCurrent.focus();
     }
@@ -274,12 +293,18 @@
       this.ekKeyPanel.hidden = false;
       this.ekError.hidden = true;
       this.ekLead.textContent = 'Es la única forma de abrir este proyecto si olvidas la contraseña. Kanlane no puede restablecerla ni enviártela por correo. Guárdala fuera de Kanlane: en un gestor de contraseñas o en papel.';
-      this.ekSubmit.textContent = this.ekMode === 'rotate-key' ? 'Cambiar la clave' : 'Usar esta clave';
+      this.ekWarn.hidden = true;
+      this.ekSubmit.textContent = this.ekMode === 'rotate-key' ? 'Cambiar la clave' : this.ekMode === 'convert-key' ? 'Convertir el proyecto' : 'Usar esta clave';
       this.ekKey.show(text);
     }
 
     setDialogBusy(on){
-      this.ekSubmit.disabled = on || ((this.ekMode === 'recovery-key' || this.ekMode === 'rotate-key') && !this.ekKey.isSaved());
+      this.ekSubmit.disabled = on || (this._keyStep() && !this.ekKey.isSaved());
+    }
+
+    /* ¿Está el diálogo en el paso que enseña una clave de recuperación? */
+    _keyStep(){
+      return /-key$/.test(this.ekMode);
     }
 
     showDialogError(msg){
@@ -301,6 +326,9 @@
       this.ekError.hidden = true;
       this.ekSubmit.disabled = false;
       this.ekCancel.disabled = false;
+      this.ekCurrentWrap.hidden = false;
+      this.ekCurrent.required = true;
+      this.ekWarn.hidden = true;
       this.ekLead.hidden = false;
       this.ekMembers.hidden = true;
       this.ekMembers.innerHTML = '';

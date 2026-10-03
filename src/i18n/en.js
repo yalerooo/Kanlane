@@ -203,7 +203,7 @@
     'Cambiar la contraseña de cifrado':'Change encryption password',
     'Crear una clave de recuperación nueva':'Create a new recovery key',
     'Olvidar la clave en este navegador':'Forget the key on this browser',
-    'Elige cómo se protege lo que guardes en este proyecto. Más adelante no se podrá cambiar.':'Choose how what you store in this project is protected. You won\'t be able to change it later.',
+    'Elige cómo se protege lo que guardes en este proyecto. Más adelante solo se podrá pasar de «Solo contraseñas» a «Cifrado total».':'Choose how what you store in this project is protected. Later you can only switch from “Passwords only” to “Full encryption”.',
     'Con ella se cifra el proyecto en tu navegador. Kanlane no la guarda ni puede recuperarla. Usa una distinta de la del cofre de contraseñas y de la de tu cuenta.':'It encrypts the project in your browser. Kanlane doesn\'t store it and can\'t recover it. Use a different one from your vault password and your account password.',
     'Proyecto «{nombre}» creado con cifrado total':'Project "{nombre}" created with full encryption',
     'Los proyectos con cifrado total no se pueden sincronizar con GitHub.':'Fully encrypted projects can\'t be synced with GitHub.',
@@ -339,6 +339,24 @@
     '{nombre} dejará de poder abrir el proyecto, pero lo que ya haya visto o descargado no se le puede quitar. Después conviene cambiar la clave del proyecto para que la que tenía deje de servir.':'{nombre} will no longer be able to open the project, but what they\'ve already seen or downloaded can\'t be taken back. Afterwards, change the project key so the one they had stops working.',
     'Huella':'Fingerprint',
     'Huella de su clave pública. Compárala con esa persona por otro canal antes de cambiar la clave del proyecto.':'Fingerprint of their public key. Compare it with that person over another channel before changing the project key.',
+
+    /* ---------- Cifrado por proyecto: convertir un proyecto a cifrado total (PR11) ---------- */
+    'Convertir a cifrado total':'Convert to full encryption',
+    'Cifra todo el contenido del proyecto con una contraseña que solo tú conoces. No se puede deshacer.':'Encrypts all the project content with a password only you know. This can\'t be undone.',
+    'Todo el contenido de este proyecto se cifrará en tu navegador con una contraseña que solo tú conoces. Kanlane no la tiene: si pierdes la contraseña y la clave de recuperación, el proyecto no se puede recuperar. No se puede deshacer, y un proyecto con cifrado total no se puede enlazar con GitHub.':'All the content of this project will be encrypted in your browser with a password only you know. Kanlane doesn\'t have it: if you lose the password and the recovery key, the project can\'t be recovered. This can\'t be undone, and a project with full encryption can\'t be linked to GitHub.',
+    'Convertir protege lo que hay ahora y lo que guardes después, pero no borra lo que ya salió: las copias de seguridad de este proyecto hechas antes (las de tu cuenta y los archivos exportados) siguen sin este cifrado, igual que lo que se hubiera sincronizado con GitHub. El nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas no se cifran.':'Converting protects what\'s there now and what you save later, but it doesn\'t erase what already left: backups of this project made earlier (those in your account and exported files) remain without this encryption, as does anything that was synced to GitHub. The project name, columns, labels, dates and task status aren\'t encrypted.',
+    'Convertir el proyecto':'Convert the project',
+    'Cifrando… {n} de {total}':'Encrypting… {n} of {total}',
+    '«{nombre}» ya tiene cifrado total':'“{nombre}” now has full encryption',
+    'No se pudo convertir el proyecto.':'Couldn\'t convert the project.',
+    'El proyecto ya tiene cifrado total, pero no se ha terminado de cifrar todo lo que había. Se reanudará al volver a abrirlo con conexión.':'The project already has full encryption, but encrypting everything that was there didn\'t finish. It will resume when you open it again while online.',
+    '{n} elementos no se han podido cifrar y siguen como estaban. Ábrelos y guárdalos de nuevo.':'{n} items couldn\'t be encrypted and were left as they were. Open them and save them again.',
+    'La conversión de «{nombre}» a cifrado total sigue a medias: se reanudará al volver a abrir el proyecto con conexión.':'The conversion of “{nombre}” to full encryption is still unfinished: it will resume when you open the project again while online.',
+    'Abre este proyecto para convertirlo a cifrado total.':'Open this project to convert it to full encryption.',
+    'Este proyecto está enlazado con GitHub, y lo que se sincroniza llega a GitHub sin cifrar. Desvincúlalo antes de convertirlo a cifrado total.':'This project is linked to GitHub, and what\'s synced reaches GitHub unencrypted. Unlink it before converting it to full encryption.',
+    'El cofre de este proyecto tiene el formato antiguo. Abre la sección Contraseñas y desbloquéalo para actualizarlo antes de convertir el proyecto.':'This project\'s vault uses the old format. Open the Passwords section and unlock it to upgrade it before converting the project.',
+    'No se pudo comprobar el proyecto. Comprueba la conexión e inténtalo de nuevo.':'Couldn\'t check the project. Check your connection and try again.',
+    'Este proyecto todavía se está convirtiendo a cifrado total. Ábrelo con conexión para que termine.':'This project is still being converted to full encryption. Open it while online so it can finish.',
 
     /* ---------- Cifrado por proyecto: clientes, plugins y copias (PR6) ---------- */
     'Renombrando… {n} de {total}':'Renaming… {n} of {total}',

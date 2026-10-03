@@ -129,6 +129,11 @@
     start(projectId){
       const p = this.project(projectId);
       if(!this.canRotate(p)) return;
+      /* Antes hay que terminar de cifrar lo que estaba en claro. */
+      if(P.isConverting(p)){
+        toast.error('Este proyecto todavía se está convirtiendo a cifrado total. Ábrelo con conexión para que termine.');
+        return;
+      }
       if(this.app.projectId !== p.id || !this.app.cipher){
         toast.error('Abre y desbloquea este proyecto para cambiar su clave.');
         return;
@@ -185,10 +190,10 @@
       if(!p || !s.recovery || this.running) return Promise.resolve();
       const t = Workhub.t;
       let begun = null;
-      this.view.setRotateProgress(t('Preparando el cambio de clave…'));
+      this.view.setRunProgress(t('Preparando el cambio de clave…'));
       return this.begin(s).then((b) => {
         begun = b;
-        return this.sweep(s.id, b.cipher, (n, total) => this.view.setRotateProgress(t('Cifrando de nuevo… {n} de {total}', {n:n, total:total})), b.enc);
+        return this.sweep(s.id, b.cipher, (n, total) => this.view.setRunProgress(t('Cifrando de nuevo… {n} de {total}', {n:n, total:total})), b.enc);
       }).then((res) => {
         this.running = '';
         this.state = null;
@@ -205,7 +210,7 @@
           toast.error(t('La clave ya ha cambiado, pero no se ha terminado de cifrar todo de nuevo. Se reanudará al volver a abrir el proyecto con conexión.'));
           return;
         }
-        this.view.setRotateProgress('');
+        this.view.setRunProgress('');
         this.view.showDialogError(t('No se pudo cambiar la clave.') + reason(err));
       });
     }

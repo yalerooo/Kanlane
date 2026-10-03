@@ -45,7 +45,7 @@
 
 ### Cuidar los datos
 - **Contraseñas cifradas en tu navegador** (AES-256) con una contraseña maestra que nunca sale de tu dispositivo, y una clave de recuperación descargable.
-- **Cifrado por proyecto (opcional):** al crear un proyecto puedes elegir «Cifrado total» (el contenido se cifra en tu navegador con una contraseña que Kanlane no tiene) o «Gestionado por Kanlane» (sin contraseña extra; Kanlane custodia la clave y podría técnicamente descifrarlo). No se cifran el nombre del proyecto, las columnas, las etiquetas, las fechas ni el estado de las tareas.
+- **Cifrado por proyecto (opcional):** al crear un proyecto puedes elegir «Cifrado total» (el contenido se cifra en tu navegador con una contraseña que Kanlane no tiene) o «Gestionado por Kanlane» (sin contraseña extra; Kanlane custodia la clave y podría técnicamente descifrarlo). Un proyecto personal sin cifrar se puede convertir después a cifrado total, y la clave de un proyecto con cifrado total se puede cambiar (por ejemplo, tras quitar a alguien de un equipo). No se cifran el nombre del proyecto, las columnas, las etiquetas, las fechas ni el estado de las tareas.
 - **Copias de seguridad:** exporta e importa un archivo, versiones automáticas en el dispositivo y copias cifradas en tu cuenta.
 - **Sin publicidad ni analítica de terceros.** Las tipografías se sirven desde el propio sitio.
 
@@ -189,7 +189,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 
 ### Take care of your data
 - **Passwords encrypted in your browser** (AES-256) with a master password that never leaves your device, plus a downloadable recovery key.
-- **Per-project encryption (optional):** when you create a project you can choose "Full encryption" (the content is encrypted in your browser with a password Kanlane doesn't have) or "Managed by Kanlane" (no extra password; Kanlane holds the key and could technically decrypt it). The project name, columns, labels, dates and task status are not encrypted.
+- **Per-project encryption (optional):** when you create a project you can choose "Full encryption" (the content is encrypted in your browser with a password Kanlane doesn't have) or "Managed by Kanlane" (no extra password; Kanlane holds the key and could technically decrypt it). An unencrypted personal project can later be converted to full encryption, and the key of a fully encrypted project can be changed (for example, after removing someone from a team). The project name, columns, labels, dates and task status are not encrypted.
 - **Backups:** export and import a file, automatic versions on the device and encrypted copies in your account.
 - **No ads and no third-party analytics.** Fonts are served from the site itself.
 

@@ -12,6 +12,11 @@ const root = path.resolve(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const ok = (msg) => console.log('OK   ' + msg);
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
+/* Espera a que una operación en segundo plano avise con un mensaje (como mucho 5 s). */
+async function toasted(){
+  for(let i = 0; i < 500 && !toasts.length; i++) await tick(10);
+  await tick(10);
+}
 
 /* Almacén de claves del navegador: una casilla por cuenta y pid (la clave anterior va en «pid.kid»). */
 const keys = new Map();
@@ -111,7 +116,7 @@ function fakeApp(db){
     setDialogBusy(){}, showDialogError(msg){ this.error = msg; }, closeDialog(){ this.closedDialog++; },
     showDialogKey(text, mode){ this.shown = text; this.mode = mode || 'recovery-key'; },
     openRotate(members, team){ this.members = members; this.team = team; this.mode = 'rotate'; },
-    setRotateProgress(text){ this.progress.push(text); },
+    setRunProgress(text){ this.progress.push(text); },
     open(){}, close(){}
   };
   const app = {rootDb:db, projectId:'', cipher:null, models:{projects:projects, team:new TeamModel(projects)}, controllers:{}, view:view,
@@ -402,7 +407,7 @@ async function rotate(app, id, password){
     toasts.length = 0;
     await ana.controllers.crypto.unlock(PASSWORD, false);
     await ana.connecting;
-    await tick(30);
+    await toasted();
     assert.ok(toasts.some((t) => t.indexOf('Cambio de clave de «Reservado» terminado') === 0), toasts.join(' | '));
     const end = ana.models.projects.get('p1').enc;
     assert.deepEqual([end.kid, end.rot], [mid.kid, undefined]);
@@ -465,7 +470,7 @@ async function rotate(app, id, password){
     toasts.length = 0;
     await ana.controllers.crypto.finishRecover();
     await ana.connecting;
-    await tick(30);
+    await toasted();
     assert.ok(toasts.some((t) => t.indexOf('Cambio de clave de «Reservado» terminado') === 0), toasts.join(' | '));
     const end = ana.models.projects.get('p1').enc;
     assert.equal(end.rot, undefined);
@@ -642,7 +647,7 @@ async function rotate(app, id, password){
       ana.controllers.rotation.gaveUp = {};
       toasts.length = 0;
       await open(ana, id);
-      await tick(30);
+      await toasted();
       assert.ok(toasts.some((t) => t.indexOf('Cambio de clave de «Equipo reservado» terminado') === 0), toasts.join(' | '));
       assert.equal(store.raw('teams', tid).enc.rot, undefined);
       assert.equal(store.raw(base + 'tasks', 'a').kid, mid.kid);

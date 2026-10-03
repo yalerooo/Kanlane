@@ -919,6 +919,14 @@
     'No se pudo eliminar la credencial':'Couldn\'t delete the credential',
 
     /* ---------- Copia de seguridad ---------- */
+    'Archivo de copia':'Backup file',
+    'Descarga todo el proyecto en un archivo .json o añade a este tablero los datos de una copia.':'Download the whole project as a .json file, or add the data from a backup to this board.',
+    'Tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas.':'Tasks with their notes, meetings, contacts, clients and encrypted passwords.',
+    'Importar añade a lo que ya tienes: no borra ni reemplaza nada.':'Importing adds to what you already have: it does not delete or replace anything.',
+    'Qué conviene saber del archivo':'What to know about the file',
+    'Las contraseñas van ya cifradas, nunca en texto plano. Aun así es un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación.':'Passwords are already encrypted, never in plain text. It is still a sensitive file: keep it as carefully as your recovery key.',
+    'Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia; si ya la tiene, se omiten para no dejarlas ilegibles.':'Passwords are only imported if this board does not have its own master password yet; if it does, they are skipped so they are not left unreadable.',
+    'Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.':'Note images are only kept when restoring into this same board.',
     'Exporta una copia de seguridad completa (tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo.':'Export a full backup (tasks with their notes, meetings, contacts, clients and encrypted passwords) to a .json file, or restore one from a file.',
     'Importar añade a lo que ya tienes — no borra ni reemplaza nada.':'Importing adds to what you already have — it doesn\'t delete or replace anything.',
     'Exportar copia de seguridad':'Export backup',

@@ -2,6 +2,15 @@
 (function(){
   const $ = (id) => document.getElementById(id);
 
+  /* Icono de cada versión guardada (un reloj: es una copia de un momento). */
+  function versionIcon(){
+    const ic = document.createElement('span');
+    ic.className = 'backup-version-ic';
+    ic.setAttribute('aria-hidden', 'true');
+    ic.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+    return ic;
+  }
+
   class BackupView {
     constructor(){
       this.btnExport = $('btnExportData');
@@ -117,7 +126,7 @@
       if(!hasKey) return;
       if(!entries.length){
         const empty = document.createElement('p');
-        empty.className = 'hint';
+        empty.className = 'backup-empty';
         empty.textContent = 'Todavía no hay copias cifradas en tu cuenta.';
         this.cloudHistory.appendChild(empty);
       }
@@ -125,6 +134,7 @@
         const row = document.createElement('div');
         row.className = 'backup-version';
         const info = document.createElement('div');
+        info.className = 'backup-version-info';
         const title = document.createElement('strong');
         title.textContent = new Date(entry.createdAt).toLocaleString() +
           (entry.projectId === currentProjectId ? '' : ' · Otro proyecto');
@@ -137,13 +147,13 @@
         [['download','Descargar'], ['restore','Importar'], ['delete','Borrar']].forEach(([action, label]) => {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = 'btn btn-ghost btn-sm';
+          button.className = action === 'delete' ? 'btn btn-danger btn-sm' : 'btn btn-ghost btn-sm';
           button.dataset.cloudAction = action;
           button.dataset.id = entry.id;
           button.textContent = label;
           actions.appendChild(button);
         });
-        row.append(info, actions);
+        row.append(versionIcon(), info, actions);
         this.cloudHistory.appendChild(row);
       });
     }
@@ -156,7 +166,7 @@
       this.history.replaceChildren();
       if(!entries.length){
         const empty = document.createElement('p');
-        empty.className = 'hint';
+        empty.className = 'backup-empty';
         empty.textContent = 'Todavía no hay versiones guardadas en este navegador.';
         this.history.appendChild(empty);
         return;
@@ -165,6 +175,7 @@
         const row = document.createElement('div');
         row.className = 'backup-version';
         const info = document.createElement('div');
+        info.className = 'backup-version-info';
         const title = document.createElement('strong');
         title.textContent = new Date(entry.createdAt).toLocaleString();
         const detail = document.createElement('span');
@@ -176,13 +187,13 @@
         [['download','Descargar'], ['restore','Importar'], ['delete','Borrar']].forEach(([action, label]) => {
           const button = document.createElement('button');
           button.type = 'button';
-          button.className = 'btn btn-ghost btn-sm';
+          button.className = action === 'delete' ? 'btn btn-danger btn-sm' : 'btn btn-ghost btn-sm';
           button.dataset.backupAction = action;
           button.dataset.id = entry.id;
           button.textContent = label;
           actions.appendChild(button);
         });
-        row.append(info, actions);
+        row.append(versionIcon(), info, actions);
         this.history.appendChild(row);
       });
     }

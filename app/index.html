@@ -510,28 +510,72 @@
   </section>
 
   <section id="viewData" hidden>
-    <p class="hint">Exporta una copia de seguridad completa (tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas) en un archivo .json, o restaura una desde un archivo. <strong>Importar añade a lo que ya tienes — no borra ni reemplaza nada.</strong></p>
-    <div class="data-actions">
-      <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
-      <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
-      <input type="file" id="importFileInput" accept="application/json,.json" hidden>
-      <button type="button" class="btn btn-ghost" id="btnExportPlain" hidden>Exportar sin cifrar</button>
+    <div class="backup">
+      <div class="settings-group">
+        <h2>Archivo de copia</h2>
+        <p class="settings-lead">Descarga todo el proyecto en un archivo .json o añade a este tablero los datos de una copia.</p>
+        <div class="backup-tiles">
+          <div class="backup-tile">
+            <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.500M5 19.500h14"/></svg></span>
+            <h3>Exportar</h3>
+            <p>Tareas con sus notas, reuniones, contactos, clientes y contraseñas cifradas.</p>
+            <div class="backup-tile-actions">
+              <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
+              <button type="button" class="btn btn-ghost" id="btnExportPlain" hidden>Exportar sin cifrar</button>
+            </div>
+          </div>
+          <div class="backup-tile">
+            <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.500L12 4l4.500 4.500M5 19.500h14"/></svg></span>
+            <h3>Importar</h3>
+            <p>Importar añade a lo que ya tienes: no borra ni reemplaza nada.</p>
+            <div class="backup-tile-actions">
+              <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
+              <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+            </div>
+          </div>
+        </div>
+        <p class="lock-error backup-msg" id="dataError" role="alert" hidden></p>
+        <p class="backup-msg backup-status" id="dataStatus" role="status" hidden></p>
+        <p class="hint" id="exportEncHelp" hidden>Este proyecto tiene cifrado total: la copia se descarga cifrada. Para importarla hará falta la contraseña de cifrado o la clave de recuperación de este proyecto.</p>
+        <details class="backup-more">
+          <summary>Qué conviene saber del archivo</summary>
+          <ul>
+            <li>Las contraseñas van ya cifradas, nunca en texto plano. Aun así es un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación.</li>
+            <li>Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia; si ya la tiene, se omiten para no dejarlas ilegibles.</li>
+            <li>Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="settings-group">
+        <div class="backup-head">
+          <div>
+            <h2>Versiones de este navegador</h2>
+            <p class="settings-lead">Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button>
+        </div>
+        <div class="backup-history" id="backupHistory" aria-live="polite"></div>
+      </div>
+
+      <div class="settings-group" id="cloudBackupHead" hidden>
+        <div class="backup-head">
+          <div>
+            <h2>Copias cifradas en tu cuenta</h2>
+            <p class="settings-lead">Recupéralas desde otro dispositivo con tu clave de recuperación. La clave solo se guarda en este navegador: consérvala fuera de Kanlane. Se mantienen siete versiones por proyecto.</p>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnSaveCloudBackup" hidden>Guardar en la nube</button>
+        </div>
+        <div class="cloud-backup-setup" id="cloudBackupSetup" hidden>
+          <button type="button" class="btn btn-primary" id="btnEnableCloudBackup">Activar copias cifradas</button>
+          <label for="cloudBackupImportKey">¿Ya tienes una clave? Introdúcela para recuperar las copias</label>
+          <div class="data-actions"><input id="cloudBackupImportKey" type="text" autocomplete="off" spellcheck="false" aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnUseCloudBackupKey">Usar clave</button></div>
+        </div>
+        <div class="cloud-backup-key" id="cloudBackupKeyWrap" hidden><label for="cloudBackupKey">Guarda esta clave fuera de Kanlane. Sin ella no podrás abrir las copias en otro dispositivo.</label><div class="data-actions"><input id="cloudBackupKey" type="text" readonly aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnCopyCloudBackupKey">Copiar clave</button><button type="button" class="btn btn-ghost" id="btnHideCloudBackupKey">Ocultar clave</button></div></div>
+        <div class="backup-history" id="cloudBackupHistory" aria-live="polite" hidden></div>
+        <button type="button" class="btn btn-ghost btn-sm backup-forget" id="btnForgetCloudBackupKey" hidden>Dejar de guardar copias en la nube</button>
+      </div>
     </div>
-    <p class="hint" id="exportEncHelp" hidden>Este proyecto tiene cifrado total: la copia se descarga cifrada. Para importarla hará falta la contraseña de cifrado o la clave de recuperación de este proyecto.</p>
-    <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
-    <div class="backup-history-head"><div><h3>Versiones de este navegador</h3><p>Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button></div>
-    <div class="backup-history" id="backupHistory" aria-live="polite"></div>
-    <div class="backup-history-head" id="cloudBackupHead" hidden><div><h3>Copias cifradas en tu cuenta</h3><p>Recupéralas desde otro dispositivo con tu clave de recuperación. La clave solo se guarda en este navegador: consérvala fuera de Kanlane. Se mantienen siete versiones por proyecto.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveCloudBackup" hidden>Guardar en la nube</button></div>
-    <div class="cloud-backup-setup" id="cloudBackupSetup" hidden>
-      <button type="button" class="btn btn-primary" id="btnEnableCloudBackup">Activar copias cifradas</button>
-      <label for="cloudBackupImportKey">¿Ya tienes una clave? Introdúcela para recuperar las copias</label>
-      <div class="data-actions"><input id="cloudBackupImportKey" type="text" autocomplete="off" spellcheck="false" aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnUseCloudBackupKey">Usar clave</button></div>
-    </div>
-    <div class="cloud-backup-key" id="cloudBackupKeyWrap" hidden><label for="cloudBackupKey">Guarda esta clave fuera de Kanlane. Sin ella no podrás abrir las copias en otro dispositivo.</label><div class="data-actions"><input id="cloudBackupKey" type="text" readonly aria-label="Clave de recuperación de copias"><button type="button" class="btn btn-ghost" id="btnCopyCloudBackupKey">Copiar clave</button><button type="button" class="btn btn-ghost" id="btnHideCloudBackupKey">Ocultar clave</button></div></div>
-    <button type="button" class="btn btn-ghost btn-sm" id="btnForgetCloudBackupKey" hidden>Dejar de guardar copias en la nube</button>
-    <div class="backup-history" id="cloudBackupHistory" aria-live="polite" hidden></div>
-    <p class="lock-error" id="dataError" hidden></p>
-    <p class="hint" id="dataStatus" hidden></p>
   </section>
 
   <section id="viewSettings" hidden>
@@ -554,10 +598,10 @@
                 <p>Claro, oscuro o el mismo que tenga configurado tu sistema.</p>
               </div>
               <div>
-                <div class="segmented" id="themeSegment" role="radiogroup" aria-label="Tema">
-                  <button type="button" role="radio" data-theme-choice="system">Sistema</button>
-                  <button type="button" role="radio" data-theme-choice="light">Claro</button>
-                  <button type="button" role="radio" data-theme-choice="dark">Oscuro</button>
+                <div class="choice-cards" id="themeSegment" role="radiogroup" aria-label="Tema">
+                  <button type="button" role="radio" data-theme-choice="system"><span class="choice-art" aria-hidden="true"><span class="art-pane is-light"></span><span class="art-pane is-dark"></span></span>Sistema</button>
+                  <button type="button" role="radio" data-theme-choice="light"><span class="choice-art" aria-hidden="true"><span class="art-pane is-light"></span></span>Claro</button>
+                  <button type="button" role="radio" data-theme-choice="dark"><span class="choice-art" aria-hidden="true"><span class="art-pane is-dark"></span></span>Oscuro</button>
                 </div>
               </div>
             </div>
@@ -574,9 +618,9 @@
                 <p>En un lateral o en una barra en la parte de arriba. En pantallas pequeñas va siempre abajo.</p>
               </div>
               <div>
-                <div class="segmented" id="navSegment" role="radiogroup" aria-label="Navegación">
-                  <button type="button" role="radio" data-nav-choice="side">Lateral</button>
-                  <button type="button" role="radio" data-nav-choice="top">Arriba</button>
+                <div class="choice-cards" id="navSegment" role="radiogroup" aria-label="Navegación">
+                  <button type="button" role="radio" data-nav-choice="side"><span class="choice-art" aria-hidden="true"><span class="art-pane is-nav-side"></span></span>Lateral</button>
+                  <button type="button" role="radio" data-nav-choice="top"><span class="choice-art" aria-hidden="true"><span class="art-pane is-nav-top"></span></span>Arriba</button>
                 </div>
               </div>
             </div>

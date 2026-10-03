@@ -980,6 +980,8 @@
     'moverse':'move',
     'abrir':'open',
     'nueva tarea ·':'new task ·',
+    'nueva tarea':'new task',
+    'cerrar':'close',
     'buscar en la sección':'search in the section',
     'Acciones':'Actions',
     'Tareas abiertas recientes':'Recent open tasks',

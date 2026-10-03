@@ -4,6 +4,8 @@
   const {esc} = Workhub.utils.html;
   const $ = (id) => document.getElementById(id);
 
+  const EMPTY_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+
   /* Resalta la primera aparición de la búsqueda dentro del texto. */
   function highlight(text, query){
     const t = String(text || '');
@@ -91,10 +93,11 @@
             '<span class="cmdk-icon" aria-hidden="true">' + (it.icon || '') + '</span>' +
             '<span class="cmdk-title" translate="no">' + highlight(it.title, this.query) + '</span>' +
             (it.meta ? '<span class="cmdk-meta" translate="no">' + highlight(it.meta, this.query) + '</span>' : '') +
+            '<kbd class="kbd cmdk-enter" aria-hidden="true">↵</kbd>' +
             '</div>';
         });
       });
-      this.list.innerHTML = html || '<div class="cmdk-empty">Sin resultados para «' + esc(this.query.trim()) + '»</div>';
+      this.list.innerHTML = html || '<div class="cmdk-empty"><span class="cmdk-empty-ic" aria-hidden="true">' + EMPTY_ICON + '</span><span>Sin resultados para «' + esc(this.query.trim()) + '»</span></div>';
       this._setActive(0, true);
     }
 

@@ -131,6 +131,41 @@
     });
   });
 
+  /* Calendario de ejemplo: mes, semana o día. */
+  var calendar = byId('calendarPreview');
+  if(calendar){
+    var weekHtml = calendar.innerHTML;
+    var captions = en
+      ? {month:'October. The full picture.', week:'One week. All your clients.', day:'Wednesday 7. Space to focus.'}
+      : {month:'Octubre. La perspectiva completa.', week:'Una semana. Todos tus clientes.', day:'Miércoles 7. Espacio para concentrarte.'};
+    var calButtons = all('[data-calendar]');
+    calButtons.forEach(function(button){
+      button.addEventListener('click', function(){
+        var mode = button.getAttribute('data-calendar');
+        calendar.className = 'mweek' + (mode === 'week' ? '' : ' is-' + mode);
+        calendar.innerHTML = weekHtml;
+        if(mode === 'month'){
+          /* Octubre de 2026 empieza en jueves: tres huecos antes del día 1 y uno después del 31. */
+          var events = {};
+          all('.mday', calendar).forEach(function(day){
+            events[day.querySelector('b').textContent] = all('em', day).map(function(ev){ return ev.outerHTML; }).join('');
+          });
+          var html = '';
+          for(var blank = 0; blank < 3; blank++) html += '<div class="mday empty" aria-hidden="true"></div>';
+          for(var d = 1; d <= 31; d++) html += '<div class="mday' + (d === 7 ? ' now' : '') + ((d + 2) % 7 > 4 ? ' we' : '') + '"><b>' + d + '</b>' + (events[d] || '') + '</div>';
+          html += '<div class="mday empty" aria-hidden="true"></div>';
+          calendar.innerHTML = html;
+        }
+        calButtons.forEach(function(other){
+          other.classList.toggle('on', other === button);
+          other.setAttribute('aria-pressed', String(other === button));
+        });
+        byId('calendarCaption').textContent = captions[mode];
+        swap(calendar);
+      });
+    });
+  }
+
   /* ---------- Sección actual en la navegación ---------- */
   if('IntersectionObserver' in window){
     var links = all('.nav-links a');
@@ -215,19 +250,25 @@
   var pillHtml = movePill ? movePill.innerHTML : '';
   function setPhase(phase){
     if(!mover || +win.getAttribute('data-phase') === phase) return;
-    var from = mover.getBoundingClientRect();
+    /* Se anotan las posiciones de todas las tarjetas: al cambiar de columna, las demás también
+       se recolocan y deben deslizarse, no saltar ni pisarse. */
+    var cards = all('.mc', win);
+    var before = cards.map(function(c){ return c.getBoundingClientRect(); });
     slots[phase].appendChild(mover);
     win.setAttribute('data-phase', String(phase));
     counts.forEach(function(c, i){ c.el.textContent = String(c.base + (i === phase ? 1 : 0)); });
     mover.classList.toggle('is-done', phase === 2);
     movePill.className = 'mpill' + (phase === 2 ? ' ok' : ' late');
     movePill.innerHTML = phase === 2 ? '<svg class="ico" width="11" height="11" aria-hidden="true"><use href="#i-check"/></svg>' + doneLabel : pillHtml;
-    var to = mover.getBoundingClientRect();
-    mover.style.transition = 'none';
-    mover.style.transform = 'translate(' + (from.left - to.left) + 'px,' + (from.top - to.top) + 'px)';
-    void mover.offsetWidth;
-    mover.style.transition = '';
-    mover.style.transform = '';
+    cards.forEach(function(c, i){
+      var to = c.getBoundingClientRect();
+      var dx = before[i].left - to.left, dy = before[i].top - to.top;
+      if(!dx && !dy) return;
+      c.style.transition = 'none';
+      c.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    });
+    void win.offsetWidth;
+    cards.forEach(function(c){ c.style.transition = ''; c.style.transform = ''; });
   }
 
   /* Recorrido fijo por las funciones: solo en pantallas anchas y con alto suficiente. */
@@ -274,7 +315,10 @@
     if(win){
       var r = win.getBoundingClientRect();
       var p = clamp((vh * .78 - r.top) / (vh * .62), 0, 1);
-      setPhase(p < .34 ? 0 : p < .72 ? 1 : 2);
+      var phase = p < .34 ? 0 : p < .72 ? 1 : 2;
+      /* En móvil no se ve la primera columna: la tarea empieza ya «En proceso». */
+      if(phase === 0 && slots[0].parentNode.offsetParent === null) phase = 1;
+      setPhase(phase);
     }
     /* Frase: se ilumina mientras cruza la pantalla. */
     if(words.length){

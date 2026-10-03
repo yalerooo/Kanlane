@@ -6,6 +6,9 @@
   var theme = null;
   try{ theme = localStorage.getItem('workhub_theme'); }catch(e){}
   if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
+  /* La demo se enseña dentro de un marco más estrecho que una pantalla: la barra lateral va
+     siempre desplegada (como se ve la aplicación en un escritorio), no en modo de iconos. */
+  root.setAttribute('data-sidebar', 'full');
   try{
     Object.defineProperty(navigator, 'languages', {configurable: true, get: function(){ return ['es-ES']; }});
     Object.defineProperty(navigator, 'language', {configurable: true, get: function(){ return 'es-ES'; }});

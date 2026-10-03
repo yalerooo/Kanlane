@@ -28,30 +28,30 @@
 
 /* ---------- Portátil y tablet horizontal: barra de iconos ---------- */
 @media (min-width:901px) and (max-width:1279px){
-  :root:not([data-nav="top"]) .app{grid-template-columns:60px minmax(0,1fr);}
-  :root:not([data-nav="top"]) .sidebar{padding:10px 7px;align-items:center;}
-  :root:not([data-nav="top"]) .brand-row{padding:2px 0 10px;}
-  :root:not([data-nav="top"]) .brand-name{display:none;}
-  :root:not([data-nav="top"]) .brand{padding:0 0 10px;width:100%;}
-  :root:not([data-nav="top"]) .project-switch{justify-content:center;padding:5px;border-color:transparent;background:transparent;}
-  :root:not([data-nav="top"]) .project-switch-text,
-  :root:not([data-nav="top"]) .project-switch-chevron{display:none;}
-  :root:not([data-nav="top"]) .project-switch > .project-mark{width:30px;height:30px;font-size:11.5px;border-radius:9px;}
-  :root:not([data-nav="top"]) .search-trigger{width:40px;height:36px;padding:0;justify-content:center;margin-bottom:10px;}
-  :root:not([data-nav="top"]) .search-trigger span,
-  :root:not([data-nav="top"]) .search-trigger .kbd{display:none;}
-  :root:not([data-nav="top"]) .tabs{width:100%;align-items:center;}
-  :root:not([data-nav="top"]) .tab{position:relative;width:40px;height:38px;padding:0;justify-content:center;}
-  :root:not([data-nav="top"]) .tab > span:first-of-type{display:none;}
-  :root:not([data-nav="top"]) .tab svg{width:18px;height:18px;}
-  :root:not([data-nav="top"]) .plugin-nav{width:40px;}
-  :root:not([data-nav="top"]) .plugin-nav > .tab{width:40px;padding:0;}
-  :root:not([data-nav="top"]) .plugin-nav-toggle{top:24px;right:-2px;width:16px;height:15px;}
-  :root:not([data-nav="top"]) .plugin-nav-toggle svg{width:11px;height:11px;}
-  :root:not([data-nav="top"]) .plugin-nav-list{width:40px;margin:2px 0 5px;padding:0;align-items:center;}
-  :root:not([data-nav="top"]) .plugin-nav-item{justify-content:center;width:38px;height:34px;padding:0;}
-  :root:not([data-nav="top"]) .plugin-nav-name{display:none;}
-  :root:not([data-nav="top"]) .tab-count{
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .app{grid-template-columns:60px minmax(0,1fr);}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .sidebar{padding:10px 7px;align-items:center;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .brand-row{padding:2px 0 10px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .brand-name{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .brand{padding:0 0 10px;width:100%;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .project-switch{justify-content:center;padding:5px;border-color:transparent;background:transparent;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .project-switch-text,
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .project-switch-chevron{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .project-switch > .project-mark{width:30px;height:30px;font-size:11.5px;border-radius:9px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .search-trigger{width:40px;height:36px;padding:0;justify-content:center;margin-bottom:10px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .search-trigger span,
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .search-trigger .kbd{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .tabs{width:100%;align-items:center;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .tab{position:relative;width:40px;height:38px;padding:0;justify-content:center;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .tab > span:first-of-type{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .tab svg{width:18px;height:18px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav{width:40px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav > .tab{width:40px;padding:0;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav-toggle{top:24px;right:-2px;width:16px;height:15px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav-toggle svg{width:11px;height:11px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav-list{width:40px;margin:2px 0 5px;padding:0;align-items:center;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav-item{justify-content:center;width:38px;height:34px;padding:0;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .plugin-nav-name{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .tab-count{
     position:absolute;
     top:2px;
     right:0;
@@ -66,14 +66,14 @@
     background:var(--surface-solid);
     box-shadow:0 0 0 1px var(--line-strong);
   }
-  :root:not([data-nav="top"]) .nav-label{font-size:0;padding:8px 0 6px;width:24px;border-bottom:1px solid var(--line);margin-bottom:6px;}
-  :root:not([data-nav="top"]) .sidebar-foot{padding:8px 0 0;width:100%;}
-  :root:not([data-nav="top"]) .account{justify-content:center;padding:0;margin-bottom:6px;}
-  :root:not([data-nav="top"]) .account-text,
-  :root:not([data-nav="top"]) #btnSignOut{display:none;}
-  :root:not([data-nav="top"]) .foot-row{flex-direction:column;padding:0;gap:6px;}
-  :root:not([data-nav="top"]) .storage-status{justify-content:center;flex:none;}
-  :root:not([data-nav="top"]) .storage-status span:last-child{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .nav-label{font-size:0;padding:8px 0 6px;width:24px;border-bottom:1px solid var(--line);margin-bottom:6px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .sidebar-foot{padding:8px 0 0;width:100%;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .account{justify-content:center;padding:0;margin-bottom:6px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .account-text,
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) #btnSignOut{display:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .foot-row{flex-direction:column;padding:0;gap:6px;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .storage-status{justify-content:center;flex:none;}
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) .storage-status span:last-child{display:none;}
   .board{gap:12px;}
   .cal-layout{grid-template-columns:minmax(0,1fr);}
   .bar-tools .dd{flex:0 1 160px;min-width:120px;}

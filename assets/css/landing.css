@@ -104,8 +104,14 @@ a.lang-opt:hover{color:var(--ink);}
 .scroll-hint{margin-top:16px;text-align:center;font-size:12.5px;color:var(--ink-faint);}
 
 /* Ventana de ejemplo: la aplicación en pequeño. */
-.win{display:grid;grid-template-columns:190px minmax(0,1fr);gap:10px;margin-top:56px;padding:10px;border-radius:22px;border:1px solid var(--line);background:color-mix(in srgb, var(--bg) 70%, transparent);box-shadow:var(--shadow-lg);font-size:12px;line-height:1.4;-webkit-user-select:none;user-select:none;}
-.win-side{display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-radius:14px;}
+.win{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;margin-top:56px;padding:10px;border-radius:22px;border:1px solid var(--line-strong);background:var(--bg);box-shadow:var(--shadow-lg);font-size:12px;line-height:1.4;text-align:left;-webkit-user-select:none;user-select:none;}
+/* Dentro de la ventana no hay cristal: superficies sólidas, para que nada se emborrone al animarse. */
+.win-side{display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-radius:14px;background:var(--surface);border:1px solid var(--line);}
+.win-label{margin:10px 8px 3px;font-size:10.5px;color:var(--ink-faint);}
+.win-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding:10px 6px 2px;border-top:1px solid var(--line);}
+.win-foot .av{width:22px;height:22px;font-size:8.5px;box-shadow:none;}
+.win-foot b{display:block;font-weight:550;}
+.win-foot small{display:block;font-size:10px;color:var(--ink-faint);}
 .win-brand{display:flex;align-items:center;gap:8px;padding:2px 6px 10px;font-size:13px;font-weight:600;letter-spacing:-0.02em;}
 .win-brand .brand-mark{width:22px;height:22px;border-radius:6px;}
 .win-project{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 7px;border-radius:9px;border:1px solid var(--line);background:var(--surface);}
@@ -115,15 +121,17 @@ a.lang-opt:hover{color:var(--ink);}
 .win-nav{display:flex;align-items:center;gap:9px;height:28px;padding:0 8px;border-radius:7px;color:var(--ink-soft);}
 .win-nav.on{background:var(--surface-2);color:var(--ink);font-weight:550;}
 .win-nav em{margin-left:auto;font-style:normal;font-size:10.5px;color:var(--ink-faint);}
-.win-main{min-width:0;}
-.win-bar{display:flex;align-items:center;gap:8px;height:44px;padding:0 8px 0 14px;border-radius:14px;margin-bottom:12px;}
+.win-main{display:flex;flex-direction:column;min-width:0;}
+.win-bar{display:flex;align-items:center;gap:8px;height:44px;padding:0 8px 0 14px;border-radius:14px;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);flex:none;}
+.win-chips{margin:0 4px 10px;flex:none;}
 .win-bar strong{font-size:13.5px;font-weight:600;}
 .win-seg{display:inline-flex;gap:1px;padding:2px;border-radius:8px;background:var(--surface-2);}
 .win-seg i{display:grid;place-items:center;width:26px;height:22px;border-radius:6px;color:var(--ink-faint);}
 .win-seg i.on{background:var(--seg-on);color:var(--ink);box-shadow:0 0 0 1px var(--line);}
 .win-find{display:grid;place-items:center;width:120px;height:26px;margin-left:auto;border-radius:8px;background:var(--surface-2);color:var(--ink-faint);justify-items:start;padding-left:9px;}
 .win-new{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:8px;background:var(--accent-solid);color:var(--accent-ink);font-weight:550;white-space:nowrap;}
-.win-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:0 4px 6px;align-items:start;}
+/* Alto fijo: caben tres tarjetas por columna, así la ventana no cambia de tamaño cuando la tarea avanza. */
+.win-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:0 4px 6px;align-items:start;height:306px;overflow:hidden;}
 
 /* Piezas de las ventanas de ejemplo (portada y recorrido). */
 .mcol{display:flex;flex-direction:column;gap:7px;min-width:0;}
@@ -145,7 +153,7 @@ a.lang-opt:hover{color:var(--ink);}
 .mpill.today{background:var(--today-bg);color:var(--today);}
 .mpill.ok{background:var(--st-done-bg);color:var(--st-done);}
 .slot{display:contents;}
-.mc-move{border-color:var(--line-strong);box-shadow:var(--shadow);}
+.mc-move{position:relative;z-index:2;border-color:var(--line-strong);background:var(--surface-solid);box-shadow:var(--shadow);}
 
 /* ---------- Presentación ---------- */
 .statement{padding:96px 0 40px;}
@@ -193,8 +201,9 @@ a.lang-opt:hover{color:var(--ink);}
 .mini-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
 .mini-top strong{font-size:14px;font-weight:600;}
 .mseg{display:inline-flex;gap:1px;padding:2px;border-radius:8px;background:var(--surface-2);}
-.mseg i{display:grid;place-items:center;height:22px;padding:0 9px;border-radius:6px;font-style:normal;color:var(--ink-soft);}
-.mseg i.on{background:var(--seg-on);color:var(--ink);box-shadow:0 0 0 1px var(--line);}
+.mseg button{display:grid;place-items:center;height:22px;padding:0 9px;border:0;border-radius:6px;background:transparent;font-size:inherit;color:var(--ink-soft);}
+.mseg button:hover{color:var(--ink);}
+.mseg button.on{background:var(--seg-on);color:var(--ink);box-shadow:0 0 0 1px var(--line);}
 .mini-task{display:grid;grid-template-columns:minmax(0,1fr) 150px;border-radius:14px;background:var(--surface);border:1px solid var(--line);overflow:hidden;}
 .mt-main{padding:16px;}
 .mt-main h4{margin:8px 0 4px;font-size:17px;font-weight:600;letter-spacing:-0.02em;line-height:1.25;}
@@ -224,6 +233,21 @@ a.lang-opt:hover{color:var(--ink);}
 .mday em .cdot{width:6px;height:6px;border-radius:2px;margin-right:4px;}
 .mday em.meet{background:var(--surface-2);color:var(--ink);white-space:normal;}
 .mday em s{display:block;text-decoration:none;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+/* Calendario de ejemplo: mes y día (la semana es la vista por defecto). */
+.mweek.is-month{grid-auto-rows:minmax(54px, auto);}
+.mweek.is-month .mday{min-height:0;padding:4px 3px;border-bottom:1px solid var(--line);gap:2px;}
+.mweek.is-month .mday > span{display:none;}
+.mweek.is-month .mday:nth-child(7n){border-right:0;}
+.mweek.is-month .mday:nth-last-child(-n+7){border-bottom:0;}
+.mweek.is-month .mday em{padding:1px 4px;font-size:9.5px;white-space:nowrap;}
+.mweek.is-month .mday em s{display:none;}
+.mweek.is-month .mday.empty{background:var(--hover);}
+.mweek.is-day{grid-template-columns:minmax(0,1fr);}
+.mweek.is-day .mday{display:none;}
+.mweek.is-day .mday.now{display:flex;min-height:170px;padding:12px;gap:6px;border-right:0;}
+.mweek.is-day .mday em{font-size:12px;padding:8px 10px;}
+.mweek.is-day .mday em s{display:inline;margin-right:8px;}
+.cal-caption{margin-top:10px;}
 .mini-vault .mrow{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr) auto 15px;align-items:center;gap:12px;min-height:50px;padding:0 12px;background:var(--surface);border:1px solid var(--line);border-bottom:0;}
 .mini-vault .mrow:first-of-type{border-radius:14px 14px 0 0;}
 .mini-vault .mrow:last-of-type{border-bottom:1px solid var(--line);border-radius:0 0 14px 14px;}
@@ -233,6 +257,22 @@ a.lang-opt:hover{color:var(--ink);}
 .mrow code{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-soft);}
 .mrow > .ico{color:var(--ink-faint);}
 .mini-note{display:flex;align-items:center;gap:7px;margin-top:10px;color:var(--ink-faint);font-size:11.5px;}
+
+/* En pantallas anchas el recorrido ocupa casi todo el ancho y sus vistas crecen con la ventana. */
+@media (min-width:1001px){
+  .tour-in{width:min(1560px, 100% - 64px);}
+  .chapter{grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:56px;}
+  .chapter-copy h3{font-size:clamp(28px, 2.6vw, 44px);}
+  .chapter-copy > p:not(.chapter-num){font-size:clamp(16px, 1.2vw, 20px);}
+  .chapter-copy .ticks li{font-size:clamp(14.5px, 1vw, 17px);}
+  .chapter-view{padding:20px;border-radius:24px;}
+  .chapter-view > *{zoom:1.25;}
+}
+@media (min-width:1300px){ .chapter-view > *{zoom:1.5;} }
+@media (min-width:1600px){ .chapter-view > *{zoom:1.8;} }
+@media (min-width:1900px){ .chapter-view > *{zoom:2.1;} }
+/* Si la ventana es baja, las vistas no pueden crecer tanto. */
+@media (min-width:1300px) and (max-height:820px){ .chapter-view > *{zoom:1.3;} }
 
 /* ---------- Demo ---------- */
 .demo-frame{padding:8px;border-radius:22px;}
@@ -418,7 +458,7 @@ html.js-motion .hero-copy > :nth-child(6){animation-delay:.36s;}
 html.js-motion .win{opacity:0;animation:rise 1s cubic-bezier(.16,1,.3,1) .35s forwards;}
 @keyframes rise{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
 /* La tarjeta que avanza de columna se desliza hasta su sitio nuevo (landing.js, técnica FLIP). */
-html.js-motion .mc-move{transition:transform .7s cubic-bezier(.16,1,.3,1), border-color .3s ease;will-change:transform;}
+html.js-motion .win-board .mc{transition:transform .7s cubic-bezier(.16,1,.3,1);will-change:transform;}
 html.js-motion .win[data-phase="2"] .mc-move strong{color:var(--ink-soft);}
 html.js-motion .scroll-hint{transition:opacity .4s ease;}
 html.js-motion .win:not([data-phase="0"]) ~ .scroll-hint{opacity:0;}
@@ -428,8 +468,8 @@ html.js-motion .statement-text .w.is-lit{color:var(--ink);opacity:1;}
 /* Recorrido fijo. */
 html.js-motion .tour.is-pinned{height:calc(100vh + var(--tour-len, 240vh));}
 html.js-motion .tour.is-pinned .tour-pin{position:sticky;top:0;height:100vh;display:flex;align-items:center;}
-html.js-motion .tour.is-pinned .tour-in{position:relative;width:min(1120px, 100% - 40px);}
-html.js-motion .tour.is-pinned .tour-steps{display:flex;gap:4px;margin-bottom:26px;}
+html.js-motion .tour.is-pinned .tour-in{position:relative;}
+html.js-motion .tour.is-pinned .tour-steps{display:flex;gap:6px;margin-bottom:clamp(20px, 4vh, 44px);}
 html.js-motion .tour.is-pinned .tour-steps button{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border:1px solid var(--line-strong);border-radius:99px;background:transparent;font-size:13.5px;color:var(--ink-soft);transition:background .3s ease, color .3s ease, border-color .3s ease;}
 html.js-motion .tour.is-pinned .tour-steps button span{font-family:var(--mono);font-size:11px;opacity:.7;}
 html.js-motion .tour.is-pinned .tour-steps button.on{background:var(--ink);border-color:var(--ink);color:var(--bg);}
@@ -486,7 +526,8 @@ html.js-motion .swap{animation:swap .35s cubic-bezier(.16,1,.3,1);}
   .statement{padding:64px 0 24px;}
   .hero{padding:44px 0 24px;}
   .win{grid-template-columns:minmax(0,1fr);margin-top:40px;border-radius:18px;}
-  .win-side{display:none;}
+  .win-side,.win-chips{display:none;}
+  .win-board{height:auto;min-height:250px;}
   .win-find{width:28px;padding:0;justify-items:center;}
   .win-board,.mini-board{gap:8px;}
   .mc{padding:8px;}
@@ -516,7 +557,7 @@ html.js-motion .swap{animation:swap .35s cubic-bezier(.16,1,.3,1);}
   .nav .btn{height:34px;padding:0 11px;font-size:13.5px;}
   .long{display:none;}
   .short{display:inline;}
-  .win-board .mcol:nth-child(3){display:none;}
+  .win-board .mcol:nth-child(1){display:none;}
   .win-board{grid-template-columns:repeat(2,minmax(0,1fr));}
   .mini-board{grid-template-columns:repeat(2,minmax(0,1fr));}
   .mini-board .mcol:nth-child(3){display:none;}

@@ -20,7 +20,7 @@
 /* Medidor de contraseña: cuatro segmentos planos y el texto al lado. */
 .pw-meter{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:16px;}
 .pw-meter-bars{display:flex;gap:4px;flex:none;}
-.pw-meter-bars i{display:block;width:26px;height:4px;border-radius:2px;background:var(--line);}
+.pw-meter-bars i{display:block;width:26px;height:4px;border-radius:2px;background:var(--line-strong);}
 .pw-meter-bars i.is-on{background:var(--accent-solid);}
 .pw-meter[data-level="short"] .pw-meter-bars i.is-on,
 .pw-meter[data-level="weak"] .pw-meter-bars i.is-on{background:var(--danger);}
@@ -37,7 +37,7 @@
 }
 
 /* Pantalla de desbloqueo del proyecto. */
-#projectLockScreen{flex-direction:column;align-items:center;gap:16px;}
+#projectLockScreen{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:16px;}
 #projectLockScreen .check-row{margin:2px 0 0;}
 #projectLockScreen .field-help{margin:6px 0 14px;}
 .lock-card-wide{width:min(480px, 100%);}
@@ -50,13 +50,13 @@
 #shCodePanel .recovery-key-box{font-size:17px;letter-spacing:.06em;}
 .invite-pass{margin-top:10px;}
 /* Cambiar la clave del proyecto: quién recibe la nueva, y el aviso tras quitar a alguien del equipo. */
-.rotate-members{list-style:none;margin:0 0 14px;padding:0;border:1px solid var(--line);border-radius:var(--r-md);}
+.rotate-members{list-style:none;margin:0 0 14px;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);}
 .rotate-members li{display:flex;flex-direction:column;gap:2px;padding:8px 10px;font-size:13px;}
 .rotate-members li + li{border-top:1px solid var(--line);}
 .rotate-state{font-size:12px;color:var(--ink-soft);line-height:1.4;}
 .rotate-members li.is-out .rotate-state{color:var(--danger);}
 #ekProgress,#ekWarn{margin:0 0 12px;}
-.share-hint{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);}
+.share-hint{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-lg);}
 .share-hint p{margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
 .member-fp{font-size:11.5px;}
 .enc-badge{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid var(--line);border-radius:999px;font-size:11px;line-height:17px;font-weight:500;color:var(--ink-soft);vertical-align:1px;}

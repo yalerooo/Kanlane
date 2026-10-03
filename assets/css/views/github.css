@@ -1,11 +1,10 @@
 /* ---------- Integración con GitHub Projects ---------- */
-.gh-card{margin-bottom:16px;}
-.gh-body{padding:0 18px 18px;}
+.gh-body{padding:0 16px 16px;}
 .gh-form,.gh-linked{display:grid;gap:12px;max-width:560px;}
 .gh-form .field{margin-bottom:0;}
 .gh-lead,.gh-note{margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft);}
 .gh-note{font-size:12.5px;}
-.gh-note.is-warn{color:var(--ink);background:var(--surface-2,var(--bg));border:1px solid var(--line);border-radius:var(--r-md,7px);padding:10px 12px;margin-bottom:8px;}
+.gh-note.is-warn{color:var(--ink-soft);background:transparent;border:1px solid var(--line);border-radius:var(--r-lg,12px);padding:10px 12px;margin-bottom:8px;}
 .gh-note.gh-privacy{margin-bottom:0;}
 #pGhPrivacy{margin-top:10px;}
 .gh-token-missing{display:grid;gap:8px;}
@@ -21,8 +20,8 @@
 .gh-project a:hover{text-decoration:underline;}
 .gh-state{font-size:12.5px;color:var(--ink-faint);}
 .gh-state.is-error{color:var(--danger);}
-.link-btn{padding:0;font:inherit;color:var(--accent);background:none;border:none;cursor:pointer;}
-.link-btn:hover{text-decoration:underline;}
+.link-btn{padding:0;font:inherit;color:var(--ink);background:none;border:none;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
+.link-btn:hover{text-decoration-color:currentColor;}
 
 /* Botón de la barra de Tareas. */
 .gh-sync{gap:6px;}
@@ -35,45 +34,43 @@
 /* Marca en las tarjetas enlazadas. */
 .gh-tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-faint);}
 .gh-tag svg{flex:none;}
-.tv-fact-value a{color:var(--accent);text-decoration:none;}
-.tv-fact-value a:hover{text-decoration:underline;}
+
 
 /* ---------- Etiquetas y pull requests ---------- */
 .label-chip{
   --lc:#6e7681;
   display:inline-flex;
   align-items:center;
+  gap:6px;
   max-width:100%;
-  padding:1px 8px;
+  height:22px;
+  padding:0 8px;
   font:inherit;
-  font-size:11.5px;
-  font-weight:500;
-  line-height:18px;
+  font-size:12px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  color:var(--ink);
-  color:color-mix(in srgb, var(--lc) 62%, var(--ink));
+  color:var(--ink-soft);
   background:var(--surface-2);
-  background:color-mix(in srgb, var(--lc) 16%, transparent);
-  border:1px solid var(--line-strong);
-  border:1px solid color-mix(in srgb, var(--lc) 38%, transparent);
-  border-radius:999px;
+  border:1px solid transparent;
+  border-radius:var(--r-sm);
 }
-.label-chip.is-toggle{cursor:pointer;opacity:.62;}
-.label-chip.is-toggle:hover{opacity:1;}
-.label-chip.is-toggle.is-on{opacity:1;background:var(--surface-2);box-shadow:0 0 0 1px var(--line-strong);background:color-mix(in srgb, var(--lc) 30%, transparent);box-shadow:0 0 0 1px color-mix(in srgb, var(--lc) 55%, transparent);}
+/* Neutra: el color de la etiqueta va solo en un punto. */
+.label-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lc);flex:none;}
+.label-chip.is-toggle{cursor:pointer;background:transparent;border-color:var(--line-strong);}
+.label-chip.is-toggle:hover{background:var(--hover);}
+.label-chip.is-toggle.is-on{color:var(--ink);font-weight:500;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);}
 .label-more{font-size:11.5px;color:var(--ink-faint);align-self:center;}
 .label-picker{display:flex;flex-wrap:wrap;gap:6px;}
 .label-add{
-  padding:1px 8px;
+  height:22px;
+  padding:0 8px;
   font:inherit;
-  font-size:11.5px;
-  line-height:18px;
+  font-size:12px;
   color:var(--ink-soft);
   background:none;
   border:1px dashed var(--line-strong);
-  border-radius:999px;
+  border-radius:var(--r-sm);
   cursor:pointer;
 }
 .label-add:hover{color:var(--ink);border-color:var(--ink-faint);}
@@ -88,16 +85,13 @@
   display:inline-flex;
   align-items:center;
   gap:4px;
-  padding:1px 8px 1px 6px;
-  font-size:11.5px;
-  font-weight:500;
-  line-height:18px;
+  height:22px;
+  padding:0 8px 0 6px;
+  font-size:12px;
   text-decoration:none;
   color:var(--st-done);
   background:var(--st-done-bg);
-  border:1px solid currentColor;
-  border:1px solid color-mix(in srgb, currentColor 32%, transparent);
-  border-radius:999px;
+  border-radius:var(--r-sm);
 }
 .pr-chip.is-merged{color:var(--meet);background:var(--meet-bg);}
 .pr-chip.is-closed{color:var(--danger);background:var(--danger-bg);}
@@ -108,13 +102,13 @@ a.pr-chip:hover{filter:brightness(1.1);}
 .gh-timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;position:relative;}
 .gh-event,.gh-empty{position:relative;display:flex;gap:10px;padding:0 0 14px;font-size:13px;line-height:1.45;color:var(--ink-soft);}
 .gh-empty{padding-bottom:0;color:var(--ink-faint);}
-.gh-event::before{content:"";position:absolute;left:4px;top:14px;bottom:0;width:1px;background:var(--line);}
+.gh-event::before{content:"";position:absolute;left:4px;top:18px;bottom:2px;width:1px;background:var(--line);}
 .gh-event:last-child::before{display:none;}
-.gh-dot{flex:none;width:9px;height:9px;margin-top:5px;border-radius:50%;background:var(--line-strong);box-shadow:0 0 0 3px var(--surface);position:relative;}
+.gh-dot{flex:none;width:9px;height:9px;margin-top:5px;border-radius:50%;background:var(--ink-faint);position:relative;}
 .gh-event-body{min-width:0;}
 .gh-event-text b{color:var(--ink);font-weight:600;}
-.gh-event-text a{color:var(--accent);text-decoration:none;}
-.gh-event-text a:hover{text-decoration:underline;}
+.gh-event-text a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
+.gh-event-text a:hover{text-decoration-color:currentColor;}
 .gh-event-text .label-chip{margin:0 2px;}
 .gh-event-time{font-size:11.5px;color:var(--ink-faint);}
 .gh-comment{margin:5px 0 2px;padding:7px 10px;font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);background:var(--surface-2);border-radius:var(--r-md);}

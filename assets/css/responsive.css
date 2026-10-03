@@ -1,6 +1,6 @@
 /* ==========================================================================
    Tamaños de pantalla
-   - Grande (≥1600px): el contenido usa todo el ancho.
+   - Grande (≥1600px): más aire entre las piezas.
    - Portátil / tablet horizontal (901–1279px): barra lateral de iconos.
    - Móvil / tablet vertical (≤900px): barra superior + navegación inferior,
      tablero columna a columna y diálogos a pantalla completa.
@@ -11,51 +11,50 @@
 .board-tabs{display:none;}
 
 /* ---------- Grande ---------- */
-.main-inner{max-width:1480px;}
 @media (min-width:1600px){
-  .main{--main-px:40px;padding:26px 40px 28px;}
-  .main-inner{max-width:none;}
   /* Lo que se lee de arriba abajo no necesita estirarse. */
-  #viewSettings,#viewData{max-width:1040px;}
-  .board{gap:14px;}
-  .cal-layout{grid-template-columns:minmax(0,1fr) 360px;}
+  #viewData{max-width:960px;}
+  .board{gap:22px;}
+  .cal-layout{grid-template-columns:minmax(0,1fr) 340px;}
   /* El mes llena el alto de la ventana. */
-  .cal-cell{min-height:max(108px, calc((100dvh - 290px) / 6));}
-  .crm{grid-template-columns:minmax(260px, 340px) minmax(0, 1fr);}
-  .people{display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));column-gap:8px;}
-  .person + .person{border-top:none;}
-  .person{border-bottom:1px solid var(--line);}
+  .cal-cell{min-height:max(108px, calc((100dvh - 200px) / 6));}
+  .crm{grid-template-columns:320px minmax(0, 1fr);}
 }
 @media (min-width:2200px){
   .app{grid-template-columns:260px minmax(0,1fr);}
-  .main{--main-px:56px;padding:30px 56px 32px;}
-  .board{gap:18px;}
+  :root[data-nav="top"] .app{grid-template-columns:minmax(0,1fr);}
+  .board{gap:26px;}
 }
 
 /* ---------- Portátil y tablet horizontal: barra de iconos ---------- */
 @media (min-width:901px) and (max-width:1279px){
-  .app{grid-template-columns:64px minmax(0,1fr);}
-  .sidebar{padding:12px 8px 10px;align-items:center;}
-  .brand{padding:0 0 10px;width:100%;}
-  .project-switch{justify-content:center;padding:5px;}
-  .project-switch-text,.project-switch-chevron{display:none;}
-  .search-trigger{width:40px;height:36px;padding:0;justify-content:center;margin-bottom:10px;}
-  .search-trigger span,.search-trigger .kbd{display:none;}
-  .tabs{width:100%;align-items:center;}
-  .tab{position:relative;width:44px;height:40px;padding:0;justify-content:center;}
-  .tab > span:first-of-type{display:none;}
-  .tab svg{width:18px;height:18px;}
-  .plugin-nav{width:44px;}
-  .plugin-nav > .tab{width:44px;padding:0;}
-  .plugin-nav-toggle{top:25px;right:0;width:16px;height:15px;}
-  .plugin-nav-toggle svg{width:11px;height:11px;}
-  .plugin-nav-list{width:44px;margin:2px 0 5px;padding:0;align-items:center;}
-  .plugin-nav-item{justify-content:center;width:40px;height:36px;padding:0;}
-  .plugin-nav-name{display:none;}
-  .tab-count{
+  :root:not([data-nav="top"]) .app{grid-template-columns:60px minmax(0,1fr);}
+  :root:not([data-nav="top"]) .sidebar{padding:10px 7px;align-items:center;}
+  :root:not([data-nav="top"]) .brand-row{padding:2px 0 10px;}
+  :root:not([data-nav="top"]) .brand-name{display:none;}
+  :root:not([data-nav="top"]) .brand{padding:0 0 10px;width:100%;}
+  :root:not([data-nav="top"]) .project-switch{justify-content:center;padding:5px;border-color:transparent;background:transparent;}
+  :root:not([data-nav="top"]) .project-switch-text,
+  :root:not([data-nav="top"]) .project-switch-chevron{display:none;}
+  :root:not([data-nav="top"]) .project-switch > .project-mark{width:30px;height:30px;font-size:11.5px;border-radius:9px;}
+  :root:not([data-nav="top"]) .search-trigger{width:40px;height:36px;padding:0;justify-content:center;margin-bottom:10px;}
+  :root:not([data-nav="top"]) .search-trigger span,
+  :root:not([data-nav="top"]) .search-trigger .kbd{display:none;}
+  :root:not([data-nav="top"]) .tabs{width:100%;align-items:center;}
+  :root:not([data-nav="top"]) .tab{position:relative;width:40px;height:38px;padding:0;justify-content:center;}
+  :root:not([data-nav="top"]) .tab > span:first-of-type{display:none;}
+  :root:not([data-nav="top"]) .tab svg{width:18px;height:18px;}
+  :root:not([data-nav="top"]) .plugin-nav{width:40px;}
+  :root:not([data-nav="top"]) .plugin-nav > .tab{width:40px;padding:0;}
+  :root:not([data-nav="top"]) .plugin-nav-toggle{top:24px;right:-2px;width:16px;height:15px;}
+  :root:not([data-nav="top"]) .plugin-nav-toggle svg{width:11px;height:11px;}
+  :root:not([data-nav="top"]) .plugin-nav-list{width:40px;margin:2px 0 5px;padding:0;align-items:center;}
+  :root:not([data-nav="top"]) .plugin-nav-item{justify-content:center;width:38px;height:34px;padding:0;}
+  :root:not([data-nav="top"]) .plugin-nav-name{display:none;}
+  :root:not([data-nav="top"]) .tab-count{
     position:absolute;
-    top:3px;
-    right:2px;
+    top:2px;
+    right:0;
     min-width:15px;
     height:15px;
     padding:0 3px;
@@ -63,28 +62,39 @@
     font-size:9.5px;
     line-height:15px;
     text-align:center;
-    background:var(--surface-2);
-    box-shadow:0 0 0 1.5px var(--sidebar);
+    color:var(--ink-soft);
+    background:var(--surface-solid);
+    box-shadow:0 0 0 1px var(--line-strong);
   }
-  .nav-label{font-size:0;padding:10px 0 6px;width:28px;border-bottom:1px solid var(--line);margin-bottom:6px;}
-  .sidebar-foot{padding:10px 0 0;width:100%;}
-  .account{justify-content:center;padding:0;}
-  .account-text,#btnSignOut{display:none;}
-  .storage-status{justify-content:center;padding:0;}
-  .storage-status span:last-child{display:none;}
-  .main{--main-px:24px;padding:20px 24px 22px;}
-  .page-head p{max-width:56ch;}
-  .board{gap:10px;}
+  :root:not([data-nav="top"]) .nav-label{font-size:0;padding:8px 0 6px;width:24px;border-bottom:1px solid var(--line);margin-bottom:6px;}
+  :root:not([data-nav="top"]) .sidebar-foot{padding:8px 0 0;width:100%;}
+  :root:not([data-nav="top"]) .account{justify-content:center;padding:0;margin-bottom:6px;}
+  :root:not([data-nav="top"]) .account-text,
+  :root:not([data-nav="top"]) #btnSignOut{display:none;}
+  :root:not([data-nav="top"]) .foot-row{flex-direction:column;padding:0;gap:6px;}
+  :root:not([data-nav="top"]) .storage-status{justify-content:center;flex:none;}
+  :root:not([data-nav="top"]) .storage-status span:last-child{display:none;}
+  .board{gap:12px;}
   .cal-layout{grid-template-columns:minmax(0,1fr);}
+  .bar-tools .dd{flex:0 1 160px;min-width:120px;}
+  .bar-tools input.bar-search{flex:0 1 200px;}
 }
 /* Nombre de columna en una línea (con "…" si no cabe). */
 .col-head .name{white-space:nowrap;}
 .col-label{overflow:hidden;text-overflow:ellipsis;min-width:0;}
 
+/* La barra de la vista no cabe en una línea: las herramientas pasan a una segunda. */
+@media (max-width:1100px){
+  header.page-head{align-items:flex-start;}
+  .page-head .titles{display:flex;align-items:center;min-height:32px;}
+  .bar-sep{align-self:center;}
+  .bar-tools{flex-wrap:wrap;row-gap:8px;}
+}
+
 /* ---------- Móvil y tablet vertical ---------- */
 @media (max-width:900px){
   :root{--nav-h:calc(58px + env(safe-area-inset-bottom, 0px));}
-  .app{display:block;}
+  .app{display:block;padding:0;}
 
   /* Barra superior: proyecto y buscar. */
   .sidebar{
@@ -97,19 +107,26 @@
     gap:8px;
     padding:8px 12px;
     padding-top:calc(8px + env(safe-area-inset-top, 0px));
-    border-right:none;
-    border-bottom:1px solid var(--line);
     overflow:visible;
     /* Sin backdrop-filter: haría que la navegación inferior (position:fixed,
-       hija de esta barra) se colocara respecto a la barra y no a la ventana. */
-    background:var(--sidebar);
+       hija de esta barra) se colocara respecto a la barra y no a la ventana.
+       Por eso aquí la barra es opaca; el cristal lo lleva la navegación inferior. */
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    background:var(--bg);
+    border:0;
+    border-bottom:1px solid var(--line);
+    border-radius:0;
+    box-shadow:none;
   }
+  .brand-row{padding:0;}
+  .brand-name{display:none;}
   .brand{padding:0;flex:1;min-width:0;}
-  .search-trigger{width:38px;height:38px;padding:0;margin:0;justify-content:center;flex:none;}
+  .search-trigger{width:36px;height:36px;padding:0;margin:0;justify-content:center;flex:none;}
   .search-trigger span,.search-trigger .kbd{display:none;}
   .nav-label,.sidebar-foot{display:none;}
 
-  /* Navegación inferior, como en una app. */
+  /* Navegación inferior, como en una app: de cristal. */
   .tabs{
     position:fixed;
     left:0;
@@ -121,10 +138,9 @@
     gap:0;
     height:var(--nav-h);
     padding:4px 4px env(safe-area-inset-bottom, 0px);
-    background:var(--sidebar);
-    background:color-mix(in srgb, var(--sidebar) 92%, transparent);
-    backdrop-filter:saturate(1.4) blur(14px);
-    -webkit-backdrop-filter:saturate(1.4) blur(14px);
+    background:var(--sheet);
+    backdrop-filter:var(--glass-blur);
+    -webkit-backdrop-filter:var(--glass-blur);
     border-top:1px solid var(--line);
   }
   body.no-clients .tabs{grid-template-columns:repeat(6, minmax(0, 1fr));}
@@ -149,21 +165,16 @@
   .plugin-nav > .tab{width:100%;padding:0 2px;}
   .plugin-nav-toggle{top:0;right:0;width:18px;height:18px;z-index:1;}
   .plugin-nav-toggle svg{width:12px;height:12px;}
-  .plugin-nav-list{position:fixed;right:12px;bottom:calc(var(--nav-h) + 8px);z-index:55;width:min(340px, calc(100vw - 24px));max-height:50vh;margin:0;padding:6px;overflow-y:auto;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);}
+  .plugin-nav-list{position:fixed;right:12px;bottom:calc(var(--nav-h) + 8px);z-index:55;width:min(340px, calc(100vw - 24px));max-height:50vh;margin:0;padding:6px;overflow-y:auto;background:var(--surface-solid);border:1px solid var(--line-strong);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);}
   .plugin-nav-item{height:auto;min-height:44px;padding:8px;font-size:13px;}
   .plugin-nav-name{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;line-height:1.3;}
-  .plugin-card-head{display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:11px;row-gap:9px;}
-  .plugin-card-head > .plugin-tile{grid-column:1;grid-row:1;}
-  .plugin-card-actions{grid-column:2;grid-row:1;justify-self:end;}
-  .plugin-card-title{grid-column:1 / -1;grid-row:2;}
   .plugin-card-title h3{align-items:flex-start;}
   .plugin-card-title h3 span,.plugin-card-title p{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;}
-  .plugin-perm-line{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;}
   .plugin-bar-text strong,.plugin-bar-text span{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;}
   .plugin-hero-text h3 span{overflow-wrap:anywhere;}
   .tab:hover{background:transparent;}
-  .tab.active{background:transparent;box-shadow:none;color:var(--accent);}
-  .tab.active svg{color:var(--accent);}
+  /* Sección activa: el icono y el texto en el color del texto, con más peso. */
+  .tab.active{background:transparent;color:var(--ink);font-weight:600;}
   .tab-count{
     position:absolute;
     top:3px;
@@ -176,23 +187,33 @@
     line-height:16px;
     text-align:center;
     color:var(--ink-soft);
-    background:var(--surface-2);
-    box-shadow:0 0 0 1.5px var(--sidebar);
+    background:var(--surface-solid);
+    box-shadow:0 0 0 1px var(--line-strong);
   }
-  .tab-count.is-alert{color:#fff;background:var(--danger);}
+  .tab-count.is-alert{color:#fff;background:var(--late);box-shadow:none;}
 
-  .main{--main-px:16px;padding:14px 16px calc(var(--nav-h) + 16px);}
-  header.page-head{padding-bottom:10px;margin-bottom:12px;gap:10px;}
-  .page-head p{display:none;}
-  .page-head h1{font-size:19px;margin:0;}
-  .page-head .btn{height:36px;}
+  .main{--main-px:0px;padding:12px 12px calc(var(--nav-h) + 16px);}
+  .main-inner > section{padding:0 2px 4px;}
+  header.page-head{position:relative;top:auto;min-height:48px;padding:8px 8px 8px 14px;margin-bottom:12px;gap:8px;}
+  .bar-sep{display:none;}
+  .bar-tools{gap:8px;}
+  .bar-tools input.bar-search{flex:1 1 150px;}
+  .bar-tools .dd{flex:1 1 140px;}
+  .bar-meta{display:none;}
+  /* El panel de filtros ocupa el ancho de la barra, debajo de ella. */
+  .bar-filter{position:static;}
+  .filter-panel{left:0;right:0;width:auto;}
+  .subbar{flex-wrap:wrap;row-gap:8px;}
+  .quick{flex:1 1 100%;}
+  .summary{margin-left:0;flex-wrap:wrap;row-gap:2px;}
+  .settings-nav{top:0;}
 
   /* Tablero: pestañas de estado y columnas que se deslizan. */
   .board-tabs{
     display:flex;
     gap:6px;
-    margin:0 -16px 10px;
-    padding:0 16px 2px;
+    margin:0 -12px 10px;
+    padding:0 14px 2px;
     overflow-x:auto;
     scrollbar-width:none;
   }
@@ -200,28 +221,27 @@
   .board-tab{
     display:inline-flex;
     align-items:center;
-    gap:6px;
+    gap:7px;
     flex:none;
-    height:32px;
+    height:30px;
     padding:0 11px;
     font-family:inherit;
-    font-size:13px;
+    font-size:12.5px;
     font-weight:500;
     color:var(--ink-soft);
-    background:var(--surface);
-    border:1px solid var(--line);
+    background:transparent;
+    border:1px solid var(--line-strong);
     border-radius:999px;
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
   }
-  .board-tab .dot{background:var(--st);}
   .board-tab .count{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
-  .board-tab.is-active{color:var(--ink);border-color:var(--ink-faint);box-shadow:var(--shadow-sm);}
+  .board-tab.is-active{color:var(--ink);background:var(--surface-2);border-color:transparent;}
   .board{
     grid-template-columns:none;
     grid-auto-flow:column;
-    grid-auto-columns:calc(50% - 5px);
-    gap:10px;
+    grid-auto-columns:calc(50% - 6px);
+    gap:12px;
     overflow-x:auto;
     overscroll-behavior-x:contain;
     scroll-snap-type:x mandatory;
@@ -241,31 +261,29 @@
   /* En pantallas táctiles no se arrastra: la pista sobra. */
   .cal-hint{display:none !important;}
   .cal-legend{gap:12px;}
-
-  /* Clientes: buscador y "Nuevo contacto" en la misma fila. */
-  #viewClients .toolbar{flex-wrap:nowrap;}
-  #viewClients .toolbar input[type="search"]{flex:1 1 auto;min-width:0;}
-  #viewClients .toolbar .btn{flex:none;}
+  .cal-month{min-width:0;}
 }
 
 @media (max-width:600px){
   .plugins-head{flex-wrap:wrap;row-gap:2px;}
-  .plugins-head .plugins-sub{flex-basis:100%;}
+  .plugins-head .plugins-sub{flex-basis:100%;margin-left:0;}
   /* Una columna del tablero cada vez. */
-  .board{grid-auto-columns:100%;gap:12px;}
-  .col{border-radius:var(--r-lg);}
+  .board{grid-auto-columns:100%;gap:14px;}
 
   /* Diálogos como hoja que sube desde abajo, a todo lo ancho. */
   /* !important: algunos diálogos fijan su ancho por id (#dlg…). */
-  dialog:not(.cmdk){
+  dialog:not(.cmdk):not(.task-view){
     width:100vw !important;
     max-width:100vw !important;
     max-height:calc(100dvh - 24px - env(safe-area-inset-top, 0px));
     margin:auto 0 0 !important;
-    border-radius:16px 16px 0 0;
+    border-radius:var(--r-sheet) var(--r-sheet) 0 0;
+    border-left:0;
+    border-right:0;
+    border-bottom:0;
     padding-bottom:env(safe-area-inset-bottom, 0px);
   }
-  dialog:not(.cmdk)[open]{animation:sheet-in .22s cubic-bezier(.2,.8,.2,1);}
+  dialog:not(.cmdk):not(.task-view)[open]{animation:sheet-in .22s cubic-bezier(.2,.8,.2,1);}
   .dlg-inner{padding:18px 16px 16px;}
   .dlg-actions{margin:18px -16px -16px;padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));border-radius:0;}
   .dlg-actions .btn{height:38px;}
@@ -273,31 +291,54 @@
   .cmdk-meta,.cmdk-foot{display:none;}
 
   /* Controles un poco más grandes para el dedo. */
-  .toolbar input[type="search"],.dd-trigger{min-height:40px;}
+  .bar-tools input.bar-search,.dd-trigger{min-height:38px;}
   .btn{min-height:36px;}
   input,select,textarea{font-size:16px;}
-  #btnNewContact{font-size:0;gap:0;width:40px;padding:0;justify-content:center;}
-  #btnNewContact svg{width:18px;height:18px;}
+  #btnNewContact,#btnNew,#calNewMeeting,#btnNewVault{font-size:0;gap:0;width:38px;padding:0;justify-content:center;flex:none;}
+  #btnNewContact svg,#btnNew svg,#calNewMeeting svg,#btnNewVault svg{width:18px;height:18px;}
+  /* Tareas: título, vista y «+» en la primera línea; buscador y filtro en la segunda. */
+  .bar-tools[data-bar="tasks"] .segmented{order:1;}
+  .bar-tools[data-bar="tasks"] .bar-push{order:2;}
+  .bar-tools[data-bar="tasks"] #btnNew{order:3;}
+  .bar-tools[data-bar="tasks"] .gh-sync,.bar-tools[data-bar="tasks"] .ext-slot{order:4;}
+  .bar-tools[data-bar="tasks"] .bar-search{order:5;flex:1 1 60%;}
+  .bar-tools[data-bar="tasks"] .bar-filter{order:6;}
+  /* Calendario: mes y «+» arriba; vista y filtro debajo. */
+  .bar-tools[data-bar="calendar"] .cal-nav{order:1;}
+  .bar-tools[data-bar="calendar"] #calToday{order:2;}
+  .bar-tools[data-bar="calendar"] .bar-push{order:3;}
+  .bar-tools[data-bar="calendar"] #calNewMeeting{order:4;}
+  .bar-tools[data-bar="calendar"] .segmented{order:5;}
+  .bar-tools[data-bar="calendar"] .dd{order:6;}
+  .bar-tools[data-bar="calendar"] .ext-slot{order:7;}
+  /* Contraseñas: buscador y «+» arriba; filtros debajo. */
+  .bar-tools[data-bar="vault"] .bar-search{order:1;flex:1 1 50%;}
+  .bar-tools[data-bar="vault"] #btnNewVault{order:2;}
+  .bar-tools[data-bar="vault"] .dd{order:3;}
+  .bar-tools[data-bar="vault"] .bar-push{display:none;}
+  .bar-tools[data-bar="clients"] .bar-push{display:none;}
 }
 @keyframes sheet-in{from{transform:translateY(24px);opacity:.4;}to{transform:none;opacity:1;}}
 
 @media (max-width:600px){
   .plugin-add .btn{flex:none;}
   .plugin-grid{grid-template-columns:minmax(0,1fr);}
-  .plugin-frame-wrap{border-radius:0;min-height:300px;}
+  .plugin-frame-wrap{min-height:300px;}
 }
 
 @media (max-width:380px){
-  .main{--main-px:12px;padding-left:12px;padding-right:12px;}
-  .board-tabs{margin:0 -12px 10px;padding:0 12px 2px;}
+  .main{padding-left:8px;padding-right:8px;}
+  .board-tabs{margin:0 -8px 10px;padding:0 10px 2px;}
   .tab{font-size:9.5px;}
 }
 
 /* Dedos: botones pequeños un poco más grandes (mínimo ~36 px de alto). */
 @media (max-width:640px), (pointer:coarse){
-  .segmented button{min-height:34px;padding-top:0;padding-bottom:0;}
-  .cal-arrow{width:38px;height:38px;}
+  .segmented button{min-height:32px;padding-top:0;padding-bottom:0;}
+  .cal-arrow{width:36px;height:36px;}
   .col-add,.col-menu{min-width:36px;min-height:36px;}
   .btn-sm{min-height:36px;}
+  .chip{height:32px;}
+  .icon-only.is-sm{width:34px;height:34px;}
   .check-row input[type="checkbox"],.tv-checks input{width:18px;height:18px;}
 }

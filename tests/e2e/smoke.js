@@ -155,6 +155,8 @@ async function newProject(page, name){
     await page.locator('.consent').waitFor({state:'detached'}).catch(() => {});
     const themeBefore = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     await page.locator('#btnThemeToggle').click();
+    /* El cambio va dentro de una transición de vista (la luz que se enciende o se apaga): llega un instante después. */
+    await page.waitForFunction((before) => document.documentElement.getAttribute('data-theme') !== before, themeBefore);
     const themeAfter = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     assert.ok(themeAfter === 'dark' || themeAfter === 'light');
     assert.notEqual(themeAfter, themeBefore === null ? 'light' : themeBefore);

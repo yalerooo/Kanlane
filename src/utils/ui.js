@@ -115,12 +115,17 @@
   }
 
   /* Cambio de tema sin golpe: la luz se enciende desde el botón pulsado (un círculo que se
-     abre) o se apaga hacia él (el círculo se cierra). apply() es lo que cambia el tema.
+     abre) o se apaga hacia él (el círculo se cierra), con el borde difuminado y un aro de
+     luz, como una gota de cristal (las máscaras están en base.css y siguen a --theme-r).
+     apply() es lo que cambia el tema.
      Sin View Transitions o con movimiento reducido, el cambio es inmediato. */
   function isDark(){
     const attr = document.documentElement.getAttribute('data-theme');
     return attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
+
+  /* Ancho de la franja del borde, en píxeles (el mismo que usan las máscaras de base.css). */
+  const RIM = 120;
 
   function themeSwitch(origin, apply){
     const root = document.documentElement;
@@ -134,11 +139,14 @@
     const y = box ? box.top + box.height / 2 : window.innerHeight / 2;
     const r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
     let off = false;
-    let anim = null;
-    /* La animación se cancela al terminar: si se quedara, taparía la del cambio siguiente. */
+    /* El borde del círculo es una franja ancha: el radio final la saca entera de la pantalla. */
+    const small = '0px', big = Math.ceil(r + RIM) + 'px';
+    const anims = [];
+    /* Las animaciones se cancelan al terminar: si se quedaran, taparían las del cambio siguiente. */
     const clean = () => {
-      if(anim) anim.cancel();
+      anims.forEach((a) => a.cancel());
       root.classList.remove('theme-vt', 'theme-off');
+      ['--theme-x', '--theme-y', '--theme-r'].forEach((p) => root.style.removeProperty(p));
     };
     let vt;
     try{
@@ -148,6 +156,9 @@
         apply();
         off = isDark();
         root.classList.toggle('theme-off', off);
+        root.style.setProperty('--theme-x', x + 'px');
+        root.style.setProperty('--theme-y', y + 'px');
+        root.style.setProperty('--theme-r', off ? big : small);
       });
     }catch(e){
       clean();
@@ -157,14 +168,11 @@
     vt.ready.then(() => {
       /* El tema no ha cambiado de claro a oscuro ni al revés (p. ej. «Sistema»): nada que animar. */
       if(off === wasDark) return;
-      const small = 'circle(0px at ' + x + 'px ' + y + 'px)';
-      const big = 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)';
-      anim = root.animate({clipPath: off ? [big, small] : [small, big]}, {
-        duration: off ? 480 : 560,
-        easing: 'cubic-bezier(.4, 0, .2, 1)',
-        fill: 'forwards',
-        pseudoElement: off ? '::view-transition-old(root)' : '::view-transition-new(root)'
-      });
+      const timing = {duration: off ? 760 : 860, easing: 'cubic-bezier(.3, .1, .2, 1)', fill: 'both'};
+      /* El radio se anima en <html> y lo heredan las dos imágenes de la transición. */
+      anims.push(root.animate({'--theme-r': off ? [big, small] : [small, big]}, timing));
+      /* La transición dura lo que duren las animaciones de sus imágenes: esta la mantiene viva. */
+      anims.push(root.animate({opacity: [1, 1]}, Object.assign({pseudoElement: '::view-transition-new(root)'}, timing)));
     }).catch(() => {});
     vt.finished.then(clean, clean);
   }

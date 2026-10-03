@@ -26,12 +26,14 @@ const EN = ['trello-alternative', 'asana-alternative', 'notion-alternative', 'pr
 const PAGES = ['index.html', 'en/index.html'].concat(ES.map(s => s + '/index.html'), EN.map(s => 'en/' + s + '/index.html'));
 
 const ok = (m) => console.log('OK   ' + m);
+/* En Windows los archivos se descargan con CRLF (core.autocrlf): se comparan siempre con LF. */
+const readText = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
 const build = (root) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}), encoding: 'utf8'});
 
 const run = build(ROOT);
 assert.equal(run.status, 0, 'el build termina bien:\n' + run.stdout + run.stderr);
 
-const sitemap = fs.readFileSync(path.join(ROOT, 'dist/sitemap.xml'), 'utf8');
+const sitemap = readText(path.join(ROOT, 'dist/sitemap.xml'));
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
 assert.equal(locs.length, 16, 'el sitemap tiene 16 URLs');
 const urlOf = (f) => ORIGIN + f.slice(0, -'index.html'.length);
@@ -42,7 +44,7 @@ const meta = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([^"
 
 /* ---------- JSON-LD ---------- */
 for(const f of PAGES){
-  const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const html = readText(path.join(ROOT, f));
   const blocks = jsonLd(html, f);
   assert.ok(blocks.length >= 1, f + ' lleva JSON-LD');
   const nodes = blocks.flatMap(b => b['@graph'] || [b]);
@@ -83,7 +85,7 @@ ok('JSON-LD válido en las 16 páginas: about por @id, FAQPage = <details> visib
 
 /* ---------- Pie de la portada ---------- */
 for(const [file, lang, expected] of [['index.html', 'es', ES.map(s => '/' + s + '/')], ['en/index.html', 'en', EN.map(s => '/en/' + s + '/')]]){
-  const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const html = readText(path.join(ROOT, file));
   const foot = html.match(/<footer class="foot">[\s\S]*?<\/footer>/)[0];
   const links = [...foot.matchAll(/<a\s+[^>]*href="([^"#]+)"/g)].map(m => m[1]);
   const guides = links.filter(h => /^\/(en\/)?[a-z-]+\/$/.test(h) && h !== '/' && h !== '/en/');
@@ -96,7 +98,7 @@ ok('el pie de / y de /en/ enlaza a las 7 páginas de su idioma, todas del sitema
 /* ---------- llms.txt ---------- */
 const llmsPath = path.join(ROOT, 'dist/llms.txt');
 assert.ok(fs.existsSync(llmsPath), 'dist/llms.txt existe');
-const llms = fs.readFileSync(llmsPath, 'utf8');
+const llms = readText(llmsPath);
 assert.ok(llms.startsWith('# Kanlane\n'), 'llms.txt empieza por «# Kanlane»');
 assert.match(llms, /\n> [^\n]+\n/, 'lleva un blockquote con la descripción');
 assert.match(llms, /Última actualización: \d{4}-\d\d-\d\d/, 'lleva fecha de actualización');
@@ -105,11 +107,11 @@ const own = urls.filter(u => u.startsWith(ORIGIN));
 assert.deepEqual(own.slice().sort(), locs.slice().sort(), 'las URLs de kanlane.com en llms.txt son exactamente las del sitemap');
 for(const u of urls.filter(u => !u.startsWith(ORIGIN))) assert.match(u, /^https:\/\/github\.com\/yalerooo\/Kanlane(\/|$)/, 'enlace externo permitido: ' + u);
 assert.ok(!sitemap.includes('llms.txt'), 'llms.txt no está en el sitemap');
-const headers = fs.readFileSync(path.join(ROOT, 'dist/_headers'), 'utf8');
+const headers = readText(path.join(ROOT, 'dist/_headers'));
 assert.ok(!/llms\.txt/.test(headers), '_headers no trata llms.txt aparte (ni noindex)');
 const all = headers.split(/\n(?=\S)/).find(b => b.startsWith('/*'));
 assert.ok(all && !/X-Robots-Tag/i.test(all), 'la regla global de _headers no lleva noindex');
-assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, 'dist/sw.js'), 'utf8').match(/const FILES = (\[.*\]);/)[1]).includes('/llms.txt'), 'el service worker precachea /llms.txt');
+assert.ok(JSON.parse(readText(path.join(ROOT, 'dist/sw.js')).match(/const FILES = (\[.*\]);/)[1]).includes('/llms.txt'), 'el service worker precachea /llms.txt');
 ok('dist/llms.txt: ' + urls.length + ' enlaces, URLs propias = sitemap, sin noindex');
 
 /* ---------- Negativo: dateModified distinto de la meta hace fallar el build ---------- */

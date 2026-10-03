@@ -63,6 +63,9 @@ async function verify(email){
     await page.locator('#pNombre').fill('Proyecto en Firebase');
     await page.locator('#pTypes [data-type="desarrollo"]').click();
     await page.locator('#btnSaveProject').click();
+    /* Paso de privacidad del asistente: «Solo contraseñas» viene elegido. */
+    await page.locator('#pStep2').waitFor({state:'visible'});
+    await page.locator('#btnSaveProject').click();
     await page.locator('#dlgProject').waitFor({state:'hidden'});
 
     await page.locator('#tabVault').click();

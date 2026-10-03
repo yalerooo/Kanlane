@@ -37,6 +37,16 @@
       });
       this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
       this.view.bindDelete((id) => this.remove(id));
+      /* Cifrado total: pasos de privacidad del asistente y ajustes de privacidad al editar. */
+      const crypto = app.controllers.crypto;
+      this.view.bindEncryption({
+        check: (pw, nombre) => crypto.check(pw, nombre),
+        prepare: () => crypto.prepare(),
+        reset: () => crypto.resetWizard(),
+        download: (text, nombre) => crypto.download(text, nombre),
+        create: (d) => this.createEncrypted(d),
+        action: (kind, id) => { if(kind === 'forget') this.view.closeDialog(); crypto.action(kind, id); }
+      });
       /* «Conectar con GitHub» sin pegar un token. */
       this.view.bindGithubOAuth(() => {
         const g = this.app.controllers.github;
@@ -83,6 +93,7 @@
       this.firstRun = true;
       window.__hideBootSkeleton();
       document.body.classList.add('is-onboarding');
+      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate());
       this.view.openOnboarding();
       /* Si ya te habían invitado a un equipo, puedes aceptarlo en vez de crear uno. */
       this.view.renderInvites(this.invites());
@@ -241,12 +252,44 @@
 
     openNew(){
       if(!this.projects.isReady()) return;
+      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate());
       this.view.openNew();
     }
 
     openEdit(id){
       const p = this.projects.get(id || this.app.projectId);
-      if(p) this.view.openEdit(p, true, this.projects.configOf(p));
+      if(!p) return;
+      this.view.openEdit(p, true, this.projects.configOf(p));
+      /* La privacidad se elige al crear el proyecto y no se cambia; solo existe con cuenta. */
+      this.view.setPrivacyInfo(this.app.controllers.crypto.me ? {encrypted:ProjectModel.isEncrypted(p)} : null);
+    }
+
+    /* Proyecto con cifrado total, desde el último paso del asistente.
+       d: {nombre, color, config, password, trusted}. */
+    createEncrypted(d){
+      if(!this.projects.isReady()) return;
+      const first = this.firstRun;
+      this.view.setEncBusy(true);
+      if(first) this.firstRunSaving = true;
+      this.app.controllers.crypto.create(Object.assign({id:first ? ProjectModel.MAIN_ID : null}, d)).then((id) => {
+        if(first){
+          setTimeout(() => { this.firstRunSaving = false; }, 1500);
+          this.finishFirstRun();
+          this.app.rememberProject({id:id, nombre:d.nombre, color:d.color, enc:true});
+          this.app.connectProject();
+          this.render();
+        } else {
+          this.justCreated = id;
+          this.app.rememberProject(Object.assign({id:id, nombre:d.nombre, color:d.color, enc:true}, d.config));
+          this.app.switchProject(id);
+          this.view.closeDialog();
+        }
+        toast.success(Workhub.t('Proyecto «{nombre}» creado con cifrado total', {nombre:d.nombre}), {important:true});
+      }).catch(() => {
+        this.firstRunSaving = false;
+        this.view.setEncBusy(false);
+        this.view.showError('No se pudo crear el proyecto. Inténtalo de nuevo.');
+      });
     }
 
     /* Crea un proyecto y lo abre. Devuelve la referencia del documento nuevo. */

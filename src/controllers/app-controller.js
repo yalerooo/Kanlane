@@ -47,6 +47,7 @@
         vault: new C.VaultController(this, new V.VaultView()),
         backup: new C.BackupController(this, new V.BackupView())
       };
+      this.controllers.crypto = new C.ProjectCryptoController(this, new V.ProjectLockView());
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       this.controllers.team = new C.TeamController(this, new V.ShareView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
@@ -199,12 +200,15 @@
       let enc = null;
       let known = true;
       if(account){
-        if(this.models.projects.loaded){
-          const p = this.models.projects.get(this.projectId);
+        const p = this.models.projects.loaded ? this.models.projects.get(this.projectId) : null;
+        const r = this.rememberedProject();
+        if(p){
           enc = P.isEncrypted(p) ? p.enc : null;
+        }else if(this.models.projects.loaded){
+          /* Recién creado con cifrado total y aún no está en la lista: se espera a que llegue. */
+          known = !(r && r.id === this.projectId && r.enc);
         }else{
           /* Sin la lista todavía: vale lo recordado en este navegador, si dice que no está cifrado. */
-          const r = this.rememberedProject();
           known = !!r && r.id === this.projectId && !r.enc;
         }
       }
@@ -225,8 +229,14 @@
       this.projectKey(enc).then((cipher) => {
         if(seq !== this.connectSeq) return;
         if(cipher) this.openProject(cipher, enc.pid);
-        else this.shell.setProjectLocked(true);
+        else this.lockProject();
       });
+    }
+
+    /* Sin la clave en este navegador: no se conecta nada y se pide la contraseña de cifrado. */
+    lockProject(){
+      this.shell.setProjectLocked(true);
+      this.controllers.crypto.onLocked();
     }
 
     openProject(cipher, pid){

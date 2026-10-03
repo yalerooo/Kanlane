@@ -1,0 +1,52 @@
+/* ---------- Cifrado total: asistente de privacidad, medidor de contraseña y desbloqueo ----------
+   Reutiliza .type-picker / .type-option (tarjetas de radio), .lock-screen / .lock-card y
+   .recovery-key-box. Sin rayas laterales ni degradados. */
+
+/* Pasos 2–4 del asistente «Nuevo proyecto». */
+.privacy-title{font-size:14px;font-weight:600;letter-spacing:-0.01em;margin:0 0 6px;}
+.privacy-step .dlg-lead{margin-bottom:14px;}
+.privacy-step .recovery-confirm{margin-top:12px;}
+.privacy-step .type-note,#plKeyCard .type-note,#ekKeyPanel .type-note{margin-top:12px;}
+.privacy-step .field-help{margin-top:6px;}
+
+/* Tarjeta que no se puede elegir (cifrado con «Desde GitHub», modo gestionado, GitHub con cifrado). */
+.type-option.is-disabled{cursor:not-allowed;opacity:.6;}
+.type-option.is-disabled:hover{border-color:var(--line);}
+.type-desc + .type-desc{margin-top:4px;color:var(--ink-faint);}
+
+/* Sección «Privacidad» de «Editar proyecto». */
+.privacy-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+
+/* Medidor de contraseña: cuatro segmentos planos y el texto al lado. */
+.pw-meter{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:16px;}
+.pw-meter-bars{display:flex;gap:4px;flex:none;}
+.pw-meter-bars i{display:block;width:26px;height:4px;border-radius:2px;background:var(--line);}
+.pw-meter-bars i.is-on{background:var(--accent-solid);}
+.pw-meter[data-level="short"] .pw-meter-bars i.is-on,
+.pw-meter[data-level="weak"] .pw-meter-bars i.is-on{background:var(--danger);}
+.pw-meter-text{font-size:12px;color:var(--ink-soft);line-height:1.35;}
+
+/* Candado junto al nombre del proyecto y en el menú. */
+.project-switch-line{display:flex;align-items:center;gap:5px;min-width:0;}
+.project-lock{display:inline-flex;flex:none;color:var(--ink-faint);}
+.project-lock[hidden]{display:none;}
+.project-enc{
+  display:inline-flex;align-items:center;gap:4px;flex:none;margin-left:6px;padding:1px 6px;
+  font-size:11px;font-weight:500;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:var(--r-sm);
+}
+
+/* Pantalla de desbloqueo del proyecto. */
+#projectLockScreen{flex-direction:column;align-items:center;gap:16px;}
+#projectLockScreen .check-row{margin:2px 0 0;}
+#projectLockScreen .field-help{margin:6px 0 14px;}
+.lock-card-wide{width:min(480px, 100%);}
+.lock-recover{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);}
+.lock-recover textarea{font-family:var(--mono);font-size:12.5px;width:100%;}
+#dlgEncKey .recovery-confirm{margin-top:12px;}
+
+@media (max-width:600px){
+  .privacy-actions .btn{width:100%;justify-content:center;}
+  .pw-meter{flex-wrap:wrap;gap:6px;}
+  .pw-meter-bars i{width:22px;}
+}

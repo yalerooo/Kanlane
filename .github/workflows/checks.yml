@@ -79,3 +79,5 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
       - name: Proyecto con cifrado total en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-smoke.js"
+      - name: Asistente de cifrado total en Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-wizard.js"

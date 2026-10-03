@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="../assets/css/views/github.css">
   <link rel="stylesheet" href="../assets/css/components/plugin-form.css">
   <link rel="stylesheet" href="../assets/css/views/team.css">
+  <link rel="stylesheet" href="../assets/css/views/privacy.css">
   <link rel="stylesheet" href="../assets/css/views/plugins.css">
   <link rel="stylesheet" href="../assets/css/views/settings.css">
   <link rel="stylesheet" href="../assets/css/views/auth.css">
@@ -136,7 +137,7 @@
       <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
         <span class="project-mark" id="projectMark" aria-hidden="true">PP</span>
         <span class="project-switch-text">
-          <span class="project-switch-name" id="projectName" translate="no">Proyecto principal</span>
+          <span class="project-switch-line"><span class="project-switch-name" id="projectName" translate="no">Proyecto principal</span><span class="project-lock" id="projectLock" title="Cifrado total: el contenido se cifra en tu navegador" hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></span>
           <span class="project-switch-sub">Kanlane</span>
         </span>
         <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
@@ -183,9 +184,54 @@
   </header>
 
   <section id="projectLockScreen" class="lock-screen" hidden>
-    <div class="lock-card">
+    <div class="lock-card" id="plCard">
       <h2>Proyecto cifrado</h2>
-      <p class="lock-desc">Este proyecto está cifrado. Actualiza Kanlane para abrirlo.</p>
+      <p class="lock-desc" id="plDesc"></p>
+      <form id="plUnlockForm">
+        <div class="field">
+          <label for="plPass">Contraseña de cifrado</label>
+          <input id="plPass" type="password" autocomplete="off" required>
+        </div>
+        <label class="check-row"><input type="checkbox" id="plTrusted"> Este dispositivo es de confianza</label>
+        <p class="field-help">La clave se queda en este navegador también al cerrar sesión. No lo marques en un ordenador compartido.</p>
+        <p class="lock-error" id="plError" hidden></p>
+        <button type="submit" class="btn btn-primary" id="plUnlock" style="width:100%">Desbloquear</button>
+      </form>
+      <p class="lock-forgot" id="plForgotWrap"><a href="#" id="plForgot">He olvidado la contraseña</a></p>
+      <form id="plRecoverForm" class="lock-recover" hidden>
+        <div class="field">
+          <label for="plRecovery">Clave de recuperación</label>
+          <textarea id="plRecovery" rows="2" placeholder="XXXX-XXXX-XXXX-…" autocomplete="off" spellcheck="false"></textarea>
+        </div>
+        <div class="field">
+          <label for="plNew">Nueva contraseña de cifrado</label>
+          <input id="plNew" type="password" autocomplete="off">
+          <div class="pw-meter" id="plMeter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+          <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+        </div>
+        <div class="field">
+          <label for="plNew2">Repite la contraseña</label>
+          <input id="plNew2" type="password" autocomplete="off">
+        </div>
+        <p class="lock-error" id="plRecoverError" hidden></p>
+        <button type="submit" class="btn btn-primary" id="plRecover" style="width:100%">Recuperar el acceso</button>
+      </form>
+    </div>
+    <div class="lock-card lock-card-wide" id="plKeyCard" hidden>
+      <h2>Guarda tu clave de recuperación</h2>
+      <p class="lock-desc">Es la única forma de abrir este proyecto si olvidas la contraseña. Kanlane no puede restablecerla ni enviártela por correo. Guárdala fuera de Kanlane: en un gestor de contraseñas o en papel.</p>
+      <div class="recovery-key-box" id="plKey" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="plKeyCopy">Copiar</button>
+        <button type="button" class="btn btn-ghost" id="plKeyDownload">Descargar .txt</button>
+      </div>
+      <p class="type-note">Si pierdes la contraseña y esta clave, perderás el proyecto y tendrás que crear otro.</p>
+      <label class="recovery-confirm">
+        <input type="checkbox" id="plKeySaved">
+        La he guardado en un lugar seguro
+      </label>
+      <p class="lock-error" id="plKeyError" hidden></p>
+      <button type="button" class="btn btn-primary" id="plKeyContinue" style="width:100%;margin-top:10px" disabled>Continuar</button>
     </div>
   </section>
 
@@ -717,6 +763,7 @@
     <p class="dlg-lead" id="pLead">Cada proyecto tiene sus propias tareas, calendario, contraseñas y etapas de trabajo.</p>
     <div class="invite-box" id="pInvites" hidden></div>
     <input type="hidden" id="pId">
+    <div id="pStep1">
     <div class="field">
       <label for="pNombre">Nombre</label>
       <input id="pNombre" maxlength="160" autocomplete="off" placeholder="Por ejemplo: Agencia, Freelance, Personal…">
@@ -755,12 +802,101 @@
     <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>
       <strong>Se borrará todo lo que hay dentro</strong>: tareas y notas, reuniones, contactos, contraseñas y clientes de este proyecto. No se puede deshacer; si quieres conservarlo, exporta antes una copia de seguridad desde el proyecto.
     </div>
+    <div class="field" id="pPrivacyInfo" hidden>
+      <span class="field-label">Privacidad</span>
+      <p class="field-help" id="pPrivacyText"></p>
+      <div class="privacy-actions" id="pPrivacyActions" hidden>
+        <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="password">Cambiar la contraseña de cifrado</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="recovery">Crear una clave de recuperación nueva</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="forget" title="Tendrás que escribir la contraseña la próxima vez.">Olvidar la clave en este navegador</button>
+      </div>
+    </div>
+    </div>
+    <div id="pStep2" class="privacy-step" hidden>
+      <h3 class="privacy-title">Privacidad del proyecto</h3>
+      <p class="dlg-lead">Elige cómo se protege lo que guardes en este proyecto. Más adelante no se podrá cambiar.</p>
+      <div class="type-picker" id="pPrivacy" role="radiogroup" aria-label="Privacidad del proyecto"></div>
+    </div>
+    <div id="pStep3" class="privacy-step" hidden>
+      <h3 class="privacy-title">Contraseña de cifrado</h3>
+      <p class="dlg-lead">Con ella se cifra el proyecto en tu navegador. Kanlane no la guarda ni puede recuperarla. Usa una distinta de la del cofre de contraseñas y de la de tu cuenta.</p>
+      <div class="field">
+        <label for="pEncPass">Contraseña de cifrado</label>
+        <input id="pEncPass" type="password" autocomplete="off">
+        <div class="pw-meter" id="pEncMeter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+        <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+      </div>
+      <div class="field">
+        <label for="pEncPass2">Repite la contraseña</label>
+        <input id="pEncPass2" type="password" autocomplete="off">
+      </div>
+      <label class="check-row"><input type="checkbox" id="pEncTrusted"> Este dispositivo es de confianza</label>
+      <p class="field-help">La clave se queda en este navegador también al cerrar sesión. No lo marques en un ordenador compartido.</p>
+    </div>
+    <div id="pStep4" class="privacy-step" hidden>
+      <h3 class="privacy-title">Guarda tu clave de recuperación</h3>
+      <p class="dlg-lead">Es la única forma de abrir este proyecto si olvidas la contraseña. Kanlane no puede restablecerla ni enviártela por correo. Guárdala fuera de Kanlane: en un gestor de contraseñas o en papel.</p>
+      <div class="recovery-key-box" id="pEncKey" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="pEncCopy">Copiar</button>
+        <button type="button" class="btn btn-ghost" id="pEncDownload">Descargar .txt</button>
+      </div>
+      <p class="type-note">Si pierdes la contraseña y esta clave, perderás el proyecto y tendrás que crear otro.</p>
+      <label class="recovery-confirm">
+        <input type="checkbox" id="pEncSaved">
+        La he guardado en un lugar seguro
+      </label>
+    </div>
     <p class="lock-error" id="pError" hidden></p>
     <div class="dlg-actions">
       <button type="button" class="btn btn-danger" id="btnDeleteProject" hidden>Eliminar proyecto</button>
       <div class="right">
         <button type="button" class="btn btn-ghost" id="btnCancelProject" data-dismiss>Cancelar</button>
         <button type="submit" class="btn btn-primary" id="btnSaveProject">Crear proyecto</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgEncKey" aria-labelledby="ekTitle">
+  <form class="dlg-inner" id="ekForm" method="dialog">
+    <h2 id="ekTitle">Cambiar la contraseña de cifrado</h2>
+    <p class="dlg-lead" id="ekLead"></p>
+    <div id="ekFields">
+      <div class="field">
+        <label for="ekCurrent">Contraseña de cifrado actual</label>
+        <input id="ekCurrent" type="password" autocomplete="off" required>
+      </div>
+      <div id="ekNewWrap">
+        <div class="field">
+          <label for="ekNew">Nueva contraseña de cifrado</label>
+          <input id="ekNew" type="password" autocomplete="off">
+          <div class="pw-meter" id="ekMeter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+          <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+        </div>
+        <div class="field">
+          <label for="ekNew2">Repite la contraseña</label>
+          <input id="ekNew2" type="password" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div id="ekKeyPanel" hidden>
+      <div class="recovery-key-box" id="ekKey" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="ekKeyCopy">Copiar</button>
+        <button type="button" class="btn btn-ghost" id="ekKeyDownload">Descargar .txt</button>
+      </div>
+      <p class="type-note">Si pierdes la contraseña y esta clave, perderás el proyecto y tendrás que crear otro.</p>
+      <label class="recovery-confirm">
+        <input type="checkbox" id="ekKeySaved">
+        La he guardado en un lugar seguro
+      </label>
+    </div>
+    <p class="lock-error" id="ekError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="ekCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="ekSubmit">Guardar</button>
       </div>
     </div>
   </form>
@@ -1201,6 +1337,8 @@
 <script src="../src/views/auth-view.js"></script>
 <script src="../src/views/project-view.js"></script>
 <script src="../src/views/project-dialog-view.js"></script>
+<script src="../src/views/project-lock-view.js"></script>
+<script src="../src/views/project-privacy-view.js"></script>
 <script src="../src/views/plugins-view.js"></script>
 <script src="../src/views/plugin-form-view.js"></script>
 <script src="../src/views/github-view.js"></script>
@@ -1215,6 +1353,7 @@
 <script src="../src/controllers/contacts-controller.js"></script>
 <script src="../src/controllers/vault-controller.js"></script>
 <script src="../src/controllers/backup-controller.js"></script>
+<script src="../src/controllers/project-crypto-controller.js"></script>
 <script src="../src/controllers/projects-controller.js"></script>
 <script src="../src/controllers/plugins-clean.js"></script>
 <script src="../src/controllers/plugins-controller.js"></script>

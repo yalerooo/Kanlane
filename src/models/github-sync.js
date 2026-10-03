@@ -48,9 +48,25 @@
     get tasks(){ return this.app.models.tasks; }
     get projects(){ return this.app.models.projects; }
 
-    /* Configuración del proyecto abierto, o null si no está enlazado. */
+    /* Un proyecto con cifrado total no se sincroniza: GitHub tendría que recibir las tareas sin cifrar.
+       p puede ser el proyecto recordado en el navegador (enc:true) mientras llega la lista. */
+    static isEncrypted(p){
+      return !!p && (p.enc === true || Workhub.models.ProjectModel.isEncrypted(p));
+    }
+
+    encrypted(){
+      return GithubSync.isEncrypted(this.app.controllers.projects.current());
+    }
+
+    encryptedError(){
+      return new api.GithubError('encrypted', Workhub.t('Los proyectos con cifrado total no se pueden sincronizar con GitHub.'));
+    }
+
+    /* Configuración del proyecto abierto, o null si no está enlazado (o si tiene cifrado total:
+       así se apagan solos el temporizador, el envío de cambios y la acción de Ctrl K). */
     config(){
       const p = this.app.controllers.projects.current();
+      if(GithubSync.isEncrypted(p)) return null;
       if(p && p.github) this.pendingCfg = null;
       return p && p.github ? p.github : this.pendingCfg;
     }
@@ -90,9 +106,13 @@
     link(opts){
       const ref = api.parseProjectUrl(opts.url);
       if(!ref) return Promise.reject(new api.GithubError('bad-url', 'El enlace tiene que ser de un proyecto, por ejemplo https://github.com/users/tu-usuario/projects/1'));
-      if(opts.token) api.setToken(opts.token);
       const opened = this.app.projectId;
       const target = opts.target && opts.target !== NEW ? opts.target : (opts.target === NEW ? NEW : opened);
+      /* Antes de llamar a GitHub: el destino no puede tener cifrado total. */
+      if(target !== NEW && GithubSync.isEncrypted(target === opened ? this.app.controllers.projects.current() : this.projects.get(target))){
+        return Promise.reject(this.encryptedError());
+      }
+      if(opts.token) api.setToken(opts.token);
       return api.fetchProject(ref).then((proj) => {
         if(opened !== this.app.projectId) throw new api.GithubError('changed', 'Cambiaste de proyecto mientras se conectaba.');
         const stages = GithubSync.stagesFromOptions(proj.options);
@@ -166,6 +186,11 @@
     /* ---------- Sincronizar ---------- */
 
     sync(){
+      /* Doble protección por si algo llama directamente. */
+      if(this.encrypted()){
+        this.error = this.encryptedError();
+        return Promise.resolve(null);
+      }
       const cfg = this.config();
       if(!cfg || this.busy || !this.tasks.isReady() || !this.canSync()) return Promise.resolve(null);
       const pid = this.app.projectId;

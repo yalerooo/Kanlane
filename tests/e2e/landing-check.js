@@ -33,6 +33,14 @@ module.exports = async function checkLanding(browser, origin){
     await page.locator('[data-accent="purple"]').click();
     assert.equal(await page.locator('#appearanceExample').evaluate(el => el.style.getPropertyValue('--preview-accent')), '#4F46E5');
     assert.equal(await page.locator('.plugin-panel:visible').count(), 1);
+    /* El calendario de ejemplo cambia entre mes, semana y día. */
+    await page.locator('[data-calendar="month"]').click();
+    assert.equal(await page.locator('#calendarPreview .mday:not(.empty)').count(), 31, 'el mes enseña los 31 días de octubre');
+    assert.equal(await page.locator('[data-calendar="month"]').getAttribute('aria-pressed'), 'true');
+    await page.locator('[data-calendar="day"]').click();
+    assert.equal(await page.locator('#calendarPreview .mday:visible').count(), 1, 'el día enseña solo el miércoles 7');
+    await page.locator('[data-calendar="week"]').click();
+    assert.equal(await page.locator('#calendarPreview .mday:visible').count(), 7);
     for(const width of [1280, 1024, 768, 390, 320]){
       await page.setViewportSize({width,height:900});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'portada sin desbordamiento a ' + width);
@@ -41,6 +49,10 @@ module.exports = async function checkLanding(browser, origin){
 
     await page.goto(origin + '/demo/', {waitUntil:'load'});
     await page.locator('.card-progress').first().waitFor();
+    /* En la demo la barra lateral va siempre desplegada, también en un marco estrecho. */
+    await page.setViewportSize({width:1100,height:900});
+    assert.ok((await page.locator('.sidebar').boundingBox()).width > 200, 'la demo enseña la barra lateral desplegada a 1100 px');
+    assert.equal(await page.locator('#tabCalendar > span').first().isVisible(), true);
     for(const width of [1024,1280,390]){
       await page.setViewportSize({width,height:900});
       /* Los tres valores usan la misma estructura producida por BoardView: anillo y «hechas/total». */

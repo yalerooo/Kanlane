@@ -1,6 +1,6 @@
 # Cifrado por proyecto: plan de implementación
 
-> Estado: **plan aceptado; PR0 en curso** (rama `claude/cifrado-pr0`: texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app). PR1–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
+> Estado: **plan aceptado; PR0 y PR1 hechos, sin fusionar.** PR0 en la rama `claude/cifrado-pr0` (texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app; PR #91). PR1 en `claude/cifrado-pr1`, que sale de PR0 (servicio de cifrado y almacén de claves, sin interfaz ni datos; ver 6.1 y 15.2). PR2–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
 > Las decisiones del dueño (modos A/B/C, sin migración, GitHub incompatible con B, compartir con código de un solo uso, orden reglas → código) se dan por cerradas y aquí solo se concretan. **El 3-oct-2026 el dueño aceptó todas las recomendaciones D1–D18 del apartado 20**: ya son decisiones vinculantes para los PR siguientes y no hay ninguna pendiente.
 > Las marcas **[MANUAL]** son pasos que tiene que hacer el dueño a mano (consola de Firebase, Cloudflare, revisión de textos). Las marcas **[SIN VERIFICAR]** son supuestos que no se han podido comprobar contra un servicio real.
 
@@ -326,6 +326,18 @@ purgeUntrusted()         onChange(cb)   // BroadcastChannel
 ```
 
 Todo con `try/catch`: si IndexedDB falla, devuelve `null` y la app pide la contraseña.
+
+**Hecho en PR1** (rama `claude/cifrado-pr1`). Lo que concreta o cambia respecto a lo de arriba, para que PR3–PR7 lo usen tal cual:
+
+- **Errores tipados**: `Error` con `name: 'ProjectCryptoError'` y `code` ∈ `unavailable`, `bad-format` (blob, envoltorio, `ev` o KDF desconocidos), `bad-key`, `extractable-key`, `short-password`, `bad-password`, `bad-recovery`, `bad-code`, `undecryptable`. AES-GCM no distingue «AAD distinta», «otra clave» y «blob manipulado»: las tres dan `undecryptable` (PR3 lo traduce a `_undecryptable`). `isError(err, code)` para comprobarlos.
+- **DEK extraíble**: `seal`, `open`, `sealBytes`, `openBytes`, `kcv` y `checkKcv` rechazan una clave extraíble (`extractable-key`). Los envoltorios (`wrapPassword`, `wrapRecovery`, `wrapCode`) aceptan los bytes (`Uint8Array(32)`) **o** una `CryptoKey` extraíble, que es lo que devuelven `unwrap…(…, true)` al cambiar la contraseña, recuperar o aceptar un código; `importDek(claveExtraíble)` devuelve una copia no extraíble para usarla con datos. Los bytes que exporta el propio servicio se ponen a cero al terminar; los que recibe los borra quien los creó (`raw.fill(0)`).
+- **Contraseña**: se normaliza a NFC antes de PBKDF2 (la misma contraseña con tildes escrita en macOS, que usa NFD, abre igual). El mínimo de 12 se cuenta en caracteres, no en unidades UTF-16. `unwrapPassword` usa `kdf.iter` del documento y solo admite entre 600 000 y 10 000 000 (fuera de eso, `bad-format`: un documento manipulado no puede bajar el coste ni congelar la pestaña).
+- **HKDF de la recuperación**: la sal son los **16 bytes** del `pid` (decodificado de base64url), no el texto. **Código de acceso**: 20 bytes aleatorios y `byte & 31` por símbolo (uniforme); `parseAccessCode` lo normaliza como la clave de recuperación (minúsculas, espacios, guiones, O/I/L). `unwrapCode` exige `iter ≥ 100 000`.
+- **AAD**: la ruta no puede contener `|`; `pid` y `kid` tienen longitud y alfabeto fijos y `ev` va al final, así que un id con `|` no crea ambigüedad. `seal/open` aceptan el resultado de `aad()` o directamente el objeto `{pid, kid, path, id, ev}`.
+- **`passwordCheck`** devuelve además `reason` (`short` | `common` | `personal` | `null`). Avisa por lista común (unas 230 palabras y contraseñas en español e inglés, también con sustituciones tipo `p@ssw0rd`), repeticiones y secuencias (`aaaa`, `abab`, `1234`, `qwer`, al revés también) cuando lo que queda tiene menos de 8 caracteres o hay menos de 5 distintos, correo / parte local / nombre del proyecto (sin tildes ni signos), o menos de 3 tipos de carácter con menos de 16. «Buena» desde 16 caracteres sin avisos; si no, «Aceptable». Los cinco textos del medidor ya están en `src/i18n/en.js` (no se ven todavía).
+- **API añadida**: constantes `VERSION`, `SUPPORTED_EV`, `MIN_KDF_ITERATIONS`, `MAX_KDF_ITERATIONS`, `MIN_PASSWORD_LENGTH`; `isAvailable()`, `isError()`, `parseAccessCode()`, `b64url()` y `fromB64url()`. El objeto está congelado.
+- **`keystore`**: `put` resuelve `'disk'` o `'memory'` y **rechaza** una clave extraíble o una entrada incompleta (`KeystoreError`: `extractable-key` / `bad-entry`); si IndexedDB no existe, falla al abrir, no responde en 4 s o no sabe clonar una `CryptoKey` (`DataCloneError`), la clave queda solo en memoria de esa pestaña. `get` nunca rechaza. `forget`, `forgetProject`, `forgetUser` y `purgeUntrusted` resuelven el número de claves borradas (o `null` si IndexedDB falló a mitad). **`forgetProject(projectId, uid)` lleva `uid`**: el principal se llama `main` en todas las cuentas y sin `uid` se olvidaría también el de otras cuentas del mismo navegador. `onChange` solo avisa de lo que hacen **otras** pestañas, y el aviso lleva ids, nunca la clave.
+- **Pendiente para PR7**: en el envoltorio `code`, `ctx.uid` tiene que ser algo que conozcan quien invita y quien acepta; el uid del invitado no se sabe al invitar por correo. Propuesta: el id de la invitación (`{tid}_{correo}`).
 
 ### 6.2 Esquema y cifrador del proyecto (PR3)
 
@@ -898,6 +910,9 @@ Node 20 tiene `globalThis.crypto.subtle`, así que el servicio se prueba con Web
 - `unwrapKey(…, extractable:false)` → `crypto.subtle.exportKey` lanza.
 - `passwordCheck`: 11 caracteres bloquea; lista común avisa; contiene el correo avisa; frase larga «Buena».
 - No se usa `Math.random` (búsqueda en el código fuente dentro de la prueba).
+- **Hecho en PR1**, además: vector fijo (semilla determinista inyectada como `crypto.getRandomValues` en una carga aparte del archivo; el servicio no tiene ninguna API para elegir sal o IV) comprobado también con `node:crypto` sin pasar por el servicio (blob, `kcv` y envoltorios `pw`, `rk` y `code`); DEK distinta en cada llamada; cambio de contraseña y recuperación con la clave de recuperación.
+- `tests/crypto/keystore.test.js` (PR1): `put/get/forget*`, `trusted` desmarcado por defecto, rechazo de claves extraíbles, sin IndexedDB / fallo al abrir / sin respuesta / `DataCloneError` → memoria sin excepciones, avisos entre pestañas, con un doble mínimo de IndexedDB escrito en la propia prueba (el repositorio no tiene `fake-indexeddb` y no se añaden dependencias).
+- `tests/e2e/keystore-check.js` (PR1, navegador real, en la CI tras `npm test --prefix tests/e2e`): servidor estático propio con los cuatro scripts; la `CryptoKey` se guarda en IndexedDB, se recupera, `exportKey` falla, sobrevive a recargar, otra pestaña recibe el aviso, cerrar sesión conserva solo la de confianza y, sin IndexedDB, todo sigue en memoria sin errores. Usa Edge en local (o `CHROME_PATH`).
 
 `tests/crypto/schema-rules.test.js` (PR3): `EncSchema` coincide con `encFields`/`encMax` de `firestore.rules`.
 
@@ -1002,6 +1017,14 @@ Un único `push` por PR (Cloudflare construye una vista previa por cada `push`).
 - `src/services/project-crypto.js`, `src/services/keystore.js`, `<script>` en `app/index.html` (no los usa nadie todavía), pruebas 14.1, entrada en `checks.yml`.
 - Medir PBKDF2 600 000 en un móvil de gama baja (D15).
 - Criterios: todas las pruebas unitarias en verde; ningún cambio visible; `node scripts/check-js.js` pasa.
+- **Hecho en la rama `claude/cifrado-pr1`** (sale de `claude/cifrado-pr0`; pendiente de PR y despliegue): `src/services/project-crypto.js` y `src/services/keystore.js` cargados en `app/index.html` justo después de `crypto.js` (nadie los usa); `tests/crypto/project-crypto.test.js`, `tests/crypto/keystore.test.js` y `tests/e2e/keystore-check.js` en `checks.yml`; `tests/sw/sw.test.js` comprueba que los scripts de la app existen y entran en el precache; `scripts/pbkdf2-bench.js`; los cinco textos del medidor en `en.js`. Detalle de lo que concreta en 6.1. Sin cambios en `firestore.rules`, en la CSP, en el almacenamiento usado ni en textos públicos (la tabla de `legal/cookies/` se actualiza en PR4, cuando `workhub-keys` empiece a usarse de verdad).
+- **Medida de PBKDF2 600 000 (D15)**: en el equipo de desarrollo (AMD Ryzen 7 7700X, Windows), `node scripts/pbkdf2-bench.js` da **~66 ms** de mediana y `tests/e2e/keystore-check.js` mide **~90 ms** en Edge 154 y **~80 ms** en Chrome por envoltura. Eso no decide D15: un móvil de gama baja puede ser 10–30 veces más lento. **[MANUAL] Medirlo en un móvil de gama baja**: abrir en el móvil una página **https** (por ejemplo `https://kanlane.com/`; `crypto.subtle` no existe en `http://` salvo en `localhost`), abrir su consola (Android: depuración USB activada, cable al ordenador y `chrome://inspect` en Chrome del ordenador → «inspect»; iPhone: Ajustes → Safari → Avanzado → Inspector web, y en el Mac Safari → Desarrollo) y pegar:
+
+  ```js
+  (async()=>{const e=new TextEncoder(),s=crypto.getRandomValues(new Uint8Array(16)),k=await crypto.subtle.importKey('raw',e.encode('una contraseña de prueba'),'PBKDF2',false,['deriveKey']);const t=[];for(let i=0;i<5;i++){const t0=performance.now();await crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt:s,iterations:600000},k,{name:'AES-GCM',length:256},false,['encrypt']);t.push(Math.round(performance.now()-t0));}console.log('PBKDF2 600000 (ms):',t.join(' / '));})()
+  ```
+
+  No guarda ni envía nada (solo calcula y escribe el tiempo en la consola). Si la mediana es **menor de 1 000 ms**, D15 dice subir `KDF_ITERATIONS` a 1 000 000 en `project-crypto.js` (el mínimo de las reglas y `MIN_KDF_ITERATIONS` siguen en 600 000) y regenerar el vector fijo de la prueba (afirma `iter: 600000`). No se ha añadido una página de prueba publicada: el fragmento basta y así no hay nada nuevo en producción.
 
 **PR2 — Reglas (M)**
 
@@ -1162,7 +1185,7 @@ El dueño aceptó **todas** las recomendaciones de este apartado tal como estaba
 
 ## 21. Suposiciones y lo que no se ha verificado
 
-- **[SIN VERIFICAR]** Coste real de PBKDF2 600 000 en móviles de gama baja (se mide en PR1).
+- **[SIN VERIFICAR]** Coste real de PBKDF2 600 000 en móviles de gama baja. Medido solo en escritorio en PR1 (~66 ms en Node y ~80–90 ms en Chrome/Edge con un Ryzen 7 7700X); la medida en móvil queda como paso manual del dueño (15.2, PR1).
 - **[SIN VERIFICAR]** Guardar `CryptoKey` no extraíble en IndexedDB en Safari de iPhone/iPad reales (en escritorio está soportado).
 - **[SIN VERIFICAR]** Cómo cuenta Firestore `exists()` + `get()` del mismo documento para el límite de 10 accesos por operación; con un acceso por operación sobra en cualquier caso.
 - **[SIN VERIFICAR]** El límite de 20 accesos por lote en producción para aceptar invitaciones cifradas (el emulador no lo aplica).

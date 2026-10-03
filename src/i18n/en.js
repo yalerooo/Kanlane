@@ -11,6 +11,14 @@
     'Guardar':'Save',
     'Cancelar':'Cancel',
     'Cerrar':'Close',
+
+    /* ---------- Cifrado por proyecto: medidor de la contraseña (src/services/project-crypto.js; interfaz en PR4) ---------- */
+    'Demasiado corta: mínimo 12 caracteres.':'Too short: at least 12 characters.',
+    'Débil: es muy común o fácil de adivinar.':'Weak: it’s very common or easy to guess.',
+    'Débil: contiene tu correo o el nombre del proyecto.':'Weak: it contains your email or the project name.',
+    'Aceptable':'Fair',
+    'Buena':'Good',
+
     'Versiones de este navegador':'Versions on this browser',
     'Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.':'A daily copy is saved when you open the app, and you can save another at any time. The last seven per project are kept. Importing a version adds data; it does not replace the board. These copies disappear if you clear this browser’s data.',
     'Guardar versión':'Save version',

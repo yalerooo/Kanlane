@@ -19,6 +19,8 @@
       this.editing = false;
       this.pendingDelete = false;
       this.colorOpen = false;
+      /* Texto del botón mientras se renombra o se elimina (con el avance si hay muchos documentos). */
+      this.busy = '';
 
       [this.clients, this.tasks, this.contacts, this.vault].forEach((m) => m.on('change', () => this.render()));
 
@@ -111,6 +113,7 @@
         editing: this.editing,
         pendingDelete: this.pendingDelete,
         colorOpen: this.colorOpen,
+        busy: this.busy,
         colors: Workhub.models.ClientModel.COLORS,
         hasAny: this.clients.items.length > 0 || this.contacts.items.length > 0
       });
@@ -151,7 +154,7 @@
     rename(rawName){
       const newName = (rawName || '').trim();
       const client = this.clients.find(this.selectedId);
-      if(!client || !this.clients.isReady()) return;
+      if(!client || !this.clients.isReady() || this.busy) return;
       if(!newName || newName === client.nombre){
         this.editing = false;
         this.render();
@@ -161,29 +164,60 @@
         toast.error('Ya hay un cliente llamado «' + newName + '»');
         return;
       }
-      this.clients.rename(client.id, newName, [this.tasks, this.meetings, this.contacts, this.vault]).then(() => {
+      this.setBusy('Guardando…');
+      const progress = this.progress('Renombrando… {n} de {total}');
+      this.clients.rename(client.id, newName, [this.tasks, this.meetings, this.contacts, this.vault], progress).then(() => {
         toast.success('Cliente renombrado');
-      }).catch(() => {
-        toast.error('No se pudo renombrar el cliente. Inténtalo de nuevo.');
+      }).catch((err) => {
+        toast.error(this.isPartial(err)
+          ? Workhub.t('No se pudo cambiar el nombre en todas las tareas: {n} pendientes. Vuelve a renombrarlo para terminar.', {n:err.pending})
+          : 'No se pudo renombrar el cliente. Inténtalo de nuevo.');
       }).finally(() => {
         this.editing = false;
+        this.busy = '';
         this.render();
       });
     }
 
+    setBusy(text){
+      this.busy = text;
+      this.render();
+    }
+
+    /* En un proyecto con cifrado total cada documento se vuelve a cifrar de uno en uno: con más de
+       50 se enseña el avance en el botón. */
+    progress(template){
+      return (done, total) => {
+        if(total <= 50) return;
+        this.busy = Workhub.t(template, {n:done, total:total});
+        this.view.setBusyText(this.busy);
+      };
+    }
+
+    isPartial(err){
+      return Workhub.models.ProjectCipher.isError(err, 'partial');
+    }
+
     remove(btn){
       const client = this.clients.find(this.selectedId);
-      if(!client || !this.clients.isReady() || !this.tasks.isReady()) return;
-      this.view.setDeleting(btn);
+      if(!client || !this.clients.isReady() || !this.tasks.isReady() || this.busy) return;
+      this.setBusy('Eliminando…');
       const name = client.nombre;
       const taskSnap = this.tasks.snapshot(this.tasks.items.filter((t) => t.cliente === name).map((t) => t.id));
       const clientSnap = this.clients.snapshot(client.id);
-      this.clients.removeWithTasks(client.id, this.tasks).then(() => {
+      this.clients.removeWithTasks(client.id, this.tasks, this.progress('Eliminando… {n} de {total}')).then(() => {
         toast.undoable('Cliente «' + name + '» eliminado', () => this.clients.restore(clientSnap).then(() => this.tasks.restore(taskSnap)), 'Cliente «' + name + '» restaurado');
-      }).catch(() => {
+      }).catch((err) => {
+        if(this.isPartial(err)){
+          /* Parte de las tareas ya se borró: se pueden recuperar. El cliente sigue ahí. */
+          toast.undoable(Workhub.t('No se pudieron eliminar todas las tareas del cliente: {n} pendientes.', {n:err.pending}),
+            () => this.tasks.restore(taskSnap), 'Tareas restauradas');
+          return;
+        }
         toast.error('No se pudo eliminar el cliente. Inténtalo de nuevo.');
       }).finally(() => {
         this.pendingDelete = false;
+        this.busy = '';
         this.render();
       });
     }

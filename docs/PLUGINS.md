@@ -233,6 +233,8 @@ await wh.storage.user.get('tema')
 
 Las claves admiten letras, números, `_`, `-` y `.` (hasta 64). Al quitar el plugin se borran sus datos del proyecto abierto. Los datos de `wh.storage.user`, si el plugin usa ese espacio compartido, se conservan para las instalaciones que pueda tener en otros proyectos.
 
+**Proyectos con cifrado total.** El plugin no nota la diferencia: sigue recibiendo en claro los datos para los que tiene permiso (el descifrado ocurre en el navegador, antes de entregárselos) y por eso la ficha de instalación y la de permisos avisan a la persona de que el plugin los verá sin cifrar. Lo que guardes con `wh.storage` se cifra con la clave del proyecto antes de salir del navegador, y el espacio total del plugin en ese proyecto baja de 800 KB a **600 KB** (el cifrado ocupa más); al superarlo, `set` falla con el error `quota`. `wh.storage.user` es de la cuenta, no del proyecto, y **no se cifra**: no guardes ahí contenido de un proyecto.
+
 ### Interfaz
 
 ```js

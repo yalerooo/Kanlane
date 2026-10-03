@@ -20,10 +20,71 @@
       this.cloudUseKey = $('btnUseCloudBackupKey');
       this.cloudKey = $('cloudBackupKey');
       this.cloudForget = $('btnForgetCloudBackupKey');
-      this.exportLabel = this.btnExport.textContent;
+      this.btnExportPlain = $('btnExportPlain');
+      this.exportEncHelp = $('exportEncHelp');
+      this.keyDlg = $('dlgBackupKey');
+      this.keySecret = $('bkSecret');
+      this.keyNote = $('bkPlainNote');
+      this.keyError = $('bkError');
+      this.keySubmit = $('bkSubmit');
+      this.encrypted = false;
     }
 
-    bindExport(handler){ this.btnExport.addEventListener('click', handler); }
+    bindExport(handler){ this.btnExport.addEventListener('click', () => handler()); }
+    bindExportPlain(handler){ this.btnExportPlain.addEventListener('click', () => handler()); }
+
+    /* Proyecto con cifrado total: la copia sale cifrada y «Exportar sin cifrar» queda aparte. */
+    setEncrypted(on){
+      this.encrypted = !!on;
+      this.btnExportPlain.hidden = !on;
+      this.exportEncHelp.hidden = !on;
+      if(!this.btnExport.disabled) this.btnExport.textContent = this.exportText();
+    }
+
+    exportText(){
+      return this.encrypted ? 'Exportar copia cifrada' : 'Exportar copia de seguridad';
+    }
+
+    /* Archivo de copia cifrado: pide la contraseña de cifrado o la clave de recuperación.
+       handler(texto) al enviar. */
+    bindSecret(handler){
+      $('bkForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        this.keyError.hidden = true;
+        handler(this.keySecret.value);
+      });
+      $('bkCancel').addEventListener('click', () => this.closeSecret());
+      this.keyDlg.addEventListener('close', () => {
+        this.keySecret.value = '';
+        this.keyError.hidden = true;
+        this.setSecretBusy(false);
+        this.resetImport();
+      });
+    }
+
+    /* plainTarget: el proyecto abierto no tiene cifrado total. */
+    askSecret(plainTarget){
+      this.keyNote.hidden = !plainTarget;
+      this.keySecret.value = '';
+      this.keyError.hidden = true;
+      this.setSecretBusy(false);
+      this.keyDlg.showModal();
+      this.keySecret.focus();
+    }
+
+    setSecretBusy(busy){
+      this.keySubmit.disabled = busy;
+      this.keySubmit.textContent = busy ? 'Comprobando…' : 'Importar';
+    }
+
+    showSecretError(msg){
+      this.keyError.textContent = msg;
+      this.keyError.hidden = false;
+    }
+
+    closeSecret(){
+      if(this.keyDlg.open) this.keyDlg.close();
+    }
     bindSaveVersion(handler){ this.btnSaveVersion.addEventListener('click', handler); }
     bindHistory(handler){
       this.history.addEventListener('click', (ev) => {
@@ -153,7 +214,8 @@
 
     setExporting(busy){
       this.btnExport.disabled = busy;
-      this.btnExport.textContent = busy ? 'Preparando…' : this.exportLabel;
+      this.btnExportPlain.disabled = busy;
+      this.btnExport.textContent = busy ? 'Preparando…' : this.exportText();
     }
 
     /* Permite volver a elegir el mismo archivo. */

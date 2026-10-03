@@ -78,7 +78,13 @@
       return tab ? tab.getAttribute('data-view') : 'tasks';
     }
 
+    /* Proyecto con cifrado total sin su clave en este navegador: no hay datos que tocar. */
+    locked(){
+      return document.body.classList.contains('project-locked');
+    }
+
     newTask(){
+      if(this.locked()) return;
       this.app.navigate('tasks');
       this.app.controllers.tasks.openNew();
     }
@@ -88,6 +94,7 @@
     actions(){
       const app = this.app;
       const c = app.controllers;
+      if(this.locked()) return this.lockedActions();
       const list = [
         {title:t('Nueva tarea'), meta:'N', icon:ICONS.plus, run:() => this.newTask()},
         {title:t('Nueva reunión'), icon:ICONS.plus, run:() => { app.navigate('calendar'); c.calendar.openNewMeeting(); }},
@@ -112,9 +119,8 @@
       if(c.team && c.team.enabled()){
         list.push({title:t('Compartir proyecto'), icon:ICONS.go, run:() => c.team.open()});
       }
-      /* Proyecto con cifrado total: bloquearlo (olvida la clave en este navegador) o ir a desbloquearlo. */
+      /* Proyecto con cifrado total: bloquearlo olvida la clave en este navegador. */
       if(c.crypto && app.cipher) list.push({title:t('Bloquear este proyecto'), icon:ICONS.project, run:() => c.crypto.lock()});
-      if(c.crypto && document.body.classList.contains('project-locked')) list.push({title:t('Desbloquear proyecto'), icon:ICONS.project, run:() => c.crypto.focusLock()});
       list.push({title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()});
       list.push({title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {
@@ -124,6 +130,26 @@
         list.push({title:t(pair[1]), icon:ICONS.theme, run:() => c.settings.setTheme(pair[0])});
       });
       list.push({title:t('Exportar copia de seguridad'), icon:ICONS.download, run:() => { app.navigate('data'); c.backup.exportData(); }});
+      if(c.auth && c.auth.user){
+        list.push({title:t('Cerrar sesión'), meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
+      }
+      return list;
+    }
+
+    /* Con el proyecto bloqueado solo queda lo que no toca sus datos: desbloquearlo, los proyectos,
+       ir a una sección, el tema y cerrar sesión. */
+    lockedActions(){
+      const app = this.app;
+      const c = app.controllers;
+      const list = [{title:t('Desbloquear proyecto'), icon:ICONS.project, run:() => c.crypto.focusLock()},
+        {title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()},
+        {title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()}];
+      Object.keys(VIEW_NAMES).forEach((v) => {
+        list.push({title:t('Ir a {view}', {view:t(VIEW_NAMES[v])}), go:true, icon:ICONS.go, run:() => app.navigate(v)});
+      });
+      [['light', 'Usar tema claro'], ['dark', 'Usar tema oscuro'], ['system', 'Usar tema del sistema']].forEach((pair) => {
+        list.push({title:t(pair[1]), icon:ICONS.theme, run:() => c.settings.setTheme(pair[0])});
+      });
       if(c.auth && c.auth.user){
         list.push({title:t('Cerrar sesión'), meta:c.auth.user.email || '', icon:ICONS.go, run:() => c.auth.signOut()});
       }
@@ -163,7 +189,11 @@
     loadNotes(){
       const now = Date.now();
       const tasks = this.app.models.tasks;
-      if(!tasks.isReady()) return Promise.resolve([]);
+      if(!tasks.isReady()){
+        /* Al bloquear o cambiar de proyecto no se conserva el texto de las notas ya leído. */
+        this.notesCache = null;
+        return Promise.resolve([]);
+      }
       if(this.notesCache && this.notesCache.project === this.app.projectId && now - this.notesCache.at < 60000) return this.notesCache.promise;
       const promise = tasks.withNotes().then((list) => {
         const out = [];

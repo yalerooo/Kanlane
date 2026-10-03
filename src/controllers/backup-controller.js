@@ -6,6 +6,7 @@
   const NOT_READY = 'El tablero todavía se está cargando, prueba de nuevo en unos segundos.';
   const DAY = 24 * 60 * 60 * 1000;
   const cloud = Workhub.services.cloudBackup;
+  const BackupModel = Workhub.models.BackupModel;
 
   class BackupController {
     constructor(app, view){
@@ -14,6 +15,8 @@
       this.view = view;
 
       this.view.bindExport(() => this.exportData());
+      this.view.bindExportPlain(() => this.exportPlain());
+      this.view.bindSecret((secret) => this.openWithSecret(secret));
       this.view.bindImport((data) => this.importData(data));
       this.view.bindSaveVersion(() => this.saveVersion());
       this.view.bindHistory((action, id) => this.historyAction(action, id));
@@ -34,7 +37,37 @@
       return Workhub.services.platform.mode() + ':' + account + ':' + this.app.projectId;
     }
 
-    onShow(){ this.refreshHistory(); this.refreshCloud(); }
+    onShow(){ this.syncEncrypted(); this.refreshHistory(); this.refreshCloud(); }
+
+    /* ---------- proyectos con cifrado total (docs/CIFRADO-PROYECTOS.md, 11.3) ---------- */
+
+    /* Lo llama AppController al abrir, bloquear o cerrar un proyecto. */
+    syncEncrypted(){
+      this.view.setEncrypted(!!this.app.cipher);
+    }
+
+    /* Archivo cifrado de una copia del proyecto abierto. Lee los envoltorios de la clave de la cuenta
+       (crypto/{uid}), así que necesita conexión o tenerlos en la caché. */
+    sealCopy(copy){
+      const app = this.app;
+      const project = app.models.projects.get(app.projectId);
+      return app.controllers.crypto.readWrap(project.id, project.enc).then((wrap) => BackupModel.seal(copy, {
+        cipher:app.cipher, enc:project.enc, wrap:wrap, uid:app.rootDb.me.uid, projectName:project.nombre
+      }));
+    }
+
+    /* Descarga una copia: cifrada si el proyecto abierto tiene cifrado total. */
+    downloadCopy(copy){
+      if(!this.app.cipher) return platform.download(copy.filename, copy.json);
+      return this.sealCopy(copy).then((file) => platform.download(file.filename, file.json));
+    }
+
+    /* Versiones locales del proyecto abierto. Las que una versión anterior de la app guardó en claro
+       para un proyecto cifrado se sellan al pasar. */
+    versions(scope){
+      const cipher = this.app.cipher;
+      return (cipher ? history.sealPlain(scope, cipher).catch(() => {}) : Promise.resolve()).then(() => history.list(scope));
+    }
 
     cloudContext(){
       const project = this.app.controllers.projects.current();
@@ -141,14 +174,18 @@
       cloud.get(context.db, id, entry.projectId, key).then((data) => {
         if(this.cloudContext()?.projectId !== context.projectId) return;
         if(action === 'restore') this.importData(data);
-        if(action === 'download') return platform.download('workhub-backup-' + entry.projectId + '.json', JSON.stringify(data, null, 2));
+        if(action === 'download'){
+          const copy = {filename:'workhub-backup-' + entry.projectId + '.json', json:JSON.stringify(data, null, 2), counts:entry.counts};
+          /* Solo la copia de este mismo proyecto se puede volver a cifrar con su clave. */
+          return entry.projectId === context.projectId ? this.downloadCopy(copy) : platform.download(copy.filename, copy.json);
+        }
       }).catch(() => this.view.showError('No se pudo abrir la copia. Comprueba la clave de recuperación.'));
     }
 
     refreshHistory(){
       const scope = this.scope();
       if(!scope) return;
-      history.list(scope).then((entries) => {
+      this.versions(scope).then((entries) => {
         if(this.scope() === scope) this.view.renderHistory(entries);
       }).catch(() => this.view.showError('No se pueden leer las versiones guardadas en este navegador.'));
     }
@@ -166,13 +203,14 @@
       const scope = this.scope();
       if(!scope || this.savingVersion) return;
       this.savingVersion = true;
-      history.list(scope).then((entries) => {
+      const cipher = this.app.cipher;
+      this.versions(scope).then((entries) => {
         if(entries.length && Date.now() - entries[0].createdAt < DAY) return;
         const project = this.app.controllers.projects.current();
         if(!project) return;
         return this.backup.build(project.nombre).then((copy) => {
-          if(this.scope() !== scope) return;
-          return history.save(scope, copy).then(() => {
+          if(this.scope() !== scope || this.app.cipher !== cipher) return;
+          return history.save(scope, copy, cipher).then(() => {
             if(this.app.shell.isVisible('data')) this.refreshHistory();
           });
         });
@@ -186,9 +224,10 @@
       if(!scope || !project || this.savingVersion) return;
       this.savingVersion = true;
       this.view.setSavingVersion(true);
+      const cipher = this.app.cipher;
       this.backup.build(project.nombre).then((copy) => {
-        if(this.scope() !== scope) throw new Error('project-changed');
-        return history.save(scope, copy);
+        if(this.scope() !== scope || this.app.cipher !== cipher) throw new Error('project-changed');
+        return history.save(scope, copy, cipher);
       }).then(() => {
         this.view.showStatus('Versión guardada en este navegador.');
         this.refreshHistory();
@@ -198,33 +237,76 @@
 
     historyAction(action, id){
       const scope = this.scope();
-      history.get(id).then((entry) => {
+      if(action === 'delete'){
+        /* Borrar no necesita abrir la versión (puede estar sellada con una clave que ya no está). */
+        history.list(scope).then((entries) => {
+          if(entries.some((entry) => entry.id === id)) return history.remove(id);
+        }).then(() => this.refreshHistory()).catch(() => this.view.showError('No se pudo borrar esta versión.'));
+        return;
+      }
+      history.get(id, this.app.cipher).then((entry) => {
         if(!entry || entry.scope !== scope || this.scope() !== scope) throw new Error('missing-version');
-        if(action === 'download') return platform.download(entry.filename, entry.json);
-        if(action === 'restore'){
-          this.importData(JSON.parse(entry.json));
-          return;
-        }
-        if(action === 'delete') return history.remove(id).then(() => this.refreshHistory());
+        if(action === 'download') return this.downloadCopy({filename:entry.filename, json:entry.json, counts:entry.counts});
+        if(action === 'restore') this.importData(JSON.parse(entry.json));
       }).catch(() => this.view.showError('No se pudo abrir esta versión.'));
     }
 
-    exportData(){
+    /* plain: en un proyecto con cifrado total, exportar el archivo sin cifrar (ya confirmado). */
+    exportData(plain){
       if(!this.backup.isReady()){
         this.view.showError(NOT_READY);
         return;
       }
+      const cipher = this.app.cipher;
+      const encrypted = !!cipher && plain !== true;
       this.view.setExporting(true);
-      this.backup.build(this.app.controllers.projects.current().nombre).then((result) => {
+      this.backup.build(this.app.controllers.projects.current().nombre).then((copy) => {
+        if(this.app.cipher !== cipher) throw new Error('project-changed');
+        return encrypted ? this.sealCopy(copy) : copy;
+      }).then((result) => {
         return platform.download(result.filename, result.json).then(() => {
           const c = result.counts;
-          toast.success('Copia de seguridad descargada');
-          this.view.showStatus('Copia descargada: ' + c.tasks + ' tareas, ' + c.meetings + ' reuniones, ' + c.contacts + ' contactos, ' + c.vault + ' contraseñas, ' + c.clients + ' clientes.');
+          toast.success(encrypted ? 'Copia cifrada descargada' : 'Copia de seguridad descargada');
+          this.view.showStatus((encrypted ? 'Copia cifrada descargada: ' : 'Copia descargada: ') + c.tasks + ' tareas, ' + c.meetings + ' reuniones, ' + c.contacts + ' contactos, ' + c.vault + ' contraseñas, ' + c.clients + ' clientes.');
         });
       }).catch(() => {
-        this.view.showError('No se pudo generar o descargar la copia de seguridad.');
+        this.view.showError(encrypted ? 'No se pudo preparar la copia cifrada. Comprueba la conexión e inténtalo de nuevo.'
+          : 'No se pudo generar o descargar la copia de seguridad.');
       }).finally(() => {
         this.view.setExporting(false);
+      });
+    }
+
+    exportPlain(){
+      if(this.app.cipher && !confirm('El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.')) return;
+      this.exportData(true);
+    }
+
+    /* Archivo de copia cifrado: con la clave del mismo proyecto se abre solo; si no, se pide la
+       contraseña de cifrado o la clave de recuperación del proyecto del que salió. */
+    importEncrypted(file){
+      const cipher = this.app.cipher;
+      if(BackupModel.sameKey(file, cipher)){
+        BackupModel.open(file, {cipher:cipher}).then((data) => this.importData(data))
+          .catch(() => this.view.showError('El archivo de copia cifrada está dañado o no es válido.'));
+        return;
+      }
+      this.pendingFile = file;
+      this.view.askSecret(!cipher);
+    }
+
+    openWithSecret(secret){
+      const file = this.pendingFile;
+      if(!file) return;
+      this.view.setSecretBusy(true);
+      BackupModel.open(file, {secret:secret}).then((data) => {
+        this.pendingFile = null;
+        this.view.closeSecret();
+        this.importData(data);
+      }, (err) => {
+        this.view.setSecretBusy(false);
+        this.view.showSecretError(err && err.code === 'bad-secret' ? 'La contraseña o la clave de recuperación no son correctas.'
+          : 'El archivo de copia cifrada está dañado o no es válido.');
       });
     }
 
@@ -235,6 +317,10 @@
       }
       if(!this.backup.isReady()){
         this.view.showError(NOT_READY);
+        return;
+      }
+      if(BackupModel.isEncryptedFile(data)){
+        this.importEncrypted(data);
         return;
       }
       this.backup.import(data).then((result) => {

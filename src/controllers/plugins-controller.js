@@ -279,7 +279,7 @@
           return;
         }
         this.pending = {mode:'install', id:res.manifest.id, url:url, manifest:res.manifest, official:false};
-        this.view.openDialog('install', this.pending);
+        this.showDialog('install');
       }).catch((err) => {
         if(this.app.projectId !== projectId) return;
         this.view.setAdding(false, err.message, true);
@@ -290,7 +290,13 @@
       const o = Workhub.services.officialPlugins[index];
       if(!o || !this.plugins.isReady() || !this.canManage()) return;
       this.pending = {mode:'install', id:o.manifest.id, url:o.url, manifest:o.manifest, official:true};
-      this.view.openDialog('install', this.pending);
+      this.showDialog('install');
+    }
+
+    /* Ficha del plugin pendiente; en un proyecto con cifrado total lleva el aviso de privacidad. */
+    showDialog(mode){
+      this.pending.encrypted = !!this.app.cipher;
+      this.view.openDialog(mode, this.pending);
     }
 
     confirmDialog(){
@@ -332,7 +338,7 @@
       const p = this.plugins.find(id);
       if(!p) return;
       this.pending = {mode:'details', id:id, url:p.url, manifest:this.manifestOf(p), official:!!p.official, granted:p.granted || [], installedAt:p.installedAt};
-      this.view.openDialog('details', this.pending);
+      this.showDialog('details');
     }
 
     /* Quita el plugin y sus datos solo del proyecto abierto. */
@@ -414,7 +420,7 @@
     reviewExtra(){
       if(!this.pendingExtra) return;
       this.pending = this.pendingExtra;
-      this.view.openDialog('review', this.pending);
+      this.showDialog('review');
     }
 
     closeFrame(){

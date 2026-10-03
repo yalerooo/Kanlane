@@ -8,7 +8,8 @@
      'github-field'   una tarea lleva campos gh*: los proyectos cifrados no admiten GitHub
      'encrypted'      operación que no existe en un proyecto cifrado (sincronizar con GitHub)
      'stale'          se quiere cambiar un documento cuyo contenido aún no se ha leído
-     'not-ready'      la colección todavía no ha cargado */
+     'not-ready'      la colección todavía no ha cargado
+     'partial'        un cambio en varios documentos no llegó a todos (.pending dice cuántos faltan) */
 (function(){
   'use strict';
   const PC = Workhub.services.projectCrypto;
@@ -114,6 +115,18 @@
         return {plain:plain, iv:PC.ivOf(raw.e)};
       }, (err) => {
         throw isError(err) ? err : fail('undecryptable', {cause:err});
+      });
+    }
+
+    /* Bloques sueltos que no son documentos del proyecto (archivo de copia cifrada, versiones locales
+       de las copias): el mismo cifrado y la misma AAD, sin esquema ni tope de tamaño. */
+    sealBlob(path, id, value){
+      return Promise.resolve().then(() => PC.seal(this.key, this._aad(path, id), value));
+    }
+
+    openBlob(path, id, e){
+      return Promise.resolve().then(() => PC.open(this.key, this._aad(path, id), e)).catch((err) => {
+        throw fail('undecryptable', {cause:err});
       });
     }
 

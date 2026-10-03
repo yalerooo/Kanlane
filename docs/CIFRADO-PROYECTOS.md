@@ -1247,6 +1247,8 @@ Un PR de esta serie está **hecho** cuando:
 | PR10 | `docs/EQUIPOS.md`, política si cambia algo; ajustar la advertencia de expulsión | «Al expulsar, lo nuevo deja de poder leerse; lo ya visto no se puede retirar» |
 | PR11 | Ajustes del proyecto, FAQ | Convertir protege lo que viene, no el pasado |
 
+**Hecho en PR8** (rama `claude/cifrado-pr8`, después del PR9, así que cubre también el modo C). Cambios: `index.html` y `en/index.html` (tarjeta «Cifrado en tu navegador», una pregunta nueva en la FAQ con el mismo texto en `FAQPage`, y un elemento en `featureList`); `gestor-de-contrasenas-para-clientes/` y `en/client-password-manager/` («lo que no protege», la fila de la tabla, «para quién no es» y una pregunta nueva con su JSON-LD); `llms.txt` (una línea en «Qué es», otra en «Qué no es» y la fecha); README en los dos idiomas; `legal/terminos/` (apartado 6) y `version: 6` en `legal-config.js`. **No** se han tocado las otras seis páginas de captación ni sus pares en inglés: solo hablan de las contraseñas cifradas y nada de lo que dicen ha dejado de ser cierto. Tampoco la política de privacidad (ya la actualizaron el PR4 y el PR9). Todos los textos siguen el apartado 4: dicen qué queda sin cifrar, que en C Kanlane podría descifrar y que no hay auditoría externa. **Se hizo a petición del dueño sin que consten las pruebas en producción de PR4–PR7 y PR9.**
+
 El texto de la pantalla del cofre en la app (`#lockDesc`) no cambia: según D11, en v1 el cofre de un proyecto B sigue pidiendo su propia contraseña maestra.
 
 ---

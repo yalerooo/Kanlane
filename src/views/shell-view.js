@@ -155,16 +155,25 @@
       const dir = order.indexOf(view) > order.indexOf(prev) ? 1 : -1;
       const play = (el, cls) => {
         if(!el) return;
-        el.classList.remove('view-in', 'view-fade', 'tab-pop');
+        if(el._viewAnimEnd) el._viewAnimEnd();
         /* Leer una medida reinicia la animación si se cambia de pestaña a mitad de otra. */
         void el.offsetWidth;
         el.style.setProperty('--view-dir', dir);
         el.classList.add(cls);
-        el.addEventListener('animationend', (ev) => {
-          if(ev.target !== el) return;
+        /* La clase se quita al acabar la animación del propio elemento (las de sus hijos también
+           llegan aquí) o, si no llega a terminar porque la sección se oculta antes, al cabo de un
+           momento: si se quedara puesta, la animación se repetiría al cambiar el ancho de la ventana. */
+        const end = (ev) => {
+          if(ev && ev.target !== el) return;
+          el.removeEventListener('animationend', end);
+          clearTimeout(timer);
+          el._viewAnimEnd = null;
           el.classList.remove(cls);
           el.style.removeProperty('--view-dir');
-        }, {once:true});
+        };
+        const timer = setTimeout(end, 800);
+        el._viewAnimEnd = end;
+        el.addEventListener('animationend', end);
       };
       play(this.sections[view], 'view-in');
       play(this.pageTitle, 'view-fade');

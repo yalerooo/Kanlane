@@ -284,6 +284,8 @@ header.page-head{
 }
 @keyframes view-fade{from{opacity:0;transform:translate3d(-5px, 0, 0);}}
 @keyframes tab-pop{from{transform:scale(.96);}}
+/* Mientras entra de lado no debe aparecer desplazamiento horizontal en la página. */
+.main-inner:has(> .view-in){overflow-x:clip;}
 /* Con la navegación en horizontal (arriba o, en móvil, abajo) la sección entra de lado. */
 :root[data-nav="top"] .view-in{animation-name:view-in-x;}
 @media (max-width: 900px){

@@ -186,6 +186,8 @@
     /* Escritura que viene de la sincronización con GitHub: la tarea queda
        como sincronizada (updatedAt y ghSyncedAt iguales, así no cuenta como cambio local). */
     saveSynced(id, body){
+      /* Un proyecto con cifrado total no se sincroniza con GitHub (no hay campos gh*). */
+      if(this.cipher) return Promise.reject(Workhub.models.ProjectCipher.error('encrypted'));
       body.updatedAt = body.ghSyncedAt = Date.now();
       if(id) return this.update(id, body);
       return this._create(body);
@@ -193,6 +195,7 @@
 
     /* Marca la tarea como sincronizada sin tocar updatedAt. at: cuándo empezó a enviarse. */
     markSynced(id, at, patch){
+      if(this.cipher) return Promise.reject(Workhub.models.ProjectCipher.error('encrypted'));
       return this.update(id, Object.assign({ghSyncedAt:at}, patch || {}));
     }
 
@@ -259,22 +262,70 @@
       return this.doc(taskId).collection('notes');
     }
 
+    /* Ruta lógica de las notas de una tarea: va en la AAD del cifrado (proyectos con cifrado total). */
+    notesPath(taskId){
+      return 'tasks/' + taskId + '/notes';
+    }
+
+    /* Nota tal como la ven las vistas: {id, data()}, igual que un documento de la base de datos.
+       cache (opcional) evita descifrar otra vez una nota que no ha cambiado. */
+    _openNote(taskId, d, cache){
+      const cipher = this.cipher;
+      const raw = d.data() || {};
+      const asDoc = (data) => ({id:d.id, data:() => data});
+      if(!cipher.isSealed(raw)) return Promise.resolve(asDoc(Object.assign({}, raw, {_plainInEncrypted:true})));
+      const iv = cipher.ivOf(raw.e);
+      const clear = cipher.clearOf('notes', raw);
+      const hit = cache && cache[d.id];
+      if(hit && hit.iv === iv) return Promise.resolve(asDoc(Object.assign({}, clear, hit.plain)));
+      return cipher.open(this.notesPath(taskId), d.id, raw).then((r) => {
+        if(cache) cache[d.id] = {iv:iv, plain:r.plain};
+        return asDoc(Object.assign({}, clear, r.plain));
+      }, () => asDoc(Object.assign({}, clear, {text:'', _undecryptable:true})));
+    }
+
     /* Escucha las notas de una tarea; devuelve la función para dejar de escuchar. */
     watchNotes(taskId, onNotes, onError){
-      return this.notes(taskId).orderBy('createdAt', 'asc').onSnapshot((snap) => onNotes(snap.docs), onError);
+      const query = this.notes(taskId).orderBy('createdAt', 'asc');
+      if(!this.cipher) return query.onSnapshot((snap) => onNotes(snap.docs), onError);
+      /* Descifrar es asíncrono: las instantáneas se entregan en orden y, si llega otra, la vieja se salta. */
+      const cache = {};
+      let alive = true, seq = 0, queue = Promise.resolve();
+      const stop = query.onSnapshot((snap) => {
+        const mine = ++seq;
+        queue = queue.then(() => {
+          if(!alive || mine !== seq) return null;
+          return Promise.all(snap.docs.map((d) => this._openNote(taskId, d, cache))).then((docs) => {
+            if(alive) onNotes(docs);
+          });
+        }).catch((err) => { if(alive && onError) onError(err); });
+      }, onError);
+      return () => {
+        alive = false;
+        if(typeof stop === 'function') stop();
+      };
+    }
+
+    /* Guarda una nota ya montada (también la usa la importación de copias). En un proyecto cifrado
+       se sella antes de escribir: el id va en la AAD, así que se genera primero. */
+    addNoteRaw(taskId, data){
+      const notes = this.notes(taskId);
+      if(!this.cipher) return notes.add(data);
+      const ref = notes.doc();
+      return this.cipher.seal(this.notesPath(taskId), ref.id, data).then((doc) => ref.set(doc)).then(() => ref);
     }
 
     addNote(taskId, text, imageAssetId){
       const team = Workhub.views.team;
       const actorUid = team.enabled() ? team.meUid() : '';
-      return this.notes(taskId).add({text:text, imageAssetId:imageAssetId || '', createdAt:Date.now(),
+      return this.addNoteRaw(taskId, {text:text, imageAssetId:imageAssetId || '', createdAt:Date.now(),
         kind:actorUid ? 'comment' : 'note', actorUid:actorUid, actorName:actorUid ? team.name(actorUid) : ''});
     }
 
     addActivity(taskId, text){
       const team = Workhub.views.team;
       if(!team.enabled() || !team.meUid()) return Promise.resolve();
-      return this.notes(taskId).add({kind:'activity', text:text, actorUid:team.meUid(),
+      return this.addNoteRaw(taskId, {kind:'activity', text:text, actorUid:team.meUid(),
         actorName:team.name(team.meUid()), createdAt:Date.now()});
     }
 
@@ -287,6 +338,12 @@
       return Promise.all(this.items.map((t) => {
         return this.notes(t.id).get().then((snap) => {
           const copy = Object.assign({}, t);
+          if(this.cipher){
+            return Promise.all(snap.docs.map((d) => this._openNote(t.id, d))).then((docs) => {
+              copy.notes = docs.map((d) => Object.assign({}, d.data(), {id:d.id}));
+              return copy;
+            });
+          }
           copy.notes = snap.docs.map((d) => Object.assign({}, d.data() || {}, {id:d.id}));
           return copy;
         });

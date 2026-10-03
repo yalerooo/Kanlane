@@ -27,6 +27,10 @@
       '<button type="button" class="btn btn-ghost btn-sm" ' + attr + '="decline" data-id="' + esc(i.id) + '">' + esc(Workhub.t('Rechazar')) + '</button></div></div>';
   }
 
+  const LOCK_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  /* enc:true es la marca del proyecto recordado en el navegador mientras llega la lista. */
+  const isEncrypted = (p) => !!p && (p.enc === true || Workhub.models.ProjectModel.isEncrypted(p));
+
   /* Cuadrado con las iniciales en el color del proyecto. */
   function markHtml(project, hue, cls){
     return '<span class="project-mark' + (cls ? ' ' + cls : '') + '" style="--h:' + hue + '" aria-hidden="true">' + esc(initials(project.nombre)) + '</span>';
@@ -37,6 +41,7 @@
       this.trigger = $('btnProject');
       this.mark = $('projectMark');
       this.name = $('projectName');
+      this.lockIcon = $('projectLock');
       this.menu = $('projectMenu');
       if(supportsPopover){
         this.menu.setAttribute('popover', 'auto');
@@ -109,7 +114,7 @@
       });
       this.typesEl.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-type]');
-        if(b) this._pickType(b.getAttribute('data-type'));
+        if(b && b.getAttribute('aria-disabled') !== 'true') this._pickType(b.getAttribute('data-type'));
       });
       this.stagesEl.addEventListener('click', (ev) => this._stageClick(ev));
       this.stagesEl.addEventListener('input', (ev) => {
@@ -131,13 +136,15 @@
         inputs[inputs.length - 1].focus();
       });
       this.clientsChk.addEventListener('change', () => { this.clients = this.clientsChk.checked; });
-      this.btnCancel.addEventListener('click', () => this.closeDialog());
+      /* En los pasos de privacidad este botón es «Atrás». */
+      this.btnCancel.addEventListener('click', () => { if(!this._back()) this.closeDialog(); });
       this.dlg.addEventListener('close', () => {
         this._resetDelete();
         /* Primer proyecto: el diálogo no se puede cerrar hasta crearlo. */
         if(this.onboarding && !this.dlg.open) this.dlg.showModal();
       });
       this.dlg.addEventListener('cancel', (ev) => { if(this.onboarding) ev.preventDefault(); });
+      this.initPrivacy();
     }
 
     /* ---------- Botón de la barra lateral ---------- */
@@ -147,6 +154,8 @@
       this.mark.textContent = initials(project.nombre);
       this.name.textContent = project.nombre;
       this.trigger.setAttribute('title', 'Proyecto: ' + project.nombre);
+      /* Candado junto al nombre en los proyectos con cifrado total. */
+      this.lockIcon.hidden = !isEncrypted(project);
     }
 
     /* ---------- Menú ---------- */
@@ -241,7 +250,8 @@
           const current = p.id === currentId;
           return '<div class="project-row' + (current ? ' is-current' : '') + '">' +
             '<button type="button" class="dd-option project-pick' + (current ? ' is-selected' : '') + '" role="menuitemradio" aria-checked="' + current + '" data-menu="pick" data-id="' + esc(p.id) + '">' +
-              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (p.team ? '<span class="project-team" title="' + esc(Workhub.t('Proyecto de equipo')) + '">' + TEAM_ICON + '</span>' : '') + (current ? CHECK : '') +
+              markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (p.team ? '<span class="project-team" title="' + esc(Workhub.t('Proyecto de equipo')) + '">' + TEAM_ICON + '</span>' : '') +
+              (isEncrypted(p) ? '<span class="project-enc" title="' + esc(Workhub.t('Cifrado total: el contenido se cifra en tu navegador')) + '">' + LOCK_ICON + '<span>' + esc(Workhub.t('Cifrado')) + '</span></span>' : '') + (current ? CHECK : '') +
             '</button>' +
             '<button type="button" class="icon-only project-edit" role="menuitem" data-menu="edit" data-id="' + esc(p.id) + '" aria-label="Editar ' + esc(p.nombre) + '" title="Editar proyecto">' + EDIT + '</button>' +
             '</div>';

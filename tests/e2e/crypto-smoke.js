@@ -1,5 +1,5 @@
 /* Proyecto con cifrado total contra Auth/Firestore emulados y las reglas reales (PR3b del plan,
-   docs/CIFRADO-PROYECTOS.md 14.4). Todavía no hay interfaz para crear proyectos cifrados (PR4), así que
+   docs/CIFRADO-PROYECTOS.md 14.4). Aquí no se usa el asistente (lo prueba crypto-wizard.js):
    el proyecto se siembra desde la página con el servicio de cifrado: documento con `enc`, clave envuelta
    en crypto/{uid} y la clave en el almacén del navegador. Comprueba que la app lo abre, que lo que llega
    a Firestore va sellado, que sin la clave no se conecta nada y que un proyecto sin cifrar sigue igual.
@@ -94,6 +94,9 @@ function assertSealed(res, what){
     await page.locator('#dlgProject').waitFor({state:'visible', timeout:30000});
     await page.locator('#pNombre').fill('Proyecto sin cifrar');
     await page.locator('#pTypes [data-type="desarrollo"]').click();
+    await page.locator('#btnSaveProject').click();
+    /* Paso de privacidad del asistente: «Solo contraseñas» viene elegido. */
+    await page.locator('#pStep2').waitFor({state:'visible'});
     await page.locator('#btnSaveProject').click();
     await page.locator('#dlgProject').waitFor({state:'hidden'});
 
@@ -206,7 +209,7 @@ function assertSealed(res, what){
     await page.evaluate((s) => Workhub.services.keystore.forget(s.uid, s.pid), seed);
     await page.reload({waitUntil:'domcontentloaded'});
     await page.locator('#projectLockScreen').waitFor({state:'visible', timeout:30000});
-    await page.locator('#projectLockScreen').getByText('Este proyecto está cifrado. Actualiza Kanlane para abrirlo.').waitFor();
+    await page.locator('#plDesc').getByText('Escribe la contraseña de cifrado de «Proyecto cifrado de prueba». Solo se usa en tu navegador.').waitFor();
     const locked = await page.evaluate(() => {
       const m = Workhub.app.models;
       return {ready:m.tasks.isReady(), items:m.tasks.items.length, cipher:!!Workhub.app.cipher,
@@ -216,6 +219,10 @@ function assertSealed(res, what){
     await page.setViewportSize({width:375, height:812});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'aviso sin desbordamiento en móvil');
     await page.setViewportSize({width:1280, height:850});
+    /* La contraseña con la que se sembró abre el proyecto (la clave envuelta es la que crea la app). */
+    await page.locator('#plPass').fill('una contraseña de cifrado larga');
+    await page.locator('#plUnlock').click();
+    await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).waitFor({timeout:30000});
 
     /* ---------- un proyecto sin cifrar sigue igual ---------- */
     await page.evaluate(() => Workhub.app.switchProject('main'));

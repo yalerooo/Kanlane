@@ -19,6 +19,7 @@
 
   /* Qué sale de Kanlane hacia GitHub (plan de cifrado, 8.4). Se muestra antes de conectar
      y en la tarjeta del proyecto enlazado. */
+  const ENCRYPTED = 'Este proyecto tiene cifrado total y no se puede enlazar con GitHub: GitHub necesita recibir las tareas sin cifrar. Para sincronizar, usa un proyecto con «Solo contraseñas».';
   const PRIVACY = 'Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.';
 
   const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -96,6 +97,11 @@
       if(!s.linked && this.body.contains(focused) && (focused.id === 'ghUrl' || focused.id === 'ghToken' || focused.id === 'ghName') && !s.connecting) return;
       if(s.linked && this.body.contains(focused) && focused.id === 'ghToken' && !s.hasToken && !s.busy && !s.tokenError) return;
 
+      /* Proyecto con cifrado total: no hay nada que conectar. */
+      if(s.encrypted){
+        this.body.innerHTML = '<p class="gh-note is-warn" id="ghEncrypted">' + esc(Workhub.t(ENCRYPTED)) + '</p>';
+        return;
+      }
       this.body.innerHTML = s.linked ? this._linked(s) : this._form(s);
     }
 
@@ -114,9 +120,11 @@
         this.form.forProject = s.currentId;
         this.form.target = s.currentId;
       }
-      if(!this.form.target || (this.form.target !== '__new__' && !projects.some((p) => p.id === this.form.target))) this.form.target = s.currentId;
+      if(!this.form.target || (this.form.target !== '__new__' && !projects.some((p) => p.id === this.form.target && !p.encrypted))) this.form.target = s.currentId;
       const isNew = this.form.target === '__new__';
-      const options = projects.map((p) => '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(Workhub.t('ya enlazado')) : '') + '</option>').join('') +
+      const options = projects.map((p) => p.encrypted
+        ? '<option value="' + esc(p.id) + '" disabled>' + esc(Workhub.t('{nombre} (cifrado total, no admite GitHub)', {nombre:p.nombre})) + '</option>'
+        : '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(Workhub.t('ya enlazado')) : '') + '</option>').join('') +
         '<option value="__new__"' + (isNew ? ' selected' : '') + '>' + esc(Workhub.t('+ Crear un proyecto nuevo')) + '</option>';
       const targetName = (projects.find((p) => p.id === this.form.target) || {}).nombre || '';
       const targetField = '<div class="field"><label for="ghTarget">Proyecto de Kanlane donde añadirlo</label>' +

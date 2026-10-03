@@ -23,6 +23,19 @@ Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus 
 | Robo de la base de datos | Las contraseñas y las notas de cada credencial del gestor se cifran en tu navegador (AES-256 + PBKDF2) antes de subir. El resto del contenido (proyectos con sus columnas y etiquetas, tareas, notas, clientes, contactos, reuniones, imágenes, datos de plugins y los demás campos de la credencial, como servicio, usuario o cliente) se guarda en Firestore sin cifrado de extremo a extremo: Google lo cifra en sus discos, pero quien administra el proyecto de Firebase puede leerlo, y quien robara la base de datos también. Las copias cifradas de la cuenta, si se activan, sí van cifradas con una clave que solo está en el navegador. |
 | Datos enviados a GitHub | Si un proyecto se enlaza con GitHub Projects, el título, la descripción, la columna y las etiquetas de sus tareas salen del navegador hacia GitHub **sin cifrar** y se quedan allí aunque se borre la tarea o se desvincule el proyecto. La app lo avisa antes de conectar. Ver [GITHUB.md](GITHUB.md#qué-sale-de-kanlane-hacia-github). |
 
+## Proyectos con cifrado total
+
+Al crear un proyecto (con cuenta) el asistente pregunta la privacidad. En «Cifrado total» el contenido se cifra en el navegador con una clave aleatoria del proyecto (AES-256-GCM); esa clave se guarda en Firestore **envuelta** con la contraseña de cifrado (PBKDF2-SHA256, 600 000 iteraciones) y con una clave de recuperación, en `crypto/{uid}`. El servidor nunca recibe la contraseña, la clave de recuperación ni la clave del proyecto.
+
+- **No hay restablecimiento por correo.** Sin la contraseña y sin la clave de recuperación el proyecto no se puede abrir, y nadie puede ayudar.
+- **Qué queda en claro:** nombre del proyecto, columnas, etiquetas, fechas, estado y orden de las tareas, asignados, vínculos entre tareas y contactos o credenciales, plugins instalados y el tamaño aproximado de cada elemento.
+- **En el navegador:** la clave vive en IndexedDB (`workhub-keys`) como `CryptoKey` no extraíble. Se borra al cerrar sesión salvo que se marque «Este dispositivo es de confianza». «Olvidar la clave en este navegador» (Editar proyecto) y «Bloquear este proyecto» (Ctrl K) la borran a mano.
+- **GitHub:** un proyecto con cifrado total no se puede enlazar ni sincronizar; lo impiden la interfaz, el motor de sincronización y las reglas.
+- **Límites:** el código lo sirve Kanlane, así que la protección depende de que ese código sea el legítimo; no protege frente a un dispositivo comprometido ni frente a extensiones del navegador con acceso a la página.
+- **Apagar la opción:** `Workhub.features.encryptedProjects = false` en `src/config/features.js` retira el cifrado total del asistente. Los proyectos cifrados que ya existan se siguen abriendo. No se debe revertir el código de cifrado si ya hay proyectos cifrados.
+
+Detalle completo: `docs/CIFRADO-PROYECTOS.md`.
+
 ## Lo que tienes que hacer en la consola (una vez)
 
 ### 1. Publicar las reglas nuevas

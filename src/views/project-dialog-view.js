@@ -7,29 +7,44 @@
   Object.assign(Workhub.views.ProjectView.prototype, {
     /* handler(id|null, nombre, color|null, config): config son los campos del tipo de proyecto. */
     bindSubmit(handler){
+      this.submitHandler = handler;
+      /* El botón principal avanza por los pasos del asistente (ver project-privacy-view.js). */
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
-        const nombre = this.nameInput.value.trim();
-        if(this.tipo === GITHUB_TYPE){
-          const url = this.ghUrl.value.trim();
-          if(!url){ this.ghUrl.focus(); this.showError('Pega el enlace de tu proyecto de GitHub.'); return; }
-          if(!Workhub.services.github.token() && !this.ghToken.value.trim()){ this.ghToken.focus(); this.showError('Pega un token de GitHub.'); return; }
-          this.error.hidden = true;
-          if(this.githubHandler) this.githubHandler({nombre:nombre, url:url, token:this.ghToken.value.trim()});
-          return;
-        }
-        if(!nombre){ this.nameInput.focus(); return; }
-        if(!this.tipo){ this.showError('Elige un tipo de proyecto.'); return; }
-        if(this.tipo === PT.CUSTOM_TYPE){
-          const named = this.stages.filter((st) => st.label.trim());
-          if(named.length < PT.MIN_STAGES){
-            this.showError('Añade al menos ' + PT.MIN_STAGES + ' etapas con nombre.');
-            return;
-          }
-          this.stages = named;
-        }
-        handler(this.idInput.value || null, nombre, this.color, PT.fieldsFor(this.tipo, this.stages, this.clients));
+        this._onSubmit();
       });
+    },
+
+    /* Valida el primer paso y devuelve lo que hay que crear o guardar (null si falta algo):
+       {id, nombre, color, config}, o {github:{nombre, url, token}} para «Desde GitHub». */
+    _collect(){
+      const nombre = this.nameInput.value.trim();
+      if(this.tipo === GITHUB_TYPE){
+        const url = this.ghUrl.value.trim();
+        if(!url){ this.ghUrl.focus(); this.showError('Pega el enlace de tu proyecto de GitHub.'); return null; }
+        if(!Workhub.services.github.token() && !this.ghToken.value.trim()){ this.ghToken.focus(); this.showError('Pega un token de GitHub.'); return null; }
+        this.error.hidden = true;
+        return {nombre:nombre, github:{nombre:nombre, url:url, token:this.ghToken.value.trim()}};
+      }
+      if(!nombre){ this.nameInput.focus(); return null; }
+      if(!this.tipo){ this.showError('Elige un tipo de proyecto.'); return null; }
+      if(this.tipo === PT.CUSTOM_TYPE){
+        const named = this.stages.filter((st) => st.label.trim());
+        if(named.length < PT.MIN_STAGES){
+          this.showError('Añade al menos ' + PT.MIN_STAGES + ' etapas con nombre.');
+          return null;
+        }
+        this.stages = named;
+      }
+      return {id:this.idInput.value || null, nombre:nombre, color:this.color, config:PT.fieldsFor(this.tipo, this.stages, this.clients)};
+    },
+
+    _dispatch(p){
+      if(p.github){
+        if(this.githubHandler) this.githubHandler(p.github);
+        return;
+      }
+      this.submitHandler(p.id, p.nombre, p.color, p.config);
     },
 
     /* «Conectar con GitHub» (sin token) en el tipo «Desde GitHub». */
@@ -65,7 +80,7 @@
     openNew(){
       this._open(null, '', null, PT.resolve(null));
       this.title.textContent = 'Nuevo proyecto';
-      this.btnSave.textContent = 'Crear proyecto';
+      this._stepButtons();
     },
 
     /* Cuenta nueva: no hay ningún proyecto y hay que crear el primero. Sin tipo
@@ -77,9 +92,8 @@
       this._open(null, '', null, PT.resolve(null));
       this.title.textContent = 'Crea tu primer proyecto';
       this.lead.textContent = 'Elige para qué lo vas a usar: el tipo define las etapas del tablero y si trabajas con clientes. Podrás cambiarlo más tarde y crear más proyectos.';
-      this.btnSave.textContent = 'Crear proyecto';
-      this.btnCancel.hidden = true;
       this.dlg.classList.add('is-onboarding');
+      this._stepButtons();
     },
 
     endOnboarding(){
@@ -95,7 +109,7 @@
     openEdit(project, canDelete, cfg){
       this._open(project.id, project.nombre, typeof project.color === 'number' ? project.color : null, cfg);
       this.title.textContent = 'Editar proyecto';
-      this.btnSave.textContent = 'Guardar';
+      this._stepButtons();
       this.btnDelete.hidden = !canDelete;
     },
 
@@ -110,6 +124,10 @@
       this.stages = cfg.stages.map((st) => Object.assign({}, st));
       this.clients = cfg.clients;
       this.typeNote.hidden = !id;
+      this._resetPrivacy();
+      this.steps.forEach((el, i) => { el.hidden = i !== 0; });
+      this.lead.hidden = false;
+      this.btnCancel.disabled = false;
       this._renderTypes();
       this._renderCustom();
       this.btnDelete.hidden = true;
@@ -127,7 +145,7 @@
     },
 
     setBusy(busy, label){
-      this.btnSave.disabled = busy;
+      this.btnSave.disabled = busy || (this.step === 4 && !this.encKey.isSaved());
       this.btnDelete.disabled = busy;
       if(busy && label) this.btnDelete.textContent = label;
     },
@@ -163,11 +181,13 @@
     },
 
     _renderTypes(){
+      /* Si en el paso de privacidad se eligió cifrado total y se vuelve atrás, GitHub ya no se puede elegir. */
+      const noGh = this.privacy === 'B';
       const github = this.idInput.value || this.onboarding ? '' :
-        '<button type="button" class="type-option' + (this.tipo === GITHUB_TYPE ? ' is-selected' : '') + '" role="radio" aria-checked="' + (this.tipo === GITHUB_TYPE) + '" data-type="' + GITHUB_TYPE + '">' +
+        '<button type="button" class="type-option' + (this.tipo === GITHUB_TYPE ? ' is-selected' : '') + (noGh ? ' is-disabled' : '') + '" role="radio" aria-checked="' + (this.tipo === GITHUB_TYPE) + '"' + (noGh ? ' aria-disabled="true"' : '') + ' data-type="' + GITHUB_TYPE + '">' +
         '<span class="type-radio" aria-hidden="true"></span>' +
         '<span class="type-body"><span class="type-name">Desde GitHub</span>' +
-        '<span class="type-desc">Crea el proyecto con las columnas y los elementos de un GitHub Project y los mantiene sincronizados.</span>' +
+        '<span class="type-desc">' + (noGh ? 'No se puede sincronizar con GitHub un proyecto con cifrado total.' : 'Crea el proyecto con las columnas y los elementos de un GitHub Project y los mantiene sincronizados.') + '</span>' +
         '<span class="type-chips"><span class="type-chip is-plain">Sincronizado con GitHub</span></span></span></button>';
       this.typesEl.innerHTML = PT.TEMPLATES.map((t) => {
         const on = t.key === this.tipo;

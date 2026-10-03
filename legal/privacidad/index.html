@@ -58,7 +58,7 @@
         <ul>
           <li><strong>Solo lo necesario.</strong> Tratamos los datos que hacen falta para que tengas tu cuenta y uses la aplicación.</li>
           <li><strong>Sin publicidad ni rastreo.</strong> No usamos analítica, no hacemos perfiles y no vendemos tus datos.</li>
-          <li><strong>Tus contraseñas guardadas.</strong> La contraseña y las notas de cada credencial se cifran en tu navegador antes de enviarse. Nosotros no podemos leerlas ni recuperarlas. El resto de tu contenido no se cifra de esta forma.</li>
+          <li><strong>Tus contraseñas guardadas.</strong> La contraseña y las notas de cada credencial se cifran en tu navegador antes de enviarse. Nosotros no podemos leerlas ni recuperarlas. El resto de tu contenido no se cifra de esta forma, salvo en los proyectos que crees con la modalidad «Cifrado total» (ver «Proyectos con cifrado total»).</li>
           <li><strong>GitHub, solo si lo conectas.</strong> Si enlazas un proyecto con GitHub Projects, el título, la descripción, la columna y las etiquetas de sus tareas se envían a GitHub sin cifrar y se quedan allí.</li>
           <li><strong>Modo invitado.</strong> Si entras como invitado, todo se queda en tu navegador y no llega a nuestros servidores.</li>
           <li><strong>Tus derechos.</strong> Puedes acceder a tus datos, corregirlos, llevártelos o pedir que se borren escribiéndonos.</li>
@@ -74,6 +74,10 @@
 
       <h3>El contenido que tú creas</h3>
       <p>Proyectos, tareas, subtareas, etiquetas, notas (texto e imágenes que adjuntes), clientes, personas de contacto (nombre, correo, teléfono y notas), reuniones, ajustes, plugins instalados y los datos que guardan, y, si trabajas en equipo, los miembros del proyecto, sus roles y las invitaciones (con el correo de la persona invitada).</p>
+
+      <h3>Proyectos con cifrado total</h3>
+      <p>Al crear un proyecto puedes elegir la modalidad <strong>«Cifrado total»</strong>. En esos proyectos, el contenido (tareas y sus notas, imágenes, clientes, contactos, reuniones, los datos de cada credencial y lo que los plugins guarden en el proyecto) <strong>se cifra en tu navegador</strong> con AES-GCM de 256 bits antes de enviarse. La clave solo se puede abrir con tu contraseña de cifrado o con tu clave de recuperación; no conocemos ninguna de las dos, así que <strong>no podemos leer ese contenido ni recuperarlo</strong> si las pierdes.</p>
+      <p><strong>No se cifran</strong> el nombre del proyecto, sus columnas y etiquetas, las fechas (de creación, de cambio, límite y de las reuniones), el estado y el orden de las tareas, las personas asignadas, qué tareas tienen contactos o credenciales vinculados, qué plugins están instalados ni el número y el tamaño aproximado de los elementos. La clave de cifrado se guarda en tu navegador mientras dura la sesión, o también después si marcas el dispositivo como de confianza (ver la <a href="/legal/cookies/">política de cookies</a>). Estos proyectos no se pueden enlazar con GitHub. La aplicación que realiza el cifrado se sirve desde nuestro sitio, así que esta protección depende también de que el código que recibe tu navegador sea el legítimo.</p>
 
       <h3>Contraseñas guardadas</h3>
       <p>Para cada credencial, la <strong>contraseña y las notas se cifran en tu navegador</strong> con una clave derivada de tu contraseña maestra (AES-GCM de 256 bits, con PBKDF2) antes de enviarse. De esos dos campos, en nuestros servidores solo hay texto cifrado, y no conocemos tu contraseña maestra, por lo que <strong>no podemos descifrarlo ni recuperarlo</strong> si la pierdes. El resto de datos de cada credencial (tipo, cliente, nombre del servicio, usuario o correo, dirección y similares) se guarda <strong>sin cifrar</strong>, igual que el resto de tu contenido: evita escribir ahí información que no quieras que se almacene en claro.</p>
@@ -189,7 +193,7 @@
         <li>conexión cifrada (HTTPS) con política HSTS y una política de seguridad de contenido (CSP) estricta contra la inyección de código;</li>
         <li>reglas de acceso a la base de datos: cada cuenta solo puede leer y escribir lo suyo, y en los proyectos compartidos solo los miembros, según su rol;</li>
         <li>verificación del correo para las cuentas con contraseña y protección frente a intentos masivos de acceso;</li>
-        <li>cifrado en tu navegador de las contraseñas y notas de las credenciales guardadas;</li>
+        <li>cifrado en tu navegador de las contraseñas y notas de las credenciales guardadas, y de todo el contenido en los proyectos con «Cifrado total»;</li>
         <li>aislamiento de los plugins en un marco sin acceso a tu sesión ni a tus contraseñas.</li>
       </ul>
       <p>Ningún sistema es infalible. Si se produjese una violación de seguridad que suponga un riesgo para tus derechos, la notificaremos a la autoridad de control en un máximo de 72 horas y, cuando el riesgo sea alto, también a las personas afectadas. Tú también puedes ayudar: usa una contraseña única y segura y activa la verificación en dos pasos en tu cuenta de Google o GitHub.</p>

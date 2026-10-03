@@ -130,6 +130,8 @@
       } else {
         try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
         firebase.clearLocalCache();
+        /* Sesión caducada o cerrada desde otra pestaña: fuera las claves de cifrado que no sean de confianza. */
+        this.purgeKeys();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
       }
     }
@@ -229,7 +231,16 @@
       if(!this.user) return;
       SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
       try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
-      firebase.signOut().catch(() => location.reload());
+      /* Las claves de los proyectos con cifrado total se borran de este navegador, salvo en los
+         dispositivos marcados como de confianza. Se espera a que termine antes de recargar. */
+      const keystore = Workhub.services.keystore;
+      const forget = keystore ? keystore.forgetUser(this.user.uid, {keepTrusted:true}).catch(() => null) : Promise.resolve();
+      forget.then(() => firebase.signOut()).catch(() => location.reload());
+    }
+
+    purgeKeys(){
+      const keystore = Workhub.services.keystore;
+      if(keystore) keystore.purgeUntrusted().catch(() => {});
     }
   }
 

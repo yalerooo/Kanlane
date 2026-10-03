@@ -8,6 +8,8 @@
   const INTERVAL = 2 * 60 * 1000;     /* sincronización periódica */
   const PUSH_DELAY = 2000;            /* espera tras un cambio local */
   const FOCUS_GAP = 30 * 1000;        /* al volver a la pestaña, si hace más de esto */
+  const ENCRYPTED = 'Este proyecto tiene cifrado total y no se puede enlazar con GitHub: GitHub necesita recibir las tareas sin cifrar. Para sincronizar, usa un proyecto con «Solo contraseñas».';
+  const isEncrypted = (p) => Workhub.models.GithubSync.isEncrypted(p);
 
   class GithubController {
     constructor(app, view){
@@ -57,7 +59,8 @@
         last: this.sync.lastResult,
         hasToken: !!api.token(),
         tokenKind: api.tokenKind(),
-        projects: this.app.models.projects.list().map((p) => ({id:p.id, nombre:p.nombre, linked:!!p.github})),
+        projects: this.app.models.projects.list().map((p) => ({id:p.id, nombre:p.nombre, linked:!!p.github, encrypted:isEncrypted(p)})),
+        encrypted: this.sync.encrypted(),
         currentId: this.app.projectId,
         connecting: this.connecting,
         connectError: this.connectError,
@@ -71,6 +74,7 @@
     onProjectChange(){
       this.sync.lastResult = null;
       this.sync.error = null;
+      this.tokenError = '';
       this.sync.pendingCfg = null;
       this.sync.sent = {};
       this.connectError = '';
@@ -114,6 +118,10 @@
 
     /* quiet: no avisa con un mensaje cuando todo va bien. */
     syncNow(quiet){
+      if(this.sync.encrypted()){
+        if(!quiet) toast.error(this.sync.encryptedError().message);
+        return Promise.resolve();
+      }
       if(!this.sync.isLinked() || !this.sync.canSync()) return Promise.resolve();
       if(!api.token()){
         /* Sin token en este navegador: se lleva al usuario a donde puede pegarlo. */
@@ -138,6 +146,7 @@
       this.tokenError = '';
       this.connectError = '';
       const fail = (text) => { this.tokenError = text; this.connectError = text; this.render(); return false; };
+      if(this.sync.encrypted()) return Promise.resolve(fail(ENCRYPTED));
       return api.oauth().then((token) => {
         if(this.sync.isLinked()) return this.saveToken(token).then(() => true);
         api.setToken(token);
@@ -157,6 +166,11 @@
     /* Proyecto ya enlazado desde otro navegador: guarda el token aquí y sincroniza. */
     saveToken(value){
       this.tokenError = '';
+      if(this.sync.encrypted()){
+        this.tokenError = ENCRYPTED;
+        this.render();
+        return Promise.resolve();
+      }
       if(!value){
         this.tokenError = 'Pega un token de GitHub.';
         this.render();
@@ -181,6 +195,13 @@
     connect(v){
       if(this.connecting) return;
       this.connectError = '';
+      const NEW = Workhub.models.GithubSync.NEW;
+      const target = v.target && v.target !== NEW ? this.app.models.projects.get(v.target) : (v.target === NEW ? null : this.app.controllers.projects.current());
+      if(isEncrypted(target)){
+        this.connectError = ENCRYPTED;
+        this.render();
+        return;
+      }
       if(!api.token() && !v.token){
         this.connectError = 'Pega un token de GitHub.';
         this.render();

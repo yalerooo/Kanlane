@@ -112,6 +112,9 @@
       if(c.team && c.team.enabled()){
         list.push({title:t('Compartir proyecto'), icon:ICONS.go, run:() => c.team.open()});
       }
+      /* Proyecto con cifrado total: bloquearlo (olvida la clave en este navegador) o ir a desbloquearlo. */
+      if(c.crypto && app.cipher) list.push({title:t('Bloquear este proyecto'), icon:ICONS.project, run:() => c.crypto.lock()});
+      if(c.crypto && document.body.classList.contains('project-locked')) list.push({title:t('Desbloquear proyecto'), icon:ICONS.project, run:() => c.crypto.focusLock()});
       list.push({title:t('Nuevo proyecto'), icon:ICONS.project, run:() => c.projects.openNew()});
       list.push({title:t('Editar proyecto actual'), icon:ICONS.project, run:() => c.projects.openEdit()});
       Object.keys(VIEW_NAMES).forEach((v) => {

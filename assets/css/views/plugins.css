@@ -103,8 +103,9 @@
   --stage-top:220px;
   height:calc(100dvh - var(--stage-top));
   min-height:360px;
-  background:var(--surface);
-  border:1px solid var(--line);
+  /* Sin caja: el plugin se pinta sobre el fondo de Kanlane, como cualquier otra sección
+     (su página es transparente; ver plugins/sdk/workhub-plugin.css). El radio solo se nota
+     en un plugin que traiga su propio fondo. */
   border-radius:var(--r-xl);
   overflow:hidden;
 }

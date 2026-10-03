@@ -14,6 +14,10 @@
   var CONNECT_TIMEOUT_MS = 8000;
   var LOCALES = {es:'es-ES', en:'en-US'};
 
+  /* Dentro de Kanlane la página del plugin no pinta fondo propio (workhub-plugin.css):
+     se ve el de la app y el plugin queda como una sección más. Abierta suelta, sí lo pinta. */
+  try{ if(global.parent && global.parent !== global) global.document.documentElement.classList.add('wh-embedded'); }catch(e){}
+
   /* Idioma de Kanlane ('es', 'en'…). Hasta conectar, el del navegador. */
   var lang = /^es\b/i.test(global.navigator.language || 'es') ? 'es' : 'en';
 

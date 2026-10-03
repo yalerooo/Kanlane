@@ -15,6 +15,10 @@
 *{box-sizing:border-box;}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 body{padding:20px;}
+/* Dentro de Kanlane (la clase la pone el SDK al cargar): sin fondo propio, para que se vea
+   el de la app y el plugin parezca una sección más; y sin margen lateral, alineado con la barra. */
+html.wh-embedded,html.wh-embedded body{background:transparent;}
+html.wh-embedded body{padding:6px 6px 28px;}
 h1,h2,h3{margin:0 0 8px;letter-spacing:-0.015em;}
 h1{font-size:18px;} h2{font-size:15px;} h3{font-size:13.5px;}
 p{margin:0 0 10px;color:var(--ink-soft);}
@@ -46,7 +50,7 @@ a{color:var(--accent);}
 .wh-badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:var(--r-sm);font-size:12px;background:var(--surface-2);color:var(--ink-soft);}
 .wh-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
 .wh-empty{padding:28px 16px;text-align:center;color:var(--ink-faint);border:1px dashed var(--line-strong);border-radius:var(--r-lg);}
-@media (max-width:600px){ body{padding:14px;} }
+@media (max-width:600px){ body{padding:14px;} html.wh-embedded body{padding:4px 2px 24px;} }
 
 /* Barra de desplazamiento fina, como la de la app: sin flechas y casi invisible hasta que se usa. */
 html{scrollbar-width:thin;scrollbar-color:var(--ink-faint) transparent;scrollbar-color:color-mix(in srgb, var(--ink-faint) 45%, transparent) transparent;}

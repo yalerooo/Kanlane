@@ -31,7 +31,7 @@ module.exports = async function checkLanding(browser, origin){
     assert.deepEqual(await page.locator('#roleRights span').allTextContents(), ['Sí','No','No']);
     await page.locator('[data-plugin="appearance"]').click();
     await page.locator('[data-accent="purple"]').click();
-    assert.equal(await page.locator('#appearanceExample').evaluate(el => el.style.getPropertyValue('--preview-accent')), '#7C5CFF');
+    assert.equal(await page.locator('#appearanceExample').evaluate(el => el.style.getPropertyValue('--preview-accent')), '#4F46E5');
     assert.equal(await page.locator('.plugin-panel:visible').count(), 1);
     for(const width of [1280, 1024, 768, 390, 320]){
       await page.setViewportSize({width,height:900});

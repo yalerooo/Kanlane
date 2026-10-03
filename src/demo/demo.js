@@ -108,7 +108,9 @@
 
   function render(){
     const f = board.filters();
-    board.render(tasks.filter(f.query, f.cliente, f.assignee), tasks.items);
+    let list = tasks.filter(f.query, f.cliente, f.assignee);
+    if(f.week) list = board.dueThisWeek(list);
+    board.render(list, tasks.items);
   }
 
   function refreshDetail(){
@@ -139,6 +141,7 @@
   detail.bindClose(() => $('dlgTaskView').close());
   detail.bindEdit(() => lock('edit'));
   detail.bindStatus((id, status) => { tasks.move(id, status); });
+  detail.bindDone((id, status) => { tasks.move(id, status); });
   detail.bindChecklist((id, itemId, done) => tasks.toggleCheck(id, itemId, done));
   detail.bindLinkActions(() => {});
   detail.bindAssignMe(() => {});

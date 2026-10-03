@@ -37,14 +37,19 @@
 </head>
 <body class="is-demo">
 
+<!-- Generado por scripts/make-demo.js a partir de app/index.html: no editar a mano. -->
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar glass">
+    <div class="brand-row">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" width="15" height="15" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"><path d="M14 46l10-28M28 46l10-28M42 46l10-28"/></svg></span>
+      <span class="brand-name">Kanlane</span>
+    </div>
     <div class="brand">
       <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
         <span class="project-mark" id="projectMark" aria-hidden="true" style="--h:222">EM</span>
         <span class="project-switch-text">
-          <span class="project-switch-name" id="projectName" translate="no">Estudio Marta</span>
-          <span class="project-switch-sub">Kanlane</span>
+          <span class="project-switch-line"><span class="project-switch-name" id="projectName" translate="no">Estudio Marta</span><span class="project-lock" id="projectLock" title="Cifrado total: el contenido se cifra en tu navegador" hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></span>
+          <span class="project-switch-sub" id="projectSub">Soporte y tickets</span>
         </span>
         <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
       </button>
@@ -69,27 +74,44 @@
       <button class="tab" id="tabSettings" data-short="Ajustes" title="Ajustes" data-view="settings" type="button"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Ajustes</span></button>
     </nav>
     <div class="sidebar-foot">
-      <div class="storage-status" id="storageStatus" data-mode="local"><span class="status-dot"></span><span id="storageLabel">Demostración</span></div>
+      <div class="foot-row">
+        <div class="storage-status" id="storageStatus" data-mode="local"><span class="status-dot"></span><span id="storageLabel">Demostración</span></div>
+      </div>
     </div>
   </aside>
 
   <main class="main">
   <div class="main-inner">
-  <header class="page-head top">
+  <header class="page-head top glass">
     <div class="titles">
       <h1 id="pageTitle">Tareas</h1>
-      <p id="pageDesc">Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.</p>
+      <p id="pageDesc" class="sr-only">Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.</p>
     </div>
-    <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
+    <div class="bar-tools" data-bar="tasks">
+      <span class="bar-sep" aria-hidden="true"></span>
+      <div class="segmented" id="taskMode" role="radiogroup" aria-label="Vista de las tareas">
+        <button type="button" role="radio" data-task-mode="board" aria-checked="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></svg>Tablero</button>
+        <button type="button" role="radio" data-task-mode="list" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Lista</button>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
+      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
+      <span class="bar-push" aria-hidden="true"></span>
+      <input type="search" id="search" class="bar-search" placeholder="Buscar por título, cliente o contacto…">
+      <div class="bar-filter">
+        <button type="button" class="icon-only" id="btnTaskFilter" aria-label="Filtrar" title="Filtrar" aria-haspopup="true" aria-expanded="false" aria-controls="taskFilterPanel"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="filter-dot" id="taskFilterDot" hidden></span></button>
+        <div class="filter-panel" id="taskFilterPanel" hidden>
+          <label class="filter-field needs-clients"><span>Cliente</span><select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select></label>
+          <label class="filter-field team-only team-off"><span>Miembro</span><select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnTaskFilterClear">Quitar filtros</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
+    </div>
   </header>
 
   <section id="viewTasks">
-    <div class="toolbar">
-      <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
-      <select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
-      <select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select>
-      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
-      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
+    <div class="subbar">
+      <div class="quick" id="quickFilters" role="group" aria-label="Filtros rápidos"></div>
       <div class="summary" id="summary" aria-live="polite"></div>
     </div>
 
@@ -100,6 +122,7 @@
       <p class="sr-only" id="boardKeyboardHelp">Pulsa Intro para abrir una tarea. Pulsa Alt y una flecha para moverla.</p>
       <p class="sr-only" id="boardKeyboardStatus" role="status" aria-live="polite"></p>
       <div class="board" id="board" hidden></div>
+      <div class="task-list" id="taskList"></div>
     </div>
   </section>
   </div>
@@ -107,44 +130,47 @@
 </div>
 
 <dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
-  <div class="dlg-inner">
+  <div class="tv-head">
     <div class="tv-top" id="tvTop"></div>
-    <h2 id="tvTitle" translate="no"></h2>
-    <div class="tv-facts" id="tvFacts"></div>
-    <section class="tv-section" id="tvDescWrap" hidden>
-      <h3>Descripción</h3>
-      <div class="tv-desc" id="tvDesc" translate="no"></div>
-    </section>
-    <section class="tv-section" id="tvChecklistWrap" hidden>
-      <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
-      <div class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></div>
-      <ul class="tv-checks" id="tvChecklist"></ul>
-    </section>
-    <section class="tv-section" id="tvLabelsWrap" hidden>
-      <h3>Etiquetas</h3>
-      <div class="tv-chips" id="tvLabels"></div>
-    </section>
-    <section class="tv-section" id="tvPrsWrap" hidden>
-      <h3>Pull requests vinculadas</h3>
-      <div class="tv-chips" id="tvPrs"></div>
-    </section>
-    <section class="tv-section">
-      <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
-      <div class="tv-notes" id="tvNotes"></div>
-      <form class="tv-comment-form" id="tvCommentForm" hidden><label for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="3" placeholder="Comparte una actualización con el equipo…" required></textarea><div><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button><p class="lock-error" id="tvCommentError" role="alert" hidden></p></div></form>
-    </section>
-    <section class="tv-section" id="tvGhWrap" hidden>
-      <h3>Actividad de GitHub</h3>
-      <ol class="gh-timeline" id="tvTimeline"></ol>
-    </section>
-    <section class="tv-section" id="tvLinksWrap" hidden>
-      <h3>Vínculos</h3>
-      <div class="tv-links" id="tvLinks"></div>
-    </section>
-    <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
-    <div class="dlg-actions">
-      <div class="tv-status-field">
-        <label for="tvEstado">Estado</label>
+    <div class="tv-head-actions">
+      <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
+      <button type="button" class="btn btn-ghost btn-sm tv-status-edit" id="btnTvDone"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><span id="btnTvDoneText">Marcar como completada</span></button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnTvEdit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      <button type="button" class="icon-only" id="btnTvClose" data-dismiss aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+  </div>
+  <div class="tv-body">
+    <div class="tv-main">
+      <h2 id="tvTitle" translate="no"></h2>
+      <section id="tvDescWrap" hidden>
+        <h3 class="sr-only">Descripción</h3>
+        <div class="tv-desc" id="tvDesc" translate="no"></div>
+      </section>
+      <section class="tv-section" id="tvChecklistWrap" hidden>
+        <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span><span class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></span></h3>
+        <ul class="tv-checks" id="tvChecklist"></ul>
+      </section>
+      <section class="tv-section" id="tvPrsWrap" hidden>
+        <h3>Pull requests vinculadas</h3>
+        <div class="tv-chips" id="tvPrs"></div>
+      </section>
+      <section class="tv-section">
+        <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
+        <div class="tv-notes" id="tvNotes"></div>
+        <form class="tv-comment-form" id="tvCommentForm" hidden><label class="sr-only" for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="2" placeholder="Comparte una actualización con el equipo…" required></textarea><div><p class="lock-error" id="tvCommentError" role="alert" hidden></p><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button></div></form>
+      </section>
+      <section class="tv-section" id="tvGhWrap" hidden>
+        <h3>Actividad de GitHub</h3>
+        <ol class="gh-timeline" id="tvTimeline"></ol>
+      </section>
+      <section class="tv-section" id="tvLinksWrap" hidden>
+        <h3>Vínculos</h3>
+        <div class="tv-links" id="tvLinks"></div>
+      </section>
+    </div>
+    <aside class="tv-side" aria-label="Propiedades de la tarea">
+      <div class="tv-prop tv-status-field">
+        <label class="tv-prop-label" for="tvEstado">Estado</label>
         <select id="tvEstado" data-dots="status">
           <option value="pendiente">Pendiente</option>
           <option value="proceso">En proceso</option>
@@ -152,11 +178,13 @@
           <option value="completada">Completada</option>
         </select>
       </div>
-      <div class="right">
-        <button type="button" class="btn btn-ghost" id="btnTvClose" data-dismiss>Cerrar</button>
-        <button type="button" class="btn btn-primary" id="btnTvEdit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      <div class="tv-facts" id="tvFacts"></div>
+      <div class="tv-prop" id="tvLabelsWrap" hidden>
+        <span class="tv-prop-label">Etiquetas</span>
+        <div class="tv-chips" id="tvLabels"></div>
       </div>
-    </div>
+      <p class="tv-stamp" id="tvStamp"></p>
+    </aside>
   </div>
 </dialog>
 
@@ -164,7 +192,7 @@
 <dialog id="dlgDemo" aria-labelledby="demoTitle">
   <div class="dlg-inner">
     <h2 id="demoTitle">Esto está en la aplicación completa</h2>
-    <p class="demo-text" id="demoText">Crea una cuenta gratis para crear y editar tareas, y para usar el calendario, los clientes y las contraseñas.</p>
+    <p class="confirm-text" id="demoText">Crea una cuenta gratis para crear y editar tareas, y para usar el calendario, los clientes y las contraseñas.</p>
     <div class="dlg-actions">
       <div class="right">
         <button type="button" class="btn btn-ghost" id="btnDemoClose">Seguir probando</button>

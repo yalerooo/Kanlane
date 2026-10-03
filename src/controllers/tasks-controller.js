@@ -436,10 +436,18 @@
       const taskId = this.currentId;
       this.dialog.setAddingNote(true);
       const upload = image ? platform.uploadAsset(image) : Promise.resolve('');
-      upload.then((assetId) => this.tasks.addNote(taskId, text, assetId)).then(() => {
+      let uploaded = !image;
+      upload.then((assetId) => {
+        uploaded = true;
+        return this.tasks.addNote(taskId, text, assetId);
+      }).then(() => {
         this.dialog.resetNoteForm();
-      }).catch(() => {
-        this.dialog.showNoteError('No se pudo añadir la nota.');
+      }).catch((err) => {
+        const code = err && (err.code || err.message);
+        if(!uploaded && code === 'image-too-large') this.dialog.showNoteError('La imagen es demasiado grande y no se pudo reducir lo suficiente. La nota no se ha guardado: prueba con una imagen más pequeña.');
+        else if(!uploaded && code === 'image-unreadable') this.dialog.showNoteError('No se pudo leer la imagen. La nota no se ha guardado: prueba con un archivo JPG o PNG.');
+        else if(!uploaded) this.dialog.showNoteError('No se pudo subir la imagen. La nota no se ha guardado.');
+        else this.dialog.showNoteError('No se pudo añadir la nota.');
       }).finally(() => {
         this.dialog.setAddingNote(false);
       });

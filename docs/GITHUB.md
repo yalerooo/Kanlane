@@ -43,7 +43,19 @@ Cada proyecto de Kanlane puede enlazarse con un proyecto de GitHub distinto. El 
 | Cambian los dos lados a la vez | Gana el cambio más reciente |
 | Borrar | **No se sincroniza.** Lo borrado en Kanlane no vuelve a importarse; lo borrado en GitHub se queda en Kanlane |
 
-Las tareas enlazadas muestran una marca de GitHub en la tarjeta y un enlace al elemento en su ficha. Los datos de Kanlane que GitHub no tiene (cliente, contacto, fecha límite, notas, contraseñas vinculadas) se quedan solo en Kanlane.
+Las tareas enlazadas muestran una marca de GitHub en la tarjeta y un enlace al elemento en su ficha. Los datos de Kanlane que GitHub no tiene (cliente, contacto, fecha límite, subtareas, notas, contraseñas vinculadas) se quedan solo en Kanlane.
+
+## Qué sale de Kanlane hacia GitHub
+
+Es lo que dicen la [política de privacidad](../legal/privacidad/index.html) («Integración con GitHub») y el aviso que la app muestra antes de conectar (en *Nuevo proyecto → Desde GitHub* y en *Ajustes → GitHub Projects*):
+
+- **Qué se envía, sin cifrar:** el **título**, la **descripción**, la **columna** (opción del campo *Status*) y las **etiquetas** de las tareas del proyecto enlazado. Las tareas nuevas se crean como **borradores** del GitHub Project si está activado *Enviar a GitHub las tareas nuevas* (y las que ya había, si se marcó al conectar). Si la tarea está vinculada a una incidencia de un repositorio, el título, la descripción y las etiquetas se cambian **en esa incidencia** (`updateIssue`, `addLabelsToLabelable`, `removeLabelsFromLabelable`).
+- **Cómo:** desde el navegador del usuario directamente a `https://api.github.com` (GraphQL), con su token. No pasa por los servidores de Kanlane ni por Firebase. En un proyecto de equipo, desde el navegador de cada miembro que sincroniza.
+- **Dónde acaba:** en GitHub, que lo trata según sus propios términos y su declaración de privacidad (responsable independiente; puede tratarlo en EE. UU.). Si el Project o el repositorio son públicos, esas tareas son públicas.
+- **Borrar no se propaga:** lo enviado **se queda en GitHub** aunque se borre la tarea o el proyecto en Kanlane, se desvincule el proyecto o se cierre la cuenta. Hay que borrarlo en GitHub.
+- **Cifrado por proyecto (plan, `docs/CIFRADO-PROYECTOS.md`):** cuando exista el cifrado total, esos proyectos **no se podrán enlazar con GitHub** (GitHub necesita las tareas sin cifrar); se bloqueará en la interfaz, en el motor y en las reglas (PR5).
+
+Texto del aviso en la app (`app/index.html` `#pGhPrivacy` y `src/views/github-view.js` `PRIVACY`, traducido en `src/i18n/en.js`): «Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.» Si cambia lo que se sincroniza, hay que cambiar a la vez este apartado, el aviso y la política.
 
 Se sincroniza al abrir el proyecto, al volver a la pestaña, cada 2 minutos y unos segundos después de cambiar algo en Kanlane. También con el botón **GitHub** de la barra de Tareas o **Sincronizar ahora** en Ajustes.
 
@@ -64,7 +76,7 @@ Un proyecto enlazado con GitHub se puede convertir en **proyecto de equipo** (ve
 
 ## Seguridad
 
-- El **token se guarda solo en este navegador** (`localStorage`); nunca se sube a Firestore ni al repositorio. En otro dispositivo hay que pegarlo otra vez. **Olvidar token** lo borra.
+- El **token se guarda solo en este navegador** (`localStorage`); nunca se sube a Firestore ni al repositorio. En otro dispositivo hay que pegarlo otra vez. **Olvidar token** / **Quitar mi acceso a GitHub** lo borran **de este navegador**, pero no lo revocan: para eso, en GitHub, *Settings → Applications* (autorización de «Conectar con GitHub») o *Developer settings → Personal access tokens* (token pegado). Cerrar sesión en Kanlane tampoco lo borra.
 - Un token con permiso `project` puede leer y modificar **todos** tus proyectos de GitHub. Créalo con caducidad, y revócalo en GitHub si dejas de usar la integración.
 - La política de contenido (`scripts/build-public.js`) permite conectar con `https://api.github.com`, y nada más de GitHub.
 

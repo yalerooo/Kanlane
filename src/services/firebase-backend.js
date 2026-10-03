@@ -11,9 +11,15 @@
   const SDK_BASE = 'https://www.gstatic.com/firebasejs/' + SDK_VERSION + '/';
   const SDK_FILES = ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'];
 
-  /* Imágenes de notas: se guardan comprimidas en Firestore (máx. ~1 MiB por documento). */
+  /* Imágenes de notas: se guardan comprimidas en Firestore como data: URL (máx. ~1 MiB
+     por documento). Las reglas (firestore.rules, colección assets) aceptan como mucho
+     900 000 caracteres en `data`; el cliente se queda en 880 000 (margen de 20 000) y
+     mide la longitud REAL de la data: URL, no los bytes estimados, para no aceptar nunca
+     una imagen que el servidor vaya a rechazar. tests/assets/limits.test.js comprueba
+     que este número no supera el de las reglas. */
   const IMAGE_MAX_SIDE = 1600;
-  const IMAGE_MAX_BYTES = 850 * 1024;
+  const IMAGE_MAX_CHARS = 880000;
+  const IMAGE_MAX_ATTEMPTS = 10;
 
   let fb = null;        /* espacio de nombres firebase */
   let auth = null;
@@ -324,30 +330,60 @@
     });
   }
 
+  /* ¿Cabe esta data: URL en un documento de imagen según las reglas? */
+  function imageFits(dataUrl){
+    return typeof dataUrl === 'string' && dataUrl.length <= IMAGE_MAX_CHARS;
+  }
+
+  function imageError(code){
+    const err = new Error(code);
+    err.code = code;
+    return err;
+  }
+
+  /* Busca la primera versión de la imagen que cabe. Es una función pura: `render(w, h,
+     quality)` devuelve la data: URL de la imagen a ese tamaño y calidad (en el navegador,
+     con un canvas). Cada intento baja la calidad JPEG (0,85 → 0,55) y después reduce el
+     lado un 25 %. Si ninguna versión cabe lanza `image-too-large`; si el navegador no
+     sabe dibujarla (data: URL vacía o que no es de imagen), `image-unreadable`. */
+  function fitImage(width, height, render){
+    if(!(width > 0) || !(height > 0)) throw imageError('image-unreadable');
+    let side = IMAGE_MAX_SIDE;
+    let quality = 0.85;
+    for(let attempt = 0; attempt < IMAGE_MAX_ATTEMPTS; attempt++){
+      const scale = Math.min(1, side / Math.max(width, height));
+      const w = Math.max(1, Math.round(width * scale));
+      const h = Math.max(1, Math.round(height * scale));
+      const out = render(w, h, quality);
+      if(typeof out !== 'string' || out.indexOf('data:image/') !== 0) throw imageError('image-unreadable');
+      if(imageFits(out)) return out;
+      if(quality > 0.6) quality = Math.round((quality - 0.1) * 100) / 100;
+      else side = Math.round(side * 0.75);
+    }
+    throw imageError('image-too-large');
+  }
+
   /* Reduce la imagen (lado máximo y calidad JPEG) hasta que quepa en un documento. */
   function compressImage(file){
     return readAsDataUrl(file).then((dataUrl) => new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        let side = IMAGE_MAX_SIDE;
-        let quality = 0.85;
-        for(let attempt = 0; attempt < 8; attempt++){
-          const scale = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
-          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const out = canvas.toDataURL('image/jpeg', quality);
-          if(out.length * 0.75 <= IMAGE_MAX_BYTES) return resolve(out);
-          if(quality > 0.6) quality -= 0.1;
-          else side = Math.round(side * 0.75);
+        try {
+          resolve(fitImage(img.naturalWidth, img.naturalHeight, (w, h, quality) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            return canvas.toDataURL('image/jpeg', quality);
+          }));
+        } catch(err){
+          reject(err);
         }
-        reject(new Error('image-too-large'));
       };
-      img.onerror = () => reject(new Error('image-unreadable'));
+      img.onerror = () => reject(imageError('image-unreadable'));
       img.src = dataUrl;
     }));
   }
@@ -420,6 +456,8 @@
     currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),
     /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */
-    allowSignup: () => config().allowSignup !== false
+    allowSignup: () => config().allowSignup !== false,
+    /* Límite de las imágenes de las notas (lo prueba tests/assets/limits.test.js). */
+    imageLimits: {maxChars: IMAGE_MAX_CHARS, maxSide: IMAGE_MAX_SIDE, maxAttempts: IMAGE_MAX_ATTEMPTS, fits: imageFits, fit: fitImage}
   };
 })();

@@ -126,6 +126,10 @@ async function t(name, fn){
   await t('una tarea con campos ajenos se rechaza', () => assertFails(own.collection('tasks').doc('unknown').set({title:'x', permisoInventado:true})));
   await t('una nota demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('oversize').set({text:'a'.repeat(20001)})));
   await t('una tarea normal sigue permitida', () => assertSucceeds(own.collection('tasks').doc('normal').set({title:'Tarea normal', checklist:[{text:'Paso',done:false}]})));
+  /* El cliente (firebase-backend.js, IMAGE_MAX_CHARS) admite data: URL de hasta 880 000 caracteres. */
+  const image = (n) => 'data:image/jpeg;base64,' + 'A'.repeat(n - 23);
+  await t('una imagen al límite del cliente se acepta', () => assertSucceeds(own.collection('assets').doc('img-max').set({data:image(880000), contentType:'image/jpeg', createdAt:Date.now()})));
+  await t('una imagen por encima del límite de las reglas se rechaza', () => assertFails(own.collection('assets').doc('img-big').set({data:image(900001), contentType:'image/jpeg', createdAt:Date.now()})));
   const backup = {projectId:'main', createdAt:Date.now(), iv:'abc', chunkCount:1, complete:false,
     counts:{tasks:1, meetings:0, contacts:0, vault:0, clients:0}};
   await t('alice crea una versión cifrada', () => assertSucceeds(own.collection('backup_versions').doc('v1').set(backup)));

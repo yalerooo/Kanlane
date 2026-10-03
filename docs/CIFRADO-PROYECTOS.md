@@ -1,7 +1,7 @@
 # Cifrado por proyecto: plan de implementación
 
-> Estado: **plan, sin implementar**. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
-> Las decisiones del dueño (modos A/B/C, sin migración, GitHub incompatible con B, compartir con código de un solo uso, orden reglas → código) se dan por cerradas y aquí solo se concretan. Lo que todavía necesita una decisión está en el apartado 20, con una recomendación.
+> Estado: **plan aceptado; PR0 en curso** (rama `claude/cifrado-pr0`: texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app). PR1–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
+> Las decisiones del dueño (modos A/B/C, sin migración, GitHub incompatible con B, compartir con código de un solo uso, orden reglas → código) se dan por cerradas y aquí solo se concretan. **El 3-oct-2026 el dueño aceptó todas las recomendaciones D1–D18 del apartado 20**: ya son decisiones vinculantes para los PR siguientes y no hay ninguna pendiente.
 > Las marcas **[MANUAL]** son pasos que tiene que hacer el dueño a mano (consola de Firebase, Cloudflare, revisión de textos). Las marcas **[SIN VERIFICAR]** son supuestos que no se han podido comprobar contra un servicio real.
 
 ---
@@ -31,7 +31,7 @@ Principios:
 
 - **Cofre** (`src/models/vault-model.js`, `src/services/crypto.js`): DEK aleatoria de 256 bits envuelta con la contraseña maestra (PBKDF2-SHA256, **300 000** iteraciones) y con una clave de recuperación de 256 bits, en `vault_meta/check`. Solo `password` y `notas` van cifradas (`iv`/`cipher`, `ivV2`/`cipherV2`); `tipo`, `cliente`, `label`, `correo`, `web`, `ip`, `usuario`, `puerto`, `dominio` van en claro. Sin AAD.
 - **Todo lo demás va en claro en Firestore**: `tasks` (+ `notes`), `clients`, `contacts`, `meetings`, `plugin_data`, `assets` (imágenes como `data:` URL), documento del proyecto.
-- **`docs/SEGURIDAD.md` línea 23 dice «En Firestore solo hay texto cifrado»: es falso** (solo lo es para la contraseña y las notas de cada credencial). Se corrige en PR0.
+- **`docs/SEGURIDAD.md` línea 23 dice «En Firestore solo hay texto cifrado»: es falso** (solo lo es para la contraseña y las notas de cada credencial). Se corrige en PR0 (también la misma frase de `docs/FIREBASE.md`).
 - **Desajuste de imágenes**: `IMAGE_MAX_BYTES = 850 * 1024` (`src/services/firebase-backend.js:16`) se compara con `out.length * 0.75`, es decir, admite una `data:` URL de hasta ~1 160 000 caracteres, pero las reglas exigen `textWithin(data, 'data', 900000)`. Una imagen que comprimida ocupe entre ~675 KB y 850 KB pasa la comprobación del cliente y el servidor la rechaza con `permission-denied`. Se corrige en PR0.
 - **Rutas** (`ProjectModel.scope`): principal en la raíz `users/{uid}/…`; otros personales en `users/{uid}/projects/{id}/…`; equipos en `teams/{tid}/…`. Las imágenes de los proyectos personales (todos) van a `users/{uid}/assets`; las de equipo, a `teams/{tid}/assets` (vía `window.__teamId`).
 - **Consultas al servidor sobre colecciones de datos** (lista completa, búsqueda de `where`/`orderBy` en `src/`):
@@ -838,7 +838,7 @@ Hoy no hay cofre en equipos y se mantiene igual en los equipos B: al convertir n
 
 Sin cambios de formato: el JSON se cifra con la clave de copias de la cuenta (`localStorage`, 256 bits), que el servidor no tiene. Quedan en claro `projectId`, `createdAt`, `counts` (cuántas tareas, contactos…). Se documenta.
 
-### 11.3 Exportar e importar (recomendación D14)
+### 11.3 Exportar e importar (decisión D14)
 
 - **Exportar en B, por defecto cifrado**: archivo `kanlane-copia-cifrada-{slug}-{fecha}.json` con `{format:'kanlane-encrypted-backup', v:1, pid, kid, kcv, kdf, pw, rk, iv, data}` donde `kdf/pw/rk` son los envoltorios de `crypto/{uid}` (ya publicables: están protegidos por la KDF) y `data` es el JSON de siempre cifrado con la DEK (AAD `kanlane/v1|pid|kid|export|{fecha}|1`). Es autosuficiente: se abre con la contraseña o la clave de recuperación vigentes al exportar.
 - «Exportar sin cifrar» con confirmación (8.6): el formato actual.
@@ -995,6 +995,7 @@ Un único `push` por PR (Cloudflare construye una vista previa por cada `push`).
 - Aviso de 8.4 «Al sincronizar…» en el bloque «Desde GitHub» del asistente y en la tarjeta de Ajustes (texto nuevo + `en.js`).
 - `docs/GITHUB.md` y `CONTEXT.md` al día.
 - Criterios de aceptación: una imagen de 3 MB se guarda en producción sin `permission-denied`; `check-i18n --strict` pasa; la política y `SEGURIDAD.md` no afirman nada falso.
+- **Hecho en la rama `claude/cifrado-pr0`** (pendiente de PR y despliegue): todo lo anterior salvo subir `actualizado`/`version` de `legal-config.js`, que queda para el dueño (es solo la fecha y el número que muestran las páginas legales; **no** vuelve a pedir el consentimiento de cookies, que depende de `VERSION` en `src/consent/consent.js` y no cambia porque no hay categorías ni proveedores nuevos). Además: la compresión es una función pura (`fitImage`, publicada en `Workhub.services.firebase.imageLimits`); si una imagen no cabe o no se puede leer, la nota **no** se guarda sin ella en silencio, sino que se muestra un error claro; `tests/rules` añade dos casos (imagen de 880 000 caracteres aceptada, de 900 001 rechazada) sin cambiar `firestore.rules`; `docs/SEGURIDAD.md` corrige también lo que queda en el navegador tras cerrar sesión. Pendiente de verificar en producción: la imagen de 3 MB.
 
 **PR1 — Servicio de cifrado (M)**
 
@@ -1029,7 +1030,7 @@ Un único `push` por PR (Cloudflare construye una vista previa por cada `push`).
 
 **PR6 — Consultas, Ctrl K, plugins, exportar (M)**: 6.4/6.5 (cliente, comando, plugins, copias), textos 8.6, `docs/PLUGINS.md` (cuota y aviso). Criterio: renombrar un cliente con 300 tareas en B actualiza todas; exportar cifrado → importar → igual.
 
-**PR7 — Compartir con código (L)**: apartado 10 completo, textos 8.5, `docs/EQUIPOS.md`. Si se decide D9, genera el par ECDH al aceptar. Paso manual: prueba con dos cuentas reales (Google + correo) en producción.
+**PR7 — Compartir con código (L)**: apartado 10 completo, textos 8.5, `docs/EQUIPOS.md`. Como se aceptó D9, genera el par ECDH al aceptar. Paso manual: prueba con dos cuentas reales (Google + correo) en producción.
 
 **PR8 — Textos públicos (M)**: ver 18. Solo cuando PR4–PR7 estén desplegados y probados.
 
@@ -1121,7 +1122,7 @@ Un PR de esta serie está **hecho** cuando:
 | PR10 | `docs/EQUIPOS.md`, política si cambia algo; ajustar la advertencia de expulsión | «Al expulsar, lo nuevo deja de poder leerse; lo ya visto no se puede retirar» |
 | PR11 | Ajustes del proyecto, FAQ | Convertir protege lo que viene, no el pasado |
 
-El texto de la pantalla del cofre en la app (`#lockDesc`) no cambia salvo que se decida D11.
+El texto de la pantalla del cofre en la app (`#lockDesc`) no cambia: según D11, en v1 el cofre de un proyecto B sigue pidiendo su propia contraseña maestra.
 
 ---
 
@@ -1131,9 +1132,11 @@ S ≈ medio día, M ≈ 1–2 días, L ≈ 3–5 días de trabajo con pruebas. T
 
 ---
 
-## 20. Decisiones que aún necesita el dueño
+## 20. Decisiones aceptadas por el dueño (3-oct-2026)
 
-| # | Pregunta | Recomendación |
+El dueño aceptó **todas** las recomendaciones de este apartado tal como estaban redactadas. Desde ahora son **decisiones vinculantes** para PR1–PR11: un PR que se aparte de alguna tiene que decirlo en su descripción y pedir antes una nueva decisión al dueño. Los apartados anteriores ya están escritos según ellas.
+
+| # | Pregunta | Decisión (aceptada) |
 |---|---|---|
 | **D1** | ¿Longitud del código de acceso? | **20 caracteres (100 bits)** en 5 grupos de 4. Cumple el mínimo (16/80) con margen y sigue siendo fácil de dictar. |
 | **D2** | ¿Se ofrece el cifrado total en «Crea tu primer proyecto» (el proyecto principal, en la raíz)? | **Sí.** Es justo cuando una persona preocupada por la privacidad decide; técnicamente el principal es solo otro ámbito (`users/{uid}/crypto/{uid}`, `projects/main.enc`). Exige el caso `deleted:true` en las reglas (ya en 7.1). |
@@ -1143,7 +1146,7 @@ S ≈ medio día, M ≈ 1–2 días, L ≈ 3–5 días de trabajo con pruebas. T
 | **D6** | ¿`linkedContacts`/`linkedVault` en claro? | **Sí**: son ids opacos; así `saveLinks` y la conversión a equipo no necesitan descifrar. Revelan qué tarea enlaza con qué contacto o credencial, no su contenido. |
 | **D7** | ¿Relleno para ocultar el tamaño del contenido? | **No en v1.** Cuesta espacio (límite de 1 MiB por documento) y el beneficio es pequeño frente a lo que ya revelan fechas y recuentos. |
 | **D8** | ¿Cifrar las marcas de instalación de plugins (`url`, `manifest`, `granted`)? | **No.** No es contenido del usuario y `where('_kind')` necesita la marca. |
-| **D9** | ¿Generar ya en PR7 un par de claves ECDH por miembro para poder rotar en PR10 sin reinvitar? | **Sí.** Es poco código más en PR7 y evita pedir a todos los miembros un código nuevo en la primera rotación. Implica confiar en el servidor para repartir claves públicas (mitigado con huellas). Si se acepta, `validCrypto` de PR2 debe admitir ya `pub` y `priv`. |
+| **D9** | ¿Generar ya en PR7 un par de claves ECDH por miembro para poder rotar en PR10 sin reinvitar? | **Sí.** Es poco código más en PR7 y evita pedir a todos los miembros un código nuevo en la primera rotación. Implica confiar en el servidor para repartir claves públicas (mitigado con huellas). Como se acepta, `validCrypto` de PR2 debe admitir ya `pub` y `priv`. |
 | **D10** | ¿Transacciones para cambios de campos secretos? | **Solo en equipos B y con conexión.** En proyectos personales, la caché de escritura basta. |
 | **D11** | ¿El cofre de un proyecto B sigue pidiendo su propia contraseña maestra? | **Sí en v1** (defensa en profundidad y sin cambios en el cofre). Más adelante se puede ofrecer «usar la clave del proyecto». |
 | **D11b** | ¿Qué se hace con el cofre en equipos B? | **Igual que hoy: sin cofre en equipos.** Cuando se diseñe, valorar cifrar el cofre compartido con la DEK del proyecto (10.8) en lugar del diseño de `EQUIPOS.md`. |
@@ -1153,7 +1156,7 @@ S ≈ medio día, M ≈ 1–2 días, L ≈ 3–5 días de trabajo con pruebas. T
 | **D15** | ¿Iteraciones de PBKDF2? | **600 000** (mínimo en reglas). Medir en un móvil de gama baja en PR1; si tarda menos de 1 s, subir a 1 000 000 en el cliente (las reglas siguen con el mínimo). |
 | **D16** | ¿Longitud mínima de la contraseña de cifrado? | **12 caracteres** (el cofre y las cuentas usan 8; aquí no hay restablecimiento y el riesgo de fuerza bruta lo asume el usuario). |
 | **D17** | ¿Desplegar PR5 junto a PR4? | **Sí**, en el mismo PR o el mismo día. |
-| **D18** | Modo C: ¿un envoltorio KMS por miembro o uno por equipo? | **Uno por equipo** (`teams/{tid}/crypto/_kms`) para no depender de que cada miembro lo cree; se decide al empezar PR9. |
+| **D18** | Modo C: ¿un envoltorio KMS por miembro o uno por equipo? | **Uno por equipo** (`teams/{tid}/crypto/_kms`) para no depender de que cada miembro lo cree; los detalles se concretan al empezar PR9. |
 
 ---
 

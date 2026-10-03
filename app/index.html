@@ -742,6 +742,7 @@
       <label for="pGhUrl">Enlace del proyecto de GitHub</label>
       <input id="pGhUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1">
       <p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de ese GitHub Project, y se mantiene sincronizado. Si dejas el nombre vacío se usa el del proyecto de GitHub.</p>
+      <p class="gh-note is-warn gh-privacy" id="pGhPrivacy">Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.</p>
     </div>
     <p class="type-note" id="pTypeNote" hidden>Las tareas cuya etapa ya no exista pasarán a la primera columna. No se pierde ninguna.</p>
     <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>

@@ -252,7 +252,7 @@
           return '<div class="project-row' + (current ? ' is-current' : '') + '">' +
             '<button type="button" class="dd-option project-pick' + (current ? ' is-selected' : '') + '" role="menuitemradio" aria-checked="' + current + '" data-menu="pick" data-id="' + esc(p.id) + '">' +
               markHtml(p, hueOf(p), 'is-sm') + '<span class="dd-text" translate="no">' + esc(p.nombre) + '</span>' + (p.team ? '<span class="project-team" title="' + esc(Workhub.t('Proyecto de equipo')) + '">' + TEAM_ICON + '</span>' : '') +
-              (isEncrypted(p) ? '<span class="project-enc" title="' + esc(Workhub.t('Cifrado total: el contenido se cifra en tu navegador')) + '">' + LOCK_ICON + '<span>' + esc(Workhub.t('Cifrado')) + '</span></span>' : '') + (current ? CHECK : '') +
+              (isEncrypted(p) ? '<span class="project-enc" title="' + esc(Workhub.t(Workhub.models.ProjectModel.isManaged(p) ? 'Gestionado por Kanlane: el contenido se guarda cifrado y Kanlane custodia la clave' : 'Cifrado total: el contenido se cifra en tu navegador')) + '">' + LOCK_ICON + '<span>' + esc(Workhub.t('Cifrado')) + '</span></span>' : '') + (current ? CHECK : '') +
             '</button>' +
             '<button type="button" class="icon-only project-edit" role="menuitem" data-menu="edit" data-id="' + esc(p.id) + '" aria-label="Editar ' + esc(p.nombre) + '" title="Editar proyecto">' + EDIT + '</button>' +
             '</div>';

@@ -12,6 +12,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const nodeCrypto = require('crypto');
 const {pageDirs} = require('./site-pages');
 
 const args = process.argv.slice(2);
@@ -63,6 +64,31 @@ const server = http.createServer((req, res) => {
     res.write('retry: 1000\n\n');
     clients.add(res);
     req.on('close', () => clients.delete(res));
+    return;
+  }
+
+  /* Servidor de claves del modo gestionado, SOLO con los emuladores (pruebas de navegador): hace lo
+     mismo que worker/index.js pero con un secreto fijo y sin verificar la firma del token, porque los
+     del emulador de Authentication no van firmados. En producción lo atiende el Worker. */
+  if(url === '/__/kms/v1/kek' && emulator){
+    const send = (status, body) => { res.writeHead(status, {'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store'}); res.end(JSON.stringify(body)); };
+    if(req.method !== 'POST') return send(405, {error: 'method'});
+    let raw = '';
+    req.on('data', (chunk) => { if(raw.length <= 512) raw += chunk; });
+    req.on('end', () => {
+      try{
+        const token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '');
+        const claims = JSON.parse(Buffer.from(token[1].split('.')[1], 'base64url').toString('utf8'));
+        const uid = claims.user_id || claims.sub;
+        const body = JSON.parse(raw);
+        if(!uid) return send(401, {error: 'auth'});
+        if(!/^[A-Za-z0-9_-]{22}$/.test(body.pid) || !/^[A-Za-z0-9_-]{11}$/.test(body.kid)) return send(400, {error: 'request'});
+        const kek = nodeCrypto.hkdfSync('sha256', Buffer.alloc(32, 7), Buffer.from('kanlane-kms-v1'), Buffer.from('u:' + uid + '|' + body.pid + '|' + body.kid), 32);
+        send(200, {v: 1, kmsv: 1, kek: Buffer.from(kek).toString('base64url')});
+      }catch(e){
+        send(401, {error: 'auth'});
+      }
+    });
     return;
   }
 

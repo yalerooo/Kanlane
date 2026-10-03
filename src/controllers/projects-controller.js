@@ -93,7 +93,7 @@
       this.firstRun = true;
       window.__hideBootSkeleton();
       document.body.classList.add('is-onboarding');
-      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate());
+      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate(), this.app.controllers.crypto.canCreateManaged());
       this.view.openOnboarding();
       /* Si ya te habían invitado a un equipo, puedes aceptarlo en vez de crear uno. */
       this.view.renderInvites(this.invites());
@@ -258,7 +258,7 @@
 
     openNew(){
       if(!this.projects.isReady()) return;
-      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate());
+      this.view.setPrivacyAvailable(this.app.controllers.crypto.canCreate(), this.app.controllers.crypto.canCreateManaged());
       this.view.openNew();
     }
 
@@ -267,11 +267,12 @@
       if(!p) return;
       this.view.openEdit(p, true, this.projects.configOf(p));
       /* La privacidad se elige al crear el proyecto y no se cambia; solo existe con cuenta. */
-      this.view.setPrivacyInfo(this.app.controllers.crypto.me ? {encrypted:ProjectModel.isEncrypted(p)} : null);
+      this.view.setPrivacyInfo(this.app.controllers.crypto.me ? {encrypted:ProjectModel.isEncrypted(p), managed:ProjectModel.isManaged(p)} : null);
     }
 
-    /* Proyecto con cifrado total, desde el último paso del asistente.
-       d: {nombre, color, config, password, trusted}. */
+    /* Proyecto con cifrado total, desde el último paso del asistente: d = {nombre, color, config,
+       password, trusted}. O gestionado por Kanlane, desde el paso de privacidad: d = {nombre, color,
+       config, managed:true}. */
     createEncrypted(d){
       if(!this.projects.isReady()) return;
       const first = this.firstRun;
@@ -290,7 +291,7 @@
           this.app.switchProject(id);
           this.view.closeDialog();
         }
-        toast.success(Workhub.t('Proyecto «{nombre}» creado con cifrado total', {nombre:d.nombre}), {important:true});
+        toast.success(Workhub.t(d.managed ? 'Proyecto «{nombre}» creado con cifrado gestionado por Kanlane' : 'Proyecto «{nombre}» creado con cifrado total', {nombre:d.nombre}), {important:true});
       }).catch((err) => {
         this.firstRunSaving = false;
         this.view.setEncBusy(false);

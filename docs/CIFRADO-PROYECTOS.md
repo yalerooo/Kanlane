@@ -14,7 +14,7 @@ Al crear un proyecto se elegirá su privacidad en un paso nuevo del asistente «
 |---|---|---|---|---|
 | **A** | Solo contraseñas | Contraseña y notas de las credenciales del cofre (lo de hoy) | El usuario (contraseña maestra del cofre) | Ya existe; es el predeterminado |
 | **B** | Cifrado total | Todo el contenido del proyecto (tareas, notas, clientes, contactos, reuniones, metadatos del cofre, datos de plugins, imágenes) | Solo quien tenga la contraseña de cifrado del proyecto o la clave de recuperación | PR1–PR7 |
-| **C** | Gestionado por Kanlane | Lo mismo que B | El usuario **y técnicamente Kanlane** (la clave la custodia un Worker de Cloudflare) | PR9 (tarjeta desactivada con «Próximamente» hasta entonces) |
+| **C** | Gestionado por Kanlane | Lo mismo que B | El usuario **y técnicamente Kanlane** (la clave la custodia un Worker de Cloudflare) | PR9 (hecho; la tarjeta vuelve a «Próximamente» con `managedEncryption: false`) |
 
 Principios:
 
@@ -956,6 +956,20 @@ Sin cambios de formato: el JSON se cifra con la clave de copias de la cuenta (`l
 - **Límite**: `AUTH_RATE_LIMIT` existente o uno nuevo (p. ej. 60/min por uid). Workers gratis: 100 000 peticiones/día; con la DEK guardada en el navegador se llama una vez por dispositivo y proyecto.
 - **Reglas**: `enc.mode in ['pw','managed']` y `validCrypto` acepta `kms` → **[MANUAL] publicar reglas** antes de desplegar PR9.
 - **Textos**: honestos (8.1, tarjeta C); política de privacidad: Cloudflare pasa a custodiar material de claves.
+
+**Hecho en PR9** (rama `claude/cifrado-pr9`). Lo que concreta o cambia respecto a lo de arriba:
+
+- **Solo proyectos personales.** El Worker deriva siempre con el ámbito `u:{uid}` (el uid sale del token verificado, nunca de la petición). **No** se ha hecho la autorización de equipos ni `teams/{tid}/crypto/_kms` (D18): un proyecto gestionado no se puede convertir en equipo (la interfaz lo dice y `TeamController.convert` lo rechaza) y las reglas no dejan crear un equipo con `enc.mode: 'managed'` ni guardar un envoltorio `kms` en `teams/{tid}/crypto`. Queda para un PR posterior.
+- **Sin clave de recuperación propia** (la opción «recomendada, opcional» de arriba no se ha hecho): el acceso depende de la cuenta y del secreto del Worker. Lo dice la política de privacidad.
+- **Worker** (`worker/index.js`): `POST /__/kms/v1/kek`, cuerpo `{pid, kid}` (máx. 512 caracteres), respuesta `{v, kmsv, kek}` con `Cache-Control: no-store`. Verifica el JWT (RS256, `kid` de las claves de Google guardadas según su `Cache-Control`, `iss`, `aud`, `exp`, `iat`, `auth_time`, `sub`, y `email_verified` si el proveedor es `password`), rechaza otro `Origin`, usa `AUTH_RATE_LIMIT` por IP y responde 503 si falta `KMS_MASTER_V1` (base64 de 32 bytes o más). Códigos: 400 petición, 401 token, 403 origen, 405 método, 429 límite, 503 sin secreto o sin claves de Google.
+- **Cliente**: `PC.wrapManaged` / `PC.unwrapManaged` (AAD `kanlane/wrap/v1|kms|pid|kid|uid`, error `bad-kms`), `ProjectModel.isManaged`, `rootDb.idToken()` y en `ProjectCryptoController`: `canCreateManaged`, `managedKek`, `create({managed:true})`, `openManaged` y `retryManaged`. `crypto/{uid}` de un gestionado es `{v, kid, kms:{iv, ct, kmsv}, createdAt, updatedAt}`, sin `kdf`, `pw` ni `rk`.
+- **Abrir**: `AppController.connectProject` no cambia. Sin la clave en el navegador llama a `onLocked()`, que en un gestionado pide la clave al Worker, abre el envoltorio, guarda la DEK no extraíble (`trusted:false`: se borra al cerrar sesión) y reconecta. Si falla, la pantalla `#projectLockScreen` muestra el motivo y «Reintentar» (`#plManaged`), sin campo de contraseña. Si la clave recién guardada no pasa el `kcv`, se enseña el error en vez de pedirla en bucle.
+- **Asistente**: la tarjeta C se elige en el paso 2 y el proyecto se crea ahí mismo («Crear proyecto»), sin pasos 3 y 4. Con «Desde GitHub» queda desactivada, como la B. Interruptor `Workhub.features.managedEncryption`.
+- **Copias**: un gestionado exporta **sin cifrar** (`BackupController.sealsCopies()`): el archivo cifrado de 11.3 se abre con contraseña o clave de recuperación, que aquí no existen. Las versiones locales sí van selladas con la DEK.
+- **Sin acciones de privacidad** al editar (no hay contraseña que cambiar) ni «Bloquear este proyecto» en Ctrl K (se volvería a abrir solo).
+- **Reglas**: `validEnc` admite `mode in ['pw','managed']`; `validCrypto` elige entre `validPwCrypto` (lo de antes) y `validKmsCrypto`; los equipos exigen `mode == 'pw'` y `validPwCrypto`. 198 pruebas. **[MANUAL] publicar las reglas y poner el secreto** (`docs/CLOUDFLARE.md`, «Secreto del modo gestionado») antes de fusionar.
+- **Pruebas**: `tests/worker/kms.test.js` (tokens firmados con una clave RSA de prueba: válidos, caducados, de otro proyecto, sin firma, manipulados; HKDF comprobado con `node:crypto`), `tests/crypto/project-crypto.test.js` (envoltorio `kms`) y `tests/e2e/crypto-managed.js` (emuladores y reglas reales). **El recorrido de navegador usa el servidor de claves de `scripts/dev.js --emulador`** (mismo cálculo, secreto fijo, sin verificar la firma porque los tokens del emulador no van firmados): **el Worker real con tokens reales de Firebase no se ha probado**; hay que probarlo en producción.
+- **Legal**: apartado «Proyectos gestionados por Kanlane» y fila de Cloudflare en `legal/privacidad/`, `version: 5`. Sin almacenamiento nuevo en el navegador (`workhub-keys` ya figuraba). `llms.txt`, FAQ y portada siguen para el PR8.
 
 ---
 

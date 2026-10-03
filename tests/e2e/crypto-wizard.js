@@ -123,8 +123,7 @@ const card = (page, text) => page.locator('.card').filter({hasText:text});
     await page.locator('#pStep2').waitFor({state:'visible'});
     assert.equal(await page.locator('#pPrivacy [data-privacy]').count(), 3, 'tres tarjetas de privacidad');
     assert.equal(await page.locator('#pPrivacy [data-privacy="A"]').getAttribute('aria-checked'), 'true', '«Solo contraseñas» por defecto');
-    assert.equal(await page.locator('#pPrivacy [data-privacy="C"]').getAttribute('aria-disabled'), 'true', '«Gestionado» desactivado');
-    await page.locator('#pPrivacy [data-privacy="C"]').click({force:true});
+    /* «Gestionado por Kanlane» tiene su propio recorrido: tests/e2e/crypto-managed.js. */
     assert.equal(await page.locator('#pPrivacy [data-privacy="C"]').getAttribute('aria-checked'), 'false');
     assert.equal(await page.locator('#btnCancelProject').isVisible(), true, '«Atrás» visible también en el primer proyecto');
     await page.locator('#btnSaveProject').click();

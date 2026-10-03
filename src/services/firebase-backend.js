@@ -304,6 +304,8 @@
     const me = profileOf(user);
     const db = scopedDb(firestore.collection('users').doc(uid));
     db.me = me;
+    /* ID token de la sesión, para el servidor de claves del modo gestionado (worker/index.js). */
+    db.idToken = () => (auth.currentUser || user).getIdToken();
     db.team = (tid) => scopedDb(firestore.collection('teams').doc(tid));
     db.teams = {
       /* Equipos de los que soy miembro. */

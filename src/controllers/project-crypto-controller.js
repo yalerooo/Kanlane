@@ -1,7 +1,9 @@
 /* Proyectos con cifrado total (docs/CIFRADO-PROYECTOS.md): crearlos, desbloquearlos con la
    contraseña o con la clave de recuperación, cambiar la contraseña, crear otra clave de recuperación
    y olvidar la clave en este navegador. Las claves las envuelve project-crypto.js, la del navegador
-   la guarda keystore.js y los modelos reciben el cifrador desde AppController.connectProject(). */
+   la guarda keystore.js y los modelos reciben el cifrador desde AppController.connectProject().
+   También los «Gestionado por Kanlane» (apartado 12): sin contraseña; la clave que envuelve la del
+   proyecto la entrega el Worker de Kanlane a la cuenta con la sesión iniciada. */
 (function(){
   const P = Workhub.models.ProjectModel;
   const PC = Workhub.services.projectCrypto;
@@ -15,8 +17,18 @@
     read: 'No se pudo leer la clave del proyecto. Comprueba la conexión e inténtalo de nuevo.',
     noWrap: 'Tu cuenta no tiene acceso a la clave de este proyecto. Pide al propietario un código de acceso nuevo.',
     mismatch: 'Las contraseñas no coinciden.',
-    save: 'No se pudo guardar el cambio. Comprueba la conexión e inténtalo de nuevo.'
+    save: 'No se pudo guardar el cambio. Comprueba la conexión e inténtalo de nuevo.',
+    kmsNetwork: 'No se pudo contactar con el servidor de claves de Kanlane. Comprueba la conexión e inténtalo de nuevo.',
+    kmsAuth: 'El servidor de claves de Kanlane no ha aceptado tu sesión. Cierra sesión, vuelve a entrar e inténtalo de nuevo.',
+    kmsRate: 'Demasiadas peticiones al servidor de claves de Kanlane. Espera un minuto e inténtalo de nuevo.',
+    kmsUnavailable: 'El servidor de claves de Kanlane no está disponible ahora. Inténtalo de nuevo en unos minutos.',
+    kmsKey: 'La clave que ha dado el servidor de Kanlane no abre este proyecto.',
+    managedNoWrap: 'No se ha encontrado la clave de este proyecto en tu cuenta.'
   };
+
+  /* Servidor de claves del modo gestionado: el Worker de Kanlane, en el mismo dominio. */
+  const KMS_URL = '/__/kms/v1/kek';
+  const KEK_BYTES = 32;
 
   function fail(code){
     const err = new Error(code);
@@ -47,7 +59,8 @@
         download: (text) => this.download(text, this.downloadName || this.currentName()),
         change: (current, next, again) => this.changePassword(current, next, again),
         newRecovery: (current) => this.newRecovery(current),
-        recoveryDone: () => this.finishNewRecovery()
+        recoveryDone: () => this.finishNewRecovery(),
+        retryManaged: () => this.retryManaged()
       });
       /* Otra pestaña ha guardado u olvidado una clave: se desbloquea o se bloquea sola. */
       if(keystore) keystore.onChange((msg) => this.onKeysChanged(msg));
@@ -60,6 +73,11 @@
     /* ¿Se puede ofrecer el cifrado total? Solo con cuenta, con Web Crypto y con el interruptor encendido. */
     canCreate(){
       return !!(this.me && Workhub.features && Workhub.features.encryptedProjects && PC && PC.isAvailable() && keystore);
+    }
+
+    /* ¿Se puede ofrecer «Gestionado por Kanlane»? */
+    canCreateManaged(){
+      return this.canCreate() && !!Workhub.features.managedEncryption && typeof this.app.rootDb.idToken === 'function';
     }
 
     project(id){
@@ -101,7 +119,38 @@
       if(code === 'no-wrap') return MSG.noWrap;
       if(code === 'read') return MSG.read;
       if(code === 'bad-format' || code === 'unavailable') return MSG.read;
+      if(code === 'kms-network') return MSG.kmsNetwork;
+      if(code === 'kms-auth') return MSG.kmsAuth;
+      if(code === 'kms-rate') return MSG.kmsRate;
+      if(code === 'kms-unavailable') return MSG.kmsUnavailable;
+      if(code === 'bad-kms') return MSG.kmsKey;
       return MSG.save;
+    }
+
+    /* Clave del servidor de Kanlane para un proyecto gestionado: {kek:Uint8Array(32), kmsv}.
+       El servidor la deriva para esta cuenta (la del ID token), este proyecto (pid) y esta clave (kid). */
+    async managedKek(ids){
+      let res;
+      try{
+        const token = await this.app.rootDb.idToken();
+        res = await fetch(KMS_URL, {
+          method:'POST', cache:'no-store', credentials:'omit',
+          headers:{'Content-Type':'application/json', Authorization:'Bearer ' + token},
+          body:JSON.stringify({pid:ids.pid, kid:ids.kid})
+        });
+      }catch(err){
+        throw fail('kms-network');
+      }
+      if(res.status === 401 || res.status === 403) throw fail('kms-auth');
+      if(res.status === 429) throw fail('kms-rate');
+      if(!res.ok) throw fail('kms-unavailable');
+      try{
+        const data = await res.json();
+        if(!Number.isInteger(data.kmsv) || data.kmsv < 1) throw fail('kms-unavailable');
+        return {kek:PC.fromB64url(data.kek, KEK_BYTES), kmsv:data.kmsv};
+      }catch(err){
+        throw fail('kms-unavailable');
+      }
     }
 
     /* ---------- asistente «Nuevo proyecto» ---------- */
@@ -115,7 +164,9 @@
       this.recovery = null;
     }
 
-    /* Crea el proyecto cifrado y devuelve su id. d: {id?, nombre, color, config, password, trusted}.
+    /* Crea el proyecto cifrado y devuelve su id. d: {id?, nombre, color, config, password, trusted},
+       o {id?, nombre, color, config, managed:true} para «Gestionado por Kanlane» (sin contraseña ni
+       clave de recuperación: la clave del proyecto se envuelve con la que da el servidor).
        Orden (6.6 del plan): clave envuelta → clave en este navegador → documento del proyecto.
        Si falla el último paso se deshacen los dos primeros. El error lleva en .phase el paso que falló. */
     async create(d){
@@ -135,7 +186,8 @@
       const t = Workhub.t;
       const code = err && err.code;
       let why = code ? ' (' + code + ')' : '';
-      if(code === 'permission-denied') why = ' ' + t('El servidor ha rechazado la operación (permission-denied): comprueba que están publicadas las reglas de firestore.rules del cifrado y que tu correo está verificado.');
+      if(code && String(code).indexOf('kms-') === 0) why = ' ' + t(this.message(err));
+      else if(code === 'permission-denied') why = ' ' + t('El servidor ha rechazado la operación (permission-denied): comprueba que están publicadas las reglas de firestore.rules del cifrado y que tu correo está verificado.');
       else if(code === 'unavailable' || code === 'deadline-exceeded') why = ' ' + t('Parece un problema de conexión; inténtalo de nuevo.');
       else if(code === 'resource-exhausted') why = ' ' + t('Se ha superado la cuota de Firestore por hoy.');
       return t('No se pudo crear el proyecto.') + (err && err.phase ? ' ' + t('Falló al {phase}.', {phase:t(err.phase)}) : '') + why;
@@ -148,23 +200,30 @@
       const raw = PC.newDekBytes();
       const pid = PC.newPid(), kid = PC.newKid();
       const ctx = {pid:pid, kid:kid, uid:uid};
-      const recovery = this.recovery || PC.newRecoveryKey();
+      const managed = d.managed === true;
       try{
         const key = await PC.importDek(raw);
-        const parts = await Promise.all([
-          PC.wrapPassword(raw, d.password, ctx),
-          PC.wrapRecovery(raw, recovery.bytes, ctx),
-          PC.kcv(key, pid, kid)
-        ]);
+        const check = await PC.kcv(key, pid, kid);
+        let wrap;
+        if(managed){
+          step('pedir la clave al servidor de Kanlane');
+          const server = await this.managedKek(ctx);
+          wrap = await PC.wrapManaged(raw, server.kek, ctx, server.kmsv);
+        }else{
+          const recovery = this.recovery || PC.newRecoveryKey();
+          const parts = await Promise.all([PC.wrapPassword(raw, d.password, ctx), PC.wrapRecovery(raw, recovery.bytes, ctx)]);
+          wrap = {kdf:parts[0].kdf, pw:parts[0].pw, rk:parts[1].rk};
+        }
         const now = Date.now();
         const ref = this.wrapRef(id);
         step('guardar la clave del proyecto');
-        await ref.set({v:PC.VERSION, kid:kid, kdf:parts[0].kdf, pw:parts[0].pw, rk:parts[1].rk, createdAt:now, updatedAt:now});
+        await ref.set(Object.assign({v:PC.VERSION, kid:kid}, wrap, {createdAt:now, updatedAt:now}));
         step('guardar la clave en este navegador');
-        await keystore.put({uid:uid, pid:pid, projectId:id, kid:kid, key:key, trusted:!!d.trusted});
+        /* Gestionado: la clave se vuelve a pedir al servidor al entrar, así que no se queda al cerrar sesión. */
+        await keystore.put({uid:uid, pid:pid, projectId:id, kid:kid, key:key, trusted:!managed && !!d.trusted});
         step('guardar el proyecto');
         const data = Object.assign({nombre:d.nombre, createdAt:id === P.MAIN_ID ? 0 : now}, d.config || {},
-          {enc:{v:PC.VERSION, mode:'pw', pid:pid, kid:kid, kcv:parts[2], createdAt:now}});
+          {enc:{v:PC.VERSION, mode:managed ? 'managed' : 'pw', pid:pid, kid:kid, kcv:check, createdAt:now}});
         if(typeof d.color === 'number') data.color = d.color;
         try{
           await projects.set(id, data);
@@ -173,7 +232,7 @@
           ref.delete().catch(() => {});
           throw err;
         }
-        this.recovery = null;
+        if(!managed) this.recovery = null;
         return id;
       }finally{
         raw.fill(0);
@@ -206,12 +265,54 @@
 
     /* ---------- pantalla de desbloqueo ---------- */
 
-    /* Lo llama AppController cuando el proyecto abierto está cifrado y su clave no está aquí. */
+    /* Lo llama AppController cuando el proyecto abierto está cifrado y su clave no está aquí.
+       Con cifrado total se pide la contraseña; uno gestionado se abre solo con la clave del servidor. */
     onLocked(){
       this.pending = null;
       this.editing = '';
       this.downloadName = '';
-      this.view.show(this.currentName());
+      const p = this.project();
+      if(!P.isManaged(p)){ this.view.show(this.currentName()); return; }
+      /* La clave se acaba de guardar y aun así no vale: se enseña el error en vez de pedirla sin parar. */
+      const done = this.managedDone;
+      if(done && done.pid === p.enc.pid && Date.now() - done.at < 10000){
+        this.view.showManaged(p.nombre, false, MSG.kmsKey);
+        return;
+      }
+      this.openManaged();
+    }
+
+    isManaged(){
+      return P.isManaged(this.project());
+    }
+
+    /* Pide la clave al servidor de Kanlane, abre con ella la del proyecto y la guarda en este navegador. */
+    openManaged(){
+      const id = this.app.projectId;
+      const p = this.project(id);
+      if(!P.isManaged(p)) return Promise.resolve();
+      const enc = p.enc;
+      this.view.showManaged(p.nombre, true);
+      if(this.managedBusy === enc.pid) return Promise.resolve();
+      this.managedBusy = enc.pid;
+      return this.readWrap(id, enc)
+        .then((doc) => this.managedKek(enc).then((server) => PC.unwrapManaged(doc, server.kek, this.ctx(enc), false)))
+        .then((key) => this.keep(id, enc, key, false))
+        .then(() => {
+          this.managedBusy = '';
+          this.managedDone = {pid:enc.pid, at:Date.now()};
+          if(id === this.app.projectId) this.app.connectProject();
+        }, (err) => {
+          this.managedBusy = '';
+          console.error('No se pudo abrir el proyecto gestionado:', err);
+          if(id !== this.app.projectId) return;
+          this.view.showManaged(p.nombre, false, err && err.code === 'no-wrap' ? MSG.managedNoWrap : this.message(err));
+        });
+    }
+
+    retryManaged(){
+      this.managedDone = null;
+      return this.openManaged();
     }
 
     isUnlocked(){
@@ -303,7 +404,7 @@
     /* kind: 'password' | 'recovery' | 'forget'. */
     action(kind, projectId){
       const p = this.project(projectId);
-      if(!P.isEncrypted(p)) return;
+      if(!P.isEncrypted(p) || P.isManaged(p)) return;
       if(kind === 'forget'){ this.forgetKey(p.id); return; }
       this.editing = p.id;
       this.downloadName = p.nombre;

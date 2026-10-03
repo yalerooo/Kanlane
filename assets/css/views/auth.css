@@ -1,36 +1,21 @@
-/* ---------- Pantalla de acceso ---------- */
+/* ---------- Pantalla de acceso ----------
+   Estilo «cristal limpio»: una sola hoja de cristal sobre el fondo con el velo del
+   acento. Dentro no hay más cristal: el formulario va directo sobre la hoja y el
+   panel de presentación, sobre relleno suave (--surface-2). */
 .auth-screen{
   position:fixed;
   inset:0;
   z-index:50;
   display:flex;
   flex-direction:column;
-  align-items:center;
-  gap:18px;
-  padding:24px 16px;
   background:var(--bg);
   overflow-y:auto;
   isolation:isolate;
 }
-/* margin:auto centra mientras cabe y, si no cabe, deja desplazarse hasta arriba
-   (con justify-content:center la parte de arriba quedaba cortada). */
-.auth-screen > .auth-card{margin-top:auto;}
-.auth-screen > .auth-lang{margin-bottom:auto;}
 body.is-authing .app{display:none;}
 /* Mientras se comprueba la sesión (clase puesta en el <head>): nunca se ve la
    app, y la pantalla de acceso se muestra desde el primer fotograma. */
 html.auth-gate .app{display:none !important;}
-/* La tarjeta de acceso usa el mismo cristal que la ficha, sobre el fondo con el velo del acento. */
-.auth-card{
-  width:min(380px, 100%);
-  background:var(--sheet);
-  border:1px solid var(--glass-line);
-  border-radius:var(--r-sheet);
-  -webkit-backdrop-filter:var(--sheet-blur);
-  backdrop-filter:var(--sheet-blur);
-  box-shadow:var(--glass-shadow);
-  padding:28px 28px 24px;
-}
 .auth-screen::before{
   content:"";
   position:fixed;
@@ -41,9 +26,65 @@ html.auth-gate .app{display:none !important;}
     radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--hue-a) calc(var(--wash) * 100%), transparent) 0, transparent 70%),
     radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--hue-b) calc(var(--wash) * 70%), transparent) 0, transparent 70%);
 }
-.auth-brand{display:flex;align-items:center;gap:9px;margin-bottom:24px;}
-.auth-card h1{font-size:19px;font-weight:600;letter-spacing:-0.02em;margin:0 0 4px;}
-.auth-sub{margin:0 0 20px;color:var(--ink-soft);font-size:13px;}
+
+/* Barra de arriba: marca (vuelve a la portada), idioma y tema. */
+.auth-top{
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 20px;
+}
+.auth-brand{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  padding:4px 8px 4px 4px;
+  margin-left:-4px;
+  color:var(--ink);
+  text-decoration:none;
+  border-radius:var(--r-md);
+}
+.auth-brand:hover{background:var(--hover);}
+.auth-brand:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.auth-logo{display:block;width:28px;height:28px;border-radius:8px;}
+.auth-brand-name{font-size:15px;font-weight:600;letter-spacing:-0.02em;}
+.auth-tools{display:flex;align-items:center;gap:8px;}
+.auth-lang button{min-width:36px;height:26px;padding:0 9px;font-size:12px;font-weight:550;letter-spacing:.02em;}
+.auth-theme{width:30px;height:30px;}
+/* Sol en oscuro, luna en claro (como el botón del pie de la barra lateral). */
+.auth-theme .ic-sun{display:none;}
+:root[data-theme="dark"] .auth-theme .ic-sun{display:block;}
+:root[data-theme="dark"] .auth-theme .ic-moon{display:none;}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .auth-theme .ic-sun{display:block;}
+  :root:not([data-theme="light"]) .auth-theme .ic-moon{display:none;}
+}
+
+/* margin:auto centra mientras cabe y, si no cabe, deja desplazarse hasta arriba
+   (con justify-content:center la parte de arriba quedaba cortada). */
+.auth-stage{flex:1 0 auto;display:flex;padding:8px 20px 20px;}
+.auth-shell{
+  margin:auto;
+  width:min(900px, 100%);
+  display:grid;
+  grid-template-columns:minmax(0, 404px) minmax(0, 1fr);
+  background:var(--sheet);
+  border:1px solid var(--glass-line);
+  border-radius:calc(var(--r-sheet) + 4px);
+  -webkit-backdrop-filter:var(--sheet-blur);
+  backdrop-filter:var(--sheet-blur);
+  box-shadow:var(--glass-shadow);
+  animation:auth-in .32s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes auth-in{from{opacity:0;transform:translateY(8px);}}
+@media (prefers-reduced-motion: reduce){.auth-shell{animation:none;}}
+
+/* ---------- Formulario ---------- */
+.auth-card{min-width:0;padding:36px 36px 30px;display:flex;flex-direction:column;justify-content:center;}
+.auth-card h1{font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;margin:0 0 6px;}
+.auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
 .auth-providers{display:flex;flex-direction:column;gap:8px;}
 .auth-provider{
   display:flex;
@@ -51,7 +92,7 @@ html.auth-gate .app{display:none !important;}
   justify-content:center;
   gap:10px;
   width:100%;
-  height:36px;
+  height:38px;
   font-family:inherit;
   font-size:13px;
   font-weight:500;
@@ -62,9 +103,10 @@ html.auth-gate .app{display:none !important;}
   cursor:pointer;
   transition:background .12s ease, border-color .12s ease;
 }
-.auth-provider:hover:not(:disabled){background:var(--hover);}
+.auth-provider:hover:not(:disabled){background:var(--hover);border-color:var(--ink-faint);}
+.auth-provider:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .auth-provider:disabled{opacity:.55;cursor:progress;}
-.auth-provider svg{width:17px;height:17px;}
+.auth-provider svg{width:17px;height:17px;flex:none;}
 .auth-divider{
   display:flex;
   align-items:center;
@@ -74,14 +116,39 @@ html.auth-gate .app{display:none !important;}
   color:var(--ink-faint);
 }
 .auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line);}
-.auth-form input{width:100%;}
-.auth-label-row{display:flex;align-items:baseline;justify-content:space-between;}
+.auth-form input{width:100%;min-height:36px;}
+.auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .auth-label-row label{font-size:12.5px;font-weight:500;color:var(--ink-soft);}
 .auth-label-row a,.auth-switch a{font-size:12.5px;color:var(--ink);font-weight:500;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
 .auth-label-row a:hover,.auth-switch a:hover{text-decoration-color:currentColor;}
-.auth-submit{width:100%;height:36px;margin-top:4px;}
+/* Contraseña con el botón de ver/ocultar dentro del campo. */
+.auth-pass{position:relative;}
+.auth-pass input{padding-right:40px;}
+.auth-pass-toggle{
+  position:absolute;
+  top:50%;
+  right:4px;
+  transform:translateY(-50%);
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  color:var(--ink-faint);
+  background:none;
+  border:none;
+  border-radius:7px;
+  cursor:pointer;
+}
+.auth-pass-toggle:hover{color:var(--ink);background:var(--hover);}
+.auth-pass-toggle:focus-visible{outline:2px solid var(--accent-solid);outline-offset:1px;}
+.auth-pass-toggle .ic-eye-off{display:none;}
+.auth-pass-toggle[aria-pressed="true"] .ic-eye{display:none;}
+.auth-pass-toggle[aria-pressed="true"] .ic-eye-off{display:block;}
+.auth-submit{width:100%;height:38px;margin-top:4px;font-size:13.5px;}
 .auth-msg{font-size:12.5px;line-height:1.45;color:var(--danger);margin:0 0 10px;}
 .auth-msg.is-info{color:var(--st-done);}
+.auth-switch{margin:16px 0 0;text-align:center;font-size:12.5px;color:var(--ink-soft);}
 
 /* Aviso «esta cuenta ya existe»: neutro, con la explicación y los dos pasos. */
 .auth-notice{
@@ -135,25 +202,124 @@ html.auth-gate .app{display:none !important;}
   border:1px solid var(--line-strong);
   border-radius:50%;
 }
-#authPanel.is-guest #authNotice{display:none;}
-.auth-guest .auth-divider{margin:16px 0 12px;}
+
+/* ---------- Invitado ---------- */
+.auth-guest{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
+.auth-guest-row{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  padding:9px 10px;
+  font-family:inherit;
+  text-align:left;
+  color:var(--ink);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:var(--r-lg);
+  cursor:pointer;
+  transition:background .12s ease, border-color .12s ease;
+}
+.auth-guest-row:hover{background:var(--hover);border-color:var(--line);}
+.auth-guest-row:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.auth-guest-ic{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:var(--r-md);color:var(--ink-soft);background:var(--surface-2);}
+.auth-guest-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.35;}
+.auth-guest-title{font-size:13px;font-weight:550;}
+.auth-guest-sub{font-size:12px;color:var(--ink-soft);}
+.auth-guest-go{flex:none;color:var(--ink-faint);transition:transform .12s ease;}
+.auth-guest-row:hover .auth-guest-go{transform:translateX(2px);color:var(--ink);}
 .auth-guest-note{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
-.auth-guest-back{width:100%;height:36px;margin-top:6px;}
+.auth-guest-back{width:100%;height:36px;margin-top:8px;}
 /* Paso «invitado»: solo el nombre y sus botones, sin el resto del acceso. */
+#authPanel.is-guest #authNotice,
 #authPanel.is-guest #authProviders,
 #authPanel.is-guest #authDivider,
 #authPanel.is-guest #authEmailForm,
 #authPanel.is-guest #authSwitch,
-#authPanel.is-guest #authGuestBtn,
-#authPanel.is-guest .auth-guest .auth-divider{display:none;}
-#authPanel.is-guest .auth-guest{margin-top:0;}
-.auth-switch{margin:16px 0 0;text-align:center;font-size:12.5px;color:var(--ink-soft);}
-.auth-foot{margin:0;font-size:12px;color:var(--ink-faint);text-align:center;max-width:380px;}
+#authPanel.is-guest #authGuestBtn{display:none;}
+#authPanel.is-guest .auth-guest{margin-top:0;padding-top:0;border-top:none;}
+
+/* ---------- Panel de presentación (solo en pantallas anchas) ---------- */
+.auth-aside{
+  min-width:0;
+  margin:8px 8px 8px 0;
+  padding:30px 28px 26px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:22px;
+  background:var(--surface-2);
+  border-radius:var(--r-sheet);
+}
+.auth-aside-title{margin:0;font-size:19px;font-weight:600;letter-spacing:-0.025em;line-height:1.25;color:var(--ink);text-wrap:balance;}
+/* Tablero de muestra: sin texto, solo la forma de las columnas y las tarjetas. */
+.auth-preview{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+  padding:10px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-lg);
+}
+.auth-pcol{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.auth-phead{display:flex;align-items:center;gap:6px;height:18px;padding:0 2px;}
+.auth-pring{width:9px;height:9px;flex:none;border:2px solid var(--c);border-radius:50%;}
+.auth-pring.is-done{background:var(--c);}
+.auth-pbar{display:block;height:5px;border-radius:3px;background:var(--surface-3);}
+.auth-pbar.is-soft{background:var(--surface-2);}
+.auth-pcard{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:9px 9px 10px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-md);
+  box-shadow:var(--shadow-sm);
+}
+.auth-pcard.is-done{opacity:.6;}
+.auth-ptag{width:7px;height:7px;border-radius:2px;background:hsl(var(--h) var(--chip-s) var(--chip-dot-l));}
+.auth-points{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
+.auth-points li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.45;color:var(--ink-soft);}
+.auth-point-ic{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-top:-2px;border-radius:7px;color:var(--ink);background:var(--surface);border:1px solid var(--line);}
+
+/* ---------- Pie ---------- */
+.auth-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 20px 18px;}
+.auth-foot{margin:0;font-size:12px;line-height:1.5;color:var(--ink-faint);text-align:center;max-width:440px;}
 .auth-foot a{color:var(--ink-soft);text-decoration-color:var(--line-strong);text-underline-offset:3px;}
 .auth-foot a:hover{color:var(--ink);}
-.auth-foot.auth-legal{margin-top:-6px;}
-.auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;padding:8px 0 4px;}
+/* El cifrado ya se cuenta en el panel de presentación; el pie lo dice cuando el panel no se ve. */
+.auth-foot-crypto{display:none;}
+
+/* ---------- Estados: carga, error y correo sin verificar ---------- */
+.auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}
 .auth-loading.is-error{color:var(--danger);align-items:flex-start;flex-direction:column;}
+.auth-loading.is-verify{flex-direction:column;align-items:flex-start;gap:10px;color:var(--ink-soft);}
+.auth-loading.is-verify strong{color:var(--ink);font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;}
+.auth-verify-msg{font-size:12.5px;color:var(--danger);}
+.auth-verify-msg:empty{display:none;}
+.auth-verify-msg.is-info{color:var(--st-done);}
+.auth-noaccess-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+
+/* ---------- Tablet y móvil: solo el formulario ---------- */
+@media (max-width: 860px){
+  .auth-shell{width:min(420px, 100%);grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
+  .auth-aside{display:none;}
+  .auth-card{padding:30px 28px 24px;}
+  .auth-foot-crypto{display:block;}
+}
+@media (max-width: 480px){
+  .auth-top{padding:10px 14px;}
+  .auth-stage{padding:6px 12px 16px;}
+  .auth-card{padding:24px 20px 20px;}
+  .auth-card h1{font-size:20px;}
+  .auth-bottom{padding:0 16px 16px;}
+  /* 16px evita que iOS amplíe la página al enfocar un campo. */
+  .auth-form input{font-size:16px;min-height:40px;}
+  .auth-provider,.auth-submit,.auth-guest-back{height:42px;}
+  .auth-pass-toggle{width:32px;height:32px;}
+}
 
 
 /* Cuenta en la barra lateral */
@@ -164,17 +330,3 @@ html.auth-gate .app{display:none !important;}
 .account-name{font-size:13px;font-weight:550;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .account-mail{font-size:11.5px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .account .icon-only{width:26px;height:26px;border-radius:7px;flex:none;}
-
-/* Cuenta de correo pendiente de verificar. */
-.auth-loading.is-verify{flex-direction:column;align-items:flex-start;gap:10px;color:var(--ink-soft);line-height:1.5;}
-.auth-loading.is-verify strong{color:var(--ink);font-size:15px;font-weight:600;}
-.auth-verify-msg{font-size:12.5px;color:var(--danger);}
-.auth-verify-msg:empty{display:none;}
-.auth-verify-msg.is-info{color:var(--st-done);}
-.auth-noaccess-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
-
-/* Idioma en la pantalla de acceso */
-.auth-lang{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:12px;color:var(--ink-faint);}
-.auth-lang button{padding:2px 4px;border:none;background:none;font:inherit;color:var(--ink-faint);cursor:pointer;border-radius:4px;}
-.auth-lang button:hover{color:var(--ink);}
-.auth-lang button.is-on{color:var(--ink);font-weight:600;}

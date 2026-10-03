@@ -78,8 +78,21 @@
       if(!this.view.isVisible()) return;
       const map = this.buckets();
       this.view.render(this.year, this.month, this.selected, map, this.mode);
-      this.view.renderDay(this.selected, map[this.selected]);
+      this.view.renderDay(this.selected, map[this.selected], this.upcoming(map, this.selected));
       this.fillExtensions();
+    }
+
+    /* Lo siguiente a partir del día elegido: reuniones y tareas sin terminar de los días
+       posteriores, por orden, hasta cinco. */
+    upcoming(map, from){
+      const TaskModel = Workhub.models.TaskModel;
+      const out = [];
+      Object.keys(map).filter((k) => k > from).sort().some((k) => {
+        map[k].meetings.forEach((m) => out.push({kind:'meeting', date:k, item:m}));
+        map[k].tasks.forEach((t) => { if(!TaskModel.isDone(t)) out.push({kind:'task', date:k, item:t}); });
+        return out.length >= 5;
+      });
+      return out.slice(0, 5);
     }
 
     /* Botones de plugins de la barra: reciben el día elegido. */
@@ -125,7 +138,8 @@
         this.render();
       } else {
         this.view.markSelected(date);
-        this.view.renderDay(date, this.buckets()[date]);
+        const map = this.buckets();
+        this.view.renderDay(date, map[date], this.upcoming(map, date));
         this.fillExtensions();
       }
       if(scroll) this.view.scrollToDay();

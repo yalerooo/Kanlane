@@ -6,6 +6,8 @@
   const {copyWithFeedback, showMessage, bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const TaskModel = Workhub.models.TaskModel;
   const MeetingModel = Workhub.models.MeetingModel;
+  const clientColors = Workhub.views.clientColors;
+  const VIDEO_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6.5" width="12.5" height="11" rx="2.5"/><path d="M15.5 10.5l5-2.5v8l-5-2.5"/></svg>';
   const $ = (id) => document.getElementById(id);
 
   const MAX_CHIPS = 3;
@@ -224,6 +226,7 @@
           })).join('');
         const cls = 'cal-cell' +
           (mode === 'month' && d.getMonth() !== month ? ' is-other' : '') +
+          (d.getDay() === 0 || d.getDay() === 6 ? ' is-weekend' : '') +
           (key === today ? ' is-today' : '') +
           (key === selected ? ' is-selected' : '');
         const count = b.meetings.length + b.tasks.length;
@@ -244,23 +247,33 @@
       if(cell) cell.classList.add('is-selected');
     }
 
-    renderDay(date, bucket){
+    /* upcoming: [{kind, date, item}] de los días siguientes (CalendarController.upcoming). */
+    renderDay(date, bucket, upcoming){
       const b = bucket || EMPTY_BUCKET;
       const isToday = date === todayYmd();
-      let html = '<span class="cal-day-kicker' + (isToday ? '' : ' is-muted') + '">' + (isToday ? 'Hoy' : 'Día seleccionado') + '</span>' +
-        '<h3>' + esc(longDay(parseYmd(date))) + '</h3>' +
+      const parts = [];
+      if(b.meetings.length) parts.push(b.meetings.length + (b.meetings.length === 1 ? ' reunión' : ' reuniones'));
+      if(b.tasks.length) parts.push(b.tasks.length + (b.tasks.length === 1 ? ' tarea' : ' tareas'));
+      let html = '<h3>' + esc(capitalize(longDay(parseYmd(date)))) + '</h3>' +
+        '<p class="cal-day-kicker' + (isToday ? '' : ' is-muted') + '"><span>' + (isToday ? 'Hoy' : 'Día seleccionado') + '</span>' + (parts.length ? ' · ' + parts.map((x) => '<span>' + x + '</span>').join(', ') : '') + '</p>' +
         '<div class="cal-day-actions">' +
-          '<button type="button" class="btn btn-primary btn-sm" data-action="new-meeting">' + PLUS_ICON + 'Reunión</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-action="new-meeting">' + PLUS_ICON + 'Reunión</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" data-action="new-task">' + PLUS_ICON + 'Tarea con esta fecha</button>' +
         '</div>';
       if(!b.meetings.length && !b.tasks.length){
         html += '<p class="cal-empty">Nada programado este día.</p>';
       }
       if(b.meetings.length){
-        html += '<p class="cal-day-label">Reuniones</p>' + b.meetings.map(agendaMeetingHtml).join('');
+        html += '<p class="cal-day-label">Reuniones</p>' + b.meetings.map((m) => agendaMeetingHtml(m)).join('');
       }
       if(b.tasks.length){
-        html += '<p class="cal-day-label">Tareas que vencen</p>' + b.tasks.map(agendaTaskHtml).join('');
+        html += '<p class="cal-day-label">Tareas que vencen</p>' + b.tasks.map((t) => agendaTaskHtml(t)).join('');
+      }
+      if(upcoming && upcoming.length){
+        html += '<p class="cal-day-label">Próximamente</p>' + upcoming.map((u) => {
+          const when = shortDay(u.date);
+          return u.kind === 'meeting' ? agendaMeetingHtml(u.item, when) : agendaTaskHtml(u.item, when);
+        }).join('');
       }
       this.day.innerHTML = html;
     }
@@ -345,38 +358,74 @@
     }
   }
 
+  /* «Mar 6»: día de la semana abreviado y número, para «Próximamente». */
+  function shortDay(key){
+    const dt = parseYmd(key);
+    return capitalize(dt.toLocaleDateString(Workhub.i18n.locale, {weekday:'short'}).replace('.', '')) + ' ' + dt.getDate();
+  }
+
+  /* Punto del evento: el color del cliente si lo tiene; si no, el de su etapa. */
+  function dotStyle(cliente, fallback){
+    return cliente && Workhub.clientsEnabled !== false
+      ? '--c:hsl(' + clientColors.hueOf(cliente) + ' 62% var(--chip-dot-l))'
+      : '--c:' + fallback;
+  }
+
+  /* Tarea en el mes: una línea con el punto del cliente (dos líneas como mucho). */
   function taskChipHtml(t){
     const s = TaskModel.statusOf(t.status);
     const ds = TaskModel.dueState(t);
     const cls = 'cal-chip is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '');
-    return '<span class="' + cls + '" draggable="true" data-kind="task" data-id="' + esc(t.id) + '" style="--c:' + s.fg + ';--cb:' + s.bg + '" title="' + esc(t.title) + '">' + esc(t.title) + '</span>';
+    return '<span class="' + cls + '" draggable="true" data-kind="task" data-id="' + esc(t.id) + '" style="' + dotStyle(t.cliente, s.dot) + '" title="' + esc(t.title) + '"><span translate="no">' + esc(t.title) + '</span></span>';
   }
 
+  /* Reunión en el mes: etiqueta con la hora en su propia línea, para que el nombre no se corte tanto. */
   function meetingChipHtml(m){
-    return '<span class="cal-chip is-meeting" draggable="true" data-kind="meeting" data-id="' + esc(m.id) + '" title="' + esc(MeetingModel.timeText(m) + ' · ' + m.title) + '">' +
-      (m.start ? '<b>' + esc(m.start) + '</b> ' : '') + '<span translate="no">' + esc(m.title) + '</span></span>';
+    return '<span class="cal-chip is-meeting" draggable="true" data-kind="meeting" data-id="' + esc(m.id) + '" style="' + dotStyle(m.cliente, 'var(--ink-faint)') + '" title="' + esc(MeetingModel.timeText(m) + ' · ' + m.title) + '">' +
+      '<span>' + (m.start ? '<b>' + esc(m.start) + '</b>' : '') + '<span translate="no">' + esc(m.title) + '</span></span></span>';
   }
 
-  function agendaMeetingHtml(m){
+  /* Minutos entre el inicio y el fin de una reunión («45 min», «1 h 30 min»). */
+  function durationText(m){
+    if(!m.start || !m.end) return '';
+    const p = (x) => { const v = String(x).split(':'); return (+v[0]) * 60 + (+v[1] || 0); };
+    const min = p(m.end) - p(m.start);
+    if(!(min > 0)) return '';
+    return min < 60 ? min + ' min' : Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + (min % 60) + ' min' : '');
+  }
+
+  function clientMeta(cliente){
+    if(!cliente || Workhub.clientsEnabled === false) return '';
+    return '<i class="client-dot" style="--h:' + clientColors.hueOf(cliente) + '"></i><span translate="no">' + esc(cliente) + '</span>';
+  }
+
+  /* when: fecha corta para «Próximamente»; sin ella, la hora de la reunión. */
+  function agendaMeetingHtml(m, when){
     const url = safeUrl(m.link);
-    const meta = [platformOf(m.link), m.cliente].filter(Boolean).join(' · ');
+    const platform = platformOf(m.link);
+    const meta = [clientMeta(m.cliente), platform ? '<span>' + esc(platform) + '</span>' : ''].filter(Boolean).join('<span aria-hidden="true">·</span>');
+    const time = when
+      ? esc(when) + (m.start ? '<small>' + esc(m.start) + '</small>' : '')
+      : esc(m.start || 'Sin hora') + (durationText(m) ? '<small>' + esc(durationText(m)) + '</small>' : '');
     return '<div class="agenda-item is-meeting" data-kind="meeting" data-id="' + esc(m.id) + '">' +
-      '<div class="agenda-time">' + esc(MeetingModel.timeText(m)) + '</div>' +
+      '<div class="agenda-time">' + time + '</div>' +
       '<div class="agenda-main"><div class="agenda-title" translate="no">' + esc(m.title) + '</div>' +
-      (meta ? '<div class="agenda-meta">' + esc(meta) + '</div>' : '') + '</div>' +
-      (url ? '<a class="btn btn-primary btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" data-join="1">Unirse</a>' : '') +
-      '</div>';
+      (meta ? '<div class="agenda-meta">' + meta + '</div>' : '') +
+      (url && !when ? '<a class="btn btn-ghost btn-sm" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" data-join="1">' + VIDEO_ICON + 'Unirse</a>' : '') +
+      '</div></div>';
   }
 
-  function agendaTaskHtml(t){
+  function agendaTaskHtml(t, when){
     const s = TaskModel.statusOf(t.status);
     const ds = TaskModel.dueState(t);
-    const label = ds === 'overdue' ? 'Vencida' : (ds === 'done' ? 'Hecha' : 'Vence');
-    const meta = [s.label, t.cliente].filter(Boolean).join(' · ');
+    const prog = TaskModel.checklistProgress(t);
+    const meta = [clientMeta(t.cliente), '<span translate="no">' + esc(s.label) + '</span>',
+      prog.total ? '<span>' + esc(Workhub.t('{n} de {total}', {n:prog.done, total:prog.total})) + '</span>' : ''].filter(Boolean).join('<span aria-hidden="true">·</span>');
+    const ring = '<span class="agenda-ring' + (s.done ? ' is-final' : '') + '" style="--st:' + s.dot + '" title="' + esc(ds === 'overdue' ? 'Vencida' : s.label) + '"></span>';
     return '<div class="agenda-item is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '') + '" data-kind="task" data-id="' + esc(t.id) + '">' +
-      '<div class="agenda-time"><span class="dot" style="background:' + (ds === 'overdue' ? 'var(--danger)' : s.dot) + '"></span>' + label + '</div>' +
+      '<div class="agenda-time">' + (when ? esc(when) : ring) + '</div>' +
       '<div class="agenda-main"><div class="agenda-title" translate="no">' + esc(t.title) + '</div>' +
-      '<div class="agenda-meta">' + esc(meta) + '</div></div>' +
+      '<div class="agenda-meta">' + meta + '</div></div>' +
       '</div>';
   }
 

@@ -296,27 +296,68 @@
   input,select,textarea{font-size:16px;}
   #btnNewContact,#btnNew,#calNewMeeting,#btnNewVault{font-size:0;gap:0;width:38px;padding:0;justify-content:center;flex:none;}
   #btnNewContact svg,#btnNew svg,#calNewMeeting svg,#btnNewVault svg{width:18px;height:18px;}
-  /* Tareas: título, vista y «+» en la primera línea; buscador y filtro en la segunda. */
-  .bar-tools[data-bar="tasks"] .segmented{order:1;}
-  .bar-tools[data-bar="tasks"] .bar-push{order:2;}
-  .bar-tools[data-bar="tasks"] #btnNew{order:3;}
-  .bar-tools[data-bar="tasks"] .gh-sync,.bar-tools[data-bar="tasks"] .ext-slot{order:4;}
-  .bar-tools[data-bar="tasks"] .bar-search{order:5;flex:1 1 60%;}
-  .bar-tools[data-bar="tasks"] .bar-filter{order:6;}
-  /* Calendario: mes y «+» arriba; vista y filtro debajo. */
-  .bar-tools[data-bar="calendar"] .cal-nav{order:1;}
-  .bar-tools[data-bar="calendar"] #calToday{order:2;}
-  .bar-tools[data-bar="calendar"] .bar-push{order:3;}
-  .bar-tools[data-bar="calendar"] #calNewMeeting{order:4;}
-  .bar-tools[data-bar="calendar"] .segmented{order:5;}
-  .bar-tools[data-bar="calendar"] .dd{order:6;}
-  .bar-tools[data-bar="calendar"] .ext-slot{order:7;}
-  /* Contraseñas: buscador y «+» arriba; filtros debajo. */
-  .bar-tools[data-bar="vault"] .bar-search{order:1;flex:1 1 50%;}
-  .bar-tools[data-bar="vault"] #btnNewVault{order:2;}
-  .bar-tools[data-bar="vault"] .dd{order:3;}
-  .bar-tools[data-bar="vault"] .bar-push{display:none;}
-  .bar-tools[data-bar="clients"] .bar-push{display:none;}
+  /* ---- Barra de la vista en móvil ----
+     Deja de ser una tarjeta de cristal: título grande y acción principal en la primera línea,
+     y las herramientas de la sección, a todo el ancho, en la segunda. Las herramientas pasan
+     a ser hijas directas de la cabecera (display:contents) para poder ordenarlas. */
+  header.page-head{
+    position:relative;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    min-height:0;
+    padding:2px 2px 0;
+    margin-bottom:12px;
+    background:none;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .page-head .titles{order:0;flex:1 1 0;min-width:0;min-height:38px;}
+  .page-head h1{font-size:20px;letter-spacing:-0.02em;overflow:hidden;text-overflow:ellipsis;}
+  .bar-tools:not([hidden]):not(.is-locked){display:contents;}
+  .bar-sep,.bar-push,.bar-meta{display:none;}
+  /* Saltos de línea de la cabecera. */
+  header.page-head::before,header.page-head::after{content:"";flex-basis:100%;height:0;margin:-4px 0;}
+  header.page-head::before{order:3;}
+  header.page-head::after{order:6;}
+  .filter-panel{top:100%;}
+  /* Línea 1: título, vista (solo iconos) y «+». */
+  #taskMode{order:1;}
+  #taskMode button{width:36px;padding:0;font-size:0;gap:0;}
+  #taskMode button svg{width:16px;height:16px;}
+  #btnNew,#calNewMeeting,#btnNewVault,#btnNewContact{order:2;}
+  /* Línea 2. Tareas: buscador y filtro. */
+  .bar-tools[data-bar="tasks"] .bar-search{order:4;flex:1 1 0;}
+  .bar-tools[data-bar="tasks"] .bar-filter{order:4;}
+  .bar-tools[data-bar="tasks"] .bar-filter .icon-only{width:38px;height:38px;background:var(--surface-2);}
+  .bar-tools[data-bar="tasks"] .gh-sync,.bar-tools[data-bar="tasks"] .ext-slot{order:7;}
+  /* Calendario: mes con flechas y «Hoy»; debajo, la vista y el filtro de cliente. */
+  .bar-tools[data-bar="calendar"] .cal-nav{order:4;flex:1 1 0;min-width:0;}
+  .bar-tools[data-bar="calendar"] .cal-month{flex:1;font-size:14px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+  .bar-tools[data-bar="calendar"] #calToday{order:4;}
+  .bar-tools[data-bar="calendar"] .segmented{order:7;flex:1 1 0;}
+  .bar-tools[data-bar="calendar"] .segmented button{flex:1;padding:0 6px;}
+  .bar-tools[data-bar="calendar"] .dd{order:7;flex:1 1 0;min-width:0;}
+  .bar-tools[data-bar="calendar"] .ext-slot{order:8;}
+  /* Contraseñas y clientes: buscador a todo el ancho; debajo, los filtros. */
+  .bar-tools[data-bar="vault"] .bar-search,.bar-tools[data-bar="clients"] .bar-search{order:4;flex:1 1 100%;}
+  .bar-tools[data-bar="vault"] .dd{order:7;flex:1 1 0;min-width:0;}
+  /* Con un tema sin clientes el filtro desaparece y la vista ocupa la línea. */
+  .cal-legend{display:none;}
+  /* En el resumen del tablero, solo lo que pide atención (los totales ya están en las pestañas). */
+  .summary .stat:not(.is-danger):not(.is-warn):not(.stat-link){display:none;}
+  .summary:not(:has(.is-danger,.is-warn,.stat-link)){display:none;}
+  /* La navegación arriba no se aplica en móvil: su ajuste sobra. */
+  #navRow{display:none;}
+  /* Ficha del cliente: las acciones en una sola línea. */
+  .crm-head-actions{flex-wrap:nowrap;gap:4px;}
+  .crm-head-actions .btn{flex:1 1 0;min-width:0;padding:0 8px;overflow:hidden;text-overflow:ellipsis;}
+  .crm-head-actions .btn svg{display:none;}
+  .crm-head-actions .icon-only{width:34px;height:36px;}
+  .crm-head-actions .icon-only + .icon-only{margin-left:0;}
 }
 @keyframes sheet-in{from{transform:translateY(24px);opacity:.4;}to{transform:none;opacity:1;}}
 
@@ -327,6 +368,8 @@
 }
 
 @media (max-width:380px){
+  .crm-head-actions{flex-wrap:wrap;}
+  .crm-head-actions .btn{flex:1 1 40%;}
   .main{padding-left:8px;padding-right:8px;}
   .board-tabs{margin:0 -8px 10px;padding:0 10px 2px;}
   .tab{font-size:9.5px;}

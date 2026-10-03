@@ -28,5 +28,7 @@
   try{
     var theme = localStorage.getItem('workhub_theme');
     if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
+    /* Navegación arriba (Ajustes → Apariencia): también antes de pintar. */
+    if(localStorage.getItem('workhub_nav') === 'top') root.setAttribute('data-nav', 'top');
   }catch(e){}
 })();

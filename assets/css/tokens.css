@@ -1,46 +1,76 @@
-/* ---------- Tokens ---------- */
+/* ---------- Tokens ----------
+   Estilo «cristal limpio»: base neutra, un solo acento y cristal solo en la barra
+   lateral, la barra de cada vista y lo que se superpone (ficha, diálogos, menús).
+   Los nombres de siempre se mantienen (los plugins dependen de ellos); los nuevos
+   son --glass*, --sheet, --overlay, --wash, --hue-a/b, --surface-solid, --late y --today. */
 :root{
-  /* Acento: lo sobreescribe Ajustes (SettingsView.applyAccent). */
-  --acc-solid-l:#2F6BFF; --acc-ink-l:#FFFFFF; --acc-text-l:#2457E0; --acc-soft-l:#EEF3FF;
-  --acc-solid-d:#4D82FF; --acc-ink-d:#FFFFFF; --acc-text-d:#8FB0FF; --acc-soft-d:#18223A;
+  /* Acento y velo del fondo: los sobreescribe Ajustes (SettingsView.applyAccent). Por defecto, Grafito. */
+  --acc-solid-l:#18181B; --acc-ink-l:#FFFFFF; --acc-text-l:#18181B; --acc-soft-l:rgba(23,24,28,0.07);
+  --acc-solid-d:#F4F4F5; --acc-ink-d:#0A0A0C; --acc-text-d:#F4F4F5; --acc-soft-d:rgba(255,255,255,0.09);
+  --hue-a:#71717A; --hue-b:#71717A;
 
   --font:'Geist', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono:'Geist Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
 
-  --bg:#FAFAFA;
-  --sidebar:#F4F4F5;
+  --bg:#F4F5F7;
+  /* Intensidad del velo de color de las dos esquinas del fondo. */
+  --wash:.18;
+  --sidebar:rgba(255,255,255,0.62);
   --surface:#FFFFFF;
-  --surface-2:#F4F4F5;
-  --surface-3:#E9E9EC;
-  --hover:rgba(24,24,27,0.045);
-  --ink:#18181B;
-  --ink-soft:#56565F;
-  --ink-faint:#8E8E97;
-  --line:#E6E6E9;
-  --line-strong:#D4D4D9;
+  /* Igual que --surface pero siempre opaca: para lo que tapa contenido al desplazarse. */
+  --surface-solid:#FFFFFF;
+  --surface-2:rgba(23,24,28,0.055);
+  --surface-3:rgba(23,24,28,0.09);
+  --hover:rgba(23,24,28,0.045);
+  --ink:#17181C;
+  --ink-soft:#5D6068;
+  --ink-faint:#686C76;
+  --line:rgba(23,24,28,0.08);
+  --line-strong:rgba(23,24,28,0.14);
+
+  /* Cristal: barra lateral y barra de vista. */
+  --glass:rgba(255,255,255,0.62);
+  --glass-line:rgba(255,255,255,0.9);
+  --glass-shadow:0 1px 2px rgba(20,22,40,0.04), 0 12px 32px -12px rgba(20,22,40,0.12);
+  --glass-blur:blur(24px) saturate(1.4);
+  /* Ficha de tarea, diálogos y menús, y el velo de detrás. */
+  --sheet:rgba(255,255,255,0.82);
+  --sheet-blur:blur(32px) saturate(1.5);
+  --overlay:rgba(230,232,238,0.55);
+  --seg-on:#FFFFFF;
 
   --accent:var(--acc-text-l);
   --accent-solid:var(--acc-solid-l);
   --accent-ink:var(--acc-ink-l);
   --accent-soft:var(--acc-soft-l);
   --focus:var(--accent-soft);
-  --focus:color-mix(in srgb, var(--accent-solid) 28%, transparent);
+  --focus:color-mix(in srgb, var(--accent-solid) 24%, transparent);
 
-  --st-pend:#71717A;  --st-pend-bg:#F1F1F3;
-  --st-proc:#2563EB;  --st-proc-bg:#EBF1FE;
-  --st-wait:#C2690A;  --st-wait-bg:#FDF3E6;
-  --st-done:#15803D;  --st-done-bg:#E9F6EE;
-  --danger:#DC2626;   --danger-bg:#FDEEEE;
-  --meet:#7C3AED;     --meet-bg:#F3EEFE;
+  --st-pend:#686C76;  --st-pend-bg:rgba(23,24,28,0.055);
+  --st-proc:#2563EB;  --st-proc-bg:rgba(37,99,235,0.09);
+  --st-wait:#92580A;  --st-wait-bg:rgba(202,138,4,0.12);
+  --st-done:#147A3A;  --st-done-bg:rgba(22,163,74,0.1);
+  --danger:#D32222;   --danger-bg:rgba(220,38,38,0.08);
+  --meet:#6D4AE0;     --meet-bg:rgba(124,58,237,0.09);
+  /* Fechas: vencida y hoy (la hecha usa --st-done). */
+  --late:#C2410C;     --late-bg:rgba(234,88,12,0.1);
+  --today:#92580A;    --today-bg:rgba(202,138,4,0.12);
+  /* Anillo de estado de cada columna (igual en claro y oscuro). */
+  --dot-pend:#9498A2; --dot-proc:#3B82F6; --dot-wait:#F59E0B; --dot-done:#22C55E; --dot-red:#EF4444; --dot-violet:#A855F7;
 
-  --shadow-sm:0 1px 1px rgba(24,24,27,0.04);
-  --shadow:0 1px 2px rgba(24,24,27,0.05), 0 1px 1px rgba(24,24,27,0.03);
-  --shadow-lg:0 24px 48px -16px rgba(24,24,27,0.22), 0 0 0 1px rgba(24,24,27,0.05);
-  --shadow-pop:0 12px 28px -8px rgba(24,24,27,0.18), 0 0 0 1px rgba(24,24,27,0.06);
-  --shadow-drag:0 16px 32px -10px rgba(24,24,27,0.25), 0 0 0 1px rgba(24,24,27,0.06);
-  --r-sm:5px; --r-md:7px; --r-lg:10px; --r-xl:12px;
+  --shadow-sm:0 1px 2px rgba(20,22,40,0.05);
+  --shadow:0 2px 4px rgba(20,22,40,0.05), 0 10px 22px -12px rgba(20,22,40,0.2);
+  --shadow-lg:0 40px 90px -30px rgba(0,0,0,0.5);
+  --shadow-pop:0 16px 36px -12px rgba(20,22,40,0.28);
+  --shadow-drag:0 18px 36px -12px rgba(20,22,40,0.3), 0 0 0 1px rgba(23,24,28,0.06);
+  /* etiqueta, control, tarjeta, panel; el cristal y la ficha salen del panel. */
+  --r-sm:6px; --r-md:9px; --r-lg:12px; --r-xl:14px;
+  --r-glass:calc(var(--r-xl) + 2px);
+  --r-sheet:calc(var(--r-xl) + 4px);
   /* Etiquetas de cliente: el tono (--h) sale del cliente. */
   --chip-s:46%; --chip-bg-l:95%; --chip-fg-l:32%; --chip-dot-l:52%;
+  /* Avatares: iniciales oscuras sobre un pastel. */
+  --av-l:86%; --av-s:78%;
   --chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E97' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   color-scheme:light;
 }
@@ -48,63 +78,94 @@
 /* Tema oscuro: por sistema (si no se ha elegido claro) o elegido en Ajustes. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0F0F11;
-    --sidebar:#0B0B0D;
-    --surface:#161619;
-    --surface-2:#1C1C20;
-    --surface-3:#26262B;
+    --bg:#0A0A0C;
+    --wash:.16;
+    --sidebar:rgba(255,255,255,0.04);
+    --surface:rgba(255,255,255,0.045);
+    --surface-solid:#17171B;
+    --surface-2:rgba(255,255,255,0.07);
+    --surface-3:rgba(255,255,255,0.11);
     --hover:rgba(255,255,255,0.05);
-    --ink:#EDEDEF;
-    --ink-soft:#A1A1AA;
-    --ink-faint:#6E6E78;
-    --line:#26262B;
-    --line-strong:#34343B;
+    --ink:#EDEDF0;
+    --ink-soft:#A0A3AD;
+    --ink-faint:#8B8F99;
+    --line:rgba(255,255,255,0.075);
+    --line-strong:rgba(255,255,255,0.14);
+    --glass:rgba(255,255,255,0.04);
+    --glass-line:rgba(255,255,255,0.08);
+    --glass-shadow:0 12px 32px -12px rgba(0,0,0,0.6);
+    --sheet:rgba(22,22,27,0.78);
+    --overlay:rgba(4,4,6,0.6);
+    --seg-on:rgba(255,255,255,0.11);
     --accent:var(--acc-text-d);
     --accent-solid:var(--acc-solid-d);
     --accent-ink:var(--acc-ink-d);
     --accent-soft:var(--acc-soft-d);
-    --st-pend:#A1A1AA;  --st-pend-bg:#232328;
-    --st-proc:#6E9BFF;  --st-proc-bg:#17213A;
-    --st-wait:#F0A24A;  --st-wait-bg:#2E2115;
-    --st-done:#4ADE80;  --st-done-bg:#132A1C;
-    --danger:#F87171;   --danger-bg:#321719;
-    --meet:#A78BFA;     --meet-bg:#241C3A;
-    --shadow-sm:0 1px 1px rgba(0,0,0,0.3);
-    --shadow:0 1px 2px rgba(0,0,0,0.35);
-    --shadow-lg:0 24px 48px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
-    --shadow-pop:0 16px 36px -8px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
-    --shadow-drag:0 18px 36px -10px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08);
+    --st-pend:#A0A3AD;  --st-pend-bg:rgba(255,255,255,0.07);
+    --st-proc:#7AA9FF;  --st-proc-bg:rgba(96,165,250,0.13);
+    --st-wait:#FBBF24;  --st-wait-bg:rgba(251,191,36,0.12);
+    --st-done:#4ADE80;  --st-done-bg:rgba(74,222,128,0.11);
+    --danger:#F87171;   --danger-bg:rgba(248,113,113,0.13);
+    --meet:#B9A5FF;     --meet-bg:rgba(167,139,250,0.14);
+    --late:#FB923C;     --late-bg:rgba(251,146,60,0.13);
+    --today:#FBBF24;    --today-bg:rgba(251,191,36,0.12);
+    --shadow-sm:none;
+    --shadow:0 12px 26px -14px #000;
+    --shadow-lg:0 40px 90px -30px rgba(0,0,0,0.7);
+    --shadow-pop:0 18px 40px -12px rgba(0,0,0,0.7);
+    --shadow-drag:0 20px 40px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
     --chip-s:38%; --chip-bg-l:17%; --chip-fg-l:78%; --chip-dot-l:62%;
+    --av-l:82%; --av-s:70%;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0F0F11;
-  --sidebar:#0B0B0D;
-  --surface:#161619;
-  --surface-2:#1C1C20;
-  --surface-3:#26262B;
+  --bg:#0A0A0C;
+  --wash:.16;
+  --sidebar:rgba(255,255,255,0.04);
+  --surface:rgba(255,255,255,0.045);
+  --surface-solid:#17171B;
+  --surface-2:rgba(255,255,255,0.07);
+  --surface-3:rgba(255,255,255,0.11);
   --hover:rgba(255,255,255,0.05);
-  --ink:#EDEDEF;
-  --ink-soft:#A1A1AA;
-  --ink-faint:#6E6E78;
-  --line:#26262B;
-  --line-strong:#34343B;
+  --ink:#EDEDF0;
+  --ink-soft:#A0A3AD;
+  --ink-faint:#8B8F99;
+  --line:rgba(255,255,255,0.075);
+  --line-strong:rgba(255,255,255,0.14);
+  --glass:rgba(255,255,255,0.04);
+  --glass-line:rgba(255,255,255,0.08);
+  --glass-shadow:0 12px 32px -12px rgba(0,0,0,0.6);
+  --sheet:rgba(22,22,27,0.78);
+  --overlay:rgba(4,4,6,0.6);
+  --seg-on:rgba(255,255,255,0.11);
   --accent:var(--acc-text-d);
   --accent-solid:var(--acc-solid-d);
   --accent-ink:var(--acc-ink-d);
   --accent-soft:var(--acc-soft-d);
-  --st-pend:#A1A1AA;  --st-pend-bg:#232328;
-  --st-proc:#6E9BFF;  --st-proc-bg:#17213A;
-  --st-wait:#F0A24A;  --st-wait-bg:#2E2115;
-  --st-done:#4ADE80;  --st-done-bg:#132A1C;
-  --danger:#F87171;   --danger-bg:#321719;
-  --meet:#A78BFA;     --meet-bg:#241C3A;
-  --shadow-sm:0 1px 1px rgba(0,0,0,0.3);
-  --shadow:0 1px 2px rgba(0,0,0,0.35);
-  --shadow-lg:0 24px 48px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
-  --shadow-pop:0 16px 36px -8px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07);
-  --shadow-drag:0 18px 36px -10px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08);
+  --st-pend:#A0A3AD;  --st-pend-bg:rgba(255,255,255,0.07);
+  --st-proc:#7AA9FF;  --st-proc-bg:rgba(96,165,250,0.13);
+  --st-wait:#FBBF24;  --st-wait-bg:rgba(251,191,36,0.12);
+  --st-done:#4ADE80;  --st-done-bg:rgba(74,222,128,0.11);
+  --danger:#F87171;   --danger-bg:rgba(248,113,113,0.13);
+  --meet:#B9A5FF;     --meet-bg:rgba(167,139,250,0.14);
+  --late:#FB923C;     --late-bg:rgba(251,146,60,0.13);
+  --today:#FBBF24;    --today-bg:rgba(251,191,36,0.12);
+  --shadow-sm:none;
+  --shadow:0 12px 26px -14px #000;
+  --shadow-lg:0 40px 90px -30px rgba(0,0,0,0.7);
+  --shadow-pop:0 18px 40px -12px rgba(0,0,0,0.7);
+  --shadow-drag:0 20px 40px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.1);
   --chip-s:38%; --chip-bg-l:17%; --chip-fg-l:78%; --chip-dot-l:62%;
+  --av-l:82%; --av-s:70%;
   color-scheme:dark;
+}
+
+/* Sin backdrop-filter el cristal no desenfoca: se sube la opacidad para que el texto siga leyéndose. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root{--glass:rgba(255,255,255,0.94);--sheet:#FFFFFF;--overlay:rgba(230,232,238,0.88);}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){--glass:#131316;--sheet:#17171B;--overlay:rgba(4,4,6,0.88);}
+  }
+  :root[data-theme="dark"]{--glass:#131316;--sheet:#17171B;--overlay:rgba(4,4,6,0.88);}
 }

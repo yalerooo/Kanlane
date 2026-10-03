@@ -21,6 +21,7 @@ jobs:
           node tests/demo/demo.test.js
           node tests/plugins/migration.test.js
           node tests/consent/consent.test.js
+          node tests/settings/settings.test.js
           node tests/vault/vault.test.js
           node tests/crypto/project-crypto.test.js
           node tests/crypto/keystore.test.js

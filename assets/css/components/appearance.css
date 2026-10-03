@@ -14,6 +14,31 @@
 :root[data-theme="dark"][data-palette="cool"]{--bg:#080B10;--surface:rgba(226,238,255,0.05);--surface-solid:#141920;--sheet:rgba(20,25,32,0.78);}
 :root[data-theme="dark"][data-palette="slate"]{--bg:#0D0E12;--surface:rgba(236,240,255,0.05);--surface-solid:#181A20;--sheet:rgba(24,26,32,0.78);}
 
+/* Cristal: cuánto dejan ver la barra lateral, la barra de vista y lo que se superpone.
+   Sale de la superficie sólida del tema y de la paleta, así vale en claro y en oscuro. */
+:root[data-glass="solid"]{
+  --glass:var(--surface-solid);--sidebar:var(--surface-solid);--sheet:var(--surface-solid);
+  --glass-line:var(--line);--glass-blur:none;--sheet-blur:none;
+}
+:root[data-glass="soft"]{
+  --glass:color-mix(in srgb, var(--surface-solid) 86%, transparent);
+  --sidebar:color-mix(in srgb, var(--surface-solid) 86%, transparent);
+  --sheet:color-mix(in srgb, var(--surface-solid) 94%, transparent);
+  --glass-blur:blur(14px) saturate(1.2);--sheet-blur:blur(20px) saturate(1.2);
+}
+:root[data-glass="strong"]{
+  --glass:color-mix(in srgb, var(--surface-solid) 34%, transparent);
+  --sidebar:color-mix(in srgb, var(--surface-solid) 34%, transparent);
+  --sheet:color-mix(in srgb, var(--surface-solid) 62%, transparent);
+  --glass-blur:blur(38px) saturate(1.8);--sheet-blur:blur(46px) saturate(1.8);
+}
+/* Velo de color de las esquinas del fondo: de nada a muy presente. */
+:root[data-wash="none"]{--wash:0;}
+:root[data-wash="soft"]{--wash:.09;}
+:root[data-wash="strong"]{--wash:.34;}
+/* Animaciones reducidas (además de lo que pida el sistema). */
+:root[data-motion="reduced"] *,:root[data-motion="reduced"] *::before,:root[data-motion="reduced"] *::after{transition:none !important;animation:none !important;}
+
 :root[data-text-size="small"]{--ui-text-scale:.93;}
 :root[data-text-size="large"]{--ui-text-scale:1.1;}
 :root[data-text-size] body{font-size:calc(13px * var(--ui-text-scale));}

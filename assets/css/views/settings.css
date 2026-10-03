@@ -23,9 +23,10 @@
 .settings-nav button[aria-current="true"]{background:var(--surface-2);color:var(--ink);font-weight:550;}
 .settings-nav button:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .settings-body{min-width:0;}
-.settings-group{margin-bottom:26px;scroll-margin-top:92px;}
-.settings-group > h2{font-size:14px;font-weight:600;letter-spacing:-0.01em;margin:0;}
-.settings-lead{margin:2px 0 10px;color:var(--ink-faint);}
+.settings-group{margin-bottom:34px;scroll-margin-top:92px;}
+.settings-group:last-child{margin-bottom:12px;}
+.settings-group h2{font-size:15px;font-weight:600;letter-spacing:-0.015em;margin:0;}
+.settings-lead{margin:3px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
 .settings-card{
   background:var(--surface);
   border:1px solid var(--line);
@@ -36,7 +37,7 @@
   display:flex;
   align-items:center;
   gap:24px;
-  padding:14px 16px;
+  padding:16px 18px;
   border-top:1px solid var(--line);
 }
 .settings-card > .settings-row:first-child{border-top:0;}
@@ -52,6 +53,42 @@
 .settings-icon-row{display:flex;align-items:center;gap:12px;}
 .settings-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:11px;background:var(--surface-2);color:var(--ink);}
 .settings-icon svg{width:19px;height:19px;}
+
+/* Opciones con muestra (tema, navegación): un dibujo pequeño de cómo queda y el nombre
+   debajo; la elegida, con borde completo. */
+.choice-cards{display:flex;gap:8px;}
+.choice-cards button{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:7px;
+  width:92px;
+  padding:5px 5px 7px;
+  font-family:inherit;
+  font-size:12.5px;
+  line-height:1.2;
+  text-align:center;
+  color:var(--ink-soft);
+  background:transparent;
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-lg);
+  cursor:pointer;
+  transition:background .12s ease, border-color .12s ease, color .12s ease;
+}
+.choice-cards button:hover{background:var(--hover);color:var(--ink);}
+.choice-cards button:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.choice-cards button[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);color:var(--ink);font-weight:550;}
+.choice-art{display:flex;height:48px;border-radius:7px;overflow:hidden;border:1px solid var(--line);}
+/* Cada panel dibuja una ventana: la barra de navegación (::before) y una tarjeta (::after). */
+.art-pane{position:relative;flex:1;min-width:0;background:var(--art-bg);}
+.art-pane::before,.art-pane::after{content:"";position:absolute;border-radius:3px;}
+.art-pane::before{left:5px;top:5px;bottom:5px;width:26%;background:var(--art-side);}
+.art-pane::after{left:calc(26% + 10px);right:6px;top:9px;height:13px;background:var(--art-card);box-shadow:0 17px 0 var(--art-card);}
+.art-pane.is-light{--art-bg:#F4F5F7;--art-side:#FFFFFF;--art-card:#FFFFFF;}
+.art-pane.is-dark{--art-bg:#0A0A0C;--art-side:#1D1D22;--art-card:#1D1D22;}
+.art-pane.is-nav-side,.art-pane.is-nav-top{--art-bg:var(--surface-2);--art-side:var(--ink-faint);--art-card:var(--surface-3);}
+.art-pane.is-nav-top::before{left:5px;right:5px;top:5px;bottom:auto;width:auto;height:8px;}
+.art-pane.is-nav-top::after{left:6px;top:18px;height:10px;box-shadow:0 14px 0 var(--art-card);}
 
 /* Muestras de acento: punto de color y nombre; la elegida, con borde completo. */
 .swatches{display:flex;flex-wrap:wrap;gap:6px;}
@@ -110,6 +147,7 @@
 @media (max-width:640px){
   .settings-row{flex-direction:column;align-items:stretch;gap:10px;}
   .settings-row > div:last-child:not(:first-child){max-width:none;}
+  .choice-cards button{flex:1;width:auto;}
   .remind-notify{align-items:flex-start;}
   .settings-ctl .dd{min-width:0;}
 }

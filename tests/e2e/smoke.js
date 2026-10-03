@@ -155,6 +155,8 @@ async function newProject(page, name){
     await page.locator('.consent').waitFor({state:'detached'}).catch(() => {});
     const themeBefore = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     await page.locator('#btnThemeToggle').click();
+    /* El cambio va dentro de una transición de vista (la luz que se enciende o se apaga): llega un instante después. */
+    await page.waitForFunction((before) => document.documentElement.getAttribute('data-theme') !== before, themeBefore);
     const themeAfter = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     assert.ok(themeAfter === 'dark' || themeAfter === 'light');
     assert.notEqual(themeAfter, themeBefore === null ? 'light' : themeBefore);
@@ -171,7 +173,14 @@ async function newProject(page, name){
     await page.evaluate(() => Workhub.app.controllers.plugins.setAppearance('prueba', {nav:'side', accent:'#0D8F6F'}));
     assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-nav')), null);
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--hue-a')), '#0D8F6F', 'el velo del fondo sigue al acento del plugin');
+    /* Cristal, velo y animaciones: valores validados que acaban en atributos de <html>. */
+    await page.evaluate(() => Workhub.app.controllers.plugins.setAppearance('prueba', {glass:'strong', wash:'none', veil:['#9b4dff', '#0EA5A4'], motion:'reduced'}));
+    assert.deepEqual(await page.evaluate(() => ['data-glass', 'data-wash', 'data-motion'].map((a) => document.documentElement.getAttribute(a))), ['strong', 'none', 'reduced']);
+    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--hue-b')), '#0EA5A4', 'el velo usa los colores propios');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wash').trim()), '0');
+    assert.equal(await page.evaluate(() => { try{ Workhub.app.controllers.plugins.setAppearance('prueba', {veil:['rojo', '#000000']}); return 'ok'; }catch(e){ return e.code || 'error'; } }), 'bad-params', 'el velo solo admite colores #RRGGBB');
     await page.evaluate(() => Workhub.app.controllers.plugins.resetAppearance('prueba'));
+    assert.deepEqual(await page.evaluate(() => ['data-glass', 'data-wash', 'data-motion'].map((a) => document.documentElement.getAttribute(a))), [null, null, null], 'al retirarse el plugin no queda nada puesto');
     assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-nav')), 'top');
     await page.locator('#navSegment [data-nav-choice="side"]').click();
     assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-nav')), null);

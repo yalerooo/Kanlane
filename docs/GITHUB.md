@@ -24,7 +24,7 @@ Si Kanlane tiene la cuenta activada y el acceso con GitHub habilitado en Firebas
 2. En Kanlane: *Nuevo proyecto → Desde GitHub*, o **Ajustes → GitHub Projects** (ver arriba).
 3. Pega el token y el enlace del proyecto de GitHub, por ejemplo `https://github.com/users/yalerooo/projects/1/views/1` (también valen los de organización: `https://github.com/orgs/…`).
 4. Solo al añadirlo a un proyecto existente, opcional: *Enviar también a GitHub las tareas que ya hay en ese proyecto*. Sin marcar, solo se envían las que crees a partir de ahora.
-5. **Conectar con GitHub**. Las columnas del tablero se sustituyen por las opciones del campo *Status* del proyecto y se importan sus elementos.
+5. **Enlazar proyecto**. Las columnas del tablero se sustituyen por las opciones del campo *Status* del proyecto y se importan sus elementos.
 
 Cada proyecto de Kanlane puede enlazarse con un proyecto de GitHub distinto. El enlace se guarda en el documento del proyecto (`github`), sin secretos.
 

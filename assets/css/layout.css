@@ -268,4 +268,28 @@ header.page-head{
   :root[data-nav="top"] .brand-row{padding:0 8px 0 4px;}
 }
 
+/* Cambio de pestaña (ShellView._animateIn): la sección entra deslizándose y fundiéndose.
+   Sin relleno al terminar, para no dejar un transform que estorbe a lo fijo o a arrastrar. */
+.view-in{animation:view-in .42s cubic-bezier(.3, .5, .2, 1) backwards;}
+.view-fade{animation:view-fade .36s cubic-bezier(.3, .5, .2, 1) backwards;}
+.tab-pop{animation:tab-pop .3s cubic-bezier(.3, 1.3, .5, 1);}
+/* Llega un poco desenfocada y desde cerca, y se asienta. */
+@keyframes view-in{
+  from{opacity:0;filter:blur(4px);transform:translate3d(0, calc(22px * var(--view-dir, 1)), 0);}
+  60%{filter:blur(0);}
+}
+@keyframes view-in-x{
+  from{opacity:0;filter:blur(4px);transform:translate3d(calc(28px * var(--view-dir, 1)), 0, 0);}
+  60%{filter:blur(0);}
+}
+@keyframes view-fade{from{opacity:0;transform:translate3d(-5px, 0, 0);}}
+@keyframes tab-pop{from{transform:scale(.96);}}
+/* Mientras entra de lado no debe aparecer desplazamiento horizontal en la página. */
+.main-inner:has(> .view-in){overflow-x:clip;}
+/* Con la navegación en horizontal (arriba o, en móvil, abajo) la sección entra de lado. */
+:root[data-nav="top"] .view-in{animation-name:view-in-x;}
+@media (max-width: 900px){
+  .view-in{animation-name:view-in-x;}
+}
+
 /* Tamaños de pantalla: ver assets/css/responsive.css. */

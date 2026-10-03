@@ -69,6 +69,10 @@
         if(ev.target.id === 'ghName') this.form.name = ev.target.value;
       });
       this.body.addEventListener('submit', (ev) => ev.preventDefault());
+      /* «toggle» no burbujea: se escucha en la fase de captura. */
+      this.body.addEventListener('toggle', (ev) => {
+        if(ev.target.id === 'ghTokenMore') this.form.tokenOpen = ev.target.open;
+      }, true);
       this.button.addEventListener('click', () => this.handlers.sync());
     }
 
@@ -99,21 +103,42 @@
 
       /* Proyecto con cifrado total: no hay nada que conectar. */
       if(s.encrypted){
-        this.body.innerHTML = '<p class="gh-note is-warn" id="ghEncrypted">' + esc(Workhub.t(ENCRYPTED)) + '</p>';
+        this.body.innerHTML = '<div class="gh-box" id="ghEncrypted"><p>' + esc(Workhub.t(ENCRYPTED)) + '</p></div>';
         return;
       }
       this.body.innerHTML = s.linked ? this._linked(s) : this._form(s);
     }
 
+    /* Un paso numerado del formulario de enlace: número, título y contenido. */
+    _step(n, title, inner){
+      return '<div class="gh-step"><span class="gh-step-n" aria-hidden="true">' + n + '</span>' +
+        '<div class="gh-step-body"><h4>' + esc(title) + '</h4>' + inner + '</div></div>';
+    }
+
+    /* Campo del token, con su explicación. */
+    _tokenField(s, label){
+      return '<div class="field"><label for="ghToken">' + esc(label) + '</label>' +
+        '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
+        '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
+    }
+
     _form(s){
-      const tokenField = s.hasToken
-        ? (s.tokenKind === 'oauth'
-          ? '<p class="gh-note gh-connected">' + CHECK + '<span>' + esc(Workhub.t('Conectado con tu cuenta de GitHub en este navegador.')) + '</span> <button type="button" class="link-btn" data-gh="forget">' + esc(Workhub.t('Quitar mi acceso a GitHub')) + '</button></p>'
-          : '<p class="gh-note">Ya hay un token guardado en este navegador. <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>')
-        : oauthBlock(s) + '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
-          '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
-          '<p class="field-help">Un token clásico con el permiso <b>project</b> (<b>read:project</b> si solo quieres leer). Se crea en GitHub → Settings → Developer settings → Personal access tokens (classic). Se guarda solo en este navegador.</p></div>';
-      /* Destino: uno de los proyectos de Kanlane o uno nuevo. */
+      const t = Workhub.t;
+      /* Paso 1: acceso a la cuenta de GitHub. Con «Conectar con GitHub» disponible, el token queda plegado. */
+      let access;
+      if(s.hasToken){
+        access = s.tokenKind === 'oauth'
+          ? '<p class="gh-note gh-connected">' + CHECK + '<span>' + esc(t('Conectado con tu cuenta de GitHub en este navegador.')) + '</span> <button type="button" class="link-btn" data-gh="forget">' + esc(t('Quitar mi acceso a GitHub')) + '</button></p>'
+          : '<p class="gh-note gh-connected">' + CHECK + '<span>Ya hay un token guardado en este navegador.</span> <button type="button" class="link-btn" data-gh="forget">Olvidarlo</button>' + (s.canOAuth ? ' · <button type="button" class="link-btn" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') + '</p>';
+      } else if(s.canOAuth){
+        access = oauthBlock(s) +
+          '<details class="gh-more" id="ghTokenMore"' + (this.form.tokenOpen ? ' open' : '') + '><summary>' + esc(t('Usar un token en su lugar')) + '</summary>' +
+          this._tokenField(s, t('Token de GitHub')) + '</details>';
+      } else {
+        access = this._tokenField(s, t('Token de GitHub'));
+      }
+
+      /* Paso 3: destino, uno de los proyectos de Kanlane o uno nuevo. */
       const projects = s.projects || [];
       /* Por defecto, el proyecto que está abierto (y se reinicia al cambiar de proyecto). */
       if(this.form.forProject !== s.currentId){
@@ -123,71 +148,98 @@
       if(!this.form.target || (this.form.target !== '__new__' && !projects.some((p) => p.id === this.form.target && !p.encrypted))) this.form.target = s.currentId;
       const isNew = this.form.target === '__new__';
       const options = projects.map((p) => p.encrypted
-        ? '<option value="' + esc(p.id) + '" disabled>' + esc(Workhub.t('{nombre} (cifrado total, no admite GitHub)', {nombre:p.nombre})) + '</option>'
-        : '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(Workhub.t('ya enlazado')) : '') + '</option>').join('') +
-        '<option value="__new__"' + (isNew ? ' selected' : '') + '>' + esc(Workhub.t('+ Crear un proyecto nuevo')) + '</option>';
+        ? '<option value="' + esc(p.id) + '" disabled>' + esc(t('{nombre} (cifrado total, no admite GitHub)', {nombre:p.nombre})) + '</option>'
+        : '<option value="' + esc(p.id) + '"' + (p.id === this.form.target ? ' selected' : '') + '>' + esc(p.nombre) + (p.linked ? ' · ' + esc(t('ya enlazado')) : '') + '</option>').join('') +
+        '<option value="__new__"' + (isNew ? ' selected' : '') + '>' + esc(t('+ Crear un proyecto nuevo')) + '</option>';
       const targetName = (projects.find((p) => p.id === this.form.target) || {}).nombre || '';
-      const targetField = '<div class="field"><label for="ghTarget">Proyecto de Kanlane donde añadirlo</label>' +
+      const target = '<div class="field"><label for="ghTarget">Proyecto de Kanlane donde añadirlo</label>' +
         '<select id="ghTarget">' + options + '</select>' +
         (isNew
-          ? '<input id="ghName" maxlength="60" autocomplete="off" placeholder="' + esc(Workhub.t('Nombre del proyecto nuevo (por defecto, el de GitHub)')) + '" value="' + esc(this.form.name) + '">' +
+          ? '<input id="ghName" maxlength="60" autocomplete="off" placeholder="' + esc(t('Nombre del proyecto nuevo (por defecto, el de GitHub)')) + '" value="' + esc(this.form.name) + '">' +
             '<p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de GitHub, y se abre.</p>'
-          : '<p class="field-help">' + esc(Workhub.t('Las columnas de «{name}» se sustituirán por las de GitHub y sus elementos se importarán como tareas.', {name:targetName})) + '</p>') +
-        '</div>';
+          : '<p class="field-help">' + esc(t('Las columnas de «{name}» se sustituirán por las de GitHub y sus elementos se importarán como tareas.', {name:targetName})) + '</p>') +
+        '</div>' +
+        (isNew ? '' : '<label class="check-row"><input type="checkbox" id="ghPushExisting"' + (this.form.pushExisting ? ' checked' : '') + '> Enviar también a GitHub las tareas que ya hay en ese proyecto</label>');
+
+      const source = '<div class="field"><label for="ghUrl">Enlace del proyecto de GitHub</label>' +
+        '<input id="ghUrl" type="url" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1" value="' + esc(this.form.url) + '">' +
+        '<p class="field-help">' + esc(t('Abre el proyecto en GitHub y copia la dirección de la página.')) + '</p></div>';
+
       return '<form class="gh-form" autocomplete="off">' +
-        '<p class="gh-lead">Enlaza este proyecto de Kanlane con un GitHub Project. Las columnas de GitHub pasan a ser las columnas del tablero y las tareas se mantienen sincronizadas en los dos sentidos.</p>' +
-        '<p class="gh-note is-warn gh-privacy">' + esc(Workhub.t(PRIVACY)) + '</p>' +
-        tokenField +
-        '<div class="field"><label for="ghUrl">Enlace del proyecto de GitHub</label>' +
-        '<input id="ghUrl" type="url" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1" value="' + esc(this.form.url) + '"></div>' +
-        targetField +
-        (isNew ? '' : '<label class="check-row"><input type="checkbox" id="ghPushExisting"' + (this.form.pushExisting ? ' checked' : '') + '> Enviar también a GitHub las tareas que ya hay en ese proyecto</label>') +
+        '<ul class="gh-points">' +
+          '<li>' + esc(t('Las columnas del proyecto de GitHub pasan a ser las columnas del tablero.')) + '</li>' +
+          '<li>' + esc(t('Las tareas se mantienen sincronizadas en los dos sentidos: título, descripción y columna.')) + '</li>' +
+          '<li>' + esc(t('Lo que se borra en un lado no se borra en el otro.')) + '</li>' +
+        '</ul>' +
+        '<div class="gh-steps">' +
+          this._step(1, t('Da acceso a tu cuenta de GitHub'), access) +
+          this._step(2, t('Indica el proyecto de GitHub'), source) +
+          this._step(3, t('Elige dónde va en Kanlane'), target) +
+        '</div>' +
+        '<div class="gh-box"><h4>' + esc(t('Qué se envía a GitHub')) + '</h4><p class="gh-privacy">' + esc(t(PRIVACY)) + '</p></div>' +
         (s.connectError ? '<p class="lock-error">' + esc(s.connectError) + '</p>' : '') +
-        '<div class="gh-actions"><button type="button" class="btn btn-primary" data-gh="connect"' + (s.connecting ? ' disabled' : '') + '>' + esc(s.connecting ? Workhub.t('Conectando…') : Workhub.t('Conectar con GitHub')) + '</button></div>' +
+        '<div class="gh-actions"><button type="button" class="btn btn-primary" data-gh="connect"' + (s.connecting ? ' disabled' : '') + '>' + esc(s.connecting ? t('Enlazando…') : t('Enlazar proyecto')) + '</button></div>' +
         '</form>';
     }
 
+    /* Fila «título + explicación + botones» de la tarjeta del proyecto enlazado. */
+    _row(title, desc, buttons){
+      return '<div class="gh-row"><div><h4>' + esc(title) + '</h4><p>' + esc(desc) + '</p></div><div class="gh-row-actions">' + buttons + '</div></div>';
+    }
+
     _linked(s){
+      const t = Workhub.t;
       const c = s.cfg;
       const r = s.last;
       let state;
       if(s.busy) state = '<span class="gh-state">Sincronizando…</span>';
       else if(s.error) state = '<span class="gh-state is-error">' + esc(s.error.message) + '</span>';
-      else if(r) state = '<span class="gh-state">' + esc(Workhub.t('Sincronizado {when}', {when:ago(r.at)})) + '</span>';
+      else if(r) state = '<span class="gh-state">' + esc(t('Sincronizado {when}', {when:ago(r.at)})) + '</span>';
       else state = '<span class="gh-state">Todavía no se ha sincronizado.</span>';
       let detail = '';
       if(r && !s.error){
         const parts = [];
-        if(r.created) parts.push(Workhub.t('{n} nuevas desde GitHub', {n:r.created}));
-        if(r.updated) parts.push(Workhub.t('{n} actualizadas', {n:r.updated}));
-        if(r.sent) parts.push(Workhub.t('{n} enviadas a GitHub', {n:r.sent}));
-        if(r.columns) parts.push(Workhub.t('{n} columnas nuevas', {n:r.columns}));
-        if(r.warnings) parts.push(Workhub.t('{n} sin poder sincronizar', {n:r.warnings}));
-        if(parts.length) detail = '<p class="gh-note">' + esc(parts.join(' · ')) + '</p>';
+        if(r.created) parts.push(t('{n} nuevas desde GitHub', {n:r.created}));
+        if(r.updated) parts.push(t('{n} actualizadas', {n:r.updated}));
+        if(r.sent) parts.push(t('{n} enviadas a GitHub', {n:r.sent}));
+        if(r.columns) parts.push(t('{n} columnas nuevas', {n:r.columns}));
+        if(r.warnings) parts.push(t('{n} sin poder sincronizar', {n:r.warnings}));
+        if(parts.length) detail = '<p class="gh-note gh-result">' + esc(parts.join(' · ')) + '</p>';
       }
       /* Enlazado desde otro navegador: el token no viaja con la cuenta y hay que pegarlo aquí. */
       const readOnly = s.canSync === false;
       const tokenBlock = s.hasToken || readOnly ? '' :
-        '<div class="field gh-token-missing">' +
-        '<p class="gh-note is-warn">Este proyecto está enlazado con GitHub, pero este navegador no tiene acceso a tu cuenta de GitHub (se guarda solo en cada navegador y no viaja con tu cuenta). ' + (s.canOAuth ? 'Conéctala con un clic o pega un token.' : 'Pega un token para volver a sincronizar.') + '</p>' +
+        '<div class="gh-box gh-token-missing">' +
+        '<p class="gh-note">Este proyecto está enlazado con GitHub, pero este navegador no tiene acceso a tu cuenta de GitHub (se guarda solo en cada navegador y no viaja con tu cuenta). ' + (s.canOAuth ? 'Conéctala con un clic o pega un token.' : 'Pega un token para volver a sincronizar.') + '</p>' +
         oauthBlock(s) +
-        '<label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
-        '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…">' +
+        '<div class="field"><label for="ghToken">' + (s.canOAuth ? 'O pega un token de GitHub' : 'Token de GitHub') + '</label>' +
+        '<input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="ghp_…"></div>' +
         (s.tokenError ? '<p class="lock-error">' + esc(s.tokenError) + '</p>' : '') +
         '<div class="gh-actions"><button type="button" class="btn ' + (s.canOAuth ? 'btn-ghost' : 'btn-primary') + '" data-gh="saveToken"' + (s.busy ? ' disabled' : '') + '>Guardar token y sincronizar</button></div></div>';
-      return '<div class="gh-linked">' +
-        '<div class="gh-project">' + MARK + '<div><a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(c.title) + '</a>' +
-        '<div>' + state + '</div></div></div>' + tokenBlock + detail +
-        (readOnly ? '<p class="gh-note">' + esc(Workhub.t('Eres lector de este proyecto: no puedes sincronizar con GitHub.')) + '</p>' : (
-          '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Kanlane (como borradores)</label>' +
-          '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
-          '<p class="gh-note">' + esc(Workhub.t(PRIVACY)) + '</p>' +
-          '<div class="gh-actions">' +
-          (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
-          '<button type="button" class="btn btn-ghost" data-gh="unlink" title="' + esc(Workhub.t('Quita el enlace de este proyecto con el GitHub Project. No borra ninguna tarea.')) + '">' + esc(Workhub.t('Desvincular proyecto')) + '</button>' +
-          (s.hasToken && s.tokenKind !== 'oauth' && s.canOAuth ? '<button type="button" class="btn btn-ghost" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
-          (s.hasToken ? '<button type="button" class="btn btn-ghost" data-gh="forget" title="' + esc(Workhub.t('Quita el acceso a GitHub de este navegador. El proyecto sigue enlazado.')) + '">' + esc(Workhub.t(s.tokenKind === 'oauth' ? 'Quitar mi acceso a GitHub' : 'Olvidar token')) + '</button>' : '') +
-          '</div>')) +
+
+      const head = '<div class="gh-project">' +
+        '<span class="gh-project-ic" aria-hidden="true">' + MARK + '</span>' +
+        '<div class="gh-project-text"><a href="' + esc(c.url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(c.title) + '</a>' + state + '</div>' +
+        (s.hasToken && !readOnly ? '<button type="button" class="btn btn-primary btn-sm" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
+        '</div>';
+      if(readOnly){
+        return '<div class="gh-linked">' + head + detail +
+          '<p class="gh-note">' + esc(t('Eres lector de este proyecto: no puedes sincronizar con GitHub.')) + '</p></div>';
+      }
+
+      const accessButtons =
+        (s.hasToken && s.tokenKind !== 'oauth' && s.canOAuth ? '<button type="button" class="btn btn-ghost btn-sm" data-gh="oauth">Conectar con GitHub en su lugar</button>' : '') +
+        (s.hasToken ? '<button type="button" class="btn btn-ghost btn-sm" data-gh="forget">' + esc(t(s.tokenKind === 'oauth' ? 'Quitar mi acceso a GitHub' : 'Olvidar token')) + '</button>' : '');
+      return '<div class="gh-linked">' + head + tokenBlock + detail +
+        '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Kanlane (como borradores)</label>' +
+        '<div class="gh-box"><h4>' + esc(t('Cómo se sincroniza')) + '</h4>' +
+          '<p>Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
+          '<p class="gh-privacy">' + esc(t(PRIVACY)) + '</p></div>' +
+        '<div class="gh-rows">' +
+          (s.hasToken ? this._row(t('Acceso a GitHub en este navegador'), t('Quita el acceso a GitHub de este navegador. El proyecto sigue enlazado.'), accessButtons) : '') +
+          this._row(t('Enlace con el proyecto de GitHub'), t('Quita el enlace de este proyecto con el GitHub Project. No borra ninguna tarea.'),
+            '<button type="button" class="btn btn-danger btn-sm" data-gh="unlink">' + esc(t('Desvincular proyecto')) + '</button>') +
+        '</div>' +
         '</div>';
     }
   }

@@ -24,6 +24,35 @@ body::before{
     radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--hue-a) calc(var(--wash) * 100%), transparent) 0, transparent 70%),
     radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--hue-b) calc(var(--wash) * 70%), transparent) 0, transparent 70%);
 }
+/* Cambio de tema (Workhub.utils.ui.themeSwitch): un círculo de luz que se abre desde el
+   botón (encender) o se cierra hacia él (apagar). El script anima el radio (--theme-r);
+   aquí van las máscaras. La vista de dentro del círculo se desvanece en una franja ancha
+   y la de fuera empieza un poco después: por el hueco asoma el fondo del par, que es el
+   aro de luz del borde, como el canto de una gota de cristal. */
+@property --theme-r{syntax:'<length>';inherits:true;initial-value:0px;}
+html.theme-vt *,html.theme-vt *::before,html.theme-vt *::after{transition:none !important;}
+html.theme-vt::view-transition-old(root),html.theme-vt::view-transition-new(root){animation:none;mix-blend-mode:normal;}
+html.theme-vt::view-transition-image-pair(root){
+  background:radial-gradient(circle at var(--theme-x) var(--theme-y),
+    transparent calc(var(--theme-r) - 120px),
+    rgba(255,255,255,0.95) calc(var(--theme-r) - 46px),
+    rgba(190,200,220,0.5) calc(var(--theme-r) - 14px),
+    transparent var(--theme-r));
+}
+/* Dentro del círculo: el tema claro (el nuevo al encender, el viejo al apagar). */
+html.theme-vt:not(.theme-off)::view-transition-new(root),
+html.theme-vt.theme-off::view-transition-old(root){
+  z-index:1;
+  -webkit-mask-image:radial-gradient(circle at var(--theme-x) var(--theme-y), #000 calc(var(--theme-r) - 120px), rgba(0,0,0,0.5) calc(var(--theme-r) - 62px), transparent calc(var(--theme-r) - 22px));
+  mask-image:radial-gradient(circle at var(--theme-x) var(--theme-y), #000 calc(var(--theme-r) - 120px), rgba(0,0,0,0.5) calc(var(--theme-r) - 62px), transparent calc(var(--theme-r) - 22px));
+}
+/* Fuera del círculo: el tema oscuro. */
+html.theme-vt:not(.theme-off)::view-transition-old(root),
+html.theme-vt.theme-off::view-transition-new(root){
+  z-index:0;
+  -webkit-mask-image:radial-gradient(circle at var(--theme-x) var(--theme-y), transparent calc(var(--theme-r) - 70px), rgba(0,0,0,0.6) calc(var(--theme-r) - 26px), #000 var(--theme-r));
+  mask-image:radial-gradient(circle at var(--theme-x) var(--theme-y), transparent calc(var(--theme-r) - 70px), rgba(0,0,0,0.6) calc(var(--theme-r) - 26px), #000 var(--theme-r));
+}
 /* Cristal: solo en la barra lateral, la barra de cada vista y lo que se superpone.
    Nunca se anida: dentro de un cristal, los elementos van con --surface o --surface-2. */
 .glass{

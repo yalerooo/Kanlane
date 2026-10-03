@@ -37,9 +37,29 @@
 }
 
 /* Pantalla de desbloqueo del proyecto. */
-#projectLockScreen{flex-direction:column;flex-wrap:nowrap;align-items:center;gap:16px;}
-#projectLockScreen .check-row{margin:2px 0 0;}
-#projectLockScreen .field-help{margin:6px 0 14px;}
+/* Ocupa todo el alto libre y centra la tarjeta (la barra de la vista está oculta mientras
+   el proyecto está bloqueado). margin:auto en vez de justify-content:center: si la tarjeta
+   no cabe (recuperación, clave), se puede desplazar hasta arriba. */
+.main-inner > #projectLockScreen{
+  flex-direction:column;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:16px;
+  min-height:calc(100vh - 24px);
+  min-height:calc(100dvh - 24px);
+  padding:24px 12px;
+}
+#projectLockScreen > .lock-card:not([hidden]){margin-top:auto;margin-bottom:auto;}
+/* La casilla de confianza es una opción suelta, no una fila de lista: sin caja alrededor. */
+#projectLockScreen .check-row{margin:4px 0 0;padding:0;gap:8px;border:0;font-size:13px;color:var(--ink);cursor:pointer;}
+#projectLockScreen .check-row input[type="checkbox"]{margin:0;}
+#projectLockScreen .field-help{margin:6px 0 16px;}
+#projectLockScreen .btn-primary{height:36px;}
+@media (max-width: 900px){
+  /* En móvil hay barra arriba y navegación abajo. */
+  .main-inner > #projectLockScreen{min-height:calc(100vh - var(--nav-h, 64px) - 96px);min-height:calc(100dvh - var(--nav-h, 64px) - 96px);padding:16px 2px;}
+}
 .lock-card-wide{width:min(480px, 100%);}
 .lock-recover{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);}
 .lock-recover textarea{font-family:var(--mono);font-size:12.5px;width:100%;}

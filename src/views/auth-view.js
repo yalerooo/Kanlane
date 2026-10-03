@@ -119,10 +119,11 @@
 
     /* handler('light' | 'dark'): el botón de sol/luna de la pantalla de acceso. */
     bindTheme(handler){
-      $('authTheme').addEventListener('click', () => {
+      const btn = $('authTheme');
+      btn.addEventListener('click', () => {
         const attr = document.documentElement.getAttribute('data-theme');
         const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        handler(dark ? 'light' : 'dark');
+        Workhub.utils.ui.themeSwitch(btn, () => handler(dark ? 'light' : 'dark'));
       });
     }
 

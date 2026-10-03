@@ -21,6 +21,10 @@
   const FONTS = ['default', 'system', 'serif', 'mono'];
   const TEXT_SIZES = ['small', 'normal', 'large'];
   const NAVS = ['side', 'top'];
+  /* Cristal (transparencia y desenfoque), velo del fondo y animaciones. */
+  const GLASSES = ['solid', 'soft', 'normal', 'strong'];
+  const WASHES = ['none', 'soft', 'normal', 'strong'];
+  const MOTIONS = ['normal', 'reduced'];
 
   const {fail, str, sameSet, cleanTask, cleanClient, cleanContact, cleanMeeting, cleanForm, YMD, HM, HEX} = Workhub.pluginClean;
 
@@ -212,6 +216,22 @@
         if(NAVS.indexOf(params.nav) === -1) throw fail('bad-params', 'nav: "side" o "top".');
         v.nav = params.nav;
       }
+      if(params.glass != null){
+        if(GLASSES.indexOf(params.glass) === -1) throw fail('bad-params', 'glass: "solid", "soft", "normal" o "strong".');
+        v.glass = params.glass;
+      }
+      if(params.wash != null){
+        if(WASHES.indexOf(params.wash) === -1) throw fail('bad-params', 'wash: "none", "soft", "normal" o "strong".');
+        v.wash = params.wash;
+      }
+      if(params.veil != null){
+        if(!Array.isArray(params.veil) || params.veil.length !== 2 || !params.veil.every((c) => HEX.test(String(c)))) throw fail('bad-params', 'veil: dos colores #RRGGBB.');
+        v.veil = params.veil.map((c) => String(c).toUpperCase());
+      }
+      if(params.motion != null){
+        if(MOTIONS.indexOf(params.motion) === -1) throw fail('bad-params', 'motion: "normal" o "reduced".');
+        v.motion = params.motion;
+      }
       this.appearance = {pluginId:pluginId, values:v};
       this.applyAppearance();
       return true;
@@ -265,6 +285,15 @@
       else root.style.removeProperty('--font');
       if(v.textSize && v.textSize !== 'normal') root.setAttribute('data-text-size', v.textSize);
       else root.removeAttribute('data-text-size');
+      /* Velo del fondo con colores propios (si no, sigue al acento, aplicado más arriba). */
+      if(v.veil){
+        root.style.setProperty('--hue-a', v.veil[0]);
+        root.style.setProperty('--hue-b', v.veil[1]);
+      }
+      [['data-glass', v.glass], ['data-wash', v.wash], ['data-motion', v.motion]].forEach(([attr, value]) => {
+        if(value && value !== 'normal') root.setAttribute(attr, value);
+        else root.removeAttribute(attr);
+      });
       this.schedule('theme', () => this.theme());
     }
 

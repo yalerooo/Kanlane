@@ -83,7 +83,7 @@
       this.btnTheme.addEventListener('click', () => {
         const attr = document.documentElement.getAttribute('data-theme');
         const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        handler(dark ? 'light' : 'dark');
+        Workhub.utils.ui.themeSwitch(this.btnTheme, () => handler(dark ? 'light' : 'dark'));
       });
     }
 
@@ -126,6 +126,7 @@
     }
 
     show(view){
+      const prev = this.currentView;
       if(view !== 'plugins' && window.matchMedia('(max-width:900px)').matches) this.setPluginNavExpanded(false);
       this.tabs.forEach((t) => {
         const active = t.getAttribute('data-view') === view;
@@ -143,6 +144,42 @@
       this.currentView = view;
       document.body.classList.toggle('plugin-open', view === 'plugins' && !document.getElementById('pluginStage').hidden);
       this._renderInfo();
+      if(prev !== view) this._animateIn(view, prev);
+    }
+
+    /* Entrada de la sección al cambiar de pestaña: aparece deslizándose desde el lado hacia
+       el que se navega (abajo o arriba con la barra lateral; derecha o izquierda con la
+       navegación arriba o en móvil). El título y las herramientas de la barra solo se funden. */
+    _animateIn(view, prev){
+      const order = Object.keys(SECTION_IDS);
+      const dir = order.indexOf(view) > order.indexOf(prev) ? 1 : -1;
+      const play = (el, cls) => {
+        if(!el) return;
+        if(el._viewAnimEnd) el._viewAnimEnd();
+        /* Leer una medida reinicia la animación si se cambia de pestaña a mitad de otra. */
+        void el.offsetWidth;
+        el.style.setProperty('--view-dir', dir);
+        el.classList.add(cls);
+        /* La clase se quita al acabar la animación del propio elemento (las de sus hijos también
+           llegan aquí) o, si no llega a terminar porque la sección se oculta antes, al cabo de un
+           momento: si se quedara puesta, la animación se repetiría al cambiar el ancho de la ventana. */
+        const end = (ev) => {
+          if(ev && ev.target !== el) return;
+          el.removeEventListener('animationend', end);
+          clearTimeout(timer);
+          el._viewAnimEnd = null;
+          el.classList.remove(cls);
+          el.style.removeProperty('--view-dir');
+        };
+        const timer = setTimeout(end, 800);
+        el._viewAnimEnd = end;
+        el.addEventListener('animationend', end);
+      };
+      play(this.sections[view], 'view-in');
+      play(this.pageTitle, 'view-fade');
+      this.bars.forEach((b) => { if(!b.hidden) play(b, 'view-fade'); });
+      /* La pestaña elegida da un pequeño bote. */
+      this.tabs.forEach((t) => { if(t.getAttribute('data-view') === view) play(t, 'tab-pop'); });
     }
 
     _renderInfo(){

@@ -1,23 +1,94 @@
 /* ---------- Integración con GitHub Projects ---------- */
-.gh-body{padding:0 16px 16px;}
-.gh-form,.gh-linked{display:grid;gap:12px;max-width:560px;}
+/* Tarjeta de Ajustes: bloques separados y con aire. Sin enlazar, tres pasos numerados;
+   enlazado, el proyecto con su estado, las opciones y, al final, cómo quitar el acceso o el enlace. */
+.gh-body{padding:2px 18px 18px;}
+.gh-form,.gh-linked{display:flex;flex-direction:column;gap:18px;max-width:600px;}
 .gh-form .field{margin-bottom:0;}
-.gh-lead,.gh-note{margin:0;font-size:13px;line-height:1.5;color:var(--ink-soft);}
-.gh-note{font-size:12.5px;}
-.gh-note.is-warn{color:var(--ink-soft);background:transparent;border:1px solid var(--line);border-radius:var(--r-lg,12px);padding:10px 12px;margin-bottom:8px;}
-.gh-note.gh-privacy{margin-bottom:0;}
+.gh-body h4{margin:0;font-size:13px;font-weight:550;letter-spacing:0;color:var(--ink);}
+.gh-note{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+.gh-body .field-help{margin:0;line-height:1.5;}
+/* Qué hace la integración, en tres líneas. */
+.gh-points{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:13px;line-height:1.5;color:var(--ink-soft);}
+.gh-points li{position:relative;padding-left:16px;}
+.gh-points li::before{content:"";position:absolute;left:3px;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--ink-faint);}
+/* Pasos numerados. */
+.gh-steps{display:flex;flex-direction:column;gap:20px;padding:18px 0 2px;border-top:1px solid var(--line);}
+.gh-step{display:grid;grid-template-columns:24px minmax(0, 1fr);gap:12px;}
+.gh-step-n{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  font-size:12px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink);
+  background:var(--surface-2);
+  border-radius:50%;
+}
+.gh-step-body{display:flex;flex-direction:column;gap:10px;min-width:0;}
+/* Lo que va tras los pasos (qué se envía, el error y el botón) sigue en la misma columna que los campos. */
+.gh-form > .gh-box,.gh-form > .lock-error,.gh-form > .gh-actions{margin-left:36px;}
+.gh-form > .lock-error{margin-top:0;margin-bottom:0;}
+.gh-step-body > h4{line-height:24px;}
+.gh-step-body .field{gap:6px;}
+.gh-step-body .field input,.gh-step-body .field select,.gh-step-body .field .dd{width:100%;}
+.gh-step-body #ghName{margin-top:2px;}
+/* Casillas sueltas (no filas de lista): sin caja alrededor. */
+.gh-body .check-row{padding:0;gap:8px;border:0;font-size:13px;line-height:1.4;color:var(--ink);cursor:pointer;}
+.gh-body .check-row input[type="checkbox"]{margin:0;}
+/* Bloque informativo: plano, con borde fino. */
+.gh-box{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);}
+.gh-box p{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+/* Aviso del diálogo «Desde GitHub» (fuera de la tarjeta de Ajustes). */
+.gh-note.is-warn{border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 12px;}
 #pGhPrivacy{margin-top:10px;}
-.gh-token-missing{display:grid;gap:8px;}
+.gh-token-missing{gap:10px;}
 .gh-actions{display:flex;flex-wrap:wrap;gap:8px;}
 .gh-connected{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--st-done, var(--ink-soft));}
 .gh-connected span{color:var(--ink-soft);}
-.gh-oauth{display:grid;gap:6px;justify-items:start;}
+.gh-oauth{display:grid;gap:8px;justify-items:start;}
 .gh-oauth .btn{display:inline-flex;align-items:center;gap:8px;}
-.gh-oauth .field-help{margin:0;}
-.gh-project{display:flex;align-items:flex-start;gap:10px;color:var(--ink);}
-.gh-project > svg{flex:none;margin-top:2px;}
-.gh-project a{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;}
+/* Alternativa plegada (el token). */
+.gh-more{font-size:12.5px;color:var(--ink-soft);}
+.gh-more summary{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  margin-left:-8px;
+  border-radius:var(--r-md);
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+}
+.gh-more summary::-webkit-details-marker{display:none;}
+.gh-more summary::before{content:"";width:12px;height:12px;flex:none;background:var(--chevron) no-repeat center/12px;transform:rotate(-90deg);transition:transform .15s ease;}
+.gh-more[open] summary::before{transform:none;}
+.gh-more summary:hover{color:var(--ink);background:var(--hover);}
+.gh-more summary:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.gh-more .field{margin-top:8px;}
+/* Proyecto enlazado: nombre, estado y «Sincronizar ahora». */
+.gh-project{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-lg);color:var(--ink);}
+.gh-project-ic{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);}
+.gh-project-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.gh-project a{font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .gh-project a:hover{text-decoration:underline;}
+.gh-project .btn{flex:none;}
+.gh-result{margin-top:-8px;}
+/* Filas del final: acceso y enlace, cada una con su explicación y su botón. */
+.gh-rows{display:flex;flex-direction:column;border-top:1px solid var(--line);}
+.gh-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 0;border-bottom:1px solid var(--line);}
+.gh-row:last-child{border-bottom:0;padding-bottom:0;}
+.gh-row > div:first-child{min-width:0;}
+.gh-row p{margin:2px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+.gh-row-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:none;max-width:55%;}
+@media (max-width:640px){
+  .gh-project{flex-wrap:wrap;}
+  .gh-project .btn{width:100%;}
+  .gh-row{flex-direction:column;align-items:stretch;gap:10px;}
+  .gh-row-actions{justify-content:flex-start;max-width:none;}
+}
 .gh-state{font-size:12.5px;color:var(--ink-faint);}
 .gh-state.is-error{color:var(--danger);}
 .link-btn{padding:0;font:inherit;color:var(--ink);background:none;border:none;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}

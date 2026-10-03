@@ -64,7 +64,7 @@
     bindTheme(handler){
       this.themeSegment.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-theme-choice]');
-        if(b) handler(b.getAttribute('data-theme-choice'));
+        if(b) Workhub.utils.ui.themeSwitch(b, () => handler(b.getAttribute('data-theme-choice')));
       });
     }
 

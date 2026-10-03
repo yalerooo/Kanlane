@@ -20,7 +20,7 @@
   var MANIFEST = {
     id: 'workhub.smartgp',
     name: 'Smart GP',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
     author: 'Kanlane',
     icon: 'clock',
@@ -394,10 +394,10 @@
       var perProject = {};
       list.forEach(function(e){ perProject[e.project || '_'] = (perProject[e.project || '_'] || 0) + e.hours; });
       var bar = list.length
-        ? '<div class="trk" style="width:' + Math.min(100, sum / scale * 100) + '%">' + Object.keys(perProject).map(function(k){
+        ? '<div class="cap"><div class="trk" style="width:' + Math.min(100, sum / scale * 100) + '%">' + Object.keys(perProject).map(function(k){
             return '<i style="flex:' + perProject[k] + ';--c:' + esc(projectColor(k === '_' ? '' : k)) + '"></i>';
-          }).join('') + '</div>'
-        : '<div class="none"></div>';
+          }).join('') + '</div></div>'
+        : '<div class="cap is-empty"></div>';
       cells += '<button type="button" class="sg-cell' + (weekend ? ' is-weekend' : '') + (limit === 0 ? ' is-off' : '') + (over ? ' is-over' : '') + (key === today() ? ' is-today' : '') + (key === st.selected ? ' is-selected' : '') + '" data-act="day" data-date="' + key + '"' +
         ' aria-label="' + esc(new Date(y, m, d).toLocaleDateString(WorkhubPlugin.locale, {weekday: 'long', day: 'numeric', month: 'long'}) + (sum ? ', ' + fmt(sum) + ' h' : '') + (limited ? ', ' + tr('máx.') + ' ' + fmt(limit) + ' h' : '')) + '">' +
         '<span class="n">' + d + '</span>' +

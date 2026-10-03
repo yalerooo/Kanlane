@@ -34,8 +34,8 @@ Workhub.services.officialPlugins = [
     manifest: {
       id: 'workhub.apariencia',
       name: 'Apariencia',
-      version: '1.2.0',
-      description: 'Personaliza el tema, los colores, la navegación, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.',
+      version: '2.0.0',
+      description: 'Temas listos y ajustes finos para cada proyecto: colores, cristal y velo del fondo, navegación, tipografía, esquinas, espaciado y animaciones.',
       author: 'Kanlane',
       icon: 'sparkles',
       color: 328,
@@ -47,7 +47,7 @@ Workhub.services.officialPlugins = [
     manifest: {
       id: 'workhub.smartgp',
       name: 'Smart GP',
-      version: '1.0.0',
+      version: '1.1.0',
       description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
       author: 'Kanlane',
       icon: 'clock',

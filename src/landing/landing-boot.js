@@ -8,7 +8,7 @@
   var theme = null, inApp = false, guest = false;
   try{ theme = localStorage.getItem('workhub_theme'); }catch(e){}
   if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
-  /* Movimiento al bajar (assets/css/landing-motion.css): solo si el navegador puede y la persona no ha
+  /* Movimiento al bajar (assets/css/landing.css): solo si el navegador puede y la persona no ha
      pedido menos movimiento. Se decide aquí, antes de pintar, para que nada aparezca y se esconda. */
   try{
     if('IntersectionObserver' in window && window.matchMedia && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('js-motion');

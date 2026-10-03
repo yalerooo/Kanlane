@@ -532,6 +532,7 @@
 
   function noteHtml(d){
     const n = d.data() || {};
+    const text = n._undecryptable ? Workhub.t('No se puede descifrar') : (n.text ? (n.kind === 'activity' ? Workhub.t(n.text) : n.text) : '');
     const actor = n.actorName ? '<span translate="no">' + esc(n.actorName) + '</span> · ' : '';
     const img = n.imageAssetId
       ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="">'
@@ -539,7 +540,7 @@
     return '<div class="note-item" data-id="' + esc(d.id) + '">' +
       (n.kind === 'activity' ? '' : '<button type="button" class="note-del" data-action="delnote" data-id="' + esc(d.id) + '">Eliminar</button>') +
       '<div class="note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (n.text ? '<div class="note-text" translate="no">' + esc(n.kind === 'activity' ? Workhub.t(n.text) : n.text) + '</div>' : '') +
+      (text ? '<div class="note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') +
       img +
       '</div>';
   }

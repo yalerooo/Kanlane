@@ -395,8 +395,17 @@
     const own = firestore.collection('users').doc(uid).collection('assets');
     const shared = () => window.__teamId ? firestore.collection('teams').doc(window.__teamId).collection('assets') : null;
     const cache = {};
+    const b64 = Workhub.services.crypto;
+    const JPEG_PREFIX = 'data:image/jpeg;base64,';
+    /* Proyecto con cifrado total: window.__assetCipher (lo fija la app al abrirlo, como __teamId)
+       cifra los bytes de la imagen antes de subirla y los descifra al leerla. */
     const read = (col, id) => col.doc(id).get().then((snap) => {
       const data = snap.exists ? snap.data() : null;
+      if(data && data.ev){
+        const cipher = window.__assetCipher;
+        if(!cipher) return null;
+        return cipher.openBytes(id, data).then((bytes) => JPEG_PREFIX + b64.b64encode(bytes));
+      }
       return data && data.data ? data.data : null;
     }).catch(() => null);
     window.__assetUrl = (id) => {
@@ -410,6 +419,18 @@
     };
     return {
       upload: (file) => compressImage(file).then((dataUrl) => {
+        const cipher = window.__assetCipher;
+        if(cipher){
+          /* El id va en la AAD del cifrado: se genera antes de escribir. */
+          const ref = (shared() || own).doc();
+          const bytes = b64.b64decode(dataUrl.slice(dataUrl.indexOf(',') + 1));
+          return cipher.sealBytes(ref.id, bytes).then((sealed) => {
+            return ref.set(Object.assign({createdAt:Date.now()}, sealed));
+          }).then(() => {
+            cache[ref.id] = dataUrl;
+            return {id:ref.id, url:dataUrl, contentType:'image/jpeg'};
+          });
+        }
         return (shared() || own).add({data:dataUrl, contentType:'image/jpeg', createdAt:Date.now()}).then((ref) => {
           cache[ref.id] = dataUrl;
           return {id:ref.id, url:dataUrl, contentType:'image/jpeg'};

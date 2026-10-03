@@ -6,6 +6,9 @@
   const KEY_RE = /^[A-Za-z0-9_.-]{1,64}$/;
   const MAX_VALUE_BYTES = 100 * 1024;
   const MAX_TOTAL_BYTES = 800 * 1024;
+  /* En un proyecto con cifrado total el cajón va en un solo blob cifrado y en base64: 800 KB no caben
+     en un documento de Firestore (1 MiB). */
+  const MAX_TOTAL_BYTES_ENCRYPTED = 600 * 1024;
   const INSTALL_KIND = 'plugin-install';
   const INSTALL_PREFIX = 'install:';
 
@@ -123,13 +126,23 @@
        - por usuario (común a todos los proyectos): settings/plugin-user:{id}.
          Se leen los datos antiguos de plugins/{id} si aún no se migraron. */
 
-    static projectBucket(db, pluginId){
+    static projectBucket(db, pluginId, cipher){
       const ref = db.doc('plugin_data/' + pluginId);
+      const valuesOf = (d) => (d && d.values && typeof d.values === 'object' ? d.values : {});
+      if(cipher){
+        /* Cifrado total: {values} va dentro del blob; solo updatedAt queda en claro. */
+        return {
+          maxBytes: MAX_TOTAL_BYTES_ENCRYPTED,
+          read: () => ref.get().then((snap) => {
+            const d = snap.exists ? snap.data() || {} : {};
+            if(!cipher.isSealed(d)) return valuesOf(d);
+            return cipher.open('plugin_data', pluginId, d).then((r) => valuesOf(r.plain));
+          }),
+          write: (values) => cipher.seal('plugin_data', pluginId, {values:values, updatedAt:Date.now()}).then((doc) => ref.set(doc))
+        };
+      }
       return {
-        read: () => ref.get().then((snap) => {
-          const d = snap.exists ? snap.data() || {} : {};
-          return d.values && typeof d.values === 'object' ? d.values : {};
-        }),
+        read: () => ref.get().then((snap) => valuesOf(snap.exists ? snap.data() || {} : {})),
         write: (values) => ref.set({values:values, updatedAt:Date.now()})
       };
     }
@@ -173,7 +186,8 @@
       return bucket.read().then((values) => {
         values[key] = json;
         const total = Object.keys(values).reduce((n, k) => n + k.length + values[k].length, 0);
-        if(total > MAX_TOTAL_BYTES) throw fail('quota', 'El plugin ha llenado su espacio (800 KB).');
+        const max = bucket.maxBytes || MAX_TOTAL_BYTES;
+        if(total > max) throw fail('quota', 'El plugin ha llenado su espacio (' + Math.round(max / 1024) + ' KB).');
         return bucket.write(values);
       });
     }

@@ -150,6 +150,15 @@
       });
     }
 
+    /* Proyecto con cifrado total cuya clave no está en este navegador: en lugar de las secciones
+       se muestra el aviso «Proyecto cifrado». */
+    setProjectLocked(on){
+      document.body.classList.toggle('project-locked', !!on);
+      const screen = document.getElementById('projectLockScreen');
+      if(screen) screen.hidden = !on;
+      if(on && window.__hideBootSkeleton) window.__hideBootSkeleton();
+    }
+
     setClientsEnabled(on){
       this.clientsOn = on;
       document.body.classList.toggle('no-clients', !on);

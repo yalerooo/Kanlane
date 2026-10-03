@@ -1,3 +1,7 @@
+/* Proyecto con cifrado total sin su clave en este navegador: solo se ve el aviso. */
+body.project-locked .main-inner > section:not(#projectLockScreen),
+body.project-locked .main-inner > .page-head{display:none !important;}
+
 /* ---------- Estructura ---------- */
 .app{
   display:grid;

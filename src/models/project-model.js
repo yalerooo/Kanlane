@@ -19,8 +19,9 @@
   const TEAM_PREFIX = 't:';
   /* En un equipo no hay gestor de contraseñas (todavía) y las imágenes viven en assets. */
   const TEAM_DATA_COLLECTIONS = ['tasks', 'clients', 'contacts', 'meetings', 'plugin_data', 'assets'];
-  /* Campos del documento de un equipo que no son de configuración. */
-  const TEAM_PROTECTED = ['ownerUid', 'memberIds', 'members', 'createdAt'];
+  /* Campos del documento de un equipo que no son de configuración. 'enc' (cifrado total) es inmutable:
+     si no estuviera aquí, set() lo borraría con FieldValue.delete() al guardar la configuración. */
+  const TEAM_PROTECTED = ['ownerUid', 'memberIds', 'members', 'createdAt', 'enc'];
   const TEAM_DERIVED = ['id', 'team', 'teamId', 'role'];
 
   class ProjectModel extends Workhub.models.CollectionModel {
@@ -39,6 +40,11 @@
     static isTeam(id){ return typeof id === 'string' && id.indexOf(TEAM_PREFIX) === 0; }
     static teamId(id){ return String(id).slice(TEAM_PREFIX.length); }
     static teamKey(tid){ return TEAM_PREFIX + tid; }
+
+    /* Proyecto con cifrado total (docs/CIFRADO-PROYECTOS.md): su documento lleva enc = {v, mode, pid, kid, kcv}. */
+    static isEncrypted(p){
+      return !!(p && p.enc && typeof p.enc === 'object' && p.enc.pid && p.enc.kid);
+    }
 
     /* "Cargado" cuando han llegado los proyectos personales y los equipos. */
     _updateLoaded(){
@@ -207,6 +213,9 @@
       /* La integración con GitHub sobrevive a los cambios de nombre, color y tipo. */
       if(current.github && !data.github) data.github = current.github;
       if(current.labels && !data.labels) data.labels = current.labels;
+      /* El cifrado del proyecto no se puede quitar ni cambiar (las reglas tampoco lo dejan). */
+      if(current.enc) data.enc = current.enc;
+      if(data.enc && data.github) return Promise.reject(new Error('encrypted-github'));
       if(typeof color === 'number') data.color = color;
       return this.set(id, data);
     }
@@ -216,6 +225,8 @@
     patch(id, fields){
       const cur = Object.assign({}, this.get(id) || {});
       delete cur.id;
+      /* Un proyecto con cifrado total no se enlaza con GitHub. */
+      if(cur.enc && fields.github) return Promise.reject(new Error('encrypted-github'));
       if(id === MAIN_ID && !cur.nombre) cur.nombre = Workhub.t(MAIN_NAME);
       Object.keys(fields).forEach((k) => {
         if(fields[k] === null || fields[k] === undefined) delete cur[k];
@@ -258,6 +269,16 @@
       }
       /* En un equipo no hay gestor de contraseñas, y las reglas no lo permiten. */
       const wipeMeta = isTeam ? Promise.resolve() : db.doc(VAULT_META_PATH).delete();
+      /* Cifrado total: las claves envueltas (la propia; en un equipo, el propietario borra las de todos)
+         y la clave guardada en este navegador. Si alguna falla se sigue: sin el proyecto no abren nada. */
+      const project = this.get(id);
+      const me = rootDb.me ? rootDb.me.uid : '';
+      if(ProjectModel.isEncrypted(project) && me){
+        const who = isTeam && Array.isArray(project.memberIds) && project.memberIds.length ? project.memberIds : [me];
+        who.forEach((uid) => wipeOthers.push(db.collection('crypto').doc(uid).delete().catch(() => null)));
+        const keystore = Workhub.services.keystore;
+        if(keystore) wipeOthers.push(keystore.forgetProject(id, me).catch(() => null));
+      }
       return Promise.all([wipeTasks, wipeMeta].concat(wipeOthers)).then(() => {
         /* Las imágenes son lo menos importante: si alguna falla, se sigue. */
         if(!assets || !assets.delete) return null;

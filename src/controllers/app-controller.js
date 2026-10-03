@@ -58,6 +58,8 @@
       /* Contadores de la barra lateral. */
       const m = this.models;
       [m.tasks, m.clients, m.meetings, m.vault].forEach((model) => model.on('change', () => this.updateCounts()));
+      /* Al llegar la lista de proyectos se sabe si el abierto tiene cifrado total. */
+      m.projects.on('change', () => this.syncEncryption());
 
       /* Botones y etiquetas de plugins: repintar donde aparecen. */
       V.extensions.on('change', () => {
@@ -157,12 +159,16 @@
 
     /* {id, nombre, color} del último proyecto abierto en este navegador. */
     cachedProject(){
-      const main = {id:M.ProjectModel.MAIN_ID, nombre:Workhub.t('Proyecto principal')};
+      return this.rememberedProject() || {id:M.ProjectModel.MAIN_ID, nombre:Workhub.t('Proyecto principal')};
+    }
+
+    /* Lo guardado por rememberProject(), o null si este navegador aún no ha abierto ningún proyecto. */
+    rememberedProject(){
       try{
         const p = JSON.parse(prefs.read(PROJECT_PREF, 'null'));
-        return p && typeof p.id === 'string' && p.id ? p : main;
+        return p && typeof p.id === 'string' && p.id ? p : null;
       }catch(e){
-        return main;
+        return null;
       }
     }
 
@@ -174,15 +180,98 @@
       if(Array.isArray(p.stages)) data.stages = p.stages;
       if(typeof p.clients === 'boolean') data.clients = p.clients;
       if(Array.isArray(p.labels)) data.labels = p.labels.slice(0, 60);
+      /* Cifrado total: para no conectar los datos antes de tener la clave. */
+      if(M.ProjectModel.isEncrypted(p) || p.enc === true) data.enc = true;
       prefs.write(PROJECT_PREF, JSON.stringify(data));
     }
 
+    /* Conecta los modelos con los datos del proyecto abierto. Si tiene cifrado total
+       (docs/CIFRADO-PROYECTOS.md) se conectan con su cifrador, y solo si la clave está en este
+       navegador; sin ella no se conecta nada y se muestra «Proyecto cifrado». Nunca se conecta
+       sin saber antes si el proyecto está cifrado. */
     connectProject(){
+      const P = M.ProjectModel;
+      const seq = this.connectSeq = (this.connectSeq || 0) + 1;
       /* Las imágenes de un proyecto de equipo se guardan con el equipo (ver firebase-backend). */
-      window.__teamId = M.ProjectModel.isTeam(this.projectId) ? M.ProjectModel.teamId(this.projectId) : '';
-      const db = M.ProjectModel.scope(this.rootDb, this.projectId);
-      PROJECT_MODELS.forEach((name) => this.models[name].connect(db));
-      this.models.plugins.connect(db, this.projectId === M.ProjectModel.MAIN_ID);
+      window.__teamId = P.isTeam(this.projectId) ? P.teamId(this.projectId) : '';
+      /* Solo hay proyectos cifrados con cuenta (ni en modo local ni como invitado). */
+      const account = !!(this.rootDb && this.rootDb.me);
+      let enc = null;
+      let known = true;
+      if(account){
+        if(this.models.projects.loaded){
+          const p = this.models.projects.get(this.projectId);
+          enc = P.isEncrypted(p) ? p.enc : null;
+        }else{
+          /* Sin la lista todavía: vale lo recordado en este navegador, si dice que no está cifrado. */
+          const r = this.rememberedProject();
+          known = !!r && r.id === this.projectId && !r.enc;
+        }
+      }
+      if(!known){
+        /* syncEncryption() volverá a llamar cuando llegue la lista de proyectos. */
+        this.disconnectProject();
+        this.pendingConnect = true;
+        this.encPid = '';
+        return;
+      }
+      this.pendingConnect = false;
+      if(!enc){
+        this.openProject(null, '');
+        return;
+      }
+      this.disconnectProject();
+      this.encPid = enc.pid;
+      this.projectKey(enc).then((cipher) => {
+        if(seq !== this.connectSeq) return;
+        if(cipher) this.openProject(cipher, enc.pid);
+        else this.shell.setProjectLocked(true);
+      });
+    }
+
+    openProject(cipher, pid){
+      const P = M.ProjectModel;
+      this.cipher = cipher;
+      this.encPid = pid;
+      this.shell.setProjectLocked(false);
+      /* Las imágenes las cifra y descifra firebase-backend, que no sabe de proyectos. */
+      window.__assetCipher = cipher ? {
+        sealBytes: (id, bytes) => cipher.sealBytes('assets', id, bytes),
+        openBytes: (id, doc) => cipher.openBytes('assets', id, doc)
+      } : null;
+      const db = P.scope(this.rootDb, this.projectId);
+      PROJECT_MODELS.forEach((name) => this.models[name].connect(db, cipher));
+      this.models.plugins.connect(db, this.projectId === P.MAIN_ID);
+    }
+
+    disconnectProject(){
+      this.cipher = null;
+      window.__assetCipher = null;
+      this.shell.setProjectLocked(false);
+      PROJECT_MODELS.forEach((name) => this.models[name].disconnect());
+      this.models.plugins.disconnect();
+    }
+
+    /* Cifrador del proyecto si su clave está guardada en este navegador y es la vigente; si no, null. */
+    projectKey(enc){
+      const keystore = Workhub.services.keystore;
+      const PC = Workhub.services.projectCrypto;
+      if(!keystore || !PC || !PC.isAvailable() || !M.ProjectCipher) return Promise.resolve(null);
+      return keystore.get(this.rootDb.me.uid, enc.pid).then((rec) => {
+        if(!rec || rec.kid !== enc.kid) return null;
+        return PC.checkKcv(rec.key, enc.pid, enc.kid, enc.kcv).then((ok) => {
+          return ok ? new M.ProjectCipher({pid:enc.pid, kid:enc.kid, key:rec.key}) : null;
+        });
+      }).catch(() => null);
+    }
+
+    /* Con la lista de proyectos cargada: conecta lo que estaba esperando y reconecta si lo conectado
+       no cuadra con el cifrado del proyecto (lo recordado en el navegador estaba anticuado). */
+    syncEncryption(){
+      if(!this.rootDb || !this.rootDb.me || !this.models.projects.loaded) return;
+      const p = this.models.projects.get(this.projectId);
+      const pid = M.ProjectModel.isEncrypted(p) ? p.enc.pid : '';
+      if(this.pendingConnect || pid !== (this.encPid || '')) this.connectProject();
     }
 
     /* Cambia de proyecto sin recargar: cierra lo que hubiera abierto, vacía los

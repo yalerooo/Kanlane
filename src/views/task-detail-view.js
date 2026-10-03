@@ -20,6 +20,7 @@
     assignees: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     gh: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.72.5.1.68-.22.68-.49v-1.9c-2.78.62-3.37-1.21-3.37-1.21-.46-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.85.09-.66.35-1.12.64-1.38-2.22-.26-4.55-1.14-4.55-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9v2.81c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>'
   };
+  const TICK_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
   const LOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
   class TaskDetailView {
@@ -54,6 +55,8 @@
       this.estado = $('tvEstado');
       this.btnClose = $('btnTvClose');
       this.btnEdit = $('btnTvEdit');
+      this.btnDone = $('btnTvDone');
+      this.stamp = $('tvStamp');
       this.lightbox = $('lightbox');
       this.lightboxImg = $('lightboxImg');
       this.taskId = null;
@@ -97,6 +100,14 @@
     }
 
     bindEdit(handler){ this.btnEdit.addEventListener('click', () => handler(this.taskId)); }
+
+    /* «Marcar como completada»: pasa la tarea a la primera etapa final (como elegirla en Estado). */
+    bindDone(handler){
+      this.btnDone.addEventListener('click', () => {
+        const done = TaskModel.STATUS.find((x) => x.done);
+        if(this.taskId && done) handler(this.taskId, done.key);
+      });
+    }
 
     bindStatus(handler){
       this.estado.addEventListener('change', () => {
@@ -154,22 +165,37 @@
       this.notesTitle.firstChild.textContent = Workhub.t(team.enabled() ? 'Actividad y comentarios' : 'Notas') + ' ';
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);
-      this.top.innerHTML =
-        (Workhub.clientsEnabled === false ? '' : (t.cliente ? clientColors.chip(t.cliente) : '<span class="tv-muted">Sin cliente</span>')) +
-        '<span class="status-pill" style="--st:' + s.fg + ';--st-bg:' + s.bg + '"><span class="dot" style="background:' + s.dot + '"></span>' + '<span translate="no">' + esc(s.label) + '</span></span>';
+      /* Cabecera: cliente / etiquetas. El estado va en la columna de propiedades. */
+      const labelNames = Array.isArray(t.labels) ? t.labels : [];
+      const crumb = [];
+      if(Workhub.clientsEnabled !== false){
+        crumb.push(t.cliente
+          ? '<span class="tv-crumb-client" translate="no"><i class="client-dot" style="--h:' + clientColors.hueOf(t.cliente) + '"></i><b>' + esc(t.cliente) + '</b></span>'
+          : '<span class="tv-muted">Sin cliente</span>');
+      }
+      if(labelNames.length) crumb.push('<span class="tv-crumb-tag" translate="no">' + esc(labelNames.join(', ')) + '</span>');
+      if(!crumb.length) crumb.push('<span class="status-pill" style="--st:' + s.dot + '"><span class="dot"></span><span translate="no">' + esc(s.label) + '</span></span>');
+      this.top.innerHTML = crumb.join('<span class="tv-crumb-sep" aria-hidden="true">/</span>');
+      /* Ya terminada o sin etapa final: el botón no tiene nada que hacer. */
+      this.btnDone.hidden = TaskModel.isDone(t) || !TaskModel.STATUS.some((x) => x.done);
       this.title.textContent = t.title || 'Sin título';
       /* La fecha límite siempre; el resto solo si tiene valor (las tareas
          importadas de copias antiguas no traen fechas reales de creación). */
       const known = (ts) => ts > 100000;
       this.facts.innerHTML = [
-        assigneesFact(t),
         fact('due', 'Fecha límite', dueHtml(t)),
-        t.repeat ? fact('repeat', 'Se repite', esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || ''))) : '',
-        t.contacto ? fact('contact', 'Contacto', esc(t.contacto)) : '',
-        ghFact(t),
-        known(t.createdAt) ? fact('created', 'Creada', esc(fmtDateTime(t.createdAt))) : '',
-        known(t.updatedAt) ? fact('updated', 'Última modificación', esc(fmtDateTime(t.updatedAt))) : ''
+        assigneesFact(t),
+        Workhub.clientsEnabled !== false && t.cliente ? fact('contact', 'Cliente', '<span class="tv-crumb-client" translate="no"><i class="client-dot" style="--h:' + clientColors.hueOf(t.cliente) + '"></i>' + esc(t.cliente) + '</span>') : '',
+        t.contacto ? fact('contact', 'Contacto', '<span translate="no">' + esc(t.contacto) + '</span>') : '',
+        fact('repeat', 'Se repite', t.repeat ? esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || '')) : '<span class="tv-muted">' + esc(Workhub.t('No se repite')) + '</span>'),
+        ghFact(t)
       ].join('');
+      /* Al pie de la columna: cuándo se creó y cuándo se tocó por última vez. */
+      this.stamp.innerHTML = [
+        known(t.createdAt) ? esc(Workhub.t('Creada')) + ' · ' + esc(fmtDateTime(t.createdAt)) : '',
+        known(t.updatedAt) ? esc(Workhub.t('Última modificación')) + ' · ' + esc(fmtDateTime(t.updatedAt)) : ''
+      ].filter(Boolean).join('<br>');
+      this.stamp.hidden = !this.stamp.innerHTML;
 
       this.descWrap.hidden = !t.desc;
       this.desc.textContent = t.desc || '';
@@ -178,7 +204,7 @@
       const prog = TaskModel.checklistProgress(t);
       this.checkWrap.hidden = !items.length;
       const percent = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
-      this.checkCount.textContent = items.length ? percent + '%' : '';
+      this.checkCount.textContent = items.length ? Workhub.t('{n} de {total}', {n:prog.done, total:prog.total}) : '';
       this.checkProgress.setAttribute('aria-valuenow', percent);
       this.checkProgressFill.style.width = percent + '%';
       this.checks.innerHTML = items.map((c) =>
@@ -342,10 +368,10 @@
       '<div class="gh-event-time">' + esc(ago(e.createdAt)) + '</div></div></li>';
   }
 
+  /* Propiedad de la columna derecha: etiqueta encima, valor debajo. */
   function fact(icon, label, valueHtml){
-    return '<div class="tv-fact"><div class="tv-fact-body">' +
-      '<span class="tv-fact-label"><span aria-hidden="true" class="tv-fact-ic">' + FACT_ICONS[icon] + '</span>' + esc(label) + '</span>' +
-      '<span class="tv-fact-value">' + valueHtml + '</span></div></div>';
+    return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + esc(label) + '</span>' +
+      '<div class="tv-prop-value tv-fact-value">' + valueHtml + '</div></div>';
   }
 
   function dueHtml(t){
@@ -360,21 +386,29 @@
     else if(days === -1) rel = 'Venció ayer';
     else rel = 'Venció hace ' + (-days) + ' días';
     const cls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
-    return esc(longDay(parseYmd(t.dueDate), true)) + ' <span class="' + cls + '">' + esc(rel) + '</span>';
+    return '<span class="' + cls + '">' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(rel) + '</span><small>' + esc(longDay(parseYmd(t.dueDate), true)) + '</small>';
   }
 
   function noteHtml(d){
     const n = d.data() || {};
     const text = n._undecryptable ? Workhub.t('No se puede descifrar') : (n.text ? (n.kind === 'activity' ? Workhub.t(n.text) : n.text) : '');
-    const actor = n.actorName ? '<span class="tv-note-author" translate="no">' + esc(n.actorName) + '</span> · ' : '';
+    const actor = n.actorName ? '<span class="tv-note-author" translate="no">' + esc(n.actorName) + '</span>' : '';
     const img = n.imageAssetId
       ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="Imagen de la nota">'
       : '';
-    return '<article class="tv-note' + (n.kind === 'activity' ? ' is-activity' : '') + '">' +
-      '<div class="tv-note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') +
-      img +
-      '</article>';
+    const when = '<time class="tv-note-date">' + esc(fmtDateTime(n.createdAt)) + '</time>';
+    /* Un cambio (actividad del equipo) va en una línea; un comentario o una nota, en burbuja. */
+    if(n.kind === 'activity'){
+      return '<article class="tv-note is-activity"><span class="tv-tick" aria-hidden="true">' + TICK_ICON + '</span>' +
+        '<div class="tv-note-body">' + actor + ' <span class="tv-note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</span> ' + when + '</div></article>';
+    }
+    const mark = n.actorName
+      ? '<span class="avatar is-mini tv-note-avatar" style="--h:' + hueFor(n.actorUid || n.actorName) + '" aria-hidden="true" translate="no">' + esc(initials(n.actorName)) + '</span>'
+      : '';
+    return '<article class="tv-note' + (mark ? ' has-author' : '') + '">' + mark +
+      '<div class="tv-note-body"><div class="tv-note-meta">' + actor + when + '</div>' +
+      (text || img ? '<div class="tv-bubble">' + (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') + img + '</div>' : '') +
+      '</div></article>';
   }
 
   function contactRowHtml(c){

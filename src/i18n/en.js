@@ -253,6 +253,14 @@
     'Bloquear este proyecto':'Lock this project',
     'Desbloquear proyecto':'Unlock project',
 
+    /* ---------- Cifrado por proyecto: error al crear, con el paso que falló ---------- */
+    'No se pudo crear el proyecto.':'Couldn\'t create the project.',
+    'preparar el cifrado':'prepare the encryption',
+    'guardar la clave del proyecto':'save the project\'s key',
+    'guardar la clave en este navegador':'save the key in this browser',
+    'guardar el proyecto':'save the project',
+    'El servidor ha rechazado la operación (permission-denied): comprueba que están publicadas las reglas de firestore.rules del cifrado y que tu correo está verificado.':'The server rejected the operation (permission-denied): check that the encryption rules in firestore.rules are published and that your email is verified.',
+
     /* ---------- Cifrado por proyecto: compartir con código de acceso (PR7) ---------- */
     'XXXX-XXXX-XXXX-XXXX-XXXX':'XXXX-XXXX-XXXX-XXXX-XXXX',
     'El equipo tendrá su propia clave. A cada persona que invites le darás un código de acceso de un solo uso por otro canal (en persona, por mensaje…). Caduca en 24 horas.':'The team will have its own key. You\'ll give each person you invite a single-use access code through another channel (in person, by message…). It expires in 24 hours.',

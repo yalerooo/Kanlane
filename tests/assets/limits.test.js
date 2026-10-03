@@ -48,7 +48,10 @@ test('el límite del cliente se mide en caracteres reales, no en bytes estimados
 test('las imágenes de equipo pasan por la misma validación', () => {
   const team = rules.match(/function isTeamCollection\(col\) \{\s*return col in \[([^\]]*)\]/);
   assert.ok(team && /'assets'/.test(team[1]), 'assets es colección de equipo');
-  assert.match(rules, /allow create, update: if isTeamCollection\(col\) && canEdit\(tid\) && validData\(col\);/);
+  /* Desde el PR 2 del cifrado la escritura pasa por validWrite, que sin sellar cae en validData (donde está el límite de assets). */
+  assert.match(rules, /allow create: if isTeamCollection\(col\) && canEdit\(tid\) && validWrite\(col\)/);
+  assert.match(rules, /allow update: if isTeamCollection\(col\) && canEdit\(tid\) && validWrite\(col\);/);
+  assert.match(rules, /function validWrite\(col\) \{[^}]*validData\(col\)/);
 });
 
 test('un documento de imagen al límite cabe en 1 MiB de Firestore', () => {

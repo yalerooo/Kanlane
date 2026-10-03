@@ -13,7 +13,12 @@ rules_version = '2';
 //    viewer (solo lectura). Se entra por invitación (invites/{id}), dirigida
 //    a un correo verificado. Las contraseñas del gestor no se comparten
 //    todavía, así que vault y vault_meta no están permitidos en equipos.
-// 4. Todo lo demás está cerrado.
+// 4. Cifrado por proyecto (docs/CIFRADO-PROYECTOS.md). Un proyecto puede
+//    llevar el campo 'enc' (solo al crearse): sus documentos de datos se
+//    guardan sellados (campos 'e', 'ev' y 'kid') y las reglas no dejan
+//    degradarlos a texto en claro. Los proyectos sin 'enc' funcionan igual
+//    que siempre. 'github' y 'enc' son incompatibles.
+// 5. Todo lo demás está cerrado.
 service cloud.firestore {
   match /databases/{database}/documents {
     function canUse(uid) {
@@ -106,28 +111,175 @@ service cloud.firestore {
           && textWithin(data, 'actorName', 200)));
     }
 
+    // ---------- Cifrado por proyecto ----------
+
+    // Un documento sellado lleva la versión del esquema ('ev', entero >= 1).
+    function isSealed(d) {
+      return d.get('ev', 0) is int && d.get('ev', 0) >= 1;
+    }
+
+    // Colecciones que pueden llevar documentos sellados.
+    function isSealable(col) {
+      return col in ['tasks', 'notes', 'clients', 'contacts', 'meetings', 'vault', 'plugin_data', 'assets'];
+    }
+
+    // Campos permitidos en un documento sellado: los que necesitan las reglas,
+    // las consultas del servidor y las actualizaciones parciales, más e/ev/kid.
+    function encFields(col) {
+      return col == 'tasks' ? ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
+                               'assignees', 'linkedContacts', 'linkedVault', 'e', 'ev', 'kid']
+        : col == 'notes' ? ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'e', 'ev', 'kid']
+        : col == 'clients' ? ['color', 'createdAt', 'e', 'ev', 'kid']
+        : col == 'contacts' ? ['createdAt', 'updatedAt', 'e', 'ev', 'kid']
+        : col == 'meetings' ? ['date', 'createdAt', 'updatedAt', 'e', 'ev', 'kid']
+        : col == 'vault' ? ['order', 'createdAt', 'updatedAt', 'iv', 'cipher', 'ivV2', 'cipherV2', 'e', 'ev', 'kid']
+        : col == 'plugin_data' ? ['updatedAt', 'e', 'ev', 'kid']
+        : col == 'assets' ? ['createdAt', 'e', 'ev', 'kid']
+        : [];
+    }
+
+    // Tamaño máximo del bloque cifrado 'e' (caracteres).
+    function encMax(col) {
+      return col == 'tasks' ? 200000
+        : col == 'notes' ? 100000
+        : col == 'clients' ? 4000
+        : col == 'contacts' ? 50000
+        : col == 'meetings' ? 100000
+        : col == 'vault' ? 20000
+        : 900000;
+    }
+
+    function validSealed(col) {
+      let d = request.resource.data;
+      return d.ev == 1
+        && d.kid is string && d.kid.size() > 0 && d.kid.size() <= 32
+        && d.e is string && d.e.size() > 0 && d.e.size() <= encMax(col)
+        && d.keys().hasOnly(encFields(col))
+        && listWithin(d, 'assignees', 50)
+        && textWithin(d, 'cipher', 900000) && textWithin(d, 'cipherV2', 900000);
+    }
+
+    // Un documento sellado nunca vuelve a texto en claro ni baja de versión.
+    function keepsSeal() {
+      return resource == null || !isSealed(resource.data)
+        || (isSealed(request.resource.data) && request.resource.data.ev >= resource.data.ev);
+    }
+
+    // Escritura de datos: sellada con su forma, o en claro con la validación de siempre.
+    function validWrite(col) {
+      return !isSealable(col) ? validData(col)
+        : keepsSeal() && (isSealed(request.resource.data) ? validSealed(col) : validData(col));
+    }
+
+    // Marca de instalación de un plugin (plugin_data/install:{id}): no es contenido del usuario y se consulta por _kind.
+    function isInstallMark() {
+      let d = request.resource.data;
+      return d.get('_kind', '') == 'plugin-install'
+        && d.keys().hasOnly(['_kind', 'pluginId', 'url', 'manifest', 'granted', 'official', 'installedAt', 'updatedAt']);
+    }
+
+    // true si, en un proyecto cifrado, esta escritura tiene que ir sellada.
+    // vault_meta (la clave del cofre, ya envuelta) y las marcas de plugins pueden ir en claro.
+    function sealRequired(col) {
+      return isSealable(col) && !(col == 'plugin_data' && isInstallMark());
+    }
+
+    function personalEnc(uid, pid) {
+      let p = /databases/$(database)/documents/users/$(uid)/projects/$(pid);
+      return exists(p) && get(p).data.get('enc', null) != null;
+    }
+
+    function teamEnc(tid) {
+      return team(tid).get('enc', null) != null;
+    }
+
+    function wrapBlob(b, max) {
+      return b is map && b.keys().hasOnly(['iv', 'ct'])
+        && b.iv is string && b.iv.size() >= 12 && b.iv.size() <= 32
+        && b.ct is string && b.ct.size() > 0 && b.ct.size() <= max;
+    }
+
+    // Campo 'enc' del documento del proyecto (modo 'pw'; 'managed' llegará con el modo gestionado).
+    function validEnc(e) {
+      return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt'])
+        && e.keys().hasAll(['v', 'mode', 'pid', 'kid', 'kcv'])
+        && e.v == 1 && e.mode == 'pw'
+        && e.pid is string && e.pid.size() >= 16 && e.pid.size() <= 32
+        && e.kid is string && e.kid.size() >= 8 && e.kid.size() <= 32
+        && e.kcv is string && e.kcv.size() > 0 && e.kcv.size() <= 128;
+    }
+
+    // 'enc' se pone al crear el proyecto (o al recrear el principal marcado como borrado), no cambia
+    // después y no convive con 'github'.
+    function validProjectEnc() {
+      let d = request.resource.data;
+      let had = resource != null && resource.data.get('enc', null) != null;
+      let has = d.get('enc', null) != null;
+      return (!has || (validEnc(d.enc) && d.get('github', null) == null))
+        && (!had || (has && d.enc == resource.data.enc) || (d.get('deleted', false) == true && !has))
+        && (had || !has || resource == null || resource.data.get('deleted', false) == true);
+    }
+
+    // Envoltorio de la clave de datos de una persona: crypto/{uid}.
+    function validCrypto() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['v', 'kid', 'kdf', 'pw', 'rk', 'pub', 'priv', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['v', 'kid', 'kdf', 'pw', 'rk'])
+        && d.v == 1
+        && d.kid is string && d.kid.size() >= 8 && d.kid.size() <= 32
+        && d.kdf is map && d.kdf.keys().hasOnly(['name', 'hash', 'iter', 'salt'])
+        && d.kdf.name == 'PBKDF2' && d.kdf.hash == 'SHA-256'
+        && d.kdf.iter is int && d.kdf.iter >= 600000 && d.kdf.iter <= 10000000
+        && d.kdf.salt is string && d.kdf.salt.size() >= 16 && d.kdf.salt.size() <= 64
+        && wrapBlob(d.pw, 256) && wrapBlob(d.rk, 256)
+        && (!('pub' in d) || (d.pub is map && d.pub.keys().size() <= 8))
+        && (!('priv' in d) || wrapBlob(d.priv, 1024));
+    }
+
     match /users/{uid} {
       // Proyecto principal: sus datos cuelgan directamente de users/{uid}.
       // 'settings' guarda preferencias y storage.user de los plugins.
       // 'plugins' conserva las instalaciones del proyecto principal.
       match /{col}/{docId} {
         allow read: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
-        allow create, update: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']) && validData(col);
+        allow create: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins'])
+          && validWrite(col)
+          && (col != 'projects' || validProjectEnc())
+          && (!sealRequired(col) || col == 'assets' || isSealed(request.resource.data) || !personalEnc(uid, 'main'));
+        allow update: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins'])
+          && validWrite(col)
+          && (col != 'projects' || validProjectEnc());
         allow delete: if canUse(uid) && (isDataCollection(col) || col in ['projects', 'assets', 'settings', 'plugins']);
       }
       match /tasks/{taskId}/notes/{noteId} {
         allow read, delete: if canUse(uid);
-        allow create, update: if canUse(uid) && validData('notes');
+        allow create: if canUse(uid) && validWrite('notes')
+          && (isSealed(request.resource.data) || !personalEnc(uid, 'main'));
+        allow update: if canUse(uid) && validWrite('notes');
+      }
+
+      // Envoltorio de la clave de datos del proyecto principal (solo lo lee y escribe su dueño).
+      match /crypto/{who} {
+        allow read, delete: if canUse(uid) && who == uid;
+        allow create, update: if canUse(uid) && who == uid && validCrypto();
       }
 
       // Resto de proyectos: las mismas colecciones bajo projects/{id}.
       match /projects/{projectId}/{col}/{docId} {
         allow read, delete: if canUse(uid) && isDataCollection(col);
-        allow create, update: if canUse(uid) && isDataCollection(col) && validData(col);
+        allow create: if canUse(uid) && isDataCollection(col) && validWrite(col)
+          && (!sealRequired(col) || isSealed(request.resource.data) || !personalEnc(uid, projectId));
+        allow update: if canUse(uid) && isDataCollection(col) && validWrite(col);
       }
       match /projects/{projectId}/tasks/{taskId}/notes/{noteId} {
         allow read, delete: if canUse(uid);
-        allow create, update: if canUse(uid) && validData('notes');
+        allow create: if canUse(uid) && validWrite('notes')
+          && (isSealed(request.resource.data) || !personalEnc(uid, projectId));
+        allow update: if canUse(uid) && validWrite('notes');
+      }
+      match /projects/{projectId}/crypto/{who} {
+        allow read, delete: if canUse(uid) && who == uid;
+        allow create, update: if canUse(uid) && who == uid && validCrypto();
       }
 
       match /backup_versions/{backupId} {
@@ -169,9 +321,15 @@ service cloud.firestore {
         && request.resource.data.memberIds == [request.auth.uid]
         && request.resource.data.members.keys().hasOnly([request.auth.uid])
         && request.resource.data.memberIds.size() <= 50
-        && request.resource.data.members[request.auth.uid].role == 'owner';
+        && request.resource.data.members[request.auth.uid].role == 'owner'
+        && (request.resource.data.get('enc', null) == null
+            || (validEnc(request.resource.data.enc) && request.resource.data.get('github', null) == null));
 
-      allow update: if verified() && (
+      // El cifrado de un equipo no cambia después de crearlo y no convive con 'github'.
+      allow update: if verified()
+        && request.resource.data.get('enc', null) == resource.data.get('enc', null)
+        && (request.resource.data.get('enc', null) == null || request.resource.data.get('github', null) == null)
+        && (
         // El propietario cambia lo que quiera, menos quién es el propietario.
         (resource.data.members[request.auth.uid].role == 'owner'
           && request.resource.data.ownerUid == resource.data.ownerUid
@@ -205,12 +363,25 @@ service cloud.firestore {
     match /teams/{tid}/{col}/{docId} {
       allow read: if isTeamCollection(col) && isMember(tid);
       allow delete: if isTeamCollection(col) && canEdit(tid);
-      allow create, update: if isTeamCollection(col) && canEdit(tid) && validData(col);
+      allow create: if isTeamCollection(col) && canEdit(tid) && validWrite(col)
+        && (!sealRequired(col) || isSealed(request.resource.data) || !teamEnc(tid));
+      allow update: if isTeamCollection(col) && canEdit(tid) && validWrite(col);
     }
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);
       allow delete: if canEdit(tid);
-      allow create, update: if canEdit(tid) && validData('notes');
+      allow create: if canEdit(tid) && validWrite('notes')
+        && (isSealed(request.resource.data) || !teamEnc(tid));
+      allow update: if canEdit(tid) && validWrite('notes');
+    }
+
+    // Envoltorio de la clave del proyecto de cada miembro: lo lee y escribe cada uno; el propietario puede borrar los de otros.
+    match /teams/{tid}/crypto/{who} {
+      allow read: if verified() && who == request.auth.uid && isMember(tid);
+      allow create, update: if verified() && who == request.auth.uid && validCrypto()
+        && (isMember(tid)
+            || request.auth.uid in getAfter(/databases/$(database)/documents/teams/$(tid)).data.memberIds);
+      allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
     }
 
     // Invitaciones: id = {idDelEquipo}_{correo en minúsculas}. Las lee y
@@ -231,6 +402,37 @@ service cloud.firestore {
             || isOwner(resource.data.teamId)
             || (request.auth.token.email_verified == true
                 && resource.data.email == request.auth.token.email.lower()));
+
+      // Clave del proyecto envuelta con el código de acceso. Va en una subcolección para que la
+      // caducidad (24 h desde que la crea el servidor) se aplique al leerla, algo que una consulta
+      // de invitaciones no podría comprobar. Solo la lee el destinatario.
+      match /key/{k} {
+        function inv() {
+          return get(/databases/$(database)/documents/invites/$(inviteId)).data;
+        }
+        function invAfter() {
+          return getAfter(/databases/$(database)/documents/invites/$(inviteId)).data;
+        }
+        allow read: if k == 'wrap' && verified() && request.auth.token.email_verified == true
+          && inv().email == request.auth.token.email.lower()
+          && request.time < resource.data.createdAt + duration.value(24, 'h');
+        allow create: if k == 'wrap' && verified()
+          && invAfter().invitedByUid == request.auth.uid
+          && isOwner(invAfter().teamId)
+          && request.resource.data.keys().hasOnly(['salt', 'iter', 'iv', 'ct', 'kid', 'kcv', 'createdAt'])
+          && request.resource.data.keys().hasAll(['salt', 'iter', 'iv', 'ct', 'createdAt'])
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.iter is int && request.resource.data.iter >= 100000
+          && request.resource.data.iter <= 10000000
+          && request.resource.data.salt is string && request.resource.data.salt.size() <= 64
+          && request.resource.data.iv is string && request.resource.data.iv.size() <= 32
+          && request.resource.data.ct is string && request.resource.data.ct.size() <= 256;
+        allow update: if false;
+        allow delete: if k == 'wrap' && verified()
+          && (inv().invitedByUid == request.auth.uid
+              || (request.auth.token.email_verified == true
+                  && inv().email == request.auth.token.email.lower()));
+      }
     }
   }
 }

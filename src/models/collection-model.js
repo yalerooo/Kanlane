@@ -99,13 +99,14 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     return this.col.where(field, '==', value).get().then((snap) => snap.docs.map((d) => d.id));
   }
 
-  updateWhere(field, value, patch){
-    if(this.cipher) return this.idsWhere(field, value).then((ids) => this._eachSealed(ids, (id) => this.update(id, patch)));
+  /* onProgress(hechos, total) solo se usa en proyectos cifrados, donde se escribe de uno en uno. */
+  updateWhere(field, value, patch, onProgress){
+    if(this.cipher) return this.idsWhere(field, value).then((ids) => this._eachSealed(ids, (id) => this.update(id, patch), onProgress));
     return this.idsWhere(field, value).then((ids) => Promise.all(ids.map((id) => this.update(id, patch))));
   }
 
-  removeWhere(field, value){
-    if(this.cipher) return this.idsWhere(field, value).then((ids) => this._eachSealed(ids, (id) => this.remove(id)));
+  removeWhere(field, value, onProgress){
+    if(this.cipher) return this.idsWhere(field, value).then((ids) => this._eachSealed(ids, (id) => this.remove(id), onProgress));
     return this.idsWhere(field, value).then((ids) => Promise.all(ids.map((id) => this.remove(id))));
   }
 
@@ -305,8 +306,17 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     });
   }
 
-  /* De una en una y con concurrencia limitada, nunca con lotes (límite de las reglas en equipos). */
-  _eachSealed(ids, worker){
-    return Workhub.utils.pool.run(ids, 12, worker);
+  /* De una en una y con concurrencia limitada, nunca con lotes (límite de las reglas en equipos).
+     Un fallo no detiene el resto: al terminar se rechaza con 'partial' y cuántos quedan (.pending),
+     para que quien llama pueda decirlo y volver a intentarlo. */
+  _eachSealed(ids, worker, onProgress){
+    let pending = 0;
+    let done = 0;
+    return Workhub.utils.pool.run(ids, 12, (id) => worker(id).then(null, () => { pending++; }).then(() => {
+      done++;
+      if(onProgress) onProgress(done, ids.length);
+    })).then(() => {
+      if(pending) throw Workhub.models.ProjectCipher.error('partial', {pending:pending, total:ids.length});
+    });
   }
 };

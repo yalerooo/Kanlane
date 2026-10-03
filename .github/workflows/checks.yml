@@ -27,6 +27,7 @@ jobs:
           node tests/crypto/schema-rules.test.js
           node tests/crypto/collection-model.test.js
           node tests/crypto/encrypted-models.test.js
+          node tests/crypto/backup-clients.test.js
           node tests/backup/backup.test.js
           node tests/assets/limits.test.js
           node tests/worker/rate-limit.test.js

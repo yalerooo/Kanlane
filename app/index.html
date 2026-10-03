@@ -431,7 +431,9 @@
       <button type="button" class="btn btn-primary" id="btnExportData">Exportar copia de seguridad</button>
       <label class="btn btn-ghost" for="importFileInput">Importar copia de seguridad</label>
       <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+      <button type="button" class="btn btn-ghost" id="btnExportPlain" hidden>Exportar sin cifrar</button>
     </div>
+    <p class="hint" id="exportEncHelp" hidden>Este proyecto tiene cifrado total: la copia se descarga cifrada. Para importarla hará falta la contraseña de cifrado o la clave de recuperación de este proyecto.</p>
     <p class="hint">El archivo incluye las contraseñas ya cifradas, nunca en texto plano — pero sigue siendo un archivo sensible: guárdalo con el mismo cuidado que la clave de recuperación. Las contraseñas solo se importan si este tablero todavía no tiene una contraseña maestra propia configurada; si ya la tiene, se omiten para no dejarlas ilegibles. Las imágenes de las notas solo se conservan al restaurar en este mismo tablero.</p>
     <div class="backup-history-head"><div><h3>Versiones de este navegador</h3><p>Se guarda una copia diaria al abrir la app y puedes guardar otra cuando quieras. Se conservan las últimas siete por proyecto. Importar una versión añade datos; no reemplaza el tablero. Estas copias desaparecen si borras los datos de este navegador.</p></div><button type="button" class="btn btn-ghost btn-sm" id="btnSaveBackupVersion">Guardar versión</button></div>
     <div class="backup-history" id="backupHistory" aria-live="polite"></div>
@@ -897,6 +899,25 @@
       <div class="right">
         <button type="button" class="btn btn-ghost" id="ekCancel">Cancelar</button>
         <button type="submit" class="btn btn-primary" id="ekSubmit">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgBackupKey" aria-labelledby="bkTitle">
+  <form class="dlg-inner" id="bkForm" method="dialog">
+    <h2 id="bkTitle">Importar copia cifrada</h2>
+    <p class="dlg-lead">Esta copia está cifrada. Escribe la contraseña de cifrado o la clave de recuperación del proyecto del que salió.</p>
+    <div class="field">
+      <label for="bkSecret">Contraseña de cifrado o clave de recuperación</label>
+      <input id="bkSecret" type="password" autocomplete="off" required>
+    </div>
+    <p class="type-note" id="bkPlainNote" hidden>El proyecto abierto no tiene cifrado total: lo que importes quedará en él sin cifrado de extremo a extremo.</p>
+    <p class="lock-error" id="bkError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="bkCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="bkSubmit">Importar</button>
       </div>
     </div>
   </form>

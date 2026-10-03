@@ -42,18 +42,47 @@ Workhub.models.ClientModel = class ClientModel extends Workhub.models.Collection
 
   /* related: modelos que guardan el nombre del cliente (tareas, reuniones,
      contactos, contraseñas); todos pasan a usar el nombre nuevo. */
-  rename(id, newName, related){
+  rename(id, newName, related, onProgress){
     const client = this.find(id);
     if(!client) return Promise.resolve();
     const oldName = client.nombre;
+    if(this.cipher) return this._renameSealed(id, oldName, newName, related || [], onProgress);
     return this.update(id, {nombre:newName}).then(() => Promise.all((related || []).map((model) =>
       model.isReady() ? model.updateWhere('cliente', oldName, {cliente:newName}) : null)));
   }
 
-  /* Elimina el cliente y todas sus tareas (reuniones, contactos y contraseñas se conservan). */
-  removeWithTasks(id, tasks){
+  /* Proyecto con cifrado total: el servidor no ve el nombre del cliente, así que cada documento se
+     vuelve a cifrar de uno en uno. Primero lo relacionado y al final el cliente: si algo falla, el
+     cliente conserva su nombre y repetir el cambio termina lo que quedó. onProgress(hechos, total). */
+  _renameSealed(id, oldName, newName, related, onProgress){
+    const models = related.filter((model) => model.isReady());
+    const total = models.reduce((n, model) => n + model.items.filter((x) => !x._undecryptable && x.cliente === oldName).length, 0);
+    let before = 0;
+    let pending = 0;
+    let chain = Promise.resolve();
+    models.forEach((model) => {
+      chain = chain.then(() => {
+        let mine = 0;
+        return model.updateWhere('cliente', oldName, {cliente:newName}, (done) => {
+          mine = done;
+          if(onProgress) onProgress(before + done, total);
+        }).catch((err) => {
+          if(!Workhub.models.ProjectCipher.isError(err, 'partial')) throw err;
+          pending += err.pending;
+        }).then(() => { before += mine; });
+      });
+    });
+    return chain.then(() => {
+      if(pending) throw Workhub.models.ProjectCipher.error('partial', {pending:pending, total:total});
+      return this.update(id, {nombre:newName});
+    });
+  }
+
+  /* Elimina el cliente y todas sus tareas (reuniones, contactos y contraseñas se conservan).
+     Si no se pudieron borrar todas las tareas (proyecto cifrado), el cliente se conserva. */
+  removeWithTasks(id, tasks, onProgress){
     const client = this.find(id);
     if(!client) return Promise.resolve();
-    return tasks.removeWhere('cliente', client.nombre).then(() => this.remove(id));
+    return tasks.removeWhere('cliente', client.nombre, onProgress).then(() => this.remove(id));
   }
 };

@@ -237,6 +237,7 @@
     lockProject(){
       this.shell.setProjectLocked(true);
       this.controllers.crypto.onLocked();
+      this.controllers.backup.syncEncrypted();
     }
 
     openProject(cipher, pid){
@@ -252,6 +253,8 @@
       const db = P.scope(this.rootDb, this.projectId);
       PROJECT_MODELS.forEach((name) => this.models[name].connect(db, cipher));
       this.models.plugins.connect(db, this.projectId === P.MAIN_ID);
+      /* La sección de copias cambia con el cifrado (exportar cifrado o no). */
+      if(this.controllers && this.controllers.backup) this.controllers.backup.syncEncrypted();
     }
 
     disconnectProject(){

@@ -1,8 +1,24 @@
 /* Exportación e importación de una copia de seguridad completa (.json).
-   Importar siempre añade: nunca borra ni reemplaza datos existentes. */
+   Importar siempre añade: nunca borra ni reemplaza datos existentes.
+
+   Un proyecto con cifrado total exporta por defecto un archivo cifrado (docs/CIFRADO-PROYECTOS.md,
+   11.3): el JSON de siempre sellado con la clave del proyecto, junto a los envoltorios de esa clave
+   (contraseña y clave de recuperación). Para abrirlo basta la contraseña de cifrado o la clave de
+   recuperación que estaban vigentes al exportar. */
 (function(){
   const {safeUrl} = Workhub.utils.urls;
   const FORMAT_VERSION = 1;
+  const ENCRYPTED_FORMAT = 'kanlane-encrypted-backup';
+  const ENCRYPTED_VERSION = 1;
+  /* Ruta lógica que va en la AAD del archivo: «kanlane/v1|pid|kid|export|{fecha}|1». */
+  const EXPORT_PATH = 'export';
+
+  function fail(code){
+    const err = new Error('backup: ' + code);
+    err.name = 'BackupError';
+    err.code = code;
+    return err;
+  }
 
   /* "Agencia Norte" → "agencia-norte" (para el nombre del archivo). */
   function slug(text){
@@ -92,7 +108,7 @@
           return Promise.all(list(t.notes).map((n) => {
             if(!n) return Promise.resolve();
             counts.notes++;
-            return ref.collection('notes').add({
+            return m.tasks.addNoteRaw(ref.id, {
               text: n.text || '',
               imageAssetId: n.imageAssetId || '',
               createdAt: n.createdAt || Date.now(),
@@ -174,6 +190,65 @@
           }));
         });
       }).then(() => ({counts:counts, vaultOutcome:vaultOutcome}));
+    }
+
+    static isEncryptedFile(data){
+      return !!data && typeof data === 'object' && data.format === ENCRYPTED_FORMAT;
+    }
+
+    /* ¿Se puede abrir ese archivo con este cifrador, sin pedir nada? (la misma clave del proyecto) */
+    static sameKey(file, cipher){
+      return !!cipher && !!file && cipher.pid === file.pid && cipher.kid === file.kid;
+    }
+
+    /* Convierte una copia de build() en el archivo cifrado. o: {cipher, enc, wrap, uid, projectName};
+       enc es el campo del proyecto y wrap su crypto/{uid} (envoltorios de la clave). */
+    static seal(copy, o){
+      const exportedAt = new Date().toISOString();
+      return o.cipher.sealBlob(EXPORT_PATH, exportedAt, JSON.parse(copy.json)).then((data) => {
+        const file = {
+          format: ENCRYPTED_FORMAT, v: ENCRYPTED_VERSION,
+          project: o.projectName || '', exportedAt: exportedAt,
+          uid: o.uid, pid: o.enc.pid, kid: o.enc.kid, kcv: o.enc.kcv,
+          kdf: o.wrap.kdf, pw: o.wrap.pw, rk: o.wrap.rk,
+          data: data
+        };
+        return {
+          filename: 'kanlane-copia-cifrada-' + (slug(o.projectName) ? slug(o.projectName) + '-' : '') + exportedAt.slice(0, 10) + '.json',
+          json: JSON.stringify(file, null, 2),
+          counts: copy.counts
+        };
+      });
+    }
+
+    /* Abre un archivo cifrado y devuelve el contenido de la copia. o: {cipher} si el proyecto abierto
+       tiene la misma clave, o {secret}: contraseña de cifrado o clave de recuperación del proyecto del
+       que salió. Errores (.code): 'bad-format', 'bad-secret'. */
+    static open(file, o){
+      const PC = Workhub.services.projectCrypto;
+      const opts = o || {};
+      return Promise.resolve().then(() => {
+        if(!BackupModel.isEncryptedFile(file) || file.v !== ENCRYPTED_VERSION || typeof file.data !== 'string' ||
+            typeof file.exportedAt !== 'string' || typeof file.uid !== 'string') throw fail('bad-format');
+        if(BackupModel.sameKey(file, opts.cipher)) return opts.cipher.key;
+        const ctx = {pid:file.pid, kid:file.kid, uid:file.uid};
+        const secret = String(opts.secret == null ? '' : opts.secret);
+        /* Lo escrito puede ser la clave de recuperación (32 símbolos) o la contraseña. */
+        const recovery = PC.parseRecoveryKey(secret);
+        const byRecovery = recovery ? PC.unwrapRecovery(file, recovery, ctx, false).catch(() => null) : Promise.resolve(null);
+        return byRecovery.then((key) => key || PC.unwrapPassword(file, secret, ctx, false)).then((key) => {
+          return PC.checkKcv(key, file.pid, file.kid, file.kcv).then((ok) => {
+            if(!ok) throw fail('bad-secret');
+            return key;
+          });
+        });
+      }).then((key) => PC.open(key, {pid:file.pid, kid:file.kid, path:EXPORT_PATH, id:file.exportedAt, ev:PC.EV}, file.data)).then((data) => {
+        if(!data || typeof data !== 'object' || Array.isArray(data)) throw fail('bad-format');
+        return data;
+      }, (err) => {
+        if(err && err.name === 'BackupError') throw err;
+        throw fail(PC.isError(err, 'bad-password') || PC.isError(err, 'bad-recovery') ? 'bad-secret' : 'bad-format');
+      });
     }
   }
 

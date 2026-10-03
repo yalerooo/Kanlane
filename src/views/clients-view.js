@@ -148,9 +148,10 @@
       Workhub.views.toast.error(msg);
     }
 
-    setDeleting(btn){
-      btn.disabled = true;
-      btn.textContent = 'Eliminando…';
+    /* Avance de un cambio largo, sin repintar la ficha. */
+    setBusyText(text){
+      const btn = this.root.querySelector('[data-busy]');
+      if(btn) btn.textContent = text;
     }
 
     /* En móvil: muestra la ficha (true) o la lista (false). */
@@ -227,8 +228,10 @@
         head = '<div class="crm-head">' + back +
           '<div class="client-edit-row">' +
           '<input type="text" class="client-edit-input" data-edit-input="1" value="' + esc(e.nombre) + '" maxlength="60" aria-label="Nombre del cliente">' +
-          '<button type="button" class="btn btn-primary" data-action="save-client">Guardar</button>' +
-          '<button type="button" class="btn btn-ghost" data-action="cancel-client">Cancelar</button>' +
+          (state.busy
+            ? '<button type="button" class="btn btn-primary" data-busy disabled>' + esc(state.busy) + '</button>'
+            : '<button type="button" class="btn btn-primary" data-action="save-client">Guardar</button>' +
+              '<button type="button" class="btn btn-ghost" data-action="cancel-client">Cancelar</button>') +
           '</div></div>';
       } else {
         const meta = orphan
@@ -253,8 +256,10 @@
         ? '<div class="crm-confirm" role="alert"><p><strong>¿Eliminar «' + esc(e.nombre) + '»?</strong> ' +
           (e.stats.total ? 'Se borrarán también sus ' + plural(e.stats.total, 'tarea', 'tareas') + '. ' : '') +
           'Sus contactos, reuniones y contraseñas se conservan.</p>' +
-          '<div class="crm-confirm-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancelar</button>' +
-          '<button type="button" class="btn btn-danger btn-sm" data-action="confirm-delete">Eliminar cliente</button></div></div>'
+          '<div class="crm-confirm-actions">' + (state.busy
+            ? '<button type="button" class="btn btn-danger btn-sm" data-busy disabled>' + esc(state.busy) + '</button>'
+            : '<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancelar</button>' +
+              '<button type="button" class="btn btn-danger btn-sm" data-action="confirm-delete">Eliminar cliente</button>') + '</div></div>'
         : '';
 
       const stat = (icon, n, label, action, title) => {

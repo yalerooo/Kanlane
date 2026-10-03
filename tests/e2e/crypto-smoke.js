@@ -3,6 +3,8 @@
    el proyecto se siembra desde la página con el servicio de cifrado: documento con `enc`, clave envuelta
    en crypto/{uid} y la clave en el almacén del navegador. Comprueba que la app lo abre, que lo que llega
    a Firestore va sellado, que sin la clave no se conecta nada y que un proyecto sin cifrar sigue igual.
+   PR6: renombrar un cliente, aviso de privacidad de los plugins, exportar e importar la copia cifrada,
+   versiones locales selladas y Ctrl K con el proyecto bloqueado.
    Uso: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub
         --config firebase.test.json "node tests/e2e/crypto-smoke.js" */
 const assert = require('node:assert/strict');
@@ -22,7 +24,8 @@ const chrome = process.env.CHROME_PATH || [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 ].find((candidate) => fs.existsSync(candidate));
 
-const SECRETS = ['Tarea secreta', 'Descripción reservada', 'Nota confidencial', 'Cliente Reservado', 'valor privado del plugin', 'Título cambiado'];
+const SECRETS = ['Tarea secreta', 'Descripción reservada', 'Nota confidencial', 'Cliente Reservado', 'valor privado del plugin', 'Título cambiado', 'Cliente Renombrado'];
+const PASSWORD = 'una contraseña de cifrado larga';
 
 async function ready(){
   for(let i = 0; i < 100; i++){
@@ -199,9 +202,85 @@ function assertSealed(res, what){
     }, seed.id);
     assert.equal(denied, 'permission-denied', 'crear en claro en un proyecto cifrado se rechaza');
 
+    /* ---------- PR6: renombrar un cliente (el servidor no ve el nombre: se filtra en memoria) ---------- */
+    const renamed = await page.evaluate(async (id) => {
+      const app = Workhub.app, m = app.models, c = app.controllers.clients;
+      await m.tasks.update(id, {cliente:'Cliente Reservado'});
+      c.selectedId = m.clients.items.find((x) => x.nombre === 'Cliente Reservado').id;
+      c.rename('Cliente Renombrado');
+      const busy = c.busy;
+      for(let i = 0; i < 100 && c.busy; i++) await new Promise((r) => setTimeout(r, 50));
+      return {busy:busy, after:c.busy, client:m.clients.items.map((x) => x.nombre), task:m.tasks.find(id).cliente};
+    }, taskId);
+    assert.deepEqual(renamed, {busy:'Guardando…', after:'', client:['Cliente Renombrado'], task:'Cliente Renombrado'});
+    assertSealed(await storedWhen(base + '/clients', hasSeal), 'clientes tras renombrar');
+    assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas tras renombrar el cliente');
+
+    /* ---------- PR6: aviso de privacidad en la ficha de un plugin ---------- */
+    await page.evaluate(() => { Workhub.app.navigate('plugins'); Workhub.app.controllers.plugins.installOfficial(0); });
+    await page.locator('#dlgPlugin #pluginEncNote').getByText('Este proyecto tiene cifrado total. El plugin recibirá sin cifrar los datos a los que le des permiso').waitFor();
+    await page.locator('#btnPluginCancel').click();
+
+    /* ---------- PR6: exportar cifrado por defecto, sin cifrar con confirmación ---------- */
+    await page.evaluate(() => Workhub.app.navigate('data'));
+    await page.locator('#btnExportData').getByText('Exportar copia cifrada').waitFor();
+    assert.equal(await page.locator('#btnExportPlain').isVisible(), true);
+    assert.equal(await page.locator('#exportEncHelp').isVisible(), true);
+    let downloading = page.waitForEvent('download');
+    await page.locator('#btnExportData').click();
+    let download = await downloading;
+    assert.match(download.suggestedFilename(), /^kanlane-copia-cifrada-proyecto-cifrado-de-prueba-\d{4}-\d{2}-\d{2}\.json$/);
+    const sealedFile = fs.readFileSync(await download.path(), 'utf8');
+    SECRETS.forEach((s) => assert.ok(sealedFile.indexOf(s) === -1, 'archivo cifrado: «' + s + '» no está en claro'));
+    const sealedJson = JSON.parse(sealedFile);
+    assert.equal(sealedJson.format, 'kanlane-encrypted-backup');
+    assert.deepEqual([sealedJson.pid, sealedJson.uid], [seed.pid, seed.uid]);
+    assert.ok(sealedJson.kdf && sealedJson.pw && sealedJson.rk && sealedJson.data.length > 100);
+    await page.locator('#dataStatus').getByText(/^Copia cifrada descargada: 1 tareas/).waitFor();
+
+    let confirmText = '';
+    page.once('dialog', (dialog) => { confirmText = dialog.message(); dialog.accept(); });
+    downloading = page.waitForEvent('download');
+    await page.locator('#btnExportPlain').click();
+    download = await downloading;
+    assert.equal(confirmText, 'El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.');
+    assert.match(download.suggestedFilename(), /^workhub-backup-/);
+    const plainFile = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    assert.equal(plainFile.tasks[0].title, 'Título cambiado en cifrado');
+    assert.equal(plainFile.tasks[0].notes[0].text, 'Nota confidencial');
+
+    /* ---------- PR6: las versiones locales se guardan selladas ---------- */
+    await page.locator('#btnSaveBackupVersion').click();
+    await page.locator('#backupHistory .backup-version').first().waitFor();
+    const versions = await page.evaluate(() => new Promise((resolve, reject) => {
+      const req = indexedDB.open('workhub-backup-history', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const all = req.result.transaction('versions', 'readonly').objectStore('versions').getAll();
+        all.onsuccess = () => resolve(all.result.filter((v) => v.scope.endsWith(':' + Workhub.app.projectId)));
+        all.onerror = () => reject(all.error);
+      };
+    }));
+    assert.ok(versions.length >= 1);
+    versions.forEach((v) => {
+      assert.ok(typeof v.e === 'string' && v.json === undefined, 'versión local sellada');
+      SECRETS.forEach((s) => assert.ok(JSON.stringify(v).indexOf(s) === -1, 'versión local: «' + s + '» no está en claro'));
+    });
+    /* La versión sellada se puede importar en el mismo proyecto: añade las tareas, selladas. */
+    await page.locator('#backupHistory [data-backup-action="restore"]').first().click();
+    await page.locator('#dataStatus').getByText(/^Importado: 0 clientes, 1 tareas \(1 notas\)/).waitFor();
+    await page.waitForFunction(() => Workhub.app.models.tasks.items.length === 2);
+    assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas tras importar una versión');
+    /* El archivo cifrado del mismo proyecto se importa sin pedir nada. */
+    await page.locator('#importFileInput').setInputFiles({name:'copia-cifrada.json', mimeType:'application/json', buffer:Buffer.from(sealedFile)});
+    await page.waitForFunction(() => Workhub.app.models.tasks.items.length === 3);
+    assert.equal(await page.locator('#dlgBackupKey').isVisible(), false, 'con la clave del mismo proyecto no se pide la contraseña');
+    assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas tras importar el archivo cifrado');
+    await page.evaluate(() => Workhub.app.navigate('tasks'));
+
     /* ---------- recargar: la clave sigue en el navegador ---------- */
     await page.reload({waitUntil:'domcontentloaded'});
-    await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).waitFor({timeout:30000});
+    await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).first().waitFor({timeout:30000});
     assert.equal(await page.locator('#projectLockScreen').isVisible(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('workhub_project')).enc), true, 'el proyecto recordado lleva enc');
 
@@ -219,10 +298,30 @@ function assertSealed(res, what){
     await page.setViewportSize({width:375, height:812});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'aviso sin desbordamiento en móvil');
     await page.setViewportSize({width:1280, height:850});
+    /* PR6: con el proyecto bloqueado, Ctrl K solo ofrece lo que no toca sus datos. */
+    await page.keyboard.press('n');
+    assert.equal(await page.locator('#dlg').isVisible(), false, 'N no abre una tarea nueva con el proyecto bloqueado');
+    await page.keyboard.press('Control+k');
+    await page.locator('#dlgCommand').waitFor({state:'visible'});
+    const lockedTitles = await page.locator('#cmdList .cmdk-title').allTextContents();
+    assert.ok(lockedTitles.includes('Desbloquear proyecto'), 'Ctrl K ofrece desbloquear');
+    ['Nueva tarea', 'Nuevo cliente', 'Exportar copia de seguridad', 'Bloquear este proyecto'].forEach((title) =>
+      assert.ok(!lockedTitles.includes(title), 'Ctrl K no ofrece «' + title + '» con el proyecto bloqueado'));
+    await page.locator('#cmdInput').fill('exportar');
+    assert.equal(await page.locator('#cmdList .cmdk-item').count(), 0, 'buscar una acción de datos no da resultados');
+    await page.locator('#cmdInput').fill('tema');
+    assert.ok(await page.locator('#cmdList .cmdk-item').count() >= 3, 'las acciones globales siguen');
+    await page.keyboard.press('Escape');
     /* La contraseña con la que se sembró abre el proyecto (la clave envuelta es la que crea la app). */
-    await page.locator('#plPass').fill('una contraseña de cifrado larga');
+    await page.locator('#plPass').fill(PASSWORD);
     await page.locator('#plUnlock').click();
-    await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).waitFor({timeout:30000});
+    await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).first().waitFor({timeout:30000});
+    await page.keyboard.press('Control+k');
+    await page.locator('#dlgCommand').waitFor({state:'visible'});
+    await page.locator('#cmdInput').fill('proyecto');
+    const openTitles = await page.locator('#cmdList .cmdk-title').allTextContents();
+    assert.ok(openTitles.includes('Bloquear este proyecto') && !openTitles.includes('Desbloquear proyecto'), 'desbloqueado, Ctrl K ofrece bloquear');
+    await page.keyboard.press('Escape');
 
     /* ---------- un proyecto sin cifrar sigue igual ---------- */
     await page.evaluate(() => Workhub.app.switchProject('main'));
@@ -235,6 +334,32 @@ function assertSealed(res, what){
     assert.ok(plain.text.indexOf('Tarea en claro del principal') !== -1, 'el proyecto sin cifrar guarda como siempre');
     assert.ok(plain.text.indexOf('"ev"') === -1);
 
+    /* ---------- PR6: en un proyecto sin cifrar no hay avisos y la copia cifrada pide su contraseña ---------- */
+    await page.evaluate(() => { Workhub.app.navigate('plugins'); Workhub.app.controllers.plugins.installOfficial(0); });
+    await page.locator('#dlgPlugin').waitFor({state:'visible'});
+    assert.equal(await page.locator('#pluginEncNote').count(), 0, 'sin cifrado no hay aviso de privacidad en los plugins');
+    await page.locator('#btnPluginCancel').click();
+    await page.evaluate(() => Workhub.app.navigate('data'));
+    await page.locator('#btnExportData').getByText('Exportar copia de seguridad').waitFor();
+    assert.equal(await page.locator('#btnExportPlain').isVisible(), false);
+    assert.equal(await page.locator('#exportEncHelp').isVisible(), false);
+    await page.locator('#importFileInput').setInputFiles({name:'copia-cifrada.json', mimeType:'application/json', buffer:Buffer.from(sealedFile)});
+    await page.locator('#dlgBackupKey').waitFor({state:'visible'});
+    assert.equal(await page.locator('#bkPlainNote').isVisible(), true, 'avisa de que el destino no tiene cifrado total');
+    await page.locator('#bkSecret').fill('una contraseña que no es');
+    await page.locator('#bkSubmit').click();
+    await page.locator('#bkError').getByText('La contraseña o la clave de recuperación no son correctas.').waitFor({timeout:30000});
+    assert.equal(await page.evaluate(() => Workhub.app.models.tasks.items.length), 1, 'con la contraseña errónea no se importa nada');
+    await page.setViewportSize({width:375, height:812});
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'diálogo de la copia cifrada sin desbordamiento en móvil');
+    await page.setViewportSize({width:1280, height:850});
+    await page.locator('#bkSecret').fill(PASSWORD);
+    await page.locator('#bkSubmit').click();
+    await page.locator('#dlgBackupKey').waitFor({state:'hidden', timeout:30000});
+    await page.locator('#dataStatus').getByText(/^Importado: 1 clientes, 1 tareas \(1 notas\)/).waitFor();
+    const imported = await storedWhen('users/' + seed.uid + '/tasks', (res) => res.text.indexOf('Título cambiado en cifrado') !== -1);
+    assert.ok(imported.text.indexOf('Título cambiado en cifrado') !== -1, 'la copia cifrada se importa en el proyecto sin cifrar');
+
     /* ---------- eliminar el proyecto cifrado ---------- */
     await page.evaluate((id) => Workhub.app.deleteProject(id), seed.id);
     assert.equal((await storedWhen(base + '/crypto/' + seed.uid, (res) => res.status === 404)).status, 404, 'la clave envuelta se borra con el proyecto');
@@ -242,7 +367,7 @@ function assertSealed(res, what){
 
     assert.deepEqual(errors, [], 'sin excepciones JavaScript');
     await context.close();
-    console.log('OK   Firebase emulado: proyecto con cifrado total (sellado en Firestore, recarga, sin clave, eliminar)');
+    console.log('OK   Firebase emulado: proyecto con cifrado total (sellado en Firestore, clientes, plugins, copias, Ctrl K, recarga, sin clave, eliminar)');
   }finally{
     await browser.close();
   }

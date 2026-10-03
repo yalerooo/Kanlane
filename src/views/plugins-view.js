@@ -275,7 +275,10 @@
         '</dl></section>' +
         '<div class="plugin-safe' + (info.official ? '' : ' is-third') + '">' + SHIELD +
           '<p>Se ejecuta aislado: nunca puede ver tus contraseñas guardadas ni tu sesión, y solo accede a lo que le permitas.' +
-          (info.official ? '' : ' <strong>Instala solo plugins de personas en las que confíes.</strong>') + '</p></div>';
+          (info.official ? '' : ' <strong>Instala solo plugins de personas en las que confíes.</strong>') + '</p></div>' +
+        /* Proyecto con cifrado total: el plugin trabaja con los datos ya descifrados. */
+        (info.encrypted ? '<div class="plugin-safe is-third" id="pluginEncNote">' + SHIELD +
+          '<p>Este proyecto tiene cifrado total. El plugin recibirá sin cifrar los datos a los que le des permiso, y lo que guarde en el almacenamiento de tu cuenta no se cifra.</p></div>' : '');
 
       this.mode = mode;
       this.dlgConfirm.hidden = this.fileMode && mode === 'details';

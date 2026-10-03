@@ -37,6 +37,9 @@
       this.invitePass = $('shInvitePass');
       this.codePanel = $('shCodePanel');
       this.code = $('shCode');
+      /* Tras quitar a alguien de un equipo cifrado: cambiar la clave para que la suya deje de servir. */
+      this.rotateHint = $('shRotateHint');
+      $('shRotate').addEventListener('click', () => this.handlers.rotate && this.handlers.rotate());
       /* Al convertir un proyecto cifrado: 'start' (pide la contraseña) o 'key' (clave de recuperación del equipo). */
       this.convertStep = 'start';
       this.codeOpen = false;
@@ -79,7 +82,7 @@
     }
 
     /* handlers: {invite(email, role, password), revoke(id), setRole(uid, role), remove(uid), leave(),
-       convert(password), convertConfirm(), codeDone(), download(texto)} */
+       convert(password), convertConfirm(), codeDone(), download(texto), rotate()} */
     bind(handlers){
       this.handlers = handlers;
     }
@@ -98,6 +101,7 @@
       this.codeOpen = false;
       this.codePanel.hidden = true;
       this.keyBox.hidden = true;
+      this.rotateHint.hidden = true;
       this.lead.hidden = false;
       this.btnConvert.textContent = 'Convertir en proyecto de equipo';
     }
@@ -167,13 +171,19 @@
       this.dlg.querySelectorAll('.member-list button, .member-list select').forEach((el) => { el.disabled = busy; });
     }
 
+    showRotateHint(on){
+      this.rotateHint.hidden = !on;
+      if(on) this.rotateHint.scrollIntoView({block:'nearest'});
+    }
+
     showError(msg){
       this.error.textContent = msg;
       this.error.hidden = false;
       this.error.scrollIntoView({block:'nearest'});
     }
 
-    /* Proyecto de equipo. s: {project, members, pending, isOwner, meUid} */
+    /* Proyecto de equipo. s: {project, members, pending, isOwner, meUid, fps}; fps = {uid: huella de su
+       clave pública} en un equipo con cifrado total. */
     openTeam(s){
       this._resetSecrets();
       this.lead.hidden = false;
@@ -224,7 +234,10 @@
         : '';
       return '<li class="member-row">' + T.avatar(m, 'is-sm') +
         '<span class="member-text"><span class="member-name" translate="no">' + esc(m.name) + (you ? ' <em>(' + esc(Workhub.t('tú')) + ')</em>' : '') + '</span>' +
-        '<span class="member-mail" translate="no">' + esc(m.email) + '</span></span>' + role + remove + '</li>';
+        '<span class="member-mail" translate="no">' + esc(m.email) + '</span>' +
+        (s.fps && s.fps[m.uid] ? '<span class="member-mail member-fp" title="' + esc(Workhub.t('Huella de su clave pública. Compárala con esa persona por otro canal antes de cambiar la clave del proyecto.')) + '">' +
+          esc(Workhub.t('Huella')) + ' <span translate="no">' + esc(s.fps[m.uid]) + '</span></span>' : '') +
+        '</span>' + role + remove + '</li>';
     }
   }
 

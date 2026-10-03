@@ -375,6 +375,85 @@ async function t(name, fn){
     await assertSucceeds(ctx.collection('invites').doc('tb_gina@x.com').delete());
   });
 
+  /* ---------- Cambio de clave (PR10 del plan, apartado 13.1) ---------- */
+  console.log('Cifrado: cambio de clave de un proyecto personal');
+  const KCV2 = 'n'.repeat(52);
+  const ROT = (over) => ENC(Object.assign({kid: 'kid-nuevo2', kcv: KCV2, rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1}}, over || {}));
+  const pbDoc = zu.collection('projects').doc('pb');
+  await t('un proyecto no nace con un cambio de clave a medias', () => assertFails(zu.collection('projects').doc('pr').set(proj({enc: ROT()}))));
+  await t('empezar un cambio de clave sin apuntar la anterior se rechaza', () => assertFails(pbDoc.update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2})})));
+  await t('apuntar como anterior una clave que no es la vigente se rechaza', () => assertFails(pbDoc.update({enc: ROT({rot: {kid: 'otro-kid-9', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('apuntar la anterior con otro kcv se rechaza', () => assertFails(pbDoc.update({enc: ROT({rot: {kid: 'kid-12345', kcv: 'x'.repeat(52), at: 1}})})));
+  await t('cambiar el pid al cambiar la clave se rechaza', () => assertFails(pbDoc.update({enc: ROT({pid: 'q'.repeat(22)})})));
+  await t('pasar a gestionado al cambiar la clave se rechaza', () => assertFails(pbDoc.update({enc: ROT({mode: 'managed'})})));
+  await t('rot con un campo de más se rechaza', () => assertFails(pbDoc.update({enc: ROT({rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1, extra: 1}})})));
+  await t('rot con la misma clave que la vigente se rechaza', () => assertFails(pbDoc.update({enc: ENC({rot: {kid: 'kid-12345', kcv: 'k'.repeat(52), at: 1}})})));
+  await t('un proyecto gestionado no cambia de clave', () => assertFails(zu.collection('projects').doc('pm').update({enc: ROT({mode: 'managed'})})));
+  await t('zed empieza el cambio de clave', () => assertSucceeds(pbDoc.update({enc: ROT()})));
+  await t('con un cambio a medias no se empieza otro', () => assertFails(pbDoc.update({enc: ROT({kid: 'kid-nuevo3', rot: {kid: 'kid-nuevo2', kcv: KCV2, at: 2}})})));
+  await t('con un cambio a medias no se vuelve a la clave anterior', () => assertFails(pbDoc.update({enc: ENC()})));
+  await t('terminar el cambio con otra clave se rechaza', () => assertFails(pbDoc.update({enc: ENC({kid: 'kid-nuevo3', kcv: KCV2})})));
+  await t('durante el cambio se sigue pudiendo renombrar', () => assertSucceeds(pbDoc.update({nombre: 'Con clave nueva'})));
+  await t('zed termina el cambio de clave', () => assertSucceeds(pbDoc.update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2})})));
+  await t('el envoltorio guarda la clave anterior mientras dura el cambio', () => assertSucceeds(zu.collection('projects').doc('pb').collection('crypto').doc('zed').set(cryptoDoc({
+    kid: 'kid-nuevo2', old: {kid: 'kid-12345', kdf: {name: 'PBKDF2', hash: 'SHA-256', iter: 600000, salt: 's'.repeat(22)},
+      pw: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, rk: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, priv: {iv: 'i'.repeat(16), ct: 'c'.repeat(200)}}}))));
+  await t('la clave anterior con un campo de más se rechaza', () => assertFails(zu.collection('projects').doc('pb').collection('crypto').doc('zed').set(cryptoDoc({
+    old: {kid: 'kid-12345', kdf: {name: 'PBKDF2'}, pw: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, rk: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, dek: 'en claro'}}))));
+  await t('la clave anterior sin su envoltorio se rechaza', () => assertFails(zu.collection('projects').doc('pb').collection('crypto').doc('zed').set(cryptoDoc({
+    old: {kid: 'kid-12345', kdf: {name: 'PBKDF2'}, rk: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}}}))));
+
+  console.log('Cifrado: claves públicas y cambio de clave en un equipo');
+  const PUB = (over) => Object.assign({kty: 'EC', crv: 'P-256', x: 'x'.repeat(43), y: 'y'.repeat(43)}, over || {});
+  const pubDoc = (over) => Object.assign({v: 1, pub: PUB(), updatedAt: 1}, over || {});
+  const rekeyDoc = (over) => Object.assign({v: 1, kid: 'kid-nuevo2', from: 'alice', epk: PUB(), iv: 'i'.repeat(16), ct: 'c'.repeat(64), createdAt: 1}, over || {});
+  const tbOf = (db) => db.collection('teams').doc('tb');
+  await t('un equipo no nace con un cambio de clave a medias', () => assertFails(alice.collection('teams').doc('tr').set(Object.assign(team('alice'), {enc: ROT()}))));
+  await t('un miembro publica su clave pública', () => assertSucceeds(tbOf(bob).collection('pubkeys').doc('bob').set(pubDoc())));
+  await t('un lector también publica la suya', () => assertSucceeds(tbOf(carol).collection('pubkeys').doc('carol').set(pubDoc())));
+  await t('nadie publica la clave pública de otro', () => assertFails(tbOf(bob).collection('pubkeys').doc('carol').set(pubDoc())));
+  await t('el propietario tampoco publica la de otro', () => assertFails(tb.collection('pubkeys').doc('bob').set(pubDoc())));
+  await t('una clave pública de otra curva se rechaza', () => assertFails(tbOf(bob).collection('pubkeys').doc('bob').set(pubDoc({pub: PUB({crv: 'P-384'})}))));
+  await t('una clave pública con la privada dentro se rechaza', () => assertFails(tbOf(bob).collection('pubkeys').doc('bob').set(pubDoc({pub: Object.assign(PUB(), {d: 'secreto'})}))));
+  await t('una clave pública con campos de más se rechaza', () => assertFails(tbOf(bob).collection('pubkeys').doc('bob').set(pubDoc({extra: 1}))));
+  await t('los miembros leen las claves públicas del equipo', () => assertSucceeds(tbOf(dave).collection('pubkeys').get()));
+  await t('quien no es miembro no lee las claves públicas', () => assertFails(tbOf(erin).collection('pubkeys').doc('bob').get()));
+  await t('quien no es miembro no publica una clave pública', () => assertFails(tbOf(erin).collection('pubkeys').doc('erin').set(pubDoc())));
+
+  await t('el propietario deja la clave nueva a un miembro', () => assertSucceeds(tb.collection('rekey').doc('bob').set(rekeyDoc())));
+  await t('un editor no deja claves a otros', () => assertFails(tbOf(bob).collection('rekey').doc('carol').set(rekeyDoc({from: 'bob'}))));
+  await t('un editor no sustituye la clave que le dejó el propietario', () => assertFails(tbOf(bob).collection('rekey').doc('bob').set(rekeyDoc({from: 'bob'}))));
+  await t('no se deja una clave a quien no es miembro', () => assertFails(tb.collection('rekey').doc('erin').set(rekeyDoc())));
+  await t('no se deja una clave a nombre de otro', () => assertFails(tb.collection('rekey').doc('carol').set(rekeyDoc({from: 'bob'}))));
+  await t('una clave entregada con campos de más se rechaza', () => assertFails(tb.collection('rekey').doc('carol').set(rekeyDoc({dek: 'en claro'}))));
+  await t('una clave entregada sin la clave efímera se rechaza', () => { const d = rekeyDoc(); delete d.epk; return assertFails(tb.collection('rekey').doc('carol').set(d)); });
+  await t('una clave entregada con una clave efímera que no es P-256 se rechaza', () => assertFails(tb.collection('rekey').doc('carol').set(rekeyDoc({epk: PUB({crv: 'P-384'})}))));
+  await t('una clave entregada con la parte privada de la efímera se rechaza', () => assertFails(tb.collection('rekey').doc('carol').set(rekeyDoc({epk: Object.assign(PUB(), {d: 'secreto'})}))));
+  await t('el miembro lee la clave que le han dejado', () => assertSucceeds(tbOf(bob).collection('rekey').doc('bob').get()));
+  await t('otro miembro no la lee', () => assertFails(tbOf(carol).collection('rekey').doc('bob').get()));
+  await t('quien no es miembro no la lee', () => assertFails(tbOf(erin).collection('rekey').doc('bob').get()));
+
+  await t('un editor no cambia la clave del equipo', () => assertFails(tbOf(bob).update({enc: ROT()})));
+  await t('el propietario no cambia la clave sin apuntar la anterior', () => assertFails(tb.update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2})})));
+  await t('el propietario empieza el cambio de clave', () => assertSucceeds(tb.update({enc: ROT()})));
+  await t('una tarea nueva sellada con la clave anterior se rechaza', () => assertFails(tbOf(bob).collection('tasks').doc('x3').set(sealed({status: 'todo'}))));
+  await t('una tarea nueva sellada con la clave vigente', () => assertSucceeds(tbOf(bob).collection('tasks').doc('x3').set(sealed({status: 'todo', kid: 'kid-nuevo2'}))));
+  await t('mover una tarea sellada con la clave anterior se permite', () => assertSucceeds(tbOf(bob).collection('tasks').doc('x1').update({status: 'done'})));
+  await t('cambiar el contenido con la clave anterior se rechaza', () => assertFails(tbOf(bob).collection('tasks').doc('x1').update({e: 'B'.repeat(60)})));
+  await t('una nota nueva con la clave anterior se rechaza', () => assertFails(tbOf(bob).collection('tasks').doc('x1').collection('notes').doc('n2').set(sealed({createdAt: 2}))));
+  await t('una imagen nueva con la clave anterior se rechaza', () => assertFails(tbOf(bob).collection('assets').doc('i2').set({createdAt: 1, e: 'A'.repeat(1000), ev: 1, kid: 'kid-12345'})));
+  await t('volver a sellar una tarea con la clave vigente', () => assertSucceeds(tb.collection('tasks').doc('x1').update({e: 'B'.repeat(60), ev: 1, kid: 'kid-nuevo2'})));
+  await t('volver a sellar una nota con la clave vigente', () => assertSucceeds(tb.collection('tasks').doc('x1').collection('notes').doc('n1').update({e: 'B'.repeat(60), ev: 1, kid: 'kid-nuevo2'})));
+  await t('un miembro guarda su envoltorio con la clave nueva y la anterior', () => assertSucceeds(tbOf(bob).collection('crypto').doc('bob').set(cryptoDoc({
+    kid: 'kid-nuevo2', old: {kid: 'kid-12345', kdf: {name: 'PBKDF2', hash: 'SHA-256', iter: 600000, salt: 's'.repeat(22)},
+      pw: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, rk: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}}}))));
+  await t('un editor no termina el cambio de clave', () => assertFails(tbOf(bob).update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2})})));
+  await t('el propietario termina el cambio de clave', () => assertSucceeds(tb.update({enc: ENC({kid: 'kid-nuevo2', kcv: KCV2})})));
+  await t('tras el cambio, lo sellado con la clave anterior sigue rechazado', () => assertFails(tbOf(bob).collection('tasks').doc('x4').set(sealed({status: 'todo'}))));
+  await t('el miembro borra la clave que recibió', () => assertSucceeds(tbOf(bob).collection('rekey').doc('bob').delete()));
+  await t('un editor no borra la clave pública de otro', () => assertFails(tbOf(bob).collection('pubkeys').doc('carol').delete()));
+  await t('el propietario borra la clave pública de quien quita', () => assertSucceeds(tb.collection('pubkeys').doc('carol').delete()));
+
   await env.cleanup();
   console.log('\n' + pass + ' correctas, ' + fail + ' fallidas');
   process.exit(fail ? 1 : 0);

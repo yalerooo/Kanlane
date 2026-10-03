@@ -193,7 +193,13 @@
       const FV = teams.FieldValue;
       return teams.doc(project.teamId).update({memberIds: FV.arrayRemove(uid), ['members.' + uid]: FV.delete()}).then(() => {
         if(!PM.isEncrypted(project)) return null;
-        return teams.cryptoDoc(project.teamId, uid).delete().catch(() => null);
+        /* Con su clave envuelta se van su clave pública y la clave nueva que tuviera pendiente (PR10). */
+        const team = this.db.team(project.teamId);
+        return Promise.all([
+          teams.cryptoDoc(project.teamId, uid).delete().catch(() => null),
+          team.collection('pubkeys').doc(uid).delete().catch(() => null),
+          team.collection('rekey').doc(uid).delete().catch(() => null)
+        ]);
       });
     }
 

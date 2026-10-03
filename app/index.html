@@ -223,6 +223,7 @@
     </div>
     <div class="lock-card lock-card-wide" id="plKeyCard" hidden>
       <h2>Guarda tu clave de recuperación</h2>
+      <p class="lock-desc" id="plKeyNote" hidden></p>
       <p class="lock-desc">Es la única forma de abrir este proyecto si olvidas la contraseña. Kanlane no puede restablecerla ni enviártela por correo. Guárdala fuera de Kanlane: en un gestor de contraseñas o en papel.</p>
       <div class="recovery-key-box" id="plKey" translate="no"></div>
       <div class="recovery-actions">
@@ -815,6 +816,7 @@
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="password">Cambiar la contraseña de cifrado</button>
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="recovery">Crear una clave de recuperación nueva</button>
         <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="forget" title="Tendrás que escribir la contraseña la próxima vez.">Olvidar la clave en este navegador</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-privacy-act="rotate" id="pRotate" title="Crea una clave nueva y vuelve a cifrar todo el proyecto con ella." hidden>Cambiar la clave del proyecto</button>
       </div>
     </div>
     </div>
@@ -868,6 +870,7 @@
   <form class="dlg-inner" id="ekForm" method="dialog">
     <h2 id="ekTitle">Cambiar la contraseña de cifrado</h2>
     <p class="dlg-lead" id="ekLead"></p>
+    <ul class="rotate-members" id="ekMembers" hidden></ul>
     <div id="ekFields">
       <div class="field">
         <label for="ekCurrent">Contraseña de cifrado actual</label>
@@ -898,6 +901,7 @@
         La he guardado en un lugar seguro
       </label>
     </div>
+    <p class="type-note" id="ekProgress" role="status" aria-live="polite" hidden></p>
     <p class="lock-error" id="ekError" hidden></p>
     <div class="dlg-actions">
       <div class="right">
@@ -990,6 +994,10 @@
         </div>
         <p class="field-help">La persona verá la invitación al entrar en Kanlane con ese correo. Tiene que tener una cuenta con ese mismo correo.</p>
       </form>
+      <div class="share-hint" id="shRotateHint" hidden>
+        <p>Has quitado a alguien del equipo. Su clave ya no abre el proyecto en Kanlane, pero pudo copiarla. Cambia la clave del proyecto para que deje de servir.</p>
+        <button type="button" class="btn btn-ghost btn-sm" id="shRotate">Cambiar la clave del proyecto</button>
+      </div>
       <div class="field" id="shPendingWrap" hidden>
         <span class="field-label">Invitaciones pendientes</span>
         <ul class="member-list" id="shPending"></ul>
@@ -1410,6 +1418,7 @@
 <script src="../src/models/plugin-model.js"></script>
 <script src="../src/models/github-sync.js"></script>
 <script src="../src/models/team-model.js"></script>
+<script src="../src/models/project-reseal.js"></script>
 
 <!-- Vistas: DOM y renderizado -->
 <script src="../src/views/client-colors.js"></script>
@@ -1461,6 +1470,7 @@
 <script src="../src/controllers/reminders-controller.js"></script>
 <script src="../src/controllers/github-controller.js"></script>
 <script src="../src/controllers/team-crypto-controller.js"></script>
+<script src="../src/controllers/key-rotation-controller.js"></script>
 <script src="../src/controllers/team-controller.js"></script>
 <script src="../src/controllers/command-controller.js"></script>
 <script src="../src/controllers/auth-controller.js"></script>

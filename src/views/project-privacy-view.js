@@ -69,7 +69,8 @@
       this.managedOn = !!on && !!managed;
     },
 
-    /* Sección «Privacidad» al editar: null la oculta; {encrypted, managed} elige el texto y los botones. */
+    /* Sección «Privacidad» al editar: null la oculta; {encrypted, managed, canRotate} elige el texto y
+       los botones (canRotate: se puede cambiar la clave del proyecto). */
     setPrivacyInfo(info){
       this.privacyInfo.hidden = !info;
       if(!info) return;
@@ -80,6 +81,7 @@
           : 'Solo contraseñas. El contenido del proyecto no tiene cifrado de extremo a extremo.';
       /* Sin contraseña de cifrado no hay nada que cambiar ni que olvidar. */
       this.privacyActions.hidden = !info.encrypted || !!info.managed;
+      $('pRotate').hidden = !info.canRotate;
     },
 
     _resetPrivacy(){

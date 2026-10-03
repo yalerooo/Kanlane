@@ -29,7 +29,10 @@
   }
 
   class ProjectCipher {
-    /* opts: {pid, kid, key}; key es la DEK como CryptoKey no extraíble. */
+    /* opts: {pid, kid, key, prev}; key es la DEK como CryptoKey no extraíble.
+       prev (opcional): [{kid, key}] con claves anteriores del mismo proyecto. Mientras se cambia la
+       clave (PR10) conviven documentos de las dos: se leen con la que toque y se escribe siempre con
+       la vigente. */
     constructor(opts){
       const o = opts || {};
       /* Valida pid y kid con las mismas reglas que el servicio. */
@@ -38,6 +41,12 @@
       this.pid = o.pid;
       this.kid = o.kid;
       this.key = o.key;
+      this.prev = {};
+      (o.prev || []).forEach((p) => {
+        if(!p || !p.key || p.kid === o.kid) return;
+        PC.aad({pid:o.pid, kid:p.kid, path:'x', id:'x', ev:PC.EV});
+        this.prev[p.kid] = p.key;
+      });
     }
 
     static error(code, extra){ return fail(code, extra); }
@@ -47,8 +56,17 @@
     isSealed(raw){ return ProjectCipher.isSealed(raw); }
     ivOf(e){ return PC.ivOf(e); }
 
-    _aad(path, id){
-      return {pid:this.pid, kid:this.kid, path:path, id:id, ev:PC.EV};
+    /* ¿Se puede leer lo cifrado con esta versión de la clave? */
+    canOpen(kid){
+      return kid === this.kid || Object.prototype.hasOwnProperty.call(this.prev, kid);
+    }
+
+    _keyOf(kid){
+      return kid === this.kid ? this.key : this.prev[kid];
+    }
+
+    _aad(path, id, kid){
+      return {pid:this.pid, kid:kid || this.kid, path:path, id:id, ev:PC.EV};
     }
 
     /* Separa un documento (o un cambio parcial) en lo que va en claro y lo que va en el blob. */
@@ -108,8 +126,8 @@
     /* Abre un documento sellado → {plain, iv}. Otra clave, otra versión u otro sitio: 'undecryptable'. */
     open(path, id, raw){
       return Promise.resolve().then(() => {
-        if(!this.isSealed(raw) || raw.kid !== this.kid || raw.ev !== PC.EV) throw fail('undecryptable');
-        return PC.open(this.key, this._aad(path, id), raw.e);
+        if(!this.isSealed(raw) || !this.canOpen(raw.kid) || raw.ev !== PC.EV) throw fail('undecryptable');
+        return PC.open(this._keyOf(raw.kid), this._aad(path, id, raw.kid), raw.e);
       }).then((plain) => {
         if(!plain || typeof plain !== 'object' || Array.isArray(plain)) throw fail('undecryptable');
         return {plain:plain, iv:PC.ivOf(raw.e)};
@@ -124,9 +142,14 @@
       return Promise.resolve().then(() => PC.seal(this.key, this._aad(path, id), value));
     }
 
-    openBlob(path, id, e){
-      return Promise.resolve().then(() => PC.open(this.key, this._aad(path, id), e)).catch((err) => {
-        throw fail('undecryptable', {cause:err});
+    /* kid (opcional): la versión de la clave con la que se selló, si no es la vigente. */
+    openBlob(path, id, e, kid){
+      return Promise.resolve().then(() => {
+        const k = kid || this.kid;
+        if(!this.canOpen(k)) throw fail('undecryptable');
+        return PC.open(this._keyOf(k), this._aad(path, id, k), e);
+      }).catch((err) => {
+        throw isError(err) ? err : fail('undecryptable', {cause:err});
       });
     }
 
@@ -140,8 +163,8 @@
 
     openBytes(path, id, raw){
       return Promise.resolve().then(() => {
-        if(!this.isSealed(raw) || raw.kid !== this.kid || raw.ev !== PC.EV) throw fail('undecryptable');
-        return PC.openBytes(this.key, this._aad(path, id), raw.e);
+        if(!this.isSealed(raw) || !this.canOpen(raw.kid) || raw.ev !== PC.EV) throw fail('undecryptable');
+        return PC.openBytes(this._keyOf(raw.kid), this._aad(path, id, raw.kid), raw.e);
       }).catch((err) => {
         throw isError(err) ? err : fail('undecryptable', {cause:err});
       });

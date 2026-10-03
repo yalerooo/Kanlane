@@ -23,7 +23,10 @@
     kmsRate: 'Demasiadas peticiones al servidor de claves de Kanlane. Espera un minuto e inténtalo de nuevo.',
     kmsUnavailable: 'El servidor de claves de Kanlane no está disponible ahora. Inténtalo de nuevo en unos minutos.',
     kmsKey: 'La clave que ha dado el servidor de Kanlane no abre este proyecto.',
-    managedNoWrap: 'No se ha encontrado la clave de este proyecto en tu cuenta.'
+    managedNoWrap: 'No se ha encontrado la clave de este proyecto en tu cuenta.',
+    rotated: 'La clave de este proyecto ha cambiado. Desbloquéalo de nuevo con tu contraseña de cifrado para recibir la nueva.',
+    rotatedOut: 'El propietario ha cambiado la clave de este proyecto y tu cuenta no ha recibido la nueva. Pídele que te quite del equipo y te vuelva a invitar.',
+    rotatedRecovery: 'La clave de este proyecto ha cambiado y tu clave de recuperación es anterior al cambio. Entra con tu contraseña de cifrado o pide al propietario que te quite del equipo y te vuelva a invitar.'
   };
 
   /* Servidor de claves del modo gestionado: el Worker de Kanlane, en el mismo dominio. */
@@ -60,7 +63,10 @@
         change: (current, next, again) => this.changePassword(current, next, again),
         newRecovery: (current) => this.newRecovery(current),
         recoveryDone: () => this.finishNewRecovery(),
-        retryManaged: () => this.retryManaged()
+        retryManaged: () => this.retryManaged(),
+        rotate: (current) => this.app.controllers.rotation.submit(current),
+        rotateConfirm: () => this.app.controllers.rotation.confirm(),
+        rotateClosed: () => this.app.controllers.rotation.closed()
       });
       /* Otra pestaña ha guardado u olvidado una clave: se desbloquea o se bloquea sola. */
       if(keystore) keystore.onChange((msg) => this.onKeysChanged(msg));
@@ -103,13 +109,59 @@
     }
 
     readWrap(projectId, enc){
-      return this.wrapRef(projectId).get().then((snap) => {
+      return this.wrapRef(projectId).get().then((snap) => snap, () => { throw fail('read'); }).then((snap) => {
         if(!snap.exists) throw fail('no-wrap');
         const doc = snap.data() || {};
-        /* La clave envuelta es de otra versión de la clave del proyecto. */
-        if(doc.kid !== enc.kid) throw fail('no-wrap');
-        return doc;
-      }, () => { throw fail('read'); });
+        if(doc.kid === enc.kid) return doc;
+        /* Un cambio de clave que se preparó y no llegó a empezar: vuelve a valer la clave anterior. */
+        if(doc.old && doc.old.kid === enc.kid) return this.restoreOld(projectId, doc);
+        /* La clave envuelta es de otra versión de la clave del proyecto (PR10: se cambió la clave). */
+        const err = fail(doc.kid ? 'rotated' : 'no-wrap');
+        err.doc = doc;
+        throw err;
+      });
+    }
+
+    /* Deshace en mi clave envuelta un cambio de clave que no llegó a empezar. */
+    restoreOld(projectId, doc){
+      const old = doc.old;
+      const back = Object.assign({}, doc, {kid:old.kid, kdf:old.kdf, pw:old.pw, rk:old.rk, updatedAt:Date.now()});
+      if(old.priv) back.priv = old.priv;
+      delete back.old;
+      return this.wrapRef(projectId).set(back).then(() => back, () => { throw fail('read'); });
+    }
+
+    /* Clave anterior del proyecto, que mi clave envuelta conserva mientras dura un cambio de clave
+       (doc.old). kind: 'pw' (con la contraseña) o 'rk' (con la clave de recuperación).
+       Devuelve la clave extraíble, o null si no hay o no se abre. */
+    openOld(enc, doc, secret, kind){
+      const old = doc && doc.old;
+      if(!old || !old.kid) return Promise.resolve(null);
+      const ctx = {pid:enc.pid, kid:old.kid, uid:this.me.uid};
+      return Promise.resolve().then(() => (kind === 'rk'
+        ? PC.unwrapRecovery({rk:old.rk}, secret, ctx, true)
+        : PC.unwrapPassword({kdf:old.kdf, pw:old.pw}, secret, ctx, true))).catch(() => null);
+    }
+
+    /* La clave anterior, en su casilla de este navegador (para leer lo que aún no se ha recifrado). */
+    keepPrev(id, enc, kid, key, trusted){
+      const rot = enc.rot;
+      if(!rot || rot.kid !== kid) return Promise.resolve(null);
+      return PC.importDek(key).then((locked) => PC.checkKcv(locked, enc.pid, rot.kid, rot.kcv).then((ok) => {
+        if(!ok) return null;
+        return keystore.put({uid:this.me.uid, pid:P.keySlot(enc.pid, kid), projectId:id, kid:kid, key:locked, trusted:!!trusted});
+      })).catch(() => null);
+    }
+
+    /* Las versiones locales de las copias selladas con la clave anterior pasan a la vigente. */
+    resealHistory(id, enc, key, oldKid, oldDek){
+      const history = Workhub.services.backupHistory;
+      const backup = this.app.controllers.backup;
+      if(!history || !backup || id !== this.app.projectId || !oldDek) return Promise.resolve();
+      return PC.importDek(oldDek).then((old) => {
+        const cipher = new Workhub.models.ProjectCipher({pid:enc.pid, kid:enc.kid, key:key, prev:[{kid:oldKid, key:old}]});
+        return history.sealPlain(backup.scope(), cipher);
+      }).catch(() => null);
     }
 
     message(err){
@@ -117,6 +169,8 @@
       if(code === 'bad-password') return MSG.badPassword;
       if(code === 'bad-recovery') return MSG.badRecovery;
       if(code === 'no-wrap') return MSG.noWrap;
+      if(code === 'rotated') return MSG.rotated;
+      if(code === 'rotated-out' || code === 'bad-rekey') return MSG.rotatedOut;
       if(code === 'read') return MSG.read;
       if(code === 'bad-format' || code === 'unavailable') return MSG.read;
       if(code === 'kms-network') return MSG.kmsNetwork;
@@ -272,7 +326,16 @@
       this.editing = '';
       this.downloadName = '';
       const p = this.project();
-      if(!P.isManaged(p)){ this.view.show(this.currentName()); return; }
+      if(!P.isManaged(p)){
+        this.view.show(this.currentName());
+        /* La clave guardada aquí es de antes de un cambio de clave: se dice por qué se pide la contraseña. */
+        if(P.isEncrypted(p) && this.me){
+          keystore.get(this.me.uid, p.enc.pid).then((rec) => {
+            if(rec && rec.kid !== p.enc.kid && p.id === this.app.projectId && !this.app.cipher && !this.pending) this.view.showRotated(p.nombre);
+          }).catch(() => {});
+        }
+        return;
+      }
       /* La clave se acaba de guardar y aun así no vale: se enseña el error en vez de pedirla sin parar. */
       const done = this.managedDone;
       if(done && done.pid === p.enc.pid && Date.now() - done.at < 10000){
@@ -329,16 +392,66 @@
       if(!P.isEncrypted(p)) return Promise.resolve();
       const enc = p.enc;
       this.view.setBusy(true, 'unlock');
+      let doc;
       return this.readWrap(id, enc)
-        .then((doc) => PC.unwrapPassword(doc, password, this.ctx(enc), false))
+        .then((d) => { doc = d; return PC.unwrapPassword(doc, password, this.ctx(enc), false); })
         .then((key) => this.keep(id, enc, key, trusted))
+        .then(() => this.afterUnlock(id, enc, doc, password, trusted))
         .then(() => {
           this.view.setBusy(false);
           if(id === this.app.projectId) this.app.connectProject();
         }, (err) => {
+          /* El propietario cambió la clave: la nueva me espera envuelta con mi clave pública. */
+          if(err && err.code === 'rotated' && err.doc){
+            return this.rekey(id, p, err.doc, password, trusted).catch((e) => {
+              this.view.setBusy(false);
+              this.view.showError(this.message(e && e.code === 'rotated' ? fail('rotated-out') : e));
+            });
+          }
           this.view.setBusy(false);
           this.view.showError(this.message(err));
         });
+    }
+
+    /* Tras abrir con la contraseña: durante un cambio de clave se guarda también la anterior; si ya
+       terminó, sobra la copia que mi clave envuelta conservaba. */
+    afterUnlock(id, enc, doc, password, trusted){
+      if(!doc.old) return Promise.resolve();
+      if(P.isRotating({enc:enc}) && doc.old.kid === enc.rot.kid){
+        return this.openOld(enc, doc, password, 'pw').then((old) => (old ? this.keepPrev(id, enc, doc.old.kid, old, trusted) : null));
+      }
+      const clean = Object.assign({}, doc);
+      delete clean.old;
+      return this.wrapRef(id).set(clean).catch(() => null);
+    }
+
+    /* Miembro de un equipo tras un cambio de clave (PR10): su clave privada, que va envuelta con su
+       contraseña, abre la clave nueva que le dejó el propietario en rekey/{uid}. Como la clave de
+       recuperación que tenía envolvía la clave anterior, se le da una nueva antes de guardar nada. */
+    async rekey(id, p, doc, password, trusted){
+      const enc = p.enc;
+      const uid = this.me.uid;
+      /* En un proyecto personal no hay quien entregue otra clave: la envuelta no es la del proyecto. */
+      if(!P.isTeam(id)) throw fail('no-wrap');
+      if(!doc.priv) throw fail('rotated-out');
+      let snap;
+      try{ snap = await P.scope(this.app.rootDb, id).collection('rekey').doc(uid).get(); }
+      catch(e){ throw fail('read'); }
+      const wrap = snap.exists ? snap.data() || {} : null;
+      if(!wrap || wrap.kid !== enc.kid) throw fail('rotated-out');
+      const oldCtx = {pid:enc.pid, kid:doc.kid, uid:uid};
+      const priv = await PC.unwrapPrivate(doc, password, oldCtx);
+      const dek = await PC.unwrapFromOwner(wrap, priv, this.ctx(enc), true);
+      const key = await PC.importDek(dek);
+      if(!(await PC.checkKcv(key, enc.pid, enc.kid, enc.kcv))) throw fail('rotated-out');
+      const oldDek = await PC.unwrapPassword(doc, password, oldCtx, true).catch(() => null);
+      if(id !== this.app.projectId) return;
+      const rk = PC.newRecoveryKey();
+      this.pending = {id:id, enc:enc, doc:doc, dek:dek, password:password, recovery:rk, trusted:trusted,
+        priv:priv, oldDek:oldDek, oldKid:doc.kid};
+      this.downloadName = p.nombre;
+      this.view.setBusy(false);
+      this.view.showKey(rk.text, 'El propietario ha cambiado la clave de este proyecto. Tu clave de recuperación anterior ya no sirve: guarda esta nueva.');
     }
 
     /* Comprueba que la clave es la del proyecto y la guarda en este navegador. */
@@ -365,31 +478,54 @@
       let doc;
       return this.readWrap(id, enc)
         .then((d) => { doc = d; return PC.unwrapRecovery(doc, bytes, this.ctx(enc), true); })
-        .then((dek) => {
+        .then((dek) => this.openOld(enc, doc, bytes, 'rk').then((oldDek) => {
           const rk = PC.newRecoveryKey();
-          this.pending = {id:id, enc:enc, doc:doc, dek:dek, password:password, recovery:rk, trusted:trusted};
+          this.pending = {id:id, enc:enc, doc:doc, dek:dek, password:password, recovery:rk, trusted:trusted,
+            oldDek:oldDek, oldKid:doc.old ? doc.old.kid : ''};
           this.downloadName = p.nombre;
           this.view.setBusy(false);
           this.view.showKey(rk.text);
-        }, (err) => {
+        }), (err) => {
           this.view.setBusy(false);
-          this.view.showRecoverError(this.message(err));
+          this.view.showRecoverError(err && err.code === 'rotated' ? MSG.rotatedRecovery : this.message(err));
         });
     }
 
+    /* Guarda mi clave envuelta con la contraseña y la clave de recuperación nuevas. Lo usan «He
+       olvidado la contraseña» y la entrada de un miembro tras un cambio de clave (s.priv: conserva su
+       par de claves; s.oldDek: la clave anterior, que se guarda mientras dure el cambio). */
     finishRecover(){
       const s = this.pending;
       if(!s) return Promise.resolve();
       const ctx = this.ctx(s.enc);
+      const rotating = P.isRotating({enc:s.enc}) && !!s.oldDek && s.enc.rot.kid === s.oldKid;
+      const oldCtx = {pid:s.enc.pid, kid:s.oldKid, uid:ctx.uid};
+      let newPub = null;
+      let key;
       this.view.setBusy(true, 'recover');
       /* El par de claves de un miembro de equipo iba envuelto con la contraseña olvidada: se crea otro. */
-      return (s.doc.priv || s.doc.pub ? PC.newKeyPair() : Promise.resolve(null))
-        .then((pair) => Promise.all([PC.wrapPassword(s.dek, s.password, ctx, pair ? pair.priv : undefined), PC.wrapRecovery(s.dek, s.recovery.bytes, ctx)])
-          .then((w) => this.wrapRef(s.id).set(Object.assign({}, s.doc, {kdf:w[0].kdf, pw:w[0].pw, rk:w[1].rk, updatedAt:Date.now()},
-            pair ? {pub:pair.pub, priv:w[0].priv} : {}))))
+      return (s.priv ? Promise.resolve({pub:s.doc.pub, priv:s.priv}) : (s.doc.priv || s.doc.pub ? PC.newKeyPair() : Promise.resolve(null)))
+        .then((pair) => Promise.all([
+          PC.wrapPassword(s.dek, s.password, ctx, pair ? pair.priv : undefined),
+          PC.wrapRecovery(s.dek, s.recovery.bytes, ctx),
+          rotating ? PC.wrapPassword(s.oldDek, s.password, oldCtx) : null,
+          rotating ? PC.wrapRecovery(s.oldDek, s.recovery.bytes, oldCtx) : null
+        ]).then((w) => {
+          const doc = Object.assign({}, s.doc, {kid:s.enc.kid, kdf:w[0].kdf, pw:w[0].pw, rk:w[1].rk, updatedAt:Date.now()},
+            pair ? {pub:pair.pub, priv:w[0].priv} : {});
+          delete doc.old;
+          if(rotating) doc.old = {kid:s.oldKid, kdf:w[2].kdf, pw:w[2].pw, rk:w[3].rk};
+          if(pair && !s.priv) newPub = pair.pub;
+          return this.wrapRef(s.id).set(doc);
+        }))
         .then(() => PC.importDek(s.dek))
-        .then((key) => this.keep(s.id, s.enc, key, s.trusted))
+        .then((k) => { key = k; return this.keep(s.id, s.enc, key, s.trusted); })
+        .then(() => (rotating ? this.keepPrev(s.id, s.enc, s.oldKid, s.oldDek, s.trusted) : null))
+        .then(() => this.resealHistory(s.id, s.enc, key, s.oldKid, s.oldDek))
         .then(() => {
+          /* Par de claves nuevo: se publica la clave pública para futuros cambios de clave. */
+          const rotation = this.app.controllers.rotation;
+          if(newPub && rotation) rotation.publishPub(s.id, newPub);
           this.pending = null;
           this.view.setBusy(false);
           if(s.id === this.app.projectId) this.app.connectProject();
@@ -401,11 +537,12 @@
 
     /* ---------- ajustes de privacidad del proyecto («Editar proyecto») ---------- */
 
-    /* kind: 'password' | 'recovery' | 'forget'. */
+    /* kind: 'password' | 'recovery' | 'forget' | 'rotate'. */
     action(kind, projectId){
       const p = this.project(projectId);
       if(!P.isEncrypted(p) || P.isManaged(p)) return;
       if(kind === 'forget'){ this.forgetKey(p.id); return; }
+      if(kind === 'rotate'){ this.app.controllers.rotation.start(p.id); return; }
       this.editing = p.id;
       this.downloadName = p.nombre;
       if(kind === 'password') this.view.openPassword();
@@ -426,7 +563,17 @@
         /* La clave privada del miembro (equipos) va envuelta con la contraseña: se envuelve con la nueva. */
         .then((dek) => (doc.priv ? PC.unwrapPrivate(doc, current, ctx) : Promise.resolve(null))
           .then((priv) => PC.wrapPassword(dek, next, ctx, priv || undefined)))
-        .then((w) => this.wrapRef(p.id).set(Object.assign({}, doc, {kdf:w.kdf, pw:w.pw, updatedAt:Date.now()}, w.priv ? {priv:w.priv} : {})))
+        /* Cambio de clave a medias: la clave anterior también pasa a la contraseña nueva. */
+        .then((w) => this.openOld(p.enc, doc, current, 'pw')
+          .then((oldDek) => (oldDek ? PC.wrapPassword(oldDek, next, {pid:p.enc.pid, kid:doc.old.kid, uid:ctx.uid}) : null))
+          .then((o) => {
+            const out = Object.assign({}, doc, {kdf:w.kdf, pw:w.pw, updatedAt:Date.now()}, w.priv ? {priv:w.priv} : {});
+            delete out.old;
+            if(o) out.old = Object.assign({}, doc.old, {kdf:o.kdf, pw:o.pw});
+            /* La clave privada de antes del cambio iba con la contraseña anterior: ya no hace falta. */
+            if(out.old) delete out.old.priv;
+            return this.wrapRef(p.id).set(out);
+          }))
         .then(() => {
           this.view.closeDialog();
           toast.success('Contraseña de cifrado cambiada', {important:true});
@@ -443,12 +590,12 @@
       this.view.setDialogBusy(true);
       return this.readWrap(p.id, p.enc)
         .then((d) => { doc = d; return PC.unwrapPassword(doc, current, this.ctx(p.enc), true); })
-        .then((dek) => {
+        .then((dek) => this.openOld(p.enc, doc, current, 'pw').then((oldDek) => {
           const rk = PC.newRecoveryKey();
-          this.pending = {id:p.id, enc:p.enc, doc:doc, dek:dek, recovery:rk};
+          this.pending = {id:p.id, enc:p.enc, doc:doc, dek:dek, recovery:rk, oldDek:oldDek};
           this.view.showDialogKey(rk.text);
           this.view.setDialogBusy(false);
-        }, (err) => {
+        }), (err) => {
           this.view.setDialogBusy(false);
           this.view.showDialogError(this.message(err));
         });
@@ -458,8 +605,17 @@
       const s = this.pending;
       if(!s) return Promise.resolve();
       this.view.setDialogBusy(true);
-      return PC.wrapRecovery(s.dek, s.recovery.bytes, this.ctx(s.enc))
-        .then((w) => this.wrapRef(s.id).set(Object.assign({}, s.doc, {rk:w.rk, updatedAt:Date.now()})))
+      /* Cambio de clave a medias: la clave anterior también se envuelve con la clave de recuperación nueva. */
+      const old = s.oldDek && s.doc.old
+        ? PC.wrapRecovery(s.oldDek, s.recovery.bytes, {pid:s.enc.pid, kid:s.doc.old.kid, uid:this.me.uid})
+        : Promise.resolve(null);
+      return Promise.all([PC.wrapRecovery(s.dek, s.recovery.bytes, this.ctx(s.enc)), old])
+        .then((w) => {
+          const out = Object.assign({}, s.doc, {rk:w[0].rk, updatedAt:Date.now()});
+          delete out.old;
+          if(w[1]) out.old = Object.assign({}, s.doc.old, {rk:w[1].rk});
+          return this.wrapRef(s.id).set(out);
+        })
         .then(() => {
           this.pending = null;
           this.view.closeDialog();
@@ -474,7 +630,8 @@
     forgetKey(projectId){
       const p = this.project(projectId);
       if(!P.isEncrypted(p) || !this.me) return Promise.resolve();
-      return keystore.forget(this.me.uid, p.enc.pid).then(() => {
+      const prev = P.isRotating(p) ? keystore.forget(this.me.uid, P.keySlot(p.enc.pid, p.enc.rot.kid)) : Promise.resolve();
+      return prev.then(() => keystore.forget(this.me.uid, p.enc.pid)).then(() => {
         if(p.id === this.app.projectId) this.app.connectProject();
       });
     }

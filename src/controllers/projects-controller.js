@@ -267,7 +267,8 @@
       if(!p) return;
       this.view.openEdit(p, true, this.projects.configOf(p));
       /* La privacidad se elige al crear el proyecto y no se cambia; solo existe con cuenta. */
-      this.view.setPrivacyInfo(this.app.controllers.crypto.me ? {encrypted:ProjectModel.isEncrypted(p), managed:ProjectModel.isManaged(p)} : null);
+      this.view.setPrivacyInfo(this.app.controllers.crypto.me
+        ? {encrypted:ProjectModel.isEncrypted(p), managed:ProjectModel.isManaged(p), canRotate:this.app.controllers.rotation.canRotate(p)} : null);
     }
 
     /* Proyecto con cifrado total, desde el último paso del asistente: d = {nombre, color, config,

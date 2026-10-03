@@ -51,6 +51,18 @@
       return ProjectModel.isEncrypted(p) && p.enc.mode === 'managed';
     }
 
+    /* Cambio de clave a medias (PR10): enc.rot = {kid, kcv, at} es la clave anterior, con la que
+       todavía puede haber documentos sellados. */
+    static isRotating(p){
+      return ProjectModel.isEncrypted(p) && !!p.enc.rot && typeof p.enc.rot === 'object' && !!p.enc.rot.kid;
+    }
+
+    /* Casilla del almacén de claves del navegador para una clave que no es la vigente del proyecto
+       (la anterior, mientras dura un cambio de clave). La vigente se guarda con el pid a secas. */
+    static keySlot(pid, kid){
+      return pid + '.' + kid;
+    }
+
     /* "Cargado" cuando han llegado los proyectos personales y los equipos. */
     _updateLoaded(){
       this.loaded = this.personalLoaded && this.teamsLoaded;
@@ -280,7 +292,12 @@
       const me = rootDb.me ? rootDb.me.uid : '';
       if(ProjectModel.isEncrypted(project) && me){
         const who = isTeam && Array.isArray(project.memberIds) && project.memberIds.length ? project.memberIds : [me];
-        who.forEach((uid) => wipeOthers.push(db.collection('crypto').doc(uid).delete().catch(() => null)));
+        who.forEach((uid) => {
+          wipeOthers.push(db.collection('crypto').doc(uid).delete().catch(() => null));
+          if(!isTeam) return;
+          wipeOthers.push(db.collection('pubkeys').doc(uid).delete().catch(() => null));
+          wipeOthers.push(db.collection('rekey').doc(uid).delete().catch(() => null));
+        });
         const keystore = Workhub.services.keystore;
         if(keystore) wipeOthers.push(keystore.forgetProject(id, me).catch(() => null));
       }

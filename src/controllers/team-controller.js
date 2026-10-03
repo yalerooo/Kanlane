@@ -38,8 +38,11 @@
         convert: (password) => this.convert(password),
         convertConfirm: () => this.convertConfirm(),
         codeDone: () => { this.view.hideCode(); this.refresh(); },
-        download: (text) => { const p = this.current(); return this.app.controllers.crypto.download(text, p ? p.nombre : ''); }
+        download: (text) => { const p = this.current(); return this.app.controllers.crypto.download(text, p ? p.nombre : ''); },
+        rotate: () => { const p = this.current(); this.view.close(); if(p) this.app.controllers.crypto.action('rotate', p.id); }
       });
+      /* Huellas de las claves públicas de los miembros de un equipo cifrado: {uid: huella}. */
+      this.fps = null;
       /* Conversión de un proyecto cifrado a la espera de que se confirme la clave de recuperación. */
       this.prepared = null;
 
@@ -68,7 +71,9 @@
       const p = this.projects.get(id || this.app.projectId);
       if(!p) return;
       this.shareId = p.id;
+      this.fps = null;
       this.team.stopSent();
+      if(p.team && P.isEncrypted(p)) this.loadFingerprints(p.id);
       if(p.team){
         if(p.role === 'owner') this.team.watchSent(p.teamId);
         this.view.openTeam(this.state(p));
@@ -77,12 +82,24 @@
       }
     }
 
+    loadFingerprints(id){
+      const rotation = this.app.controllers.rotation;
+      if(!rotation) return;
+      rotation.pubkeys(id).then((keys) => {
+        if(this.shareId !== id) return;
+        this.fps = {};
+        Object.keys(keys).forEach((uid) => { this.fps[uid] = keys[uid].fp; });
+        this.refresh();
+      }, () => {});
+    }
+
     state(p){
       return {
         project: p,
         members: this.projects.membersOf(p),
         pending: p.role === 'owner' ? this.team.sent.items.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)) : [],
         isOwner: p.role === 'owner',
+        fps: this.fps,
         meUid: this.app.models.projects.rootDb.me.uid
       };
     }
@@ -145,10 +162,15 @@
       const m = p && this.projects.membersOf(p).find((x) => x.uid === uid);
       if(!m) return;
       const text = P.isEncrypted(p)
-        ? Workhub.t('{nombre} dejará de poder abrir el proyecto, pero lo que ya haya visto o descargado no se le puede quitar.', {nombre:m.name})
+        ? Workhub.t('{nombre} dejará de poder abrir el proyecto, pero lo que ya haya visto o descargado no se le puede quitar. Después conviene cambiar la clave del proyecto para que la que tenía deje de servir.', {nombre:m.name})
         : Workhub.t('«{name}» dejará de ver este proyecto.', {name:m.name});
       this.confirm(Workhub.t('Quitar del equipo'), text, Workhub.t('Quitar'))
-        .then((ok) => { if(ok) this.run(this.team.removeMember(p, uid), 'No se pudo quitar a esa persona.'); });
+        .then((ok) => {
+          if(!ok) return;
+          this.run(this.team.removeMember(p, uid), 'No se pudo quitar a esa persona.').then((done) => {
+            if(done && P.isEncrypted(p) && this.view.isOpen()) this.view.showRotateHint(true);
+          });
+        });
     }
 
     leave(){

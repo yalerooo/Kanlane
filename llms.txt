@@ -2,7 +2,7 @@
 
 > Kanlane es un gestor de tareas y proyectos con tableros kanban, calendario, clientes, contactos, contraseñas cifradas en el navegador, trabajo en equipo y uso sin conexión. Se puede empezar gratis.
 
-Última actualización: 2026-10-02
+Última actualización: 2026-10-03
 
 Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvil y el ordenador. La portada incluye una demo interactiva del tablero que no pide registro. El sitio está en español y en inglés.
 
@@ -46,6 +46,7 @@ Qué es:
 - Tableros kanban por proyecto con etapas personalizables, subtareas y tareas que se repiten.
 - Calendario de fechas límite y reuniones, y una sección de clientes y contactos.
 - Contraseñas cifradas en el navegador con una contraseña maestra que no sale del dispositivo. Sin esa contraseña ni la clave de recuperación, nadie puede descifrarlas, tampoco Kanlane. Se cifran la contraseña y las notas de cada credencial; el resto (cliente, usuario, web, IP) se guarda sin cifrar.
+- Cifrado del contenido por proyecto, opcional y elegido al crearlo. Con «Cifrado total», tareas, notas, clientes, contactos, reuniones, contraseñas, imágenes y datos de plugins se cifran en el navegador (AES-256) con una contraseña que Kanlane no tiene; sin ella ni la clave de recuperación el proyecto no se puede recuperar, y para compartirlo se da a cada persona un código de acceso de un solo uso por otro canal. Con «Gestionado por Kanlane» no hay contraseña extra: protege frente a una copia de la base de datos, pero Kanlane custodia la clave y podría técnicamente descifrar el proyecto, y no se puede compartir con un equipo. En los dos quedan sin cifrar el nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas, y no se sincronizan con GitHub.
 - Proyectos compartidos con roles (propietario, editor y lector) e invitaciones a la dirección de correo de cada persona, que las acepta desde el menú de proyectos (no se envía ningún correo).
 - Uso sin conexión: se abre con los últimos datos y los cambios se envían al volver la red.
 - Plugins en páginas aisladas que solo acceden a lo que el usuario permite, y sincronización con GitHub Projects.
@@ -58,3 +59,4 @@ Qué no es:
 - Los recordatorios de tareas y reuniones solo funcionan con Kanlane abierto; no hay avisos por correo con la aplicación cerrada.
 - La exportación no incluye las imágenes originales de las notas ni los datos de los plugins.
 - El cofre de contraseñas no autocompleta, no tiene extensión de navegador, no se comparte con el equipo (los proyectos de equipo no tienen cofre) ni importa desde otros gestores.
+- No cifra todo por defecto ni es de «conocimiento cero»: el cifrado del contenido es opcional por proyecto, los metadatos indicados arriba quedan sin cifrar y la aplicación que cifra se sirve desde kanlane.com. No tiene una auditoría de seguridad externa.

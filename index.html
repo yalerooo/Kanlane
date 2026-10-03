@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kanlane · Gestor de tareas y proyectos para equipos</title>
   <meta name="description" content="Kanlane es un gestor de tareas y proyectos con tableros kanban, calendario, clientes y trabajo en equipo. Una alternativa sencilla a Trello para organizar tu trabajo.">
-  <meta name="last-modified" content="2026-10-02">
+  <meta name="last-modified" content="2026-10-03">
   <link rel="canonical" href="https://kanlane.com/">
   <link rel="alternate" hreflang="es" href="https://kanlane.com/">
   <link rel="alternate" hreflang="en" href="https://kanlane.com/en/">
@@ -52,7 +52,7 @@
         "name": "Kanlane",
         "inLanguage": "es"
       },
-      {"@type":"WebPage","@id":"https://kanlane.com/#pagina","url":"https://kanlane.com/","name":"Kanlane · Gestor de tareas y proyectos para equipos","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"es","dateModified":"2026-10-02"},
+      {"@type":"WebPage","@id":"https://kanlane.com/#pagina","url":"https://kanlane.com/","name":"Kanlane · Gestor de tareas y proyectos para equipos","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"es","dateModified":"2026-10-03"},
       {
         "@type": "SoftwareApplication",
         "@id": "https://kanlane.com/#aplicacion",
@@ -71,6 +71,7 @@
           "Calendario de fechas límite y reuniones por mes, semana y día",
           "Clientes y contactos",
           "Contraseñas cifradas en el navegador",
+          "Cifrado opcional del contenido de cada proyecto",
           "Subtareas y tareas que se repiten",
           "Proyectos compartidos con roles",
           "Sincronización con GitHub Projects",
@@ -84,6 +85,7 @@
           {"@type": "Question", "name": "¿Funciona sin conexión a internet?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes instalar Kanlane como aplicación en el móvil o el ordenador y abrirla sin conexión: verás tus últimos datos y los cambios se enviarán cuando vuelvas a tener red."}},
           {"@type": "Question", "name": "¿Quién puede ver mis contraseñas?", "acceptedAnswer": {"@type": "Answer", "text": "Solo tú. Las contraseñas y sus notas se cifran en tu navegador con tu contraseña maestra antes de guardarse, y esa contraseña nunca sale de tu dispositivo."}},
           {"@type": "Question", "name": "¿Qué pasa si olvido la contraseña maestra?", "acceptedAnswer": {"@type": "Answer", "text": "Al crearla se genera una clave de recuperación que puedes descargar y guardar. Sin la contraseña maestra ni esa clave, nadie puede descifrar tus contraseñas, tampoco Kanlane."}},
+          {"@type": "Question", "name": "¿Se puede cifrar todo el contenido de un proyecto?", "acceptedAnswer": {"@type": "Answer", "text": "Sí, se elige al crear cada proyecto. Con «Cifrado total», el contenido (tareas, notas, clientes, contactos, reuniones, contraseñas, imágenes y datos de plugins) se cifra en tu navegador con AES-256 y una contraseña que solo tú conoces: Kanlane no la tiene y no puede leer ese contenido, y si pierdes la contraseña y la clave de recuperación el proyecto no se puede recuperar. Con «Gestionado por Kanlane» no hay contraseña extra: protege si alguien copia la base de datos, pero Kanlane custodia la clave y podría técnicamente descifrar el proyecto. En los dos casos quedan sin cifrar el nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas, y esos proyectos no se sincronizan con GitHub."}},
           {"@type": "Question", "name": "¿Puedo trabajar en equipo?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes compartir un proyecto, invitar a otras personas por correo y asignar tareas. Cada persona tiene un rol: propietario, editor o lector."}},
           {"@type": "Question", "name": "¿Puedo llevarme mis datos?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes exportar tareas, notas, clientes, contactos, reuniones y contraseñas cifradas. También hay versiones locales y copias cifradas opcionales en tu cuenta. La exportación no incluye imágenes originales ni datos de plugins; conserva por separado lo que necesites."}},
           {"@type": "Question", "name": "¿Qué son los plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Pequeñas extensiones que añaden funciones, como un registro de horas por proyecto o un temporizador. Se ejecutan aisladas y solo acceden a lo que tú les permitas."}}
@@ -438,7 +440,7 @@
         <article class="feat">
           <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-lock"/></svg>
           <h3>Cifrado en tu navegador</h3>
-          <p>Las contraseñas y sus notas se cifran con AES-256 antes de salir de tu dispositivo. Sin tu contraseña maestra o tu clave de recuperación, nadie puede leerlas.</p>
+          <p>Las contraseñas y sus notas se cifran con AES-256 antes de salir de tu dispositivo: sin tu contraseña maestra o tu clave de recuperación, nadie puede leerlas. Al crear un proyecto puedes elegir que se cifre también el resto de su contenido.</p>
         </article>
         <article class="feat">
           <svg class="ico" width="22" height="22" aria-hidden="true"><use href="#i-users"/></svg>
@@ -477,6 +479,10 @@
         <details>
           <summary>¿Qué pasa si olvido la contraseña maestra?</summary>
           <p>Al crearla se genera una clave de recuperación que puedes descargar y guardar. Sin la contraseña maestra ni esa clave, nadie puede descifrar tus contraseñas, tampoco Kanlane.</p>
+        </details>
+        <details>
+          <summary>¿Se puede cifrar todo el contenido de un proyecto?</summary>
+          <p>Sí, se elige al crear cada proyecto. Con «Cifrado total», el contenido (tareas, notas, clientes, contactos, reuniones, contraseñas, imágenes y datos de plugins) se cifra en tu navegador con AES-256 y una contraseña que solo tú conoces: Kanlane no la tiene y no puede leer ese contenido, y si pierdes la contraseña y la clave de recuperación el proyecto no se puede recuperar. Con «Gestionado por Kanlane» no hay contraseña extra: protege si alguien copia la base de datos, pero Kanlane custodia la clave y podría técnicamente descifrar el proyecto. En los dos casos quedan sin cifrar el nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas, y esos proyectos no se sincronizan con GitHub.</p>
         </details>
         <details>
           <summary>¿Puedo trabajar en equipo?</summary>

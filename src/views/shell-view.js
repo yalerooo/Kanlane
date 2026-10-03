@@ -155,7 +155,7 @@
       const dir = order.indexOf(view) > order.indexOf(prev) ? 1 : -1;
       const play = (el, cls) => {
         if(!el) return;
-        el.classList.remove('view-in', 'view-fade');
+        el.classList.remove('view-in', 'view-fade', 'tab-pop');
         /* Leer una medida reinicia la animación si se cambia de pestaña a mitad de otra. */
         void el.offsetWidth;
         el.style.setProperty('--view-dir', dir);
@@ -169,6 +169,8 @@
       play(this.sections[view], 'view-in');
       play(this.pageTitle, 'view-fade');
       this.bars.forEach((b) => { if(!b.hidden) play(b, 'view-fade'); });
+      /* La pestaña elegida da un pequeño bote. */
+      this.tabs.forEach((t) => { if(t.getAttribute('data-view') === view) play(t, 'tab-pop'); });
     }
 
     _renderInfo(){

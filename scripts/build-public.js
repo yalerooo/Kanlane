@@ -35,14 +35,16 @@ const ALL = {
    - script-src: solo scripts de este dominio y del SDK de Firebase/Google;
      ningún script en línea ni eval, así una inyección de HTML no ejecuta nada.
    - connect-src: la app solo habla con los servicios de Google/Firebase y con
-     la API de GitHub (integración con GitHub Projects).
+     la API de GitHub (integración con GitHub Projects). www.gstatic.com está
+     para que las herramientas de desarrollo puedan bajar los mapas de código
+     (.js.map) del SDK de Firebase, que ya se carga desde ahí en script-src.
    - frame-src https:: los plugins de terceros se cargan en un <iframe sandbox>
      desde su propio dominio (aislados: ver src/services/plugin-host.js).
    Si añades otro servicio externo, añade su dominio aquí. */
 const CSP = [
   "default-src 'self'",
   "script-src 'self' https://www.gstatic.com https://apis.google.com https://www.google.com https://www.recaptcha.net",
-  "connect-src 'self' https://*.googleapis.com https://apis.google.com https://api.github.com https://www.google.com https://www.recaptcha.net",
+  "connect-src 'self' https://www.gstatic.com https://*.googleapis.com https://apis.google.com https://api.github.com https://www.google.com https://www.recaptcha.net",
   "frame-src 'self' https: http://localhost:* http://127.0.0.1:*",
   "img-src 'self' data: blob: https:",
   "style-src 'self' 'unsafe-inline'",

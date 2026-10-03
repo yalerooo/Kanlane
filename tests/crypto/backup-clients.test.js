@@ -90,6 +90,8 @@ async function settle(m){
     await Promise.all(Object.keys(m).map((k) => m[k]._queue));
   }
 }
+/* Las palabras que se buscan tienen que ser largas o llevar un espacio: una de tres letras («Ana»)
+   aparece por azar en el base64 de cientos de documentos cifrados y la prueba fallaba a veces. */
 const noPlain = (db, col, words) => {
   const text = JSON.stringify([...db.rawAll(col).values()]);
   words.forEach((w) => assert.ok(text.indexOf(w) === -1, col + ': «' + w + '» no está en claro'));
@@ -106,7 +108,7 @@ const noPlain = (db, col, words) => {
     await m.clients.create('Otro Cliente');
     await Promise.all(Array.from({length:300}, (_, i) => m.tasks.add({title:'Tarea ' + i, cliente:'Agencia Norte', status:'pendiente', order:i, createdAt:i})));
     await Promise.all(Array.from({length:5}, (_, i) => m.tasks.add({title:'Ajena ' + i, cliente:'Otro Cliente', status:'pendiente', order:i, createdAt:i})));
-    await m.contacts.add({nombre:'Ana', cliente:'Agencia Norte', createdAt:1});
+    await m.contacts.add({nombre:'Ana Contacto', cliente:'Agencia Norte', createdAt:1});
     await m.meetings.add({title:'Reunión', cliente:'Agencia Norte', date:'2026-10-05', createdAt:1});
     await settle(m);
     assert.equal(m.tasks.items.length, 305);
@@ -124,7 +126,7 @@ const noPlain = (db, col, words) => {
     assert.equal(seen.length, 302, 'un aviso de avance por documento');
     assert.equal(seen[seen.length - 1], '302/302');
     assert.equal(seen[0], '1/302');
-    ['tasks', 'clients', 'contacts', 'meetings'].forEach((col) => noPlain(db, col, ['Agencia', 'Tarea ', 'Ana', 'Reunión']));
+    ['tasks', 'clients', 'contacts', 'meetings'].forEach((col) => noPlain(db, col, ['Agencia', 'Tarea ', 'Ana Contacto', 'Reunión']));
     ok('clientes: renombrar con 300 tareas en un proyecto cifrado las actualiza todas, con avance y sin texto en claro');
 
     /* Fallo a medias: el cliente conserva su nombre y repetir el cambio termina. */

@@ -30,7 +30,7 @@
 ## Qué puedes hacer
 
 ### Organizar el trabajo
-- **Tableros kanban por proyecto.** Arrastra las tareas entre etapas. Elige un tipo de proyecto (soporte, desarrollo, kanban con revisión) o define tus propias etapas, con color, orden y límite de tarjetas por columna.
+- **Tableros kanban por proyecto.** Arrastra las tareas entre etapas, o míralas en lista, con filtros rápidos por cliente, por lo que vence esta semana y por lo que tienes asignado. Elige un tipo de proyecto (soporte, desarrollo, kanban con revisión) o define tus propias etapas, con color, orden y límite de tarjetas por columna.
 - **Subtareas y tareas que se repiten.** Divide una tarea en pasos con su progreso, y haz que se repita cada día, semana, mes o año: al terminarla se crea la siguiente.
 - **Calendario** de fechas límite y reuniones en vista de mes, semana y día. Arrastra una tarea o una reunión a otro día para moverla.
 - **Clientes y contactos** en una sola sección: cada cliente con sus personas, tareas y reuniones. Colores propios por cliente.
@@ -174,7 +174,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 ## What you can do
 
 ### Organize your work
-- **Kanban boards per project.** Drag tasks between stages. Pick a project type (support, development, kanban with review) or define your own stages, with colors, order and per-column card limits.
+- **Kanban boards per project.** Drag tasks between stages, or view them as a list, with quick filters by client, by what is due this week and by what is assigned to you. Pick a project type (support, development, kanban with review) or define your own stages, with colors, order and per-column card limits.
 - **Subtasks and recurring tasks.** Split a task into steps with progress, and make it repeat daily, weekly, monthly or yearly: finishing it creates the next one.
 - **Calendar** of due dates and meetings in month, week and day views. Drag a task or a meeting to another day to move it.
 - **Clients and contacts** in a single section: each client with its people, tasks and meetings. Per-client colors.

@@ -24,6 +24,8 @@ jobs:
           node tests/vault/vault.test.js
           node tests/crypto/project-crypto.test.js
           node tests/crypto/keystore.test.js
+          node tests/crypto/schema-rules.test.js
+          node tests/crypto/collection-model.test.js
           node tests/backup/backup.test.js
           node tests/assets/limits.test.js
           node tests/worker/rate-limit.test.js

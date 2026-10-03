@@ -1,6 +1,6 @@
 # Cifrado por proyecto: plan de implementación
 
-> Estado: **plan aceptado; PR0, PR1 y PR2 hechos.** PR0 en `claude/cifrado-pr0` (PR #91, fusionado); PR1 en `claude/cifrado-pr1` (PR #92); **PR2 (reglas en doble formato) en `claude/cifrado-pr2`: hay que PUBLICAR las reglas a mano antes de desplegar PR3.** PR0 en la rama `claude/cifrado-pr0` (texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app; PR #91). PR1 en `claude/cifrado-pr1`, que sale de PR0 (servicio de cifrado y almacén de claves, sin interfaz ni datos; ver 6.1 y 15.2). PR2–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
+> Estado: **plan aceptado; PR0, PR1, PR2 y PR3a hechos** (PR3a en `claude/cifrado-pr3a`: capa de cifrado de los modelos, sin conectar a la app; ver la nota «Hecho en PR3a» en 6.3). Lo que sigue describe los PR anteriores: **plan aceptado; PR0, PR1 y PR2 hechos.** PR0 en `claude/cifrado-pr0` (PR #91, fusionado); PR1 en `claude/cifrado-pr1` (PR #92); **PR2 (reglas en doble formato) en `claude/cifrado-pr2`: hay que PUBLICAR las reglas a mano antes de desplegar PR3.** PR0 en la rama `claude/cifrado-pr0` (texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app; PR #91). PR1 en `claude/cifrado-pr1`, que sale de PR0 (servicio de cifrado y almacén de claves, sin interfaz ni datos; ver 6.1 y 15.2). PR2–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
 > Las decisiones del dueño (modos A/B/C, sin migración, GitHub incompatible con B, compartir con código de un solo uso, orden reglas → código) se dan por cerradas y aquí solo se concretan. **El 3-oct-2026 el dueño aceptó todas las recomendaciones D1–D18 del apartado 20**: ya son decisiones vinculantes para los PR siguientes y no hay ninguna pendiente.
 > Las marcas **[MANUAL]** son pasos que tiene que hacer el dueño a mano (consola de Firebase, Cloudflare, revisión de textos). Las marcas **[SIN VERIFICAR]** son supuestos que no se han podido comprobar contra un servicio real.
 
@@ -372,6 +372,21 @@ isSealed(raw) → !!raw.ev
   - `idsWhere/updateWhere/removeWhere(field, …)`: si `field` es secreto (p. ej. `cliente`) se filtra en memoria sobre `this.items` (exige `this.loaded`; si no, rechaza `not-ready`) y se escribe de uno en uno con concurrencia 12 (`runPool` sale de `team-model.js` a un `src/utils/pool.js` compartido). Nunca `batch`.
   - `snapshot(ids)` copia el texto en claro; `restore(snap)` pasa por `this.set()` (vuelve a cifrar con IV nuevo). Se comprueba `snap.col === this.col` como hoy.
   - `patchLocal` sin cambios.
+
+**Hecho en PR3a** (rama `claude/cifrado-pr3a`). Archivos: `src/config/features.js`, `src/utils/pool.js`, `src/models/enc-schema.js`, `src/models/project-cipher.js`, `CollectionModel` y las notas de `TaskModel`. **Ningún controlador pasa todavía un cifrador** (`connect(db)` como siempre): eso, las imágenes, el cofre, `plugin_data`, `ProjectModel` y las vistas son el PR3b. Lo que concreta o cambia respecto a 6.2 y 6.3:
+
+- **No se usa `snap.docChanges()`.** Cada instantánea trae la colección entera y se recorre completa; la caché por IV (`this._plain[id].iv`) evita descifrar lo que no cambió, y un documento borrado desaparece solo al reconstruir. Así una instantánea vieja se puede saltar sin perder cambios y no hace falta que el almacén tenga `docChanges`.
+- **Instantáneas solapadas:** si al ir a procesar una ya espera otra más nueva, la vieja se salta. La que ya se está descifrando termina y se aplica (así la primera carga no se retrasa); la siguiente la corrige con la caché caliente.
+- **Caché de escritura:** `update`/`set` con campos secretos guardan el nuevo contenido en `this._plain[id]` en el acto (antes de cifrar). Una instantánea más vieja no la pisa mientras la escritura esté en vuelo o se haya hecho durante su descifrado. Si la escritura falla, se recupera la entrada anterior.
+- **Orden de las escrituras:** los cifrados de un mismo documento se encadenan, de modo que las escrituras salen en el orden pedido aunque un cifrado tarde más que otro. La cadena no espera a que Firestore confirme (sin conexión esa promesa no termina hasta volver la red).
+- **Límites antes de cifrar** (`ProjectCipher.check`, los de `validData`): error `too-large` con `.field`. Se comprueban de forma síncrona antes de tocar la caché.
+- **Errores:** `ProjectCipherError` con `code` ∈ `undecryptable`, `too-large`, `github-field`, `encrypted`, `stale`, `not-ready`. `ProjectCipher.open` convierte cualquier fallo del servicio (otra clave, otro `kid`, otro `ev`, AAD distinta) en `undecryptable`.
+- **Documento ilegible:** `{id, _undecryptable:true, …campos en claro}`; `update` de campos secretos y `set` lo rechazan, un `update` de solo campos en claro (mover) sí se permite, y `restore()` lo devuelve tal cual estaba guardado.
+- **Documento en claro dentro de un proyecto cifrado:** `_plainInEncrypted:true`; al cambiar un campo secreto se sustituye entero por su versión sellada (`set`), para que no queden campos en claro.
+- **`loaded`** solo existe con cifrador (`ProjectModel` ya tiene su propio `loaded`).
+- **Notas:** `TaskModel.addNoteRaw(taskId, data)` (lo usan `addNote` y `addActivity`; quedará para `BackupModel.import`), `watchNotes` con cola y caché propias que entrega `{id, data()}`, `withNotes()` descifra. Una nota ilegible llega con `text:''` y `_undecryptable:true`.
+- **Pendiente (no hecho en PR3a):** las transacciones de D10 para equipos B (necesitan `db.teams.runTransaction`, PR7) y pintar `_undecryptable`/`_plainInEncrypted` en las vistas (PR3b).
+- **Pruebas:** `tests/crypto/schema-rules.test.js` y `tests/crypto/collection-model.test.js` (en la CI), con un chequeo de 16 mutaciones: cada pieza se rompió a propósito y alguna prueba falló.
 
 ### 6.4 Modelos
 
@@ -1053,7 +1068,7 @@ Un único `push` por PR (Cloudflare construye una vista previa por cada `push`).
 
 - `enc-schema.js`, `project-cipher.js`, `CollectionModel` (6.3), `TaskModel` (notas), `VaultModel`, `ProjectModel` (`isEncrypted`, `TEAM_PROTECTED`, `save`), `firebase-backend` (`__assetCipher`), `AppController.connectProject` (espera a saber si es B; pantalla «Proyecto cifrado» mínima que desbloquea si ya hay clave y, si no, dice «Este proyecto está cifrado. Actualiza Kanlane para abrirlo.»), estados `_undecryptable`.
 - Interruptor `Workhub.features.encryptedProjects = false` (archivo nuevo `src/config/features.js`): la creación sigue imposible.
-- Si se ve grande, se divide en **PR3a** (`CollectionModel`, esquema, tareas y notas) y **PR3b** (imágenes, cofre, `plugin_data`, `ProjectModel`).
+- Se dividió: **PR3a** (`CollectionModel`, esquema, tareas y notas; **hecho**, ver la nota de 6.3) y **PR3b** (imágenes, cofre, `plugin_data`, `ProjectModel`, `AppController.connectProject`, estados en las vistas y el e2e con un proyecto B sembrado; pendiente). Los criterios de abajo sobre el proyecto B sembrado son del PR3b.
 - Criterios: con proyectos A todo igual (e2e `smoke.js` y `cloud-smoke.js` en verde, demo en verde); un proyecto B sembrado a mano en el emulador se lee, se edita y en Firestore solo hay cifrado.
 
 **PR4 — Asistente, creación y desbloqueo (L)**

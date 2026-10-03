@@ -117,8 +117,31 @@
 
     /* Crea el proyecto cifrado y devuelve su id. d: {id?, nombre, color, config, password, trusted}.
        Orden (6.6 del plan): clave envuelta → clave en este navegador → documento del proyecto.
-       Si falla el último paso se deshacen los dos primeros. */
+       Si falla el último paso se deshacen los dos primeros. El error lleva en .phase el paso que falló. */
     async create(d){
+      let phase = 'preparar el cifrado';
+      try{
+        return await this._create(d, (p) => { phase = p; });
+      }catch(err){
+        const out = err && typeof err === 'object' ? err : new Error(String(err));
+        out.phase = phase;
+        console.error('No se pudo crear el proyecto cifrado (' + phase + '):', out);
+        throw out;
+      }
+    }
+
+    /* Texto para la persona: qué paso falló y por qué. */
+    createError(err){
+      const t = Workhub.t;
+      const code = err && err.code;
+      let why = code ? ' (' + code + ')' : '';
+      if(code === 'permission-denied') why = ' ' + t('El servidor ha rechazado la operación (permission-denied): comprueba que están publicadas las reglas de firestore.rules del cifrado y que tu correo está verificado.');
+      else if(code === 'unavailable' || code === 'deadline-exceeded') why = ' ' + t('Parece un problema de conexión; inténtalo de nuevo.');
+      else if(code === 'resource-exhausted') why = ' ' + t('Se ha superado la cuota de Firestore por hoy.');
+      return t('No se pudo crear el proyecto.') + (err && err.phase ? ' ' + t('Falló al {phase}.', {phase:t(err.phase)}) : '') + why;
+    }
+
+    async _create(d, step){
       const uid = this.me.uid;
       const projects = this.app.models.projects;
       const id = d.id || projects.col.doc().id;
@@ -135,8 +158,11 @@
         ]);
         const now = Date.now();
         const ref = this.wrapRef(id);
+        step('guardar la clave del proyecto');
         await ref.set({v:PC.VERSION, kid:kid, kdf:parts[0].kdf, pw:parts[0].pw, rk:parts[1].rk, createdAt:now, updatedAt:now});
+        step('guardar la clave en este navegador');
         await keystore.put({uid:uid, pid:pid, projectId:id, kid:kid, key:key, trusted:!!d.trusted});
+        step('guardar el proyecto');
         const data = Object.assign({nombre:d.nombre, createdAt:id === P.MAIN_ID ? 0 : now}, d.config || {},
           {enc:{v:PC.VERSION, mode:'pw', pid:pid, kid:kid, kcv:parts[2], createdAt:now}});
         if(typeof d.color === 'number') data.color = d.color;

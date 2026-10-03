@@ -291,10 +291,10 @@
           this.view.closeDialog();
         }
         toast.success(Workhub.t('Proyecto «{nombre}» creado con cifrado total', {nombre:d.nombre}), {important:true});
-      }).catch(() => {
+      }).catch((err) => {
         this.firstRunSaving = false;
         this.view.setEncBusy(false);
-        this.view.showError('No se pudo crear el proyecto. Inténtalo de nuevo.');
+        this.view.showError(this.app.controllers.crypto.createError(err));
       });
     }
 

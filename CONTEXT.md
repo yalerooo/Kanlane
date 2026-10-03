@@ -29,6 +29,8 @@ Plan: **`docs/CIFRADO-PROYECTOS.md`** (apartados 15 «Desglose en PR», 20 «Dec
 | PR8 | Textos públicos: política, página del cofre, FAQ/JSON-LD, `llms.txt` | Pendiente; **solo** cuando PR4–PR7 estén desplegados y probados (antes sería una promesa falsa) |
 | PR9–PR11 | Modo gestionado (Worker), rotación de la clave y expulsión, convertir un proyecto A en B | Pendiente |
 
+**Aviso del 3-oct-2026 (producción):** al dueño le falló crear un proyecto con cifrado total en `kanlane.com`. La consola solo mostraba `AppCheck: ReCAPTCHA error` (la clave de reCAPTCHA Enterprise no incluye `kanlane.com`: ruido mientras App Check no sea obligatorio; ver `docs/ROBUSTEZ.md`) y avisos de CSP por los `.js.map` (solo con las herramientas de desarrollo abiertas, inofensivos). El error real no se veía porque `createEncrypted` lo descartaba. Desde el PR de `claude/error-crear-cifrado` el mensaje dice **qué paso falló y por qué** («Falló al guardar la clave del proyecto. … (permission-denied)…») y el error queda en la consola. **Causa sin confirmar**: lo más probable es que las reglas publicadas en la consola no sean las del PR2 (un `permission-denied` al escribir `crypto/{uid}`); hay que esperar al mensaje nuevo antes de darlo por explicado.
+
 **Qué hacer ahora, en este orden**
 
 1. **Comprobar que el #94 está fusionado** y que `main` tiene el PR1 y el PR2: `git fetch origin && git merge-base --is-ancestor 4d42a1a origin/main && echo ok`. Si no lo está, fusionarlo antes de nada (es el que lleva `project-crypto.js`, `keystore.js` y las reglas nuevas a `main`).

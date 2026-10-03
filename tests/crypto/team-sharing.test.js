@@ -256,6 +256,43 @@ async function createEncrypted(app, id, nombre){
     ok('equipos cifrados: los cambios de campos secretos van en transacción y no se pisan; sin conexión, con la caché');
   }
 
+  /* ---------- crear un proyecto cifrado: el error dice el paso que falló ---------- */
+  {
+    const store = fakeDb();
+    const app = fakeApp(accountDb(store, {uid:'eva', name:'Eva', email:'eva@example.test', photo:''}));
+    await tick(5);
+    const crypto = app.controllers.crypto;
+    const denied = () => Promise.reject(Object.assign(new Error('denied'), {code:'permission-denied'}));
+    const realError = console.error;
+    const logged = [];
+    console.error = (...args) => logged.push(args);
+    try{
+      /* El servidor rechaza la clave envuelta (reglas sin publicar): no queda nada a medias. */
+      const realRef = crypto.wrapRef.bind(crypto);
+      crypto.wrapRef = (id) => Object.assign({}, realRef(id), {set:denied});
+      const e1 = await crypto.create({id:'px', nombre:'X', config:{tipo:'kanban'}, password:PASSWORD}).then(() => null, (e) => e);
+      assert.equal(e1.phase, 'guardar la clave del proyecto');
+      assert.equal(crypto.createError(e1), 'No se pudo crear el proyecto. Falló al guardar la clave del proyecto. El servidor ha rechazado la operación (permission-denied): comprueba que están publicadas las reglas de firestore.rules del cifrado y que tu correo está verificado.');
+      assert.equal(store.raw('users/eva/projects', 'px'), undefined);
+      assert.equal(keys.size, 0);
+      crypto.wrapRef = realRef;
+      /* El servidor rechaza el documento del proyecto: se deshacen la clave envuelta y la del navegador. */
+      const realSet = app.models.projects.set.bind(app.models.projects);
+      app.models.projects.set = () => Promise.reject(Object.assign(new Error('offline'), {code:'unavailable'}));
+      const e2 = await crypto.create({id:'px', nombre:'X', config:{tipo:'kanban'}, password:PASSWORD}).then(() => null, (e) => e);
+      app.models.projects.set = realSet;
+      await tick(5);
+      assert.equal(e2.phase, 'guardar el proyecto');
+      assert.equal(crypto.createError(e2), 'No se pudo crear el proyecto. Falló al guardar el proyecto. Parece un problema de conexión; inténtalo de nuevo.');
+      assert.equal(store.raw('users/eva/projects/px/crypto', 'eva'), undefined);
+      assert.equal(keys.size, 0);
+      assert.equal(logged.length, 2, 'el error queda también en la consola');
+    }finally{
+      console.error = realError;
+    }
+    ok('crear: si falla, el mensaje dice el paso y el motivo, queda en la consola y no deja nada a medias');
+  }
+
   /* ---------- convertir, invitar y aceptar ---------- */
   {
     const store = fakeDb();

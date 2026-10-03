@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanlane · diseño completo</title>
+<style>
+@font-face{font-family:'Geist';src:url('../../assets/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('../../assets/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'Geist','Inter',system-ui,sans-serif;font-size:13px;line-height:1.45;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,h4,p,dl,dd{margin:0}
+svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none;width:16px;height:16px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:12px}
+
+/* =====================================================================
+   COLOR. Base neutra; el color es un velo tenue en el fondo y el acento.
+   ===================================================================== */
+body[data-pal="grafito"]{--hue-a:#71717a;--hue-b:#71717a;--acc-l:#18181b;--acc-d:#f4f4f5}
+body[data-pal="azul"]{--hue-a:#3b82f6;--hue-b:#6366f1;--acc-l:#2563eb;--acc-d:#7aa9ff}
+body[data-pal="violeta"]{--hue-a:#6366f1;--hue-b:#d946ef;--acc-l:#4f46e5;--acc-d:#9b9dff}
+body[data-pal="rosa"]{--hue-a:#ec4899;--hue-b:#f97316;--acc-l:#db2777;--acc-d:#ff86bd}
+body[data-pal="verde"]{--hue-a:#14b8a6;--hue-b:#22c55e;--acc-l:#0d8f6f;--acc-d:#4fd6a8}
+body[data-pal="naranja"]{--hue-a:#f97316;--hue-b:#ec4899;--acc-l:#e0492d;--acc-d:#ff8a6b}
+body[data-pal="ambar"]{--hue-a:#f59e0b;--hue-b:#f97316;--acc-l:#b45309;--acc-d:#fbbf24}
+
+body[data-tema="claro"]{
+  --bg:#f4f5f7;--wash:.18;--ink:#17181c;--soft:#5d6068;--faint:#9498a2;
+  --accent:var(--acc-l);--accent-ink:#fff;
+  --glass:rgba(255,255,255,.62);--glass-line:rgba(255,255,255,.9);--glass-shadow:0 1px 2px rgba(20,22,40,.04),0 12px 32px -12px rgba(20,22,40,.12);
+  --surface:#fff;--ring:#fff;--line:rgba(23,24,28,.08);--line-strong:rgba(23,24,28,.14);--hover:rgba(23,24,28,.045);--fill:rgba(23,24,28,.055);
+  --card-shadow:0 1px 2px rgba(20,22,40,.05);--card-hover:0 2px 4px rgba(20,22,40,.05),0 10px 22px -12px rgba(20,22,40,.2);
+  --overlay:rgba(230,232,238,.55);--sheet:rgba(255,255,255,.82);--seg-on:#fff;
+  --late:#c2410c;--late-bg:rgba(234,88,12,.1);--today:#a16207;--today-bg:rgba(202,138,4,.12);--done:#15803d;--done-bg:rgba(22,163,74,.1);
+}
+body[data-tema="oscuro"]{
+  --bg:#0a0a0c;--wash:.16;--ink:#ededf0;--soft:#a0a3ad;--faint:#6b6f7a;
+  --accent:var(--acc-d);--accent-ink:#0a0a0c;
+  --glass:rgba(255,255,255,.04);--glass-line:rgba(255,255,255,.08);--glass-shadow:0 12px 32px -12px rgba(0,0,0,.6);
+  --surface:rgba(255,255,255,.045);--ring:#17171b;--line:rgba(255,255,255,.075);--line-strong:rgba(255,255,255,.14);--hover:rgba(255,255,255,.05);--fill:rgba(255,255,255,.07);
+  --card-shadow:none;--card-hover:0 12px 26px -14px #000;
+  --overlay:rgba(4,4,6,.6);--sheet:rgba(22,22,27,.78);--seg-on:rgba(255,255,255,.11);
+  --late:#fb923c;--late-bg:rgba(251,146,60,.13);--today:#fbbf24;--today-bg:rgba(251,191,36,.12);--done:#4ade80;--done-bg:rgba(74,222,128,.11);
+}
+.scene{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(60% 70% at 0% 0%,color-mix(in srgb,var(--hue-a) calc(var(--wash) * 100%),transparent) 0,transparent 70%),
+  radial-gradient(55% 65% at 100% 100%,color-mix(in srgb,var(--hue-b) calc(var(--wash) * 70%),transparent) 0,transparent 70%)}
+.glass{background:var(--glass);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);box-shadow:var(--glass-shadow)}
+
+/* =====================================================================
+   PIEZAS COMUNES
+   ===================================================================== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:1px solid transparent;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:550;white-space:nowrap}
+.btn svg{width:14px;height:14px;stroke-width:2}
+.btn.ghost{background:var(--surface);border-color:var(--line-strong);color:var(--ink);font-weight:500}
+.btn.ghost:hover{background:var(--hover)}
+.btn.sm{height:28px;padding:0 10px;border-radius:8px;font-size:12.5px}
+.btn.danger{color:var(--late)}
+.icon-btn{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9px;background:transparent;color:var(--soft)}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.icon-btn.sm{width:26px;height:26px;border-radius:7px}
+.icon-btn.sm svg{width:14px;height:14px}
+.seg{display:inline-flex;gap:1px;padding:2px;border-radius:9px;background:var(--fill)}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:0;border-radius:7px;background:transparent;font-weight:500;color:var(--soft)}
+.seg button svg{width:14px;height:14px}
+.seg button[aria-pressed="true"]{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line)}
+.find{display:flex;align-items:center;gap:8px;height:32px;min-width:240px;white-space:nowrap;padding:0 10px;border-radius:9px;background:var(--fill);color:var(--faint)}
+.find svg{width:14px;height:14px}
+.find kbd{margin-left:auto;font:500 10.5px 'Geist Mono',ui-monospace,monospace}
+.av{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:9.5px;font-weight:600;flex:none;background:var(--av);color:#17181c;box-shadow:0 0 0 2px var(--ring)}
+.av.lg{width:36px;height:36px;font-size:12.5px;box-shadow:none}
+.av.xs{width:18px;height:18px;font-size:8px;box-shadow:none}
+.a1{--av:#c7d2fe}.a2{--av:#fed7aa}.a3{--av:#bbf7d0}.a4{--av:#e9d5ff}.a5{--av:#bae6fd}.a6{--av:#fecdd3}
+.who{display:flex}
+.who .av{width:20px;height:20px;font-size:8.5px;margin-left:-4px}
+.who .av:first-child{margin-left:0}
+.dot{width:8px;height:8px;border-radius:3px;background:var(--c);flex:none}
+.n{--c:#3b82f6}.t{--c:#f59e0b}.v{--c:#22c55e}.i{--c:#a855f7}
+.pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;background:var(--fill);font-size:12px;color:var(--soft);white-space:nowrap}
+.pill svg{width:12px;height:12px}
+.pill.late{background:var(--late-bg);color:var(--late)}
+.pill.today{background:var(--today-bg);color:var(--today)}
+.pill.ok{background:var(--done-bg);color:var(--done)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--card-shadow)}
+.state{width:9px;height:9px;border-radius:50%;border:2px solid var(--dot);flex:none}
+.s0{--dot:#9498a2}.s1{--dot:#3b82f6}.s2{--dot:#f59e0b}.s3{--dot:#22c55e;background:var(--dot)}
+.sw{position:relative;width:34px;height:20px;border:0;border-radius:99px;background:var(--line-strong);flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.sw[aria-pressed="true"]{background:var(--accent)}
+.sw[aria-pressed="true"]::after{transform:translateX(14px);background:var(--accent-ink)}
+.select{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface)}
+.select svg{width:13px;height:13px;color:var(--faint)}
+
+/* =====================================================================
+   ESTRUCTURA
+   ===================================================================== */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:236px minmax(0,1fr);gap:12px;height:100vh;padding:12px}
+.side{display:flex;flex-direction:column;padding:12px 10px;border-radius:16px;min-width:0}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 14px;font-size:15px;font-weight:600;letter-spacing:-.02em}
+.logo{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--accent);color:var(--accent-ink)}
+.logo svg{width:14px;height:14px;stroke-width:2.6}
+.project{display:flex;align-items:center;gap:9px;margin-bottom:14px;padding:7px 8px;border-radius:10px;border:1px solid var(--line);background:var(--surface)}
+.project i{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:var(--fill);font-style:normal;font-size:10.5px;font-weight:600;color:var(--soft)}
+.project b{font-weight:550;white-space:nowrap}
+.project small{display:block;font-size:11.5px;color:var(--faint)}
+.project svg{margin-left:auto;width:14px;height:14px;color:var(--faint)}
+.label{margin:10px 9px 4px;font-size:11px;font-weight:500;color:var(--faint)}
+.nav{display:flex;align-items:center;gap:10px;height:32px;width:100%;padding:0 9px;border:0;border-radius:8px;background:transparent;color:var(--soft);font-weight:450;text-align:left;white-space:nowrap}
+.nav:hover{background:var(--hover);color:var(--ink)}
+.nav em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.nav[aria-current="page"]{background:var(--fill);color:var(--ink);font-weight:550}
+.me{margin-top:auto;display:flex;align-items:center;gap:9px;padding:10px 4px 2px 8px;border-top:1px solid var(--line)}
+.me div{min-width:0;flex:1}
+.me b{font-weight:550}
+.me small{display:block;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis}
+
+/* Navegación arriba: la misma barra, tumbada. */
+body[data-nav="arriba"] .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+body[data-nav="arriba"] .side{flex-direction:row;align-items:center;gap:2px;padding:8px 10px}
+body[data-nav="arriba"] .brand{padding:0 12px 0 6px}
+body[data-nav="arriba"] .project{margin:0 10px 0 0;padding:4px 8px}
+body[data-nav="arriba"] .project small,body[data-nav="arriba"] .label,body[data-nav="arriba"] .nav em,body[data-nav="arriba"] .me div{display:none}
+body[data-nav="arriba"] .nav{width:auto;padding:0 10px}
+body[data-nav="arriba"] .me{margin:0 0 0 auto;padding:0;border:0}
+
+.main{min-width:0;min-height:0}
+.view{display:flex;flex-direction:column;height:100%}
+.bar{display:flex;align-items:center;gap:10px;height:52px;padding:0 10px 0 16px;border-radius:16px;margin-bottom:14px;flex:none}
+.bar h1{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.bar .sep{width:1px;height:18px;background:var(--line-strong)}
+.bar .push{margin-left:auto}
+.body{flex:1;min-height:0;overflow:auto;padding:0 6px 12px;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+.lead{color:var(--soft);max-width:68ch}
+.sub{display:flex;align-items:center;gap:8px;margin:0 6px 12px;color:var(--faint);font-size:12.5px}
+.sub .chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:99px;border:1px solid var(--line-strong);background:transparent;color:var(--soft)}
+.sub .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sub .push{margin-left:auto}
+
+/* ---------- TABLERO ---------- */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.col > h2{display:flex;align-items:center;gap:8px;height:28px;margin:0 2px 2px;font-size:12.5px;font-weight:550}
+.col > h2 span{color:var(--faint);font-weight:450;font-variant-numeric:tabular-nums}
+.col > h2 .icon-btn{margin-left:auto}
+.card{padding:12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--card-shadow);cursor:pointer;transition:box-shadow .18s,border-color .18s,transform .18s}
+.card:hover{border-color:var(--line-strong);box-shadow:var(--card-hover);transform:translateY(-1px)}
+.card-top{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--soft)}
+.card-top .tag{margin-left:auto;color:var(--faint)}
+.card h3{margin-top:7px;font-size:13.5px;font-weight:550;letter-spacing:-.005em;line-height:1.35}
+.card p{margin-top:4px;font-size:12.5px;color:var(--soft);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card.is-done h3{color:var(--soft)}
+.card-foot{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.card-foot .it{display:inline-flex;align-items:center;gap:5px}
+.card-foot .it svg{width:13px;height:13px}
+.card-foot .who{margin-left:auto}
+.ringp{width:14px;height:14px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p) * 1%),var(--line-strong) 0);-webkit-mask:radial-gradient(circle,transparent 4px,#000 4.5px);mask:radial-gradient(circle,transparent 4px,#000 4.5px)}
+.add{display:flex;align-items:center;gap:7px;height:32px;padding:0 10px;border-radius:9px;color:var(--faint)}
+.add:hover{background:var(--hover);color:var(--ink)}
+.add svg{width:14px;height:14px}
+
+/* ---------- FICHA DE TAREA ---------- */
+.scrim{position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:32px;background:var(--overlay);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+body.ficha .scrim{opacity:1;pointer-events:auto}
+.sheet{display:flex;flex-direction:column;width:min(960px,100%);max-height:100%;border-radius:18px;background:var(--sheet);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(32px) saturate(1.5);backdrop-filter:blur(32px) saturate(1.5);box-shadow:0 40px 90px -30px rgba(0,0,0,.5);transform:translateY(10px) scale(.985);transition:transform .3s cubic-bezier(.16,1,.3,1);overflow:hidden}
+body.ficha .sheet{transform:none}
+.sheet-head{display:flex;align-items:center;gap:8px;height:52px;padding:0 12px 0 20px;border-bottom:1px solid var(--line);color:var(--soft);flex:none}
+.sheet-head .crumb{display:flex;align-items:center;gap:7px}
+.sheet-head .crumb b{font-weight:500;color:var(--ink)}
+.sheet-head .push{margin-left:auto}
+.sheet-body{display:grid;grid-template-columns:minmax(0,1fr) 288px;min-height:0;overflow:auto}
+.sheet-main{padding:22px 26px 22px}
+.sheet-main h2{font-size:21px;font-weight:600;letter-spacing:-.02em;line-height:1.25}
+.sheet-main .desc{margin-top:8px;font-size:14px;color:var(--soft);line-height:1.6}
+.sec{display:flex;align-items:center;gap:8px;margin:26px 0 8px;font-size:13px;font-weight:550}
+.sec span{color:var(--faint);font-weight:450}
+.sec .bar-p{flex:1;max-width:120px;height:4px;margin-left:auto;border-radius:99px;background:var(--fill);overflow:hidden}
+.sec .bar-p i{display:block;height:100%;background:var(--accent)}
+.todo{display:flex;align-items:center;gap:10px;height:34px;margin:0 -8px;padding:0 8px;border-radius:8px;font-size:13.5px}
+.todo:hover{background:var(--hover)}
+.todo i{display:grid;place-items:center;width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line-strong);flex:none}
+.todo.ok{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--line-strong)}
+.todo.ok i{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.todo.ok i svg{width:10px;height:10px;stroke-width:3}
+.todo.new{color:var(--faint)}
+.todo.new svg{width:16px;height:16px}
+.feed{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+.feed .ev{display:flex;gap:10px;color:var(--soft)}
+.feed .ev time{margin-left:6px;color:var(--faint);font-size:12px}
+.feed .ev b{color:var(--ink);font-weight:550}
+.feed .ev .tick{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fill);color:var(--faint);flex:none}
+.feed .ev .tick svg{width:12px;height:12px}
+.feed .ev .txt{padding-top:2px;min-width:0}
+.feed .bubble{margin-top:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);line-height:1.5}
+.write{display:flex;align-items:flex-end;gap:10px;margin-top:14px;padding:10px 10px 10px 12px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);color:var(--faint);min-height:68px}
+.write .btn{margin-left:auto}
+.sheet-side{padding:18px 18px 22px;border-left:1px solid var(--line);background:var(--hover)}
+.prop{padding:7px 0}
+.prop dt{font-size:12px;color:var(--faint);margin-bottom:3px}
+.prop dd{display:flex;align-items:center;gap:8px;min-height:30px;margin:0 -8px;padding:3px 8px;border-radius:8px;font-weight:500}
+.prop dd:hover{background:var(--hover)}
+.prop dd small{font-weight:400;color:var(--faint);font-size:12px}
+.sheet-side hr{border:0;border-top:1px solid var(--line);margin:8px 0}
+.sheet-side .stamp{font-size:12px;color:var(--faint);line-height:1.7}
+
+/* ---------- CALENDARIO ---------- */
+.cal-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;height:100%}
+.month{display:flex;flex-direction:column;overflow:hidden}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);font-size:11.5px;color:var(--faint)}
+.dow span{padding:9px 10px}
+.grid{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(0,1fr)}
+.day{display:flex;flex-direction:column;gap:3px;padding:6px 6px 4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.day:nth-child(7n){border-right:0}
+.day:nth-last-child(-n+7){border-bottom:0}
+.day > b{display:grid;place-items:center;width:22px;height:22px;margin-bottom:1px;border-radius:7px;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.day.out > b{color:var(--faint)}
+.day.out .evt{opacity:.6}
+.day.we{background:var(--hover)}
+.day.now > b{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.day.sel{box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.evt{display:flex;align-items:center;gap:6px;height:21px;padding:0 6px;border-radius:6px;font-size:11.5px;white-space:nowrap;overflow:hidden;color:var(--soft)}
+.evt span{overflow:hidden;text-overflow:ellipsis}
+.evt .dot{width:6px;height:6px;border-radius:2px}
+.evt.meet{background:var(--fill);color:var(--ink)}
+.evt.meet time{color:var(--faint);font-variant-numeric:tabular-nums}
+.evt.late{color:var(--late)}
+.agenda{display:flex;flex-direction:column;padding:16px;overflow:auto}
+.agenda h2{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.agenda .when{color:var(--faint);font-size:12.5px;margin-top:1px}
+.agenda h3{margin:20px 0 8px;font-size:12px;font-weight:500;color:var(--faint)}
+.slot{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.slot:first-of-type{border-top:0;padding-top:2px}
+.slot time{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--soft);font-weight:500}
+.slot time small{display:block;color:var(--faint);font-weight:400;font-size:11.5px}
+.slot b{display:block;font-weight:550}
+.slot p{display:flex;align-items:center;gap:6px;margin-top:2px;color:var(--soft);font-size:12.5px}
+.slot .btn{margin-top:8px}
+
+/* ---------- CLIENTES ---------- */
+.split{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;height:100%}
+.list{padding:6px;overflow:auto}
+.cli{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:10px;background:transparent;text-align:left}
+.cli:hover{background:var(--hover)}
+.cli[aria-current="true"]{background:var(--fill)}
+.cli .mk{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);font-size:11.5px;font-weight:650;flex:none}
+.cli b{display:block;font-weight:550}
+.cli small{color:var(--faint);font-size:12px}
+.cli em{margin-left:auto;font-style:normal;color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums}
+.detail{overflow:auto;padding:22px 24px}
+.detail-head{display:flex;align-items:center;gap:14px}
+.detail-head .mk{display:grid;place-items:center;width:48px;height:48px;border-radius:13px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);font-size:16px;font-weight:650}
+.detail-head h2{font-size:19px;font-weight:600;letter-spacing:-.02em}
+.detail-head p{color:var(--faint);font-size:12.5px}
+.detail-head .acts{margin-left:auto;display:flex;gap:6px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.stat{padding:12px 14px;border-radius:12px;border:1px solid var(--line)}
+.stat small{color:var(--faint);font-size:12px}
+.stat b{display:block;margin-top:2px;font-size:20px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat b span{font-size:12px;font-weight:450;letter-spacing:0;color:var(--late);margin-left:6px}
+.h{display:flex;align-items:center;margin:24px 0 8px;font-size:13px;font-weight:550}
+.h span{margin-left:6px;color:var(--faint);font-weight:450}
+.h .btn{margin-left:auto}
+.person{display:grid;grid-template-columns:36px minmax(0,1.1fr) minmax(0,1.3fr) minmax(0,.8fr) auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.person b{display:block;font-weight:550}
+.person small{color:var(--faint);font-size:12px}
+.person > span:not(.av){display:flex;align-items:center;gap:7px;color:var(--soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.person > span svg{width:13px;height:13px;color:var(--faint)}
+.trow{display:flex;align-items:center;gap:10px;height:38px;border-top:1px solid var(--line)}
+.trow .pill{margin-left:auto}
+
+/* ---------- CONTRASEÑAS ---------- */
+.vault-note{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);color:var(--soft)}
+.vault-note svg{color:var(--done)}
+.vault-note b{color:var(--ink);font-weight:550}
+.vault-note .btn{margin-left:auto}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--faint);border-bottom:1px solid var(--line)}
+.tbl td{padding:0 14px;height:48px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover td{background:var(--hover)}
+.tbl .grp td{height:34px;font-size:12px;color:var(--soft);background:var(--hover);font-weight:500}
+.tbl .grp td div{display:flex;align-items:center;gap:8px}
+.tbl .name{display:flex;align-items:center;gap:10px;font-weight:550}
+.tbl .name i{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--fill);color:var(--soft)}
+.tbl .name i svg{width:14px;height:14px}
+.tbl .soft{color:var(--soft)}
+.tbl .secret{display:flex;align-items:center;gap:4px}
+.tbl .secret span{letter-spacing:.14em;color:var(--soft);min-width:104px}
+.tbl .secret span.shown{letter-spacing:0}
+.tbl .end{text-align:right;width:1%}
+
+/* ---------- PLUGINS ---------- */
+.plugs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.plug{display:flex;flex-direction:column;padding:16px}
+.plug-head{display:flex;align-items:center;gap:12px}
+.plug-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;background:var(--fill);color:var(--ink)}
+.plug-ic svg{width:19px;height:19px}
+.plug h3{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.plug small{color:var(--faint);font-size:12px}
+.plug .sw{margin-left:auto}
+.plug p{margin-top:12px;color:var(--soft);line-height:1.55;flex:1}
+.perms{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.plug-foot{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--faint);font-size:12px}
+.plug-foot .btn{margin-left:auto}
+.plug.empty{align-items:flex-start;justify-content:center;border-style:dashed;background:transparent;box-shadow:none}
+.plug.empty p{flex:none;margin-top:4px}
+.plug.empty .btn{margin-top:14px}
+
+/* ---------- AJUSTES ---------- */
+.settings{display:grid;grid-template-columns:190px minmax(0,720px);gap:28px;padding-top:4px}
+.subnav{position:sticky;top:0;align-self:start;display:flex;flex-direction:column;gap:1px}
+.subnav button{display:flex;align-items:center;gap:9px;height:32px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--soft);text-align:left}
+.subnav button:hover{background:var(--hover);color:var(--ink)}
+.subnav button[aria-pressed="true"]{background:var(--fill);color:var(--ink);font-weight:550}
+.group{margin-bottom:26px}
+.group > h2{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.group > p{margin:2px 0 10px;color:var(--faint)}
+.row{display:flex;align-items:center;gap:24px;padding:14px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row > div:first-child{flex:1;min-width:0}
+.row h3{font-size:13px;font-weight:550}
+.row p{margin-top:1px;color:var(--soft);font-size:12.5px;max-width:46ch}
+.row .ctl{display:flex;align-items:center;gap:8px;flex:none}
+.row.stack{flex-direction:column;align-items:stretch;gap:12px}
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.swatch{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px 0 7px;border-radius:8px;border:1px solid var(--line-strong);background:transparent}
+.swatch i{width:14px;height:14px;border-radius:50%;background:var(--sw)}
+.swatch[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:550}
+.account{display:flex;align-items:center;gap:12px}
+.account b{display:block;font-weight:550}
+.account small{color:var(--faint)}
+.status{display:inline-flex;align-items:center;gap:7px;font-weight:500}
+.status i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.links{display:flex;gap:14px;color:var(--soft);font-size:12.5px}
+.links span{text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+</style>
+</head>
+<body data-tema="oscuro" data-pal="grafito" data-nav="lateral">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20v-1a5.5 5.5 0 0 1 5.5-5.5h2A5.5 5.5 0 0 1 15.5 19v1M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14a5 5 0 0 1 3 4.7V20"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0V8zM12 17v4"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.8"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="M8 10l4-4 4 4M8 14l4 4 4-4"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.500 10.500z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 11V9.500A3.500 3.500 0 0 1 7.500 6H19M16 3l3 3-3 3M20 13v1.500a3.500 3.500 0 0 1-3.500 3.500H5M8 21l-3-3 3-3"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 6.500A2.500 2.500 0 0 1 6.500 4h11A2.500 2.500 0 0 1 20 6.500v7a2.500 2.500 0 0 1-2.500 2.500H11l-4.500 4v-4A2.500 2.500 0 0 1 4 13.500z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.500" y="8.500" width="11.500" height="11.500" rx="2.500"/><path d="M15.500 5.500v-.5A2 2 0 0 0 13.500 3H6a2 2 0 0 0-2 2v7.500a2 2 0 0 0 2 2h.5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.500 12S6 5.500 12 5.500 21.500 12 21.500 12 18 18.500 12 18.500 2.500 12 2.500 12z"/><circle cx="12" cy="12" r="2.800"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6.500" width="12.500" height="11" rx="2.500"/><path d="M15.500 10.500l5-2.500v8l-5-2.500"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-4 1.200-4-2-6-2.500M15 21v-3.200a2.800 2.800 0 0 0-.800-2.200c2.600-.300 5.300-1.300 5.300-5.800a4.500 4.500 0 0 0-1.200-3.100 4.200 4.200 0 0 0-.100-3.100s-1-.300-3.200 1.200a11 11 0 0 0-6 0C6.800 3.300 5.800 3.600 5.800 3.600a4.200 4.200 0 0 0-.100 3.100 4.500 4.500 0 0 0-1.200 3.100c0 4.500 2.700 5.500 5.300 5.800a2.800 2.800 0 0 0-.800 2.200V21"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.500" r="7.500"/><path d="M12 9.500v4l2.500 1.500M9.500 2.500h5"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M10 4l1.800 4.700L16.500 10.500l-4.700 1.800L10 17l-1.800-4.700L3.500 10.500l4.700-1.800zM18 14l.900 2.100L21 17l-2.100.900L18 20l-.900-2.100L15 17l2.100-.900z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.500V11a6 6 0 0 1 12 0v5.500l1.500 2h-15zM10 21h4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.500 3v5.500c0 4.500-3.200 8-7.500 9.500-4.300-1.500-7.500-5-7.500-9.500V6z"/><path d="M9 12l2.200 2.200L15.200 10"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.200 0 2-.900 2-2 0-1.300.700-2 2-2h1.500A3.500 3.500 0 0 0 21 13.500C21 7.700 17 3 12 3z"/><path d="M7.500 12h.01M9.500 8h.01M14.500 7.500h.01" stroke-width="2.600"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.500a4.500 4.500 0 0 1-.600-8.960A6 6 0 0 1 18 10.500h.250a4 4 0 0 1 0 8z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.500"/><path d="M3.500 7.500l8.500 6 8.500-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.500l1.500 4.500-2 1.500a12 12 0 0 0 6 6l1.500-2 4.500 1.500V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8.500-8.500M16 7l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3.500" y="4" width="17" height="6.500" rx="2"/><rect x="3.500" y="13.500" width="17" height="6.500" rx="2"/><path d="M7.500 7.250h.01M7.500 16.750h.01" stroke-width="2.600"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M3.500 12h17M12 3.500c2.500 2.500 3.500 5.500 3.500 8.500s-1 6-3.500 8.500c-2.500-2.500-3.500-5.500-3.500-8.500s1-6 3.500-8.500z"/></symbol>
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M6 19l4-14M12 19l4-14M18 19l2-7"/></symbol>
+</svg>
+<div class="scene"></div>
+
+<div class="app">
+  <aside class="side glass">
+    <div class="brand"><span class="logo"><svg><use href="#i-logo"/></svg></span>Kanlane</div>
+    <div class="project"><i>EM</i><div><b>Estudio Marta</b><small>Soporte</small></div><svg><use href="#i-updown"/></svg></div>
+    <button class="nav" data-go="tareas"><svg><use href="#i-board"/></svg>Tareas<em>6</em></button>
+    <button class="nav" data-go="calendario"><svg><use href="#i-cal"/></svg>Calendario<em>2</em></button>
+    <button class="nav" data-go="clientes"><svg><use href="#i-users"/></svg>Clientes<em>4</em></button>
+    <button class="nav" data-go="contrasenas"><svg><use href="#i-lock"/></svg>Contraseñas</button>
+    <div class="label">Espacio</div>
+    <button class="nav" data-go="plugins"><svg><use href="#i-plug"/></svg>Plugins</button>
+    <button class="nav"><svg><use href="#i-down"/></svg>Copia de seguridad</button>
+    <button class="nav" data-go="ajustes"><svg><use href="#i-gear"/></svg>Ajustes</button>
+    <div class="me"><span class="av a1">AL</span><div><b>Ana López</b><small>ana@estudio.example</small></div><button class="icon-btn sm" id="themeToggle" aria-label="Cambiar tema"><svg><use href="#i-sun"/></svg></button></div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ================= TAREAS ================= -->
+    <section class="view" data-view="tareas">
+      <div class="bar glass">
+        <h1>Tareas</h1><span class="sep"></span>
+        <div class="seg"><button aria-pressed="true"><svg><use href="#i-board"/></svg>Tablero</button><button aria-pressed="false">Lista</button></div>
+        <div class="find push"><svg><use href="#i-search"/></svg>Buscar<kbd>Ctrl K</kbd></div>
+        <button class="icon-btn" aria-label="Filtrar"><svg><use href="#i-filter"/></svg></button>
+        <button class="btn"><svg><use href="#i-plus"/></svg>Nueva tarea</button>
+      </div>
+      <div class="sub">
+        <button class="chip" aria-pressed="true">Todas</button>
+        <button class="chip" aria-pressed="false">Asignadas a mí</button>
+        <button class="chip" aria-pressed="false">Vencen esta semana</button>
+        <button class="chip" aria-pressed="false"><span class="dot n"></span>Estudio Norte</button>
+        <span class="push">8 tareas · 1 vencida</span>
+      </div>
+      <div class="body"><div class="board" id="board"></div></div>
+    </section>
+
+    <!-- ================= CALENDARIO ================= -->
+    <section class="view" data-view="calendario" hidden>
+      <div class="bar glass">
+        <h1>Calendario</h1><span class="sep"></span>
+        <button class="icon-btn sm" aria-label="Mes anterior"><svg><use href="#i-left"/></svg></button>
+        <b style="font-weight:550;min-width:96px;text-align:center">Octubre 2026</b>
+        <button class="icon-btn sm" aria-label="Mes siguiente"><svg><use href="#i-right"/></svg></button>
+        <button class="btn ghost sm">Hoy</button>
+        <div class="seg push"><button aria-pressed="true">Mes</button><button aria-pressed="false">Semana</button></div>
+        <button class="btn"><svg><use href="#i-plus"/></svg>Nueva reunión</button>
+      </div>
+      <div class="body">
+        <div class="cal-wrap">
+          <div class="panel month">
+            <div class="dow"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+            <div class="grid" id="calGrid"></div>
+          </div>
+          <aside class="panel agenda">
+            <h2>Sábado 3 de octubre</h2>
+            <p class="when">Hoy · 1 reunión, 1 tarea</p>
+            <h3>Reuniones</h3>
+            <div class="slot"><time>10:00<small>45 min</small></time><div><b>Reunión con Estudio Norte</b><p><span class="dot n"></span>Marta Ruiz · Videollamada</p><button class="btn ghost sm"><svg><use href="#i-video"/></svg>Unirse</button></div></div>
+            <h3>Vencen hoy</h3>
+            <div class="slot"><time><span class="state s1" style="display:block;margin-top:4px"></span></time><div><b>Integrar el formulario de contacto</b><p><span class="dot n"></span>Estudio Norte · 2 de 4 subtareas</p></div></div>
+            <h3>Próximamente</h3>
+            <div class="slot"><time>Mar 6<small>16:30</small></time><div><b>Revisión de marca</b><p><span class="dot t"></span>Taller Costa</p></div></div>
+            <div class="slot"><time>Jue 8</time><div><b>Preparar presupuesto de noviembre</b><p><span class="dot t"></span>Taller Costa · tarea</p></div></div>
+            <div class="slot"><time>Dom 11</time><div><b>Ordenar facturas del trimestre</b><p><span class="dot i"></span>Interno · tarea</p></div></div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CLIENTES ================= -->
+    <section class="view" data-view="clientes" hidden>
+      <div class="bar glass">
+        <h1>Clientes</h1><span class="sep"></span>
+        <span style="color:var(--faint)">4 clientes · 7 contactos</span>
+        <div class="find push"><svg><use href="#i-search"/></svg>Buscar cliente o contacto</div>
+        <button class="btn"><svg><use href="#i-plus"/></svg>Nuevo cliente</button>
+      </div>
+      <div class="body">
+        <div class="split">
+          <div class="panel list">
+            <button class="cli n" aria-current="true"><span class="mk">EN</span><span><b>Estudio Norte</b><small>3 contactos · 3 contraseñas</small></span><em>3</em></button>
+            <button class="cli t"><span class="mk">TC</span><span><b>Taller Costa</b><small>2 contactos · 2 contraseñas</small></span><em>2</em></button>
+            <button class="cli v"><span class="mk">CA</span><span><b>Casa Aldea</b><small>2 contactos · 1 contraseña</small></span><em>1</em></button>
+            <button class="cli i"><span class="mk">IN</span><span><b>Interno</b><small>Sin contactos</small></span><em>1</em></button>
+          </div>
+          <div class="panel detail n">
+            <div class="detail-head">
+              <span class="mk">EN</span>
+              <div><h2>Estudio Norte</h2><p>Cliente desde marzo de 2025 · estudionorte.example</p></div>
+              <div class="acts"><button class="btn ghost">Ver tareas</button><button class="btn ghost"><svg><use href="#i-lock"/></svg>Ver contraseñas</button><button class="icon-btn" aria-label="Más"><svg><use href="#i-dots"/></svg></button></div>
+            </div>
+            <div class="stats">
+              <div class="stat"><small>Tareas abiertas</small><b>3<span>1 vencida</span></b></div>
+              <div class="stat"><small>Completadas</small><b>14</b></div>
+              <div class="stat"><small>Próxima reunión</small><b style="font-size:15px;line-height:28px;letter-spacing:-.01em">Hoy, 10:00</b></div>
+              <div class="stat"><small>Contraseñas</small><b>3</b></div>
+            </div>
+            <div class="h">Contactos<span>3</span><button class="btn ghost sm"><svg><use href="#i-plus"/></svg>Añadir contacto</button></div>
+            <div class="person"><span class="av lg a2">MR</span><div><b>Marta Ruiz</b><small>Directora</small></div><span><svg><use href="#i-mail"/></svg>marta@estudionorte.example</span><span><svg><use href="#i-phone"/></svg>600 123 456</span><button class="icon-btn sm" aria-label="Más"><svg><use href="#i-dots"/></svg></button></div>
+            <div class="person"><span class="av lg a5">JP</span><div><b>Jorge Peña</b><small>Administración</small></div><span><svg><use href="#i-mail"/></svg>administracion@estudionorte.example</span><span><svg><use href="#i-phone"/></svg>600 234 567</span><button class="icon-btn sm" aria-label="Más"><svg><use href="#i-dots"/></svg></button></div>
+            <div class="person"><span class="av lg a6">SB</span><div><b>Sara Blanco</b><small>Marketing</small></div><span><svg><use href="#i-mail"/></svg>sara@estudionorte.example</span><span><svg><use href="#i-phone"/></svg>600 345 678</span><button class="icon-btn sm" aria-label="Más"><svg><use href="#i-dots"/></svg></button></div>
+            <div class="h">Tareas abiertas<span>3</span></div>
+            <div class="trow"><span class="state s0"></span>Maquetar la nueva portada<span class="pill late">30 sept</span></div>
+            <div class="trow"><span class="state s1"></span>Integrar el formulario de contacto<span class="pill today">Hoy</span></div>
+            <div class="trow"><span class="state s0"></span>Publicar la web nueva<span class="pill">27 oct</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONTRASEÑAS ================= -->
+    <section class="view" data-view="contrasenas" hidden>
+      <div class="bar glass">
+        <h1>Contraseñas</h1><span class="sep"></span>
+        <span style="color:var(--faint)">6 credenciales</span>
+        <div class="find push"><svg><use href="#i-search"/></svg>Buscar por nombre, dominio o usuario</div>
+        <button class="btn"><svg><use href="#i-plus"/></svg>Nueva credencial</button>
+      </div>
+      <div class="body">
+        <div class="vault-note"><svg><use href="#i-shield"/></svg><span><b>Desbloqueado.</b> Las contraseñas se cifran en este navegador con tu contraseña maestra; se bloquean solas tras 5 minutos sin uso.</span><button class="btn ghost sm"><svg><use href="#i-lock"/></svg>Bloquear ahora</button></div>
+        <div class="panel" style="overflow:hidden">
+          <table class="tbl">
+            <thead><tr><th>Nombre</th><th>Usuario</th><th>Contraseña</th><th>Dominio o host</th><th>Puerto</th><th></th></tr></thead>
+            <tbody id="vault"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PLUGINS ================= -->
+    <section class="view" data-view="plugins" hidden>
+      <div class="bar glass">
+        <h1>Plugins</h1><span class="sep"></span>
+        <div class="seg"><button aria-pressed="true">Todos</button><button aria-pressed="false">Instalados</button></div>
+        <button class="btn ghost push"><svg><use href="#i-plus"/></svg>Instalar desde una dirección</button>
+      </div>
+      <div class="body">
+        <div class="h" style="margin-top:0">Instalados<span>2</span></div>
+        <div class="plugs">
+          <article class="panel plug"><div class="plug-head"><span class="plug-ic"><svg><use href="#i-sparkles"/></svg></span><div><h3>Apariencia</h3><small>Oficial de Kanlane · v1.1.0</small></div><button class="sw" aria-pressed="true" aria-label="Activar"></button></div><p>Personaliza el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.</p><div class="perms"><span class="pill">Cambia la apariencia</span><span class="pill">Guarda sus ajustes</span></div><div class="plug-foot">Sin acceso a tus datos<button class="btn ghost sm">Abrir</button></div></article>
+          <article class="panel plug"><div class="plug-head"><span class="plug-ic"><svg><use href="#i-timer"/></svg></span><div><h3>Temporizador</h3><small>Oficial de Kanlane · v1.1.0</small></div><button class="sw" aria-pressed="true" aria-label="Activar"></button></div><p>Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.</p><div class="perms"><span class="pill">Lee tus tareas</span><span class="pill">Guarda sus datos</span><span class="pill">Añade paneles</span></div><div class="plug-foot">12 h 40 min esta semana<button class="btn ghost sm">Abrir</button></div></article>
+        </div>
+        <div class="h">Disponibles<span>2</span></div>
+        <div class="plugs">
+          <article class="panel plug"><div class="plug-head"><span class="plug-ic"><svg><use href="#i-chart"/></svg></span><div><h3>Informe de trabajo</h3><small>Oficial de Kanlane · v1.1.0</small></div></div><p>Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.</p><div class="perms"><span class="pill">Lee tus tareas</span><span class="pill">Añade paneles</span></div><div class="plug-foot">Sin instalar<button class="btn sm">Instalar</button></div></article>
+          <article class="panel plug"><div class="plug-head"><span class="plug-ic"><svg><use href="#i-clock"/></svg></span><div><h3>Smart GP</h3><small>Oficial de Kanlane · v1.0.0</small></div></div><p>Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.</p><div class="perms"><span class="pill">Lee tus tareas</span><span class="pill">Guarda sus datos</span><span class="pill">Añade paneles</span></div><div class="plug-foot">Sin instalar<button class="btn sm">Instalar</button></div></article>
+          <article class="panel plug empty"><h3>¿Tienes un plugin de terceros?</h3><p>Pega su dirección y revisa los permisos que pide antes de instalarlo.</p><button class="btn ghost sm"><svg><use href="#i-plus"/></svg>Instalar plugin</button></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AJUSTES ================= -->
+    <section class="view" data-view="ajustes" hidden>
+      <div class="bar glass"><h1>Ajustes</h1><span class="sep"></span><span style="color:var(--faint)">Estudio Marta · Soporte</span></div>
+      <div class="body">
+        <div class="settings">
+          <nav class="subnav">
+            <button aria-pressed="true" data-sec="apariencia"><svg><use href="#i-palette"/></svg>Apariencia</button>
+            <button aria-pressed="false" data-sec="recordatorios"><svg><use href="#i-bell"/></svg>Recordatorios</button>
+            <button aria-pressed="false" data-sec="integraciones"><svg><use href="#i-github"/></svg>Integraciones</button>
+            <button aria-pressed="false" data-sec="cuenta"><svg><use href="#i-cloud"/></svg>Cuenta y datos</button>
+            <button aria-pressed="false" data-sec="privacidad"><svg><use href="#i-shield"/></svg>Privacidad</button>
+          </nav>
+          <div>
+            <div class="group" id="sec-apariencia">
+              <h2>Apariencia</h2><p>Cómo se ve Kanlane en este navegador.</p>
+              <div class="panel">
+                <div class="row"><div><h3>Tema</h3><p>Claro u oscuro. Se recuerda en este navegador.</p></div><div class="ctl"><div class="seg" data-set="tema"><button data-v="claro"><svg><use href="#i-sun"/></svg>Claro</button><button data-v="oscuro"><svg><use href="#i-moon"/></svg>Oscuro</button></div></div></div>
+                <div class="row stack"><div><h3>Color de acento</h3><p>Se usa en los botones principales y en los elementos seleccionados.</p></div>
+                  <div class="swatches" data-set="pal">
+                    <button class="swatch" data-v="grafito" style="--sw:var(--ink)"><i></i>Grafito</button>
+                    <button class="swatch" data-v="azul" style="--sw:#3b82f6"><i></i>Azul</button>
+                    <button class="swatch" data-v="violeta" style="--sw:#6366f1"><i></i>Violeta</button>
+                    <button class="swatch" data-v="rosa" style="--sw:#ec4899"><i></i>Rosa</button>
+                    <button class="swatch" data-v="verde" style="--sw:#10b981"><i></i>Verde</button>
+                    <button class="swatch" data-v="naranja" style="--sw:#f97316"><i></i>Naranja</button>
+                    <button class="swatch" data-v="ambar" style="--sw:#f59e0b"><i></i>Ámbar</button>
+                  </div>
+                </div>
+                <div class="row"><div><h3>Navegación</h3><p>En un lateral o en una barra en la parte de arriba.</p></div><div class="ctl"><div class="seg" data-set="nav"><button data-v="lateral">Lateral</button><button data-v="arriba">Arriba</button></div></div></div>
+                <div class="row"><div><h3>Idioma</h3><p>Idioma de la interfaz. Tus datos no se traducen.</p></div><div class="ctl"><div class="seg"><button aria-pressed="true">Español</button><button aria-pressed="false">English</button></div></div></div>
+              </div>
+            </div>
+            <div class="group" id="sec-recordatorios">
+              <h2>Recordatorios</h2><p>Avisos mientras Kanlane esté abierto.</p>
+              <div class="panel">
+                <div class="row"><div><h3>Activar recordatorios</h3><p>De las tareas que vencen y de las reuniones a punto de empezar.</p></div><div class="ctl"><button class="sw" aria-pressed="true" aria-label="Recordatorios"></button></div></div>
+                <div class="row"><div><h3>Tareas</h3><p>Cuándo avisar de una fecha límite.</p></div><div class="ctl"><span class="select">Un día antes<svg><use href="#i-chev"/></svg></span></div></div>
+                <div class="row"><div><h3>Reuniones</h3><p>Con cuánta antelación avisar.</p></div><div class="ctl"><span class="select">10 minutos antes<svg><use href="#i-chev"/></svg></span></div></div>
+                <div class="row"><div><h3>Notificaciones del navegador</h3><p>Para verlos aunque estés en otra pestaña.</p></div><div class="ctl"><button class="btn ghost sm">Activar</button></div></div>
+              </div>
+            </div>
+            <div class="group" id="sec-integraciones">
+              <h2>Integraciones</h2><p>Conecta este proyecto con otras herramientas.</p>
+              <div class="panel">
+                <div class="row"><div class="account"><span class="plug-ic"><svg><use href="#i-github"/></svg></span><div><h3>GitHub Projects</h3><p>Sincroniza el tablero con un proyecto de GitHub.</p></div></div><div class="ctl"><button class="btn ghost sm">Conectar</button></div></div>
+              </div>
+            </div>
+            <div class="group" id="sec-cuenta">
+              <h2>Cuenta y datos</h2><p>Dónde se guardan las tareas, reuniones, contactos y contraseñas.</p>
+              <div class="panel">
+                <div class="row"><div class="account"><span class="av lg a1">AL</span><div><b>Ana López</b><small>ana@estudio.example</small></div></div><div class="ctl"><button class="btn ghost sm">Cerrar sesión</button></div></div>
+                <div class="row"><div><h3>Almacenamiento</h3><p>Se guarda en tu cuenta y se sincroniza entre dispositivos.</p></div><div class="ctl"><span class="status"><i></i>Sincronizado</span></div></div>
+                <div class="row"><div><h3>Cifrado del proyecto</h3><p>Cifrado total: solo los miembros con la clave pueden leerlo.</p></div><div class="ctl"><span class="pill ok"><svg><use href="#i-shield"/></svg>Activo</span><button class="btn ghost sm">Gestionar</button></div></div>
+                <div class="row"><div><h3>Aplicación</h3><p>Instala Kanlane en su propia ventana; funciona sin conexión.</p></div><div class="ctl"><button class="btn ghost sm">Instalar Kanlane</button></div></div>
+              </div>
+            </div>
+            <div class="group" id="sec-privacidad">
+              <h2>Privacidad</h2><p>Cómo tratamos tus datos y qué cookies permites.</p>
+              <div class="panel">
+                <div class="row"><div><h3>Cookies</h3><p>Elige cuáles permites.</p></div><div class="ctl"><button class="btn ghost sm">Configurar cookies</button></div></div>
+                <div class="row"><div><h3>Documentos legales</h3><div class="links" style="margin-top:4px"><span>Política de privacidad</span><span>Términos y condiciones</span><span>Cookies</span></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= FICHA DE TAREA ================= -->
+<div class="scrim" id="scrim">
+  <div class="sheet" role="dialog" aria-label="Tarea">
+    <div class="sheet-head">
+      <div class="crumb"><span class="dot n"></span><b>Estudio Norte</b><span>/</span><span>Web</span></div>
+      <button class="btn ghost sm push"><svg><use href="#i-check"/></svg>Marcar como completada</button>
+      <button class="icon-btn" aria-label="Más"><svg><use href="#i-dots"/></svg></button>
+      <button class="icon-btn" id="closeSheet" aria-label="Cerrar"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <div class="sheet-main">
+        <h2>Integrar el formulario de contacto</h2>
+        <p class="desc">Conectar el formulario con el correo de administración y añadir el aviso legal antes de publicar la nueva portada.</p>
+        <div class="sec">Subtareas <span>2 de 4</span><div class="bar-p"><i style="width:50%"></i></div></div>
+        <div class="todo ok"><i><svg><use href="#i-check"/></svg></i>Maquetar el formulario</div>
+        <div class="todo ok"><i><svg><use href="#i-check"/></svg></i>Validar los campos</div>
+        <div class="todo"><i></i>Conectar con el correo de administración</div>
+        <div class="todo"><i></i>Añadir el aviso legal</div>
+        <div class="todo new"><svg><use href="#i-plus"/></svg>Añadir subtarea</div>
+        <div class="sec">Actividad y comentarios</div>
+        <div class="feed">
+          <div class="ev"><span class="av a2">MR</span><div class="txt"><b>Marta Ruiz</b><time>ayer, 17:42</time><div class="bubble">El correo de destino es administracion@estudionorte.example. Avisadme cuando esté para probarlo.</div></div></div>
+          <div class="ev"><span class="tick"><svg><use href="#i-check"/></svg></span><div class="txt"><b>Ana López</b> completó «Validar los campos»<time>ayer, 12:10</time></div></div>
+          <div class="ev"><span class="tick"><svg><use href="#i-right"/></svg></span><div class="txt"><b>Ana López</b> movió la tarea a En proceso<time>29 sept</time></div></div>
+        </div>
+        <div class="write">Escribe un comentario…<button class="btn sm">Comentar</button></div>
+      </div>
+      <aside class="sheet-side">
+        <dl>
+          <div class="prop"><dt>Estado</dt><dd><span class="state s1"></span>En proceso</dd></div>
+          <div class="prop"><dt>Fecha límite</dt><dd><span class="pill today"><svg><use href="#i-cal"/></svg>Hoy</span><small>3 de octubre</small></dd></div>
+          <div class="prop"><dt>Asignada a</dt><dd><span class="who"><span class="av a2">MR</span><span class="av a1">AL</span></span>Marta y Ana</dd></div>
+          <hr>
+          <div class="prop"><dt>Cliente</dt><dd><span class="dot n"></span>Estudio Norte</dd></div>
+          <div class="prop"><dt>Contacto</dt><dd>Marta Ruiz<small>Directora</small></dd></div>
+          <div class="prop"><dt>Etiqueta</dt><dd><span class="pill">Web</span></dd></div>
+          <div class="prop"><dt>Se repite</dt><dd style="color:var(--faint);font-weight:400">No se repite</dd></div>
+          <hr>
+        </dl>
+        <p class="stamp">Creada el 24 de septiembre<br>Última modificación ayer, 17:42</p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ic = function(n){ return '<svg><use href="#i-' + n + '"/></svg>'; };
+  var people = {AL:'a1', MR:'a2', LC:'a3', IV:'a4'};
+  var who = function(list){ return list && list.length ? '<span class="who">' + list.map(function(p){ return '<span class="av ' + people[p] + '">' + p + '</span>'; }).join('') + '</span>' : ''; };
+
+  /* ---------- Tablero ---------- */
+  var cols = [['Pendiente', 's0'], ['En proceso', 's1'], ['Esperando al cliente', 's2'], ['Completada', 's3']];
+  var tasks = [
+    {col:0, c:'n', client:'Estudio Norte', tag:'Diseño', title:'Maquetar la nueva portada', desc:'Pasar el diseño aprobado a HTML y comprobar que se ve bien en el móvil.', sub:[0,4], due:'30 sept', kind:'late', who:['MR']},
+    {col:0, c:'t', client:'Taller Costa', title:'Preparar presupuesto de noviembre', sub:[1,5], due:'8 oct', rep:true},
+    {col:0, c:'v', client:'Casa Aldea', tag:'Textos', title:'Revisar textos de la web', due:'15 oct', who:['IV']},
+    {col:1, c:'n', client:'Estudio Norte', tag:'Web', title:'Integrar el formulario de contacto', desc:'Conectar el formulario con el correo de administración y añadir el aviso legal.', sub:[2,4], notes:1, due:'Hoy', kind:'today', who:['MR','AL']},
+    {col:1, c:'i', client:'Interno', title:'Ordenar facturas del trimestre', due:'11 oct', who:['AL']},
+    {col:2, c:'t', client:'Taller Costa', tag:'Marca', title:'Aprobar el logotipo definitivo', desc:'Pendiente de que Lucas confirme la versión en negativo.', notes:3, due:'13 oct', who:['LC']},
+    {col:3, c:'v', client:'Casa Aldea', title:'Entregar fotografías', sub:[3,3], due:'28 sept', done:true},
+    {col:3, c:'n', client:'Estudio Norte', title:'Reunión de arranque', due:'24 sept', done:true, who:['MR','AL']}
+  ];
+  function card(t){
+    var foot = '';
+    if(t.done) foot += '<span class="pill ok">' + ic('check') + t.due + '</span>';
+    else foot += '<span class="pill' + (t.kind ? ' ' + t.kind : '') + '">' + ic('cal') + t.due + '</span>';
+    if(t.sub && !t.done) foot += '<span class="it"><i class="ringp" style="--p:' + Math.round(t.sub[0] / t.sub[1] * 100) + '"></i>' + t.sub[0] + '/' + t.sub[1] + '</span>';
+    if(t.notes) foot += '<span class="it">' + ic('msg') + t.notes + '</span>';
+    if(t.rep) foot += '<span class="it" title="Se repite">' + ic('repeat') + '</span>';
+    return '<article class="card' + (t.done ? ' is-done' : '') + '"><div class="card-top"><span class="dot ' + t.c + '"></span>' + t.client + (t.tag ? '<span class="tag">' + t.tag + '</span>' : '') + '</div>' +
+      '<h3>' + t.title + '</h3>' + (t.desc ? '<p>' + t.desc + '</p>' : '') + '<div class="card-foot">' + foot + who(t.who) + '</div></article>';
+  }
+  document.getElementById('board').innerHTML = cols.map(function(c, i){
+    var mine = tasks.filter(function(t){ return t.col === i; });
+    return '<section class="col"><h2><span class="state ' + c[1] + '"></span>' + c[0] + ' <span>' + mine.length + '</span><button class="icon-btn sm" aria-label="Añadir">' + ic('plus') + '</button></h2>' +
+      mine.map(card).join('') + (i === 0 ? '<div class="add">' + ic('plus') + 'Añadir tarea</div>' : '') + '</section>';
+  }).join('');
+
+  /* ---------- Calendario: octubre de 2026 (el día 1 cae en jueves) ---------- */
+  var events = {
+    '-1':[{c:'n', t:'Maquetar la nueva portada', late:true}],
+    3:[{c:'n', t:'Reunión con Estudio Norte', at:'10:00'}, {c:'n', t:'Integrar el formulario'}],
+    6:[{c:'t', t:'Revisión de marca', at:'16:30'}],
+    8:[{c:'t', t:'Presupuesto de noviembre'}],
+    11:[{c:'i', t:'Ordenar facturas'}],
+    13:[{c:'v', t:'Llamada con Casa Aldea', at:'12:00'}, {c:'t', t:'Aprobar el logotipo'}],
+    15:[{c:'v', t:'Revisar textos de la web'}],
+    20:[{c:'n', t:'Seguimiento mensual', at:'09:30'}],
+    27:[{c:'n', t:'Entrega de la web', at:'11:00'}, {c:'n', t:'Publicar la web nueva'}]
+  };
+  var cells = '';
+  for(var k = 0; k < 35; k++){
+    var d = k - 2, out = d < 1 || d > 31, num = d < 1 ? 30 + d - 0 + (d === 0 ? 0 : 0) : (d > 31 ? d - 31 : d);
+    if(d < 1) num = 30 + d;
+    var key = d === 0 ? '-1' : d, evs = (!out || d === 0) ? (events[key] || []) : [];
+    cells += '<div class="day' + (out ? ' out' : '') + (k % 7 > 4 ? ' we' : '') + (d === 3 ? ' now sel' : '') + '"><b>' + num + '</b>' + evs.map(function(e){
+      return '<div class="evt' + (e.at ? ' meet' : '') + (e.late ? ' late' : '') + '"><i class="dot ' + e.c + '"></i>' + (e.at ? '<time>' + e.at + '</time>' : '') + '<span>' + e.t + '</span></div>';
+    }).join('') + '</div>';
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+
+  /* ---------- Contraseñas (datos de ejemplo) ---------- */
+  var vault = [
+    ['n', 'Estudio Norte', [['globe', 'Panel de WordPress', 'admin', 'estudionorte.example/wp-admin', ''], ['server', 'FTP del servidor', 'norte_ftp', '203.0.113.24', '21'], ['mail', 'Correo de administración', 'administracion@estudionorte.example', 'correo.estudionorte.example', '993']]],
+    ['t', 'Taller Costa', [['globe', 'Dominio y alojamiento', 'tallercosta', 'panel.alojamiento.example', ''], ['key', 'Base de datos', 'costa_db', '203.0.113.80', '3306']]],
+    ['v', 'Casa Aldea', [['globe', 'Tienda en línea', 'casa.aldea', 'tienda.casaaldea.example', '']]]
+  ];
+  document.getElementById('vault').innerHTML = vault.map(function(g){
+    return '<tr class="grp"><td colspan="6"><div><span class="dot ' + g[0] + '"></span>' + g[1] + '</div></td></tr>' + g[2].map(function(r){
+      return '<tr><td><span class="name"><i>' + ic(r[0]) + '</i>' + r[1] + '</span></td><td class="soft">' + r[2] + '</td>' +
+        '<td><span class="secret"><span>••••••••••••</span><button class="icon-btn sm" data-eye aria-label="Mostrar">' + ic('eye') + '</button><button class="icon-btn sm" aria-label="Copiar">' + ic('copy') + '</button></span></td>' +
+        '<td class="soft mono">' + r[3] + '</td><td class="soft mono">' + (r[4] || '—') + '</td><td class="end"><button class="icon-btn sm" aria-label="Más">' + ic('dots') + '</button></td></tr>';
+    }).join('');
+  }).join('');
+  document.getElementById('vault').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-eye]'); if(!b) return;
+    var s = b.parentElement.firstChild, on = s.classList.toggle('shown');
+    s.textContent = on ? 'ejemplo-no-real' : '••••••••••••';
+  });
+
+  /* ---------- Estado: vista, tema, acento y navegación ---------- */
+  var state = {vista:'tareas', tema:'oscuro', pal:'grafito', nav:'lateral'}, ficha = false;
+  try{ var saved = JSON.parse(localStorage.getItem('kanlane-maqueta') || '{}'); Object.keys(state).forEach(function(k){ if(saved[k]) state[k] = saved[k]; }); }catch(e){}
+  location.hash.slice(1).split('&').forEach(function(p){ var kv = p.split('='); if(kv[0] in state && kv[1]) state[kv[0]] = kv[1]; if(kv[0] === 'ficha') ficha = true; });
+  function apply(){
+    ['tema', 'pal', 'nav'].forEach(function(k){ document.body.setAttribute('data-' + k, state[k]); });
+    document.querySelectorAll('[data-set] button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.v === state[b.parentElement.dataset.set])); });
+    document.querySelectorAll('[data-view]').forEach(function(s){ s.hidden = s.dataset.view !== state.vista; });
+    document.querySelectorAll('.nav').forEach(function(b){ if(b.dataset.go === state.vista) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    document.querySelector('#themeToggle use').setAttribute('href', state.tema === 'oscuro' ? '#i-sun' : '#i-moon');
+    try{ localStorage.setItem('kanlane-maqueta', JSON.stringify(state)); }catch(e){}
+  }
+  document.addEventListener('click', function(ev){
+    var b = ev.target.closest('button');
+    if(ev.target.closest('.card')) return open(true);
+    if(!b) { if(ev.target.id === 'scrim') open(false); return; }
+    if(b.dataset.go){ state.vista = b.dataset.go; apply(); }
+    else if(b.parentElement.dataset.set){ state[b.parentElement.dataset.set] = b.dataset.v; apply(); }
+    else if(b.id === 'themeToggle'){ state.tema = state.tema === 'oscuro' ? 'claro' : 'oscuro'; apply(); }
+    else if(b.id === 'closeSheet') open(false);
+    else if(b.dataset.sec){ document.getElementById('sec-' + b.dataset.sec).scrollIntoView({behavior:'smooth', block:'start'}); b.parentElement.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); }); }
+    else if(b.classList.contains('sw')) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+  });
+  function open(on){ document.body.classList.toggle('ficha', on); }
+  document.addEventListener('keydown', function(ev){ if(ev.key === 'Escape') open(false); });
+  apply();
+  if(ficha) open(true);
+})();
+</script>
+</body>
+</html>

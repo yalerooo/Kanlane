@@ -6,39 +6,40 @@
   gap:9px;
   width:100%;
   min-width:0;
-  padding:5px 7px 5px 5px;
+  padding:6px 8px 6px 7px;
   font-family:inherit;
   text-align:left;
   color:var(--ink);
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--r-lg);
+  /* Dentro de la barra de cristal: superficie con borde, no más cristal. */
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:10px;
   cursor:pointer;
   transition:background .12s ease, border-color .12s ease;
 }
 .project-switch:hover,
-.project-switch[aria-expanded="true"]{background:var(--hover);}
+.project-switch[aria-expanded="true"]{border-color:var(--line-strong);}
 .project-switch:focus-visible{outline:none;border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
 .project-switch-text{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.2;}
-.project-switch-name{font-size:13.5px;font-weight:600;letter-spacing:-0.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.project-switch-name{font-size:13px;font-weight:550;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .project-switch-sub{font-size:11.5px;color:var(--ink-faint);}
 .project-switch-chevron{flex:none;color:var(--ink-faint);}
 
-/* Cuadrado con iniciales en el color del proyecto. */
+/* Cuadrado con iniciales: neutro en el selector; con el color del proyecto en el menú. */
 .project-mark{
   flex:none;
-  width:28px;
-  height:28px;
-  border-radius:var(--r-md);
+  width:24px;
+  height:24px;
+  border-radius:7px;
   display:grid;
   place-items:center;
-  font-size:11.5px;
+  font-size:10.5px;
   font-weight:600;
   letter-spacing:.01em;
-  color:#fff;
-  background:hsl(var(--h, 214) 58% 50%);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+  color:hsl(var(--h, 214) var(--chip-s) var(--chip-fg-l));
+  background:hsl(var(--h, 214) var(--chip-s) var(--chip-bg-l));
 }
+.project-switch > .project-mark{color:var(--ink-soft);background:var(--surface-2);}
 .project-mark.is-sm{width:22px;height:22px;font-size:10px;border-radius:var(--r-sm);}
 .project-mark.is-xs{width:18px;height:18px;font-size:8.5px;border-radius:4px;}
 
@@ -80,13 +81,12 @@
   line-height:1.5;
   color:var(--danger);
   background:var(--danger-bg);
-  border-radius:var(--r-md);
+  border-radius:var(--r-lg);
 }
 
 @media (max-width:900px){
-  .brand{padding:0 4px 8px 0;flex:1;min-width:0;}
-  .project-switch{width:auto;max-width:100%;padding:3px 6px 3px 3px;}
-  .project-mark{width:26px;height:26px;}
+  .brand{padding:0;flex:1;min-width:0;}
+  .project-switch{width:auto;max-width:100%;padding:4px 8px 4px 5px;}
   .project-switch-sub{display:none;}
 }
 

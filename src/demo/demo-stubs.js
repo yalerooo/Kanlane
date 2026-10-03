@@ -7,6 +7,12 @@
     assetSrc: function(){ return ''; },
     mode: function(){ return 'local'; }
   };
+  /* Preferencias (tablero o lista): solo en memoria, la demo no guarda nada. */
+  var prefs = {};
+  Workhub.services.preferences = {
+    read: function(key, fallback){ return key in prefs ? prefs[key] : fallback; },
+    write: function(key, value){ prefs[key] = value; }
+  };
   Workhub.models = Workhub.models || {};
   /* La ficha consulta VaultModel solo si la tarea tiene contraseñas vinculadas. */
   Workhub.models.VaultModel = Workhub.models.VaultModel || {titleFor: function(v){ return v && v.label || ''; }, typeLabel: function(){ return ''; }};

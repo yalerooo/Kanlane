@@ -11,12 +11,12 @@
 
   /* Colores de etapa: nombre → variables del tema (ya tienen versión oscura). */
   const COLORS = [
-    {key:'gray', name:'Gris', dot:'var(--st-pend)', bg:'var(--st-pend-bg)', fg:'var(--st-pend)'},
-    {key:'blue', name:'Azul', dot:'var(--st-proc)', bg:'var(--st-proc-bg)', fg:'var(--st-proc)'},
-    {key:'orange', name:'Naranja', dot:'var(--st-wait)', bg:'var(--st-wait-bg)', fg:'var(--st-wait)'},
-    {key:'green', name:'Verde', dot:'var(--st-done)', bg:'var(--st-done-bg)', fg:'var(--st-done)'},
-    {key:'red', name:'Rojo', dot:'var(--danger)', bg:'var(--danger-bg)', fg:'var(--danger)'},
-    {key:'violet', name:'Violeta', dot:'var(--meet)', bg:'var(--meet-bg)', fg:'var(--meet)'}
+    {key:'gray', name:'Gris', dot:'var(--dot-pend)', bg:'var(--st-pend-bg)', fg:'var(--st-pend)'},
+    {key:'blue', name:'Azul', dot:'var(--dot-proc)', bg:'var(--st-proc-bg)', fg:'var(--st-proc)'},
+    {key:'orange', name:'Naranja', dot:'var(--dot-wait)', bg:'var(--st-wait-bg)', fg:'var(--st-wait)'},
+    {key:'green', name:'Verde', dot:'var(--dot-done)', bg:'var(--st-done-bg)', fg:'var(--st-done)'},
+    {key:'red', name:'Rojo', dot:'var(--dot-red)', bg:'var(--danger-bg)', fg:'var(--danger)'},
+    {key:'violet', name:'Violeta', dot:'var(--dot-violet)', bg:'var(--meet-bg)', fg:'var(--meet)'}
   ];
 
   const stage = (key, label, color, done) => ({key:key, label:label, color:color, done:!!done});

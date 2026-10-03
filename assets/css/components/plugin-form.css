@@ -7,8 +7,8 @@
   place-items:center;
   width:20px;
   height:20px;
-  color:#fff;
-  background:hsl(var(--h, 214) 58% 50%);
+  color:var(--ink-soft);
+  background:var(--surface-2);
   border-radius:var(--r-sm);
 }
 .pf-badge svg{width:13px;height:13px;}
@@ -36,12 +36,12 @@
   height:22px;
   padding:0;
   background:var(--c);
-  border:2px solid var(--surface);
+  border:2px solid var(--surface-solid);
   border-radius:50%;
   box-shadow:0 0 0 1px var(--line-strong);
   cursor:pointer;
 }
-.pf-swatch.is-selected{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--c);}
+.pf-swatch.is-selected{box-shadow:0 0 0 2px var(--surface-solid), 0 0 0 4px var(--c);}
 
 /* Calendario para elegir varios días. */
 .pf-dates{padding:10px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);}
@@ -83,5 +83,5 @@
   background:var(--danger-bg);
   border:1px solid var(--danger);
   border:1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-  border-radius:var(--r-md);
+  border-radius:var(--r-lg);
 }

@@ -6,8 +6,8 @@
   <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32.png">
   <link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
-  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0F0F11" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F4F5F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0A0A0C" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="../manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -132,13 +132,17 @@
 </div>
 
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar glass">
+    <div class="brand-row">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" width="15" height="15" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"><path d="M14 46l10-28M28 46l10-28M42 46l10-28"/></svg></span>
+      <span class="brand-name">Kanlane</span>
+    </div>
     <div class="brand">
       <button type="button" class="project-switch" id="btnProject" aria-haspopup="menu" aria-expanded="false" aria-controls="projectMenu">
         <span class="project-mark" id="projectMark" aria-hidden="true">PP</span>
         <span class="project-switch-text">
           <span class="project-switch-line"><span class="project-switch-name" id="projectName" translate="no">Proyecto principal</span><span class="project-lock" id="projectLock" title="Cifrado total: el contenido se cifra en tu navegador" hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></span>
-          <span class="project-switch-sub">Kanlane</span>
+          <span class="project-switch-sub" id="projectSub">Proyecto</span>
         </span>
         <svg class="project-switch-chevron" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
       </button>
@@ -169,18 +173,81 @@
         <div class="account-text"><span class="account-name" id="accountName"></span><span class="account-mail" id="accountMail"></span></div>
         <button type="button" class="icon-only" id="btnSignOut" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
       </div>
-      <div class="storage-status" id="storageStatus" data-mode="firebase"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
+      <div class="foot-row">
+        <div class="storage-status" id="storageStatus" data-mode="firebase"><span class="status-dot"></span><span id="storageLabel">Sincronizado</span></div>
+        <button type="button" class="icon-only is-sm" id="btnThemeToggle" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar entre tema claro y oscuro"><svg class="ic-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="ic-moon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+      </div>
     </div>
   </aside>
 
   <main class="main">
   <div class="main-inner">
-  <header class="page-head top">
+  <header class="page-head top glass">
     <div class="titles">
       <h1 id="pageTitle">Tareas</h1>
-      <p id="pageDesc">Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.</p>
+      <p id="pageDesc" class="sr-only">Organiza el trabajo de cada cliente por estado. Arrastra las tarjetas para moverlas entre columnas.</p>
     </div>
-    <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
+    <div class="bar-tools" data-bar="tasks">
+      <span class="bar-sep" aria-hidden="true"></span>
+      <div class="segmented" id="taskMode" role="radiogroup" aria-label="Vista de las tareas">
+        <button type="button" role="radio" data-task-mode="board" aria-checked="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></svg>Tablero</button>
+        <button type="button" role="radio" data-task-mode="list" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Lista</button>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
+      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
+      <span class="bar-push" aria-hidden="true"></span>
+      <input type="search" id="search" class="bar-search" placeholder="Buscar por título, cliente o contacto…">
+      <div class="bar-filter">
+        <button type="button" class="icon-only" id="btnTaskFilter" aria-label="Filtrar" title="Filtrar" aria-haspopup="true" aria-expanded="false" aria-controls="taskFilterPanel"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="filter-dot" id="taskFilterDot" hidden></span></button>
+        <div class="filter-panel" id="taskFilterPanel" hidden>
+          <label class="filter-field needs-clients"><span>Cliente</span><select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select></label>
+          <label class="filter-field team-only team-off"><span>Miembro</span><select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnTaskFilterClear">Quitar filtros</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
+    </div>
+    <div class="bar-tools" data-bar="calendar" hidden>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <div class="cal-nav">
+        <button type="button" class="icon-only is-sm cal-arrow" id="calPrev" aria-label="Mes anterior"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h2 class="cal-month" id="calMonthLabel"></h2>
+        <button type="button" class="icon-only is-sm cal-arrow" id="calNext" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="calToday">Hoy</button>
+      <span class="bar-push" aria-hidden="true"></span>
+      <div class="ext-slot" id="calExtSlot" data-ext-slot="calendar.toolbar" hidden></div>
+      <select id="calFilterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <div class="segmented" id="calMode" role="radiogroup" aria-label="Vista del calendario">
+        <button type="button" role="radio" data-cal-mode="month" aria-checked="true">Mes</button>
+        <button type="button" role="radio" data-cal-mode="week" aria-checked="false">Semana</button>
+        <button type="button" role="radio" data-cal-mode="day" aria-checked="false">Día</button>
+      </div>
+      <button type="button" class="btn btn-primary" id="calNewMeeting"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva reunión</button>
+    </div>
+    <div class="bar-tools is-locked" data-bar="vault" id="vaultTools" hidden>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <span class="bar-meta" id="vaultMeta"></span>
+      <span class="bar-push" aria-hidden="true"></span>
+      <input type="search" id="searchVault" class="bar-search" placeholder="Buscar por cliente, correo, web o IP…">
+      <select id="filterTipo" aria-label="Filtrar por tipo">
+        <option value="">Todos los tipos</option>
+        <option value="correo">Correo / Web</option>
+        <option value="usuario">Usuario / Web</option>
+        <option value="servidor">Servidor</option>
+        <option value="rdp">RDP</option>
+        <option value="vpn">VPN</option>
+      </select>
+      <select id="filterClienteVault" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
+      <button class="btn btn-primary" id="btnNewVault" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva credencial</button>
+    </div>
+    <div class="bar-tools" data-bar="clients" hidden>
+      <span class="bar-sep" aria-hidden="true"></span>
+      <span class="bar-meta" id="clientsMeta"></span>
+      <span class="bar-push" aria-hidden="true"></span>
+      <input type="search" id="searchClients" class="bar-search" placeholder="Buscar cliente, persona, email o teléfono…" aria-label="Buscar clientes y contactos">
+      <button class="btn btn-primary" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
+    </div>
   </header>
 
   <section id="projectLockScreen" class="lock-screen" hidden>
@@ -241,12 +308,8 @@
   </section>
 
   <section id="viewTasks">
-    <div class="toolbar">
-      <input type="search" id="search" placeholder="Buscar por título, cliente o contacto…">
-      <select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
-      <select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select>
-      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
-      <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
+    <div class="subbar">
+      <div class="quick" id="quickFilters" role="group" aria-label="Filtros rápidos"></div>
       <div class="summary" id="summary" aria-live="polite"></div>
     </div>
 
@@ -257,32 +320,15 @@
       <p class="sr-only" id="boardKeyboardHelp">Pulsa Intro para abrir una tarea. Pulsa Alt y una flecha para moverla.</p>
       <p class="sr-only" id="boardKeyboardStatus" role="status" aria-live="polite"></p>
       <div class="board" id="board" hidden></div>
+      <div class="task-list" id="taskList"></div>
     </div>
   </section>
 
   <section id="viewCalendar" hidden>
-    <div class="cal-toolbar">
-      <div class="cal-nav">
-        <button type="button" class="icon-btn cal-arrow" id="calPrev" aria-label="Mes anterior"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
-        <h2 class="cal-month" id="calMonthLabel"></h2>
-        <button type="button" class="icon-btn cal-arrow" id="calNext" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
-      </div>
-      <div class="cal-actions">
-        <div class="ext-slot" id="calExtSlot" data-ext-slot="calendar.toolbar" hidden></div>
-        <div class="segmented" id="calMode" role="radiogroup" aria-label="Vista del calendario">
-          <button type="button" role="radio" data-cal-mode="month" aria-checked="true">Mes</button>
-          <button type="button" role="radio" data-cal-mode="week" aria-checked="false">Semana</button>
-          <button type="button" role="radio" data-cal-mode="day" aria-checked="false">Día</button>
-        </div>
-        <select id="calFilterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
-        <button type="button" class="btn btn-ghost" id="calToday">Hoy</button>
-        <button type="button" class="btn btn-primary" id="calNewMeeting"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva reunión</button>
-      </div>
-    </div>
     <div class="cal-legend">
-      <span><i style="background:var(--meet-bg);box-shadow:inset 0 0 0 1px var(--meet)"></i>Reunión</span>
-      <span><i style="background:var(--st-pend-bg);box-shadow:inset 0 0 0 1px var(--st-pend)"></i>Tarea que vence ese día</span>
-      <span><i style="background:var(--danger-bg);box-shadow:inset 0 0 0 1px var(--danger)"></i>Tarea vencida</span>
+      <span><i class="lg-meet"></i>Reunión</span>
+      <span><i class="lg-task"></i>Tarea que vence ese día</span>
+      <span><i class="lg-late"></i>Tarea vencida</span>
       <span class="cal-hint">Arrastra una tarea o reunión a otro día para moverla · doble clic en un día para crear una reunión</span>
     </div>
     <div class="cal-layout">
@@ -352,33 +398,19 @@
     </div>
 
     <div id="vaultContent" hidden>
-      <div class="toolbar">
-        <input type="search" id="searchVault" placeholder="Buscar por cliente, correo, web o IP…">
-        <select id="filterTipo" aria-label="Filtrar por tipo">
-          <option value="">Todos los tipos</option>
-          <option value="correo">Correo / Web</option>
-          <option value="usuario">Usuario / Web</option>
-          <option value="servidor">Servidor</option>
-          <option value="rdp">RDP</option>
-          <option value="vpn">VPN</option>
-        </select>
-        <select id="filterClienteVault" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select>
-        <button class="btn btn-primary" id="btnNewVault" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva credencial</button>
-        <button class="btn btn-ghost" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear</button>
+      <div class="vault-note">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+        <span><b>Desbloqueado.</b> Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</span>
+        <button class="btn btn-ghost btn-sm" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear ahora</button>
       </div>
-      <p class="hint">Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</p>
       <div id="vaultWrap">
         <div class="state-msg" id="stateMsgVault">Sin credenciales guardadas todavía.</div>
-        <div class="contacts-grid" id="vaultGrid" hidden></div>
+        <div class="vault-table" id="vaultGrid" hidden></div>
       </div>
     </div>
   </section>
 
   <section id="viewClients" hidden>
-    <div class="toolbar">
-      <input type="search" id="searchClients" placeholder="Buscar cliente, persona, email o teléfono…" aria-label="Buscar clientes y contactos">
-      <button class="btn btn-primary" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
-    </div>
     <div class="crm" id="crm">
       <div class="crm-list-pane">
         <form id="formNewClient" class="crm-new">
@@ -456,117 +488,196 @@
   </section>
 
   <section id="viewSettings" hidden>
-    <div class="settings-card gh-card">
-      <div class="settings-row">
-        <div>
-          <h3>GitHub Projects</h3>
-          <p>Sincroniza el tablero de este proyecto con un proyecto de GitHub.</p>
-        </div>
-      </div>
-      <div class="gh-body" id="ghBody"></div>
-    </div>
-    <div class="settings-card">
-      <div class="settings-row">
-        <div>
-          <h3>Color de acento</h3>
-          <p>Se usa en los botones principales, la sección activa y los elementos seleccionados.</p>
-        </div>
-        <div class="swatches" id="accentSwatches" role="radiogroup" aria-label="Color de acento"></div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <h3>Tema</h3>
-          <p>Claro, oscuro o el mismo que tenga configurado tu sistema.</p>
-        </div>
-        <div>
-          <div class="segmented" id="themeSegment" role="radiogroup" aria-label="Tema">
-            <button type="button" role="radio" data-theme-choice="system">Sistema</button>
-            <button type="button" role="radio" data-theme-choice="light">Claro</button>
-            <button type="button" role="radio" data-theme-choice="dark">Oscuro</button>
-          </div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <h3>Idioma</h3>
-          <p>Idioma de la interfaz. Tus datos no se traducen.</p>
-        </div>
-        <div>
-          <div class="segmented" id="langSegment" role="radiogroup" aria-label="Idioma">
-            <button type="button" role="radio" data-lang-choice="es" translate="no">Español</button>
-            <button type="button" role="radio" data-lang-choice="en" translate="no">English</button>
-          </div>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <h3>Recordatorios</h3>
-          <p>Avisos de las tareas que vencen y de las reuniones que están a punto de empezar, mientras Kanlane esté abierto.</p>
-        </div>
-        <div class="remind-block">
-          <div class="segmented" id="remindSegment" role="radiogroup" aria-label="Recordatorios">
-            <button type="button" role="radio" data-remind="on">Activados</button>
-            <button type="button" role="radio" data-remind="off">Desactivados</button>
-          </div>
-          <div class="remind-options" id="remindOptions">
-            <label class="remind-field"><span>Tareas</span>
-              <select id="remindTaskLead">
-                <option value="0">El mismo día</option>
-                <option value="1">Un día antes</option>
-                <option value="2">Dos días antes</option>
-              </select>
-            </label>
-            <label class="remind-field"><span>Reuniones</span>
-              <select id="remindMeetLead">
-                <option value="5">5 minutos antes</option>
-                <option value="10">10 minutos antes</option>
-                <option value="15">15 minutos antes</option>
-                <option value="30">30 minutos antes</option>
-                <option value="60">1 hora antes</option>
-              </select>
-            </label>
-            <div class="remind-notify">
-              <button type="button" class="btn btn-ghost btn-sm" id="btnRemindNotify">Activar notificaciones del navegador</button>
-              <p id="remindNotifyState"></p>
+    <div class="settings">
+      <nav class="settings-nav" id="settingsNav" aria-label="Apartados de ajustes">
+        <button type="button" data-sec="setLook" aria-current="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3.7-2 2-2h1.5A3.5 3.5 0 0 0 21 13.5C21 7.7 17 3 12 3z"/><path d="M7.5 12h.01M9.5 8h.01M14.5 7.500h.01" stroke-width="2.6"/></svg>Apariencia</button>
+        <button type="button" data-sec="setRemind"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4"/></svg>Recordatorios</button>
+        <button type="button" data-sec="setIntegr"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4 1.2-4-2-6-2.5M15 21v-3.2a2.8 2.8 0 0 0-.8-2.2c2.6-.3 5.3-1.3 5.3-5.800a4.5 4.5 0 0 0-1.2-3.1 4.2 4.2 0 0 0-.1-3.100s-1-.3-3.2 1.200a11 11 0 0 0-6 0C6.8 3.3 5.8 3.6 5.8 3.600a4.2 4.2 0 0 0-.1 3.1 4.5 4.5 0 0 0-1.2 3.100c0 4.5 2.7 5.5 5.3 5.800a2.8 2.8 0 0 0-.8 2.200V21"/></svg>Integraciones</button>
+        <button type="button" data-sec="setAccount"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18.5a4.5 4.5 0 0 1-.6-8.960A6 6 0 0 1 18 10.5h.25a4 4 0 0 1 0 8z"/></svg>Cuenta y datos</button>
+        <button type="button" data-sec="setPrivacy"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.500V6z"/><path d="M9 12l2.2 2.200L15.2 10"/></svg>Privacidad</button>
+      </nav>
+      <div class="settings-body">
+        <div class="settings-group" id="setLook">
+          <h2>Apariencia</h2>
+          <p class="settings-lead">Cómo se ve Kanlane. Se guarda en este navegador y en tu cuenta.</p>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div>
+                <h3>Tema</h3>
+                <p>Claro, oscuro o el mismo que tenga configurado tu sistema.</p>
+              </div>
+              <div>
+                <div class="segmented" id="themeSegment" role="radiogroup" aria-label="Tema">
+                  <button type="button" role="radio" data-theme-choice="system">Sistema</button>
+                  <button type="button" role="radio" data-theme-choice="light">Claro</button>
+                  <button type="button" role="radio" data-theme-choice="dark">Oscuro</button>
+                </div>
+              </div>
+            </div>
+            <div class="settings-row is-stack">
+              <div>
+                <h3>Color de acento</h3>
+                <p>Se usa en los botones principales y en los elementos seleccionados.</p>
+              </div>
+              <div class="swatches" id="accentSwatches" role="radiogroup" aria-label="Color de acento"></div>
+            </div>
+            <div class="settings-row" id="navRow">
+              <div>
+                <h3>Navegación</h3>
+                <p>En un lateral o en una barra en la parte de arriba. En pantallas pequeñas va siempre abajo.</p>
+              </div>
+              <div>
+                <div class="segmented" id="navSegment" role="radiogroup" aria-label="Navegación">
+                  <button type="button" role="radio" data-nav-choice="side">Lateral</button>
+                  <button type="button" role="radio" data-nav-choice="top">Arriba</button>
+                </div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <h3>Idioma</h3>
+                <p>Idioma de la interfaz. Tus datos no se traducen.</p>
+              </div>
+              <div>
+                <div class="segmented" id="langSegment" role="radiogroup" aria-label="Idioma">
+                  <button type="button" role="radio" data-lang-choice="es" translate="no">Español</button>
+                  <button type="button" role="radio" data-lang-choice="en" translate="no">English</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="settings-row" id="installRow" hidden>
-        <div>
-          <h3>Aplicación</h3>
-          <p>Instala Kanlane como una aplicación: se abre en su propia ventana y funciona sin conexión con tus últimos datos.</p>
-        </div>
-        <div>
-          <button type="button" class="btn btn-primary" id="btnInstallApp" hidden>Instalar Kanlane</button>
-          <p class="install-hint" id="installHint" hidden>En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».</p>
-        </div>
-      </div>
-      <div class="settings-row" id="privacyRow">
-        <div>
-          <h3>Privacidad</h3>
-          <p>Consulta cómo tratamos tus datos y elige qué cookies permites.</p>
-        </div>
-        <div class="privacy-links">
-          <button type="button" class="btn btn-ghost btn-sm" data-cookie-settings>Configurar cookies</button>
-          <p class="privacy-note"><a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a> · <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/cookies/" target="_blank" rel="noopener">Política de cookies</a></p>
-          <p class="privacy-note">Para ejercer tus derechos de protección de datos o cerrar tu cuenta, escribe al correo de contacto que figura en la política de privacidad.</p>
-        </div>
-      </div>
-      <div class="settings-row">
-        <div>
-          <h3>Almacenamiento</h3>
-          <p>Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
-        </div>
-        <div class="storage-block" id="storageCard" data-mode="firebase">
-          <div class="storage-line"><span class="status-dot"></span><span id="storageTitle"></span></div>
-          <p class="storage-desc" id="storageDesc"></p>
-          <div class="settings-account" id="settingsAccount" hidden>
-            <div class="settings-account-who">
-              <span class="settings-account-label" id="settingsAccountLabel"></span>
-              <span class="settings-account-mail" id="settingsAccountMail" translate="no"></span>
+
+        <div class="settings-group" id="setRemind">
+          <h2>Recordatorios</h2>
+          <p class="settings-lead">Avisos mientras Kanlane esté abierto.</p>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div>
+                <h3>Recordatorios</h3>
+                <p>Avisos de las tareas que vencen y de las reuniones que están a punto de empezar, mientras Kanlane esté abierto.</p>
+              </div>
+              <div>
+                <div class="segmented" id="remindSegment" role="radiogroup" aria-label="Recordatorios">
+                  <button type="button" role="radio" data-remind="on">Activados</button>
+                  <button type="button" role="radio" data-remind="off">Desactivados</button>
+                </div>
+              </div>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
+            <div class="remind-options" id="remindOptions">
+              <div class="settings-row">
+                <div>
+                  <h3>Tareas</h3>
+                  <p>Cuándo avisar de una fecha límite.</p>
+                </div>
+                <div class="settings-ctl">
+                  <select id="remindTaskLead" aria-label="Tareas">
+                    <option value="0">El mismo día</option>
+                    <option value="1">Un día antes</option>
+                    <option value="2">Dos días antes</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <h3>Reuniones</h3>
+                  <p>Con cuánta antelación avisar.</p>
+                </div>
+                <div class="settings-ctl">
+                  <select id="remindMeetLead" aria-label="Reuniones">
+                    <option value="5">5 minutos antes</option>
+                    <option value="10">10 minutos antes</option>
+                    <option value="15">15 minutos antes</option>
+                    <option value="30">30 minutos antes</option>
+                    <option value="60">1 hora antes</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <h3>Notificaciones del navegador</h3>
+                  <p id="remindNotifyState"></p>
+                </div>
+                <div class="remind-notify">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnRemindNotify">Activar notificaciones del navegador</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group" id="setIntegr">
+          <h2>Integraciones</h2>
+          <p class="settings-lead">Conecta este proyecto con otras herramientas.</p>
+          <div class="settings-card gh-card">
+            <div class="settings-row">
+              <div class="settings-icon-row">
+                <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4 1.2-4-2-6-2.5M15 21v-3.2a2.8 2.8 0 0 0-.8-2.2c2.6-.3 5.3-1.3 5.3-5.800a4.5 4.5 0 0 0-1.2-3.1 4.2 4.2 0 0 0-.1-3.100s-1-.3-3.2 1.200a11 11 0 0 0-6 0C6.8 3.3 5.8 3.6 5.8 3.600a4.2 4.2 0 0 0-.1 3.1 4.5 4.5 0 0 0-1.2 3.100c0 4.5 2.7 5.5 5.3 5.800a2.8 2.8 0 0 0-.8 2.200V21"/></svg></span>
+                <div>
+                  <h3>GitHub Projects</h3>
+                  <p>Sincroniza el tablero de este proyecto con un proyecto de GitHub.</p>
+                </div>
+              </div>
+            </div>
+            <div class="gh-body" id="ghBody"></div>
+          </div>
+        </div>
+
+        <div class="settings-group" id="setAccount">
+          <h2>Cuenta y datos</h2>
+          <p class="settings-lead">Dónde se guardan las tareas, reuniones, contactos y contraseñas de este tablero.</p>
+          <div class="settings-card">
+            <div class="settings-row is-stack">
+              <div>
+                <h3>Almacenamiento</h3>
+              </div>
+              <div class="storage-block" id="storageCard" data-mode="firebase">
+                <div class="storage-line"><span class="status-dot"></span><span id="storageTitle"></span></div>
+                <p class="storage-desc" id="storageDesc"></p>
+                <div class="settings-account" id="settingsAccount" hidden>
+                  <div class="settings-account-who">
+                    <span class="settings-account-label" id="settingsAccountLabel"></span>
+                    <span class="settings-account-mail" id="settingsAccountMail" translate="no"></span>
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
+                </div>
+              </div>
+            </div>
+            <div class="settings-row" id="installRow" hidden>
+              <div>
+                <h3>Aplicación</h3>
+                <p>Instala Kanlane como una aplicación: se abre en su propia ventana y funciona sin conexión con tus últimos datos.</p>
+              </div>
+              <div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btnInstallApp" hidden>Instalar Kanlane</button>
+                <p class="install-hint" id="installHint" hidden>En Safari, pulsa Compartir y después «Añadir a pantalla de inicio».</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group" id="setPrivacy">
+          <h2>Privacidad</h2>
+          <p class="settings-lead">Consulta cómo tratamos tus datos y elige qué cookies permites.</p>
+          <div class="settings-card" id="privacyRow">
+            <div class="settings-row">
+              <div>
+                <h3>Cookies</h3>
+                <p>Elige cuáles permites.</p>
+              </div>
+              <div>
+                <button type="button" class="btn btn-ghost btn-sm" data-cookie-settings>Configurar cookies</button>
+              </div>
+            </div>
+            <div class="settings-row is-stack">
+              <div>
+                <h3>Documentos legales</h3>
+              </div>
+              <div class="privacy-links">
+                <p class="privacy-note"><a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a> · <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/cookies/" target="_blank" rel="noopener">Política de cookies</a></p>
+                <p class="privacy-note">Para ejercer tus derechos de protección de datos o cerrar tu cuenta, escribe al correo de contacto que figura en la política de privacidad.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -693,44 +804,47 @@
 </dialog>
 
 <dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
-  <div class="dlg-inner">
+  <div class="tv-head">
     <div class="tv-top" id="tvTop"></div>
-    <h2 id="tvTitle" translate="no"></h2>
-    <div class="tv-facts" id="tvFacts"></div>
-    <section class="tv-section" id="tvDescWrap" hidden>
-      <h3>Descripción</h3>
-      <div class="tv-desc" id="tvDesc" translate="no"></div>
-    </section>
-    <section class="tv-section" id="tvChecklistWrap" hidden>
-      <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
-      <div class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></div>
-      <ul class="tv-checks" id="tvChecklist"></ul>
-    </section>
-    <section class="tv-section" id="tvLabelsWrap" hidden>
-      <h3>Etiquetas</h3>
-      <div class="tv-chips" id="tvLabels"></div>
-    </section>
-    <section class="tv-section" id="tvPrsWrap" hidden>
-      <h3>Pull requests vinculadas</h3>
-      <div class="tv-chips" id="tvPrs"></div>
-    </section>
-    <section class="tv-section">
-      <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
-      <div class="tv-notes" id="tvNotes"></div>
-      <form class="tv-comment-form" id="tvCommentForm" hidden><label for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="3" placeholder="Comparte una actualización con el equipo…" required></textarea><div><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button><p class="lock-error" id="tvCommentError" role="alert" hidden></p></div></form>
-    </section>
-    <section class="tv-section" id="tvGhWrap" hidden>
-      <h3>Actividad de GitHub</h3>
-      <ol class="gh-timeline" id="tvTimeline"></ol>
-    </section>
-    <section class="tv-section" id="tvLinksWrap" hidden>
-      <h3>Vínculos</h3>
-      <div class="tv-links" id="tvLinks"></div>
-    </section>
-    <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
-    <div class="dlg-actions">
-      <div class="tv-status-field">
-        <label for="tvEstado">Estado</label>
+    <div class="tv-head-actions">
+      <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
+      <button type="button" class="btn btn-ghost btn-sm tv-status-edit" id="btnTvDone"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><span id="btnTvDoneText">Marcar como completada</span></button>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnTvEdit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      <button type="button" class="icon-only" id="btnTvClose" data-dismiss aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+  </div>
+  <div class="tv-body">
+    <div class="tv-main">
+      <h2 id="tvTitle" translate="no"></h2>
+      <section id="tvDescWrap" hidden>
+        <h3 class="sr-only">Descripción</h3>
+        <div class="tv-desc" id="tvDesc" translate="no"></div>
+      </section>
+      <section class="tv-section" id="tvChecklistWrap" hidden>
+        <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span><span class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></span></h3>
+        <ul class="tv-checks" id="tvChecklist"></ul>
+      </section>
+      <section class="tv-section" id="tvPrsWrap" hidden>
+        <h3>Pull requests vinculadas</h3>
+        <div class="tv-chips" id="tvPrs"></div>
+      </section>
+      <section class="tv-section">
+        <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
+        <div class="tv-notes" id="tvNotes"></div>
+        <form class="tv-comment-form" id="tvCommentForm" hidden><label class="sr-only" for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="2" placeholder="Comparte una actualización con el equipo…" required></textarea><div><p class="lock-error" id="tvCommentError" role="alert" hidden></p><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button></div></form>
+      </section>
+      <section class="tv-section" id="tvGhWrap" hidden>
+        <h3>Actividad de GitHub</h3>
+        <ol class="gh-timeline" id="tvTimeline"></ol>
+      </section>
+      <section class="tv-section" id="tvLinksWrap" hidden>
+        <h3>Vínculos</h3>
+        <div class="tv-links" id="tvLinks"></div>
+      </section>
+    </div>
+    <aside class="tv-side" aria-label="Propiedades de la tarea">
+      <div class="tv-prop tv-status-field">
+        <label class="tv-prop-label" for="tvEstado">Estado</label>
         <select id="tvEstado" data-dots="status">
           <option value="pendiente">Pendiente</option>
           <option value="proceso">En proceso</option>
@@ -738,11 +852,13 @@
           <option value="completada">Completada</option>
         </select>
       </div>
-      <div class="right">
-        <button type="button" class="btn btn-ghost" id="btnTvClose" data-dismiss>Cerrar</button>
-        <button type="button" class="btn btn-primary" id="btnTvEdit"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
+      <div class="tv-facts" id="tvFacts"></div>
+      <div class="tv-prop" id="tvLabelsWrap" hidden>
+        <span class="tv-prop-label">Etiquetas</span>
+        <div class="tv-chips" id="tvLabels"></div>
       </div>
-    </div>
+      <p class="tv-stamp" id="tvStamp"></p>
+    </aside>
   </div>
 </dialog>
 

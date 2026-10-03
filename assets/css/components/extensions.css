@@ -14,13 +14,12 @@
   background:var(--surface);
   border:1px solid var(--line-strong);
   border-radius:var(--r-md);
-  box-shadow:var(--shadow-sm);
   cursor:pointer;
   white-space:nowrap;
   transition:border-color .12s ease, background .12s ease;
 }
-.ext-btn:hover{background:var(--hover);border-color:hsl(var(--h) 55% 55% / .7);}
-.ext-btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus);}
+.ext-btn:hover{background:var(--hover);}
+.ext-btn:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 /* El icono lleva el color del plugin: se ve de dónde viene el botón. */
 .ext-btn svg{flex:none;color:hsl(var(--h) 62% 50%);}
 .ext-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 65% 55%);flex:none;}
@@ -30,8 +29,8 @@
 :root[data-theme="dark"] .ext-btn:not(.is-primary) svg{color:hsl(var(--h) 80% 72%);}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ext-btn:not(.is-primary) svg{color:hsl(var(--h) 80% 72%);} }
 
-/* Dentro de la ficha de una tarea, encima de la barra de acciones. */
-.tv-ext{padding:12px 0 2px;border-top:1px solid var(--line);margin-top:14px;}
+/* Dentro de la ficha de una tarea: en su cabecera, junto a las acciones. */
+.tv-ext .ext-btn{height:28px;font-size:12.5px;}
 
 /* Etiquetas en las tarjetas del tablero */
 .ext-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
@@ -39,10 +38,10 @@
   display:inline-flex;
   align-items:center;
   gap:4px;
-  height:20px;
-  padding:0 7px;
-  font-size:11.5px;
-  font-weight:500;
+  height:22px;
+  padding:0 8px;
+  font-size:12px;
+  font-weight:450;
   border-radius:var(--r-sm);
   color:var(--ink-soft);
   background:var(--surface-2);
@@ -50,36 +49,42 @@
   white-space:nowrap;
 }
 .ext-badge.is-accent{color:var(--accent);background:var(--accent-soft);}
+.ext-badge.is-warning{color:var(--today);background:var(--today-bg);}
 .ext-badge.is-success{color:var(--st-done);background:var(--st-done-bg);}
 .ext-badge.is-warning{color:var(--st-wait);background:var(--st-wait-bg);}
 .ext-badge.is-danger{color:var(--danger);background:var(--danger-bg);}
 
 /* ---------- Densidad (plugins con permiso "appearance") ---------- */
-:root[data-density="compact"] .card{padding:7px 10px 8px;}
+:root[data-density="compact"] .card{padding:8px 10px;}
 :root[data-density="compact"] .card h3{font-size:13px;}
-:root[data-density="compact"] .card .client-chip{margin-bottom:4px;}
-:root[data-density="compact"] .cards{gap:4px;}
-:root[data-density="compact"] .crm-item{padding:4px 8px;}
-:root[data-density="compact"] .person{padding:7px 8px;}
-:root[data-density="compact"] .plugin-card{padding:10px;gap:6px;}
+:root[data-density="compact"] .card-top{margin-bottom:4px;}
+:root[data-density="compact"] .card-foot{margin-top:8px;}
+:root[data-density="compact"] .cards{gap:5px;}
+:root[data-density="compact"] .crm-item{padding:5px 8px;}
+:root[data-density="compact"] .person{padding:6px 0;}
+:root[data-density="compact"] .plugin-card{padding:12px;}
 :root[data-density="compact"] .field{margin-bottom:10px;gap:4px;}
-:root[data-density="compact"] .tv-section{margin-top:15px;}
-:root[data-density="compact"] .tv-note{padding:7px 9px;}
-:root[data-density="compact"] .agenda-item{padding:5px 8px;}
-:root[data-density="comfortable"] .card{padding:14px 15px 15px;}
+:root[data-density="compact"] .tv-section{margin-top:18px;}
+:root[data-density="compact"] .tv-notes{gap:9px;}
+:root[data-density="compact"] .agenda-item{padding:6px 8px;}
+:root[data-density="compact"] .settings-row{padding:10px 16px;}
+:root[data-density="compact"] .vault-card{min-height:40px;}
+:root[data-density="comfortable"] .card{padding:15px;}
 :root[data-density="comfortable"] .card h3{font-size:14px;}
-:root[data-density="comfortable"] .cards{gap:10px;}
-:root[data-density="comfortable"] .crm-item{padding:10px 10px;}
-:root[data-density="comfortable"] .person{padding:13px 8px;}
-:root[data-density="comfortable"] .plugin-card{padding:18px;gap:10px;}
+:root[data-density="comfortable"] .cards{gap:11px;}
+:root[data-density="comfortable"] .crm-item{padding:12px 10px;}
+:root[data-density="comfortable"] .person{padding:14px 0;}
+:root[data-density="comfortable"] .plugin-card{padding:20px;}
 :root[data-density="comfortable"] .field{margin-bottom:18px;gap:8px;}
-:root[data-density="comfortable"] .tv-section{margin-top:24px;}
-:root[data-density="comfortable"] .tv-note{padding:12px 15px;}
-:root[data-density="comfortable"] .agenda-item{padding:11px 13px;}
+:root[data-density="comfortable"] .tv-section{margin-top:32px;}
+:root[data-density="comfortable"] .tv-notes{gap:18px;}
+:root[data-density="comfortable"] .agenda-item{padding:13px 8px;}
+:root[data-density="comfortable"] .settings-row{padding:18px 16px;}
+:root[data-density="comfortable"] .vault-card{min-height:56px;}
 /* La barra lateral solo en escritorio (en móvil es la navegación inferior). */
 @media (min-width:901px){
   :root[data-density="compact"] .cal-cell{min-height:84px;}
-  :root[data-density="comfortable"] .cal-cell{min-height:116px;}
-  :root[data-density="compact"] .tab{height:29px;}
+  :root[data-density="comfortable"] .cal-cell{min-height:124px;}
+  :root[data-density="compact"] .tab{height:28px;}
   :root[data-density="comfortable"] .tab{height:36px;}
 }

@@ -11,6 +11,7 @@
 
       this.view.applyAccent(this.model.currentAccent());
       this.view.applyTheme(this.model.theme, false);
+      this.view.applyNav(this.model.nav);
 
       this.view.bindAccent((key) => {
         this.model.setAccent(key);
@@ -19,6 +20,7 @@
         this.render();
       });
       this.view.bindTheme((theme) => this.setTheme(theme));
+      this.view.bindNav((nav) => this.setNav(nav));
       /* Cambiar de idioma recarga la app (se guarda antes en la cuenta). */
       this.view.bindLang((lang) => {
         if(lang === Workhub.i18n.lang) return;
@@ -29,6 +31,7 @@
       this.model.on('change', () => {
         this.view.applyAccent(this.model.currentAccent());
         this.view.applyTheme(this.model.theme, true);
+        this.view.applyNav(this.model.nav);
         this.reapplyPlugins();
         this.render();
       });
@@ -48,8 +51,16 @@
       this.render();
     }
 
+    /* nav: 'side' | 'top' */
+    setNav(nav){
+      this.model.setNav(nav);
+      this.view.applyNav(this.model.nav);
+      this.reapplyPlugins();
+      this.render();
+    }
+
     render(){
-      this.view.render(SettingsModel.ACCENTS, this.model.accent, this.model.theme, platform.mode());
+      this.view.render(SettingsModel.ACCENTS, this.model.accent, this.model.theme, platform.mode(), this.model.nav);
     }
   }
 

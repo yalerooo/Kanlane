@@ -344,7 +344,8 @@ await wh.ui.setAppearance({
   font: 'serif',         // 'default', 'system', 'serif' o 'mono'
   textSize: 'large',     // 'small', 'normal' o 'large'
   radius: 'round',       // 'sharp' (rectas), 'normal' o 'round' (redondeadas)
-  density: 'compact'     // 'compact', 'normal' o 'comfortable'
+  density: 'compact',    // 'compact', 'normal' o 'comfortable'
+  nav: 'top'             // 'side' (lateral), 'top' (barra arriba) o null para seguir Ajustes
 });
 await wh.ui.resetAppearance();   // volver al aspecto normal
 ```

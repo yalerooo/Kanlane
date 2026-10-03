@@ -2,7 +2,9 @@
    elegido a la derecha, con sus personas de contacto. En móvil se ve una cosa
    u otra (la ficha tiene botón para volver a la lista). */
 (function(){
-  const {esc, closest, initials, hueFor} = Workhub.utils.html;
+  const {esc, closest, initials, hueFor, iconSpan} = Workhub.utils.html;
+  const {fmtDate, parseYmd, todayYmd, capitalize} = Workhub.utils.dates;
+  const TaskModel = Workhub.models.TaskModel;
   const clientColors = Workhub.views.clientColors;
   const svg = (w, d) => '<svg viewBox="0 0 24 24" width="' + w + '" height="' + w + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const COLOR_ICON = svg(15, '<path d="M12 22a10 10 0 1 1 10-10c0 2.5-2 3.5-4 3.5h-2.2a1.8 1.8 0 0 0-1.3 3.1A1.8 1.8 0 0 1 12 22Z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="7.5" r="1.2" fill="currentColor"/>');
@@ -49,6 +51,7 @@
       this.btnNewContact = $('btnNewContact');
       this.listLabel = $('crmListLabel');
       this.count = $('crmCount');
+      this.meta = $('clientsMeta');
     }
 
     /* ---------- Eventos ---------- */
@@ -116,6 +119,7 @@
           case 'open-contact': handlers.openContact(btn.getAttribute('data-id')); break;
           case 'view-tasks': handlers.viewTasks(); break;
           case 'view-vault': handlers.viewVault(); break;
+          case 'open-task': handlers.openTask(btn.getAttribute('data-id')); break;
           case 'back': handlers.back(); break;
         }
       });
@@ -128,6 +132,8 @@
         }
         const row = closest(t, '.person[data-action="open-contact"]');
         if(row && t === row && ev.key === 'Enter') handlers.openContact(row.getAttribute('data-id'));
+        const task = closest(t, '.crm-task[data-action="open-task"]');
+        if(task && t === task && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); handlers.openTask(task.getAttribute('data-id')); }
       });
     }
 
@@ -172,6 +178,13 @@
       const q = state.query;
       this.listLabel.hidden = !state.hasAny || !entries.length;
       this.count.textContent = entries.filter((e) => e.client).length || '';
+      /* En la barra de la vista: cuántos clientes y contactos se están viendo. */
+      if(this.meta){
+        const nc = entries.filter((e) => e.client).length;
+        const np = entries.reduce((n, e) => n + e.contacts.length, 0);
+        /* Cada cifra en su propio nodo, para que se traduzca por separado. */
+        this.meta.innerHTML = state.hasAny ? '<span>' + plural(nc, 'cliente', 'clientes') + '</span> · <span>' + plural(np, 'contacto', 'contactos') + '</span>' : '';
+      }
       if(!state.hasAny){
         this.list.hidden = true;
         this.detail.hidden = true;
@@ -205,15 +218,16 @@
       const orphan = !e.client;
       const hue = orphan ? 0 : clientColors.hueOf(e.nombre);
       let meta;
-      if(q && e.matches && !e.nameMatch) meta = plural(e.matches, 'contacto coincide', 'contactos coinciden');
-      else meta = e.contacts.length ? plural(e.contacts.length, 'contacto', 'contactos') : 'Sin contactos';
+      if(q && e.matches && !e.nameMatch) meta = esc(plural(e.matches, 'contacto coincide', 'contactos coinciden'));
+      else meta = '<span>' + (e.contacts.length ? plural(e.contacts.length, 'contacto', 'contactos') : 'Sin contactos') + '</span>' +
+        (e.vaultCount ? ' · <span>' + plural(e.vaultCount, 'contraseña', 'contraseñas') + '</span>' : '');
       const badge = !orphan && e.stats.open
         ? '<span class="crm-badge" title="' + esc(Workhub.t(plural(e.stats.open, 'tarea abierta', 'tareas abiertas'))) + '">' + e.stats.open + '</span>'
         : '';
       return '<button type="button" class="crm-item' + (orphan ? ' is-orphan' : '') + '" role="option" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '" data-client="' + esc(e.id) + '"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' +
-        '<span class="avatar is-square is-sm' + (orphan ? ' is-lock' : '') + '" aria-hidden="true">' + (orphan ? '?' : esc(initials(e.nombre))) + '</span>' +
+        '<span class="avatar is-square' + (orphan ? ' is-lock' : '') + '" aria-hidden="true">' + (orphan ? '?' : esc(initials(e.nombre))) + '</span>' +
         '<span class="crm-item-text"><span class="crm-item-name" translate="no">' + (orphan ? esc(e.nombre) : highlight(e.nombre, q)) + '</span>' +
-        '<span class="crm-item-meta">' + esc(meta) + '</span></span>' + badge +
+        '<span class="crm-item-meta">' + meta + '</span></span>' + badge +
         '</button>';
     }
 
@@ -236,14 +250,16 @@
       } else {
         const meta = orphan
           ? 'Contactos cuyo cliente ya no existe. Edítalos para asignarles uno.'
-          : (e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + ' en total' : 'Sin tareas todavía');
+          : [sinceText(e.client), e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + ' en total' : 'Sin tareas todavía'].filter(Boolean).map((x) => '<span>' + esc(x) + '</span>').join(' · ');
         head = '<div class="crm-head"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' + back +
           (orphan
             ? '<span class="avatar is-square is-lock" aria-hidden="true">?</span>'
             : '<button type="button" class="avatar is-square avatar-btn" data-action="toggle-color" aria-label="Cambiar color de ' + esc(e.nombre) + '" aria-expanded="' + !!state.colorOpen + '" title="Cambiar color">' + esc(initials(e.nombre)) + '</button>') +
-          '<div class="crm-title"><h2 translate="no">' + esc(e.nombre) + '</h2><p>' + esc(meta) + '</p></div>' +
+          '<div class="crm-title"><h2 translate="no">' + esc(e.nombre) + '</h2><p>' + (orphan ? esc(meta) : meta) + '</p></div>' +
           (orphan ? '' :
             '<div class="crm-head-actions">' +
+            '<button type="button" class="btn btn-ghost" data-action="view-tasks">Ver tareas</button>' +
+            (document.body.classList.contains('team-project') ? '' : '<button type="button" class="btn btn-ghost" data-action="view-vault">' + LOCK_ICON + 'Ver contraseñas</button>') +
             '<button type="button" class="icon-only' + (state.colorOpen ? ' is-active' : '') + '" data-action="toggle-color" aria-label="Color" aria-expanded="' + !!state.colorOpen + '" title="Color">' + COLOR_ICON + '</button>' +
             '<button type="button" class="icon-only" data-action="edit-client" aria-label="Renombrar ' + esc(e.nombre) + '" title="Renombrar">' + EDIT_ICON + '</button>' +
             '<button type="button" class="icon-only is-danger" data-action="delete" aria-label="Eliminar ' + esc(e.nombre) + '" title="Eliminar">' + TRASH_ICON + '</button>' +
@@ -262,20 +278,28 @@
               '<button type="button" class="btn btn-danger btn-sm" data-action="confirm-delete">Eliminar cliente</button>') + '</div></div>'
         : '';
 
-      const stat = (icon, n, label, action, title) => {
-        const inner = '<span class="crm-stat-top">' + icon + (action ? '<span class="crm-stat-go">' + ARROW_ICON + '</span>' : '') + '</span>' +
-          '<b>' + n + '</b><span class="crm-stat-label">' + esc(Workhub.t(label)) + '</span>';
+      /* Cifras del cliente: solo las que salen de datos que la app ya tiene. */
+      const stat = (label, valueHtml, action, title) => {
+        const inner = '<small>' + esc(Workhub.t(label)) + '</small><b>' + valueHtml + '</b>';
         return action
           ? '<button type="button" class="crm-stat is-link" data-action="' + action + '" title="' + esc(Workhub.t(title)) + '">' + inner + '</button>'
           : '<div class="crm-stat">' + inner + '</div>';
       };
+      const open = orphan ? [] : (e.openTasks || []);
+      const overdue = open.filter((t) => TaskModel.dueState(t) === 'overdue').length;
       const shortcuts = orphan ? '' :
         '<div class="crm-stats">' +
-        stat(USERS_ICON, e.contacts.length, 'Contactos') +
-        stat(BOARD_ICON, e.stats.open || 0, 'Tareas abiertas', 'view-tasks', 'Ver tareas') +
-        stat(LOCK_ICON, e.vaultCount || 0, 'Contraseñas', 'view-vault', 'Ver contraseñas') +
+        stat('Tareas abiertas', (e.stats.open || 0) + (overdue ? '<span>' + esc(Workhub.t(plural(overdue, 'vencida', 'vencidas'))) + '</span>' : ''), 'view-tasks', 'Ver tareas') +
+        stat('Completadas', String(Math.max(0, (e.stats.total || 0) - (e.stats.open || 0)))) +
+        stat('Próxima reunión', '<em>' + esc(meetingText(e.nextMeeting)) + '</em>') +
+        stat('Contraseñas', String(e.vaultCount || 0), 'view-vault', 'Ver contraseñas') +
         '</div>' +
         '<div class="crm-shortcuts"><div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div></div>';
+
+      const tasksHtml = open.length
+        ? '<div class="crm-section"><div class="crm-section-head"><h3>Tareas abiertas<span class="crm-count">' + open.length + '</span></h3></div>' +
+          '<div class="crm-tasks">' + open.map(taskRowHtml).join('') + '</div></div>'
+        : '';
 
       const people = e.contacts.length
         ? '<div class="people">' + e.contacts.map((c) => personHtml(c, q)).join('') + '</div>'
@@ -287,8 +311,34 @@
           '<div class="crm-section-head"><h3>Personas de contacto' + (e.contacts.length ? '<span class="crm-count">' + e.contacts.length + '</span>' : '') + '</h3>' +
           (orphan ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-action="add-contact">' + PLUS_ICON + 'Añadir contacto</button>') +
           '</div>' + people +
-        '</div>';
+        '</div>' + tasksHtml;
     }
+  }
+
+  /* «Cliente desde marzo de 2025», si se sabe cuándo se creó. */
+  function sinceText(client){
+    const ts = client && client.createdAt;
+    if(!(ts > 100000)) return '';
+    return Workhub.t('Cliente desde {fecha}', {fecha:new Date(ts).toLocaleDateString(Workhub.i18n.locale, {month:'long', year:'numeric'})});
+  }
+
+  /* «Hoy, 10:00», «6 oct, 16:30» o «Sin reuniones». */
+  function meetingText(m){
+    if(!m) return Workhub.t('Sin reuniones');
+    const day = m.date === todayYmd() ? Workhub.t('Hoy') : fmtDate(m.date);
+    return day + (m.start ? ', ' + m.start : '');
+  }
+
+  /* Tarea abierta del cliente: anillo de su etapa, título y fecha. Abre la ficha. */
+  function taskRowHtml(t){
+    const st = TaskModel.statusOf(t.status);
+    const ds = TaskModel.dueState(t);
+    const due = t.dueDate
+      ? '<span class="due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : '') + '">' + iconSpan('calendar') + esc(ds === 'today' ? Workhub.t('Hoy') : fmtDate(t.dueDate)) + '</span>'
+      : '';
+    return '<div class="crm-task" data-action="open-task" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
+      '<span class="agenda-ring" style="--st:' + st.dot + '" title="' + esc(st.label) + '"></span>' +
+      '<span class="crm-task-title" translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</span>' + due + '</div>';
   }
 
   function personHtml(c, q){
@@ -300,11 +350,12 @@
       ? (phoneHref
         ? '<a class="person-line" href="tel:' + esc(phoneHref) + '">' + PHONE_ICON + '<span>' + highlight(c.telefono, q) + '</span></a>'
         : '<span class="person-line">' + PHONE_ICON + '<span>' + highlight(c.telefono, q) + '</span></span>') : '';
-    const notas = c.notas ? '<p class="person-notes">' + highlight(c.notas, q) + '</p>' : '';
+    /* Fila: avatar, nombre (y sus notas debajo, en una línea), correo, teléfono y editar. */
+    const notas = c.notas ? '<small title="' + esc(c.notas) + '">' + highlight(String(c.notas).split('\n')[0], q) + '</small>' : '';
     return '<div class="person" data-action="open-contact" data-id="' + esc(c.id) + '" tabindex="0" role="button" aria-label="Editar contacto ' + esc(name) + '">' +
-      '<span class="avatar is-sm" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
-      '<div class="person-main" translate="no"><strong>' + highlight(name, q) + '</strong>' +
-      (email || tel ? '<div class="person-lines">' + email + tel + '</div>' : '') + notas + '</div>' +
+      '<span class="avatar" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
+      '<div class="person-main" translate="no"><strong>' + highlight(name, q) + '</strong>' + notas + '</div>' +
+      '<div class="person-cell">' + email + '</div><div class="person-cell">' + tel + '</div>' +
       '<span class="person-edit" aria-hidden="true">' + EDIT_ICON + '</span>' +
       '</div>';
   }

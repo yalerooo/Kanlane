@@ -155,13 +155,16 @@
       const perms = (m.permissions || []).map((p) => (pluginHost.PERMISSION_INFO[p] || {short:p}).short);
       const meta = [m.author || 'Autor desconocido', 'v' + (m.version || '1.0.0'), official ? '' : sourceText(opts.url, false)].filter(Boolean).join(' · ');
       return '<article class="plugin-card" tabindex="' + (opts.cardAction ? '0' : '-1') + '" style="--h:' + hueOf(m) + '" data-plugin-action="' + opts.cardAction + '" ' + opts.dataAttr + (opts.cardAction ? ' aria-label="' + esc(m.name) + ': ver detalles"' : '') + '>' +
-        '<div class="plugin-card-head">' + tileHtml(m, '', 17) +
+        '<div class="plugin-card-head">' + tileHtml(m, '', 19) +
           '<div class="plugin-card-title"><h3><span>' + esc(m.name) + '</span>' + (official ? VERIFIED : '') + '</h3>' +
           '<p>' + esc(meta) + '</p></div>' +
-          (opts.actions ? '<div class="plugin-card-actions">' + opts.actions + '</div>' : '') +
         '</div>' +
         '<p class="plugin-desc">' + esc(m.description || 'Sin descripción.') + '</p>' +
-        '<p class="plugin-perm-line">' + (perms.length ? esc(perms.join(' · ')) : 'Sin acceso a tus datos') + '</p>' +
+        /* Permisos como etiquetas; en el pie, el estado y la acción. */
+        (perms.length ? '<div class="plugin-perm-line">' + perms.map((p) => '<span class="pill">' + esc(p) + '</span>').join('') + '</div>' : '') +
+        '<div class="plugin-card-foot"><span>' + (perms.length ? (opts.state || '') : 'Sin acceso a tus datos') + '</span>' +
+          (opts.actions ? '<div class="plugin-card-actions">' + opts.actions + '</div>' : '') +
+        '</div>' +
         '</article>';
     }
 
@@ -178,6 +181,7 @@
         url: p.url,
         cardAction: 'details',
         dataAttr: 'data-id="' + esc(p.id) + '"',
+        state: 'Instalado',
         actions: this.fileMode ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-plugin-action="open" data-id="' + esc(p.id) + '">Abrir</button>'
       })).join('');
 
@@ -186,9 +190,9 @@
         url: o.url,
         cardAction: o.installed ? 'details' : (editable ? 'official-details' : ''),
         dataAttr: o.installed ? 'data-id="' + esc(o.manifest.id) + '"' : 'data-index="' + i + '"',
-        actions: this.fileMode || !editable ? '' : o.installed
-          ? '<span class="plugin-installed">Instalado</span>'
-          : '<button type="button" class="btn btn-ghost btn-sm" data-plugin-action="install" data-index="' + i + '">Instalar</button>'
+        state: o.installed ? 'Instalado' : 'Sin instalar',
+        actions: this.fileMode || !editable || o.installed ? ''
+          : '<button type="button" class="btn btn-primary btn-sm" data-plugin-action="install" data-index="' + i + '">Instalar</button>'
       })).join('');
     }
 

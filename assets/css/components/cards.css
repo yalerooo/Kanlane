@@ -5,7 +5,6 @@
   gap:10px;
 }
 .contact-card,
-.vault-card,
 .client-card{
   position:relative;
   background:var(--surface);
@@ -15,9 +14,9 @@
   box-shadow:var(--shadow-sm);
   transition:border-color .12s ease, box-shadow .12s ease, background .12s ease;
 }
-.contact-card,.vault-card{cursor:pointer;}
-.contact-card:hover,.vault-card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);}
-.contact-card h3,.vault-card h3{font-size:14px;font-weight:600;margin:0 0 8px;letter-spacing:-0.01em;}
+.contact-card{cursor:pointer;}
+.contact-card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);}
+.contact-card h3{font-size:14px;font-weight:600;margin:0 0 8px;letter-spacing:-0.01em;}
 
 /* Etiqueta de cliente: punto con su color + nombre */
 .client-chip{
@@ -25,23 +24,24 @@
   align-items:center;
   gap:6px;
   max-width:100%;
-  font-size:11.5px;
-  font-weight:500;
-  line-height:20px;
-  height:20px;
-  padding:0 7px 0 6px;
+  font-size:12px;
+  font-weight:450;
+  line-height:22px;
+  height:22px;
+  padding:0 8px 0 7px;
   border-radius:var(--r-sm);
-  color:hsl(var(--h) var(--chip-s) var(--chip-fg-l));
-  background:hsl(var(--h) var(--chip-s) var(--chip-bg-l));
+  /* Neutra: el color del cliente va solo en el punto. */
+  color:var(--ink-soft);
+  background:var(--surface-2);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
 .client-chip::before{
   content:"";
-  width:7px;
-  height:7px;
-  border-radius:2px;
+  width:8px;
+  height:8px;
+  border-radius:3px;
   flex:none;
   background:hsl(var(--h) 62% var(--chip-dot-l));
 }
@@ -57,10 +57,12 @@
   font-size:13px;
   font-weight:600;
   letter-spacing:.01em;
-  color:hsl(var(--h) var(--chip-s) var(--chip-fg-l));
-  background:hsl(var(--h) var(--chip-s) var(--chip-bg-l));
+  /* Iniciales oscuras sobre un pastel del tono de la persona. */
+  color:#17181C;
+  background:hsl(var(--h) var(--av-s) var(--av-l));
 }
-.avatar.is-square{border-radius:var(--r-lg);width:38px;height:38px;font-size:13.5px;}
+/* Cuadrado con iniciales (clientes): el color del cliente al 16 %. */
+.avatar.is-square{border-radius:var(--r-md);width:32px;height:32px;font-size:11.5px;font-weight:650;color:hsl(var(--h) 62% var(--chip-dot-l));background:hsl(var(--h) 62% var(--chip-dot-l) / .16);}
 .avatar.is-sm{width:30px;height:30px;font-size:11.5px;}
 .avatar.is-lock{color:var(--ink-soft);background:var(--surface-2);}
 .card-head{display:flex;align-items:center;gap:11px;margin-bottom:12px;min-width:0;}
@@ -93,9 +95,7 @@
 .icon svg{display:block;}
 .btn .icon{margin-right:0;color:currentColor;}
 
-/* Contraseñas */
-.vault-card.dragging{opacity:0.4;cursor:grabbing;}
-.vault-card.drag-over{border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
+/* Contraseñas: la tabla está en views/vault.css. */
 .vault-card .cat,
 dialog .dlg-inner > .cat{
   display:flex;
@@ -106,24 +106,26 @@ dialog .dlg-inner > .cat{
 }
 .type-badge{
   flex:none;
-  font-size:11px;
-  font-weight:500;
-  padding:0 7px;
-  height:20px;
-  line-height:20px;
+  font-size:12px;
+  font-weight:450;
+  padding:0 8px;
+  height:22px;
+  line-height:22px;
   border-radius:var(--r-sm);
   background:var(--surface-2);
   color:var(--ink-soft);
 }
-.meet-badge{background:var(--meet-bg);color:var(--meet);}
-.pass-row{display:flex;align-items:center;gap:6px;margin-top:12px;}
-.pass-value{
+.meet-badge{background:var(--surface-2);color:var(--ink);}
+/* Contraseña en una ficha (diálogo de la credencial). */
+dialog .pass-row{display:flex;align-items:center;gap:6px;margin-top:12px;}
+dialog .pass-value{
   flex:1;
   min-width:0;
-  height:26px;
-  line-height:24px;
+  height:28px;
+  line-height:28px;
   font-family:var(--mono);
   font-size:12.5px;
+  letter-spacing:0;
   background:var(--surface-2);
   border-radius:var(--r-sm);
   padding:0 9px;
@@ -138,7 +140,7 @@ dialog .dlg-inner > .cat{
 .client-card{display:flex;flex-direction:column;gap:12px;padding:12px 12px 12px 14px;}
 .client-row{display:flex;align-items:center;gap:12px;min-width:0;}
 .avatar-btn{border:none;padding:0;font-family:inherit;cursor:pointer;transition:box-shadow .12s ease;}
-.avatar-btn:hover{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px hsl(var(--h) 62% var(--chip-dot-l) / .5);}
+.avatar-btn:hover{box-shadow:0 0 0 2px var(--surface-solid), 0 0 0 4px hsl(var(--h) 62% var(--chip-dot-l) / .5);}
 .client-main{flex:1;min-width:0;}
 .client-card h3{font-size:14px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .client-card .meta{font-size:12.5px;color:var(--ink-faint);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -153,8 +155,10 @@ dialog .dlg-inner > .cat{
 .icon-only{
   display:grid;
   place-items:center;
-  width:30px;
-  height:30px;
+  width:32px;
+  height:32px;
+  flex:none;
+  padding:0;
   border:none;
   border-radius:var(--r-md);
   background:transparent;
@@ -164,6 +168,7 @@ dialog .dlg-inner > .cat{
 }
 .icon-only:hover,.icon-only.is-active{background:var(--hover);color:var(--ink);}
 .icon-only.is-danger:hover{background:var(--danger-bg);color:var(--danger);}
+.icon-only.is-sm{width:26px;height:26px;border-radius:7px;}
 .client-card-editing{grid-column:1 / -1;}
 .client-edit-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;}
 .client-edit-row input{flex:1 1 200px;}
@@ -194,8 +199,8 @@ dialog .dlg-inner > .cat{
   background:hsl(var(--h) 62% 52%);
   transition:box-shadow .12s ease;
 }
-.color-swatch:hover{box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong);}
-.color-swatch.is-selected{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px hsl(var(--h) 62% 52%);}
+.color-swatch:hover{box-shadow:0 0 0 2px var(--surface-solid), 0 0 0 3px var(--line-strong);}
+.color-swatch.is-selected{box-shadow:0 0 0 2px var(--surface-solid), 0 0 0 4px hsl(var(--h) 62% 52%);}
 .color-swatch.is-auto{
   width:auto;
   padding:0 9px;

@@ -22,7 +22,7 @@
       /* Texto del botón mientras se renombra o se elimina (con el avance si hay muchos documentos). */
       this.busy = '';
 
-      [this.clients, this.tasks, this.contacts, this.vault].forEach((m) => m.on('change', () => this.render()));
+      [this.clients, this.tasks, this.contacts, this.vault, this.meetings].forEach((m) => m.on('change', () => this.render()));
 
       this.view.bindCreate((name) => {
         const p = this.app.createClient(name);
@@ -55,6 +55,7 @@
         openContact: (id) => this.app.controllers.contacts.openEdit(id),
         viewTasks: () => this.app.controllers.command.showClientTasks(this.selectedClientName()),
         viewVault: () => this.viewVault(this.selectedClientName()),
+        openTask: (id) => this.app.controllers.tasks.openDetail(id),
         back: () => { this.view.showDetailPane(false); this.view.focusSelected(); }
       });
     }
@@ -78,7 +79,10 @@
           client: client,
           contacts: contacts,
           stats: this.tasks.statsByClient(client.nombre),
-          vaultCount: this.vault.items.filter((v) => v.cliente === client.nombre).length
+          vaultCount: this.vault.items.filter((v) => v.cliente === client.nombre).length,
+          /* Para la ficha: tareas sin terminar (por fecha) y la próxima reunión, de lo que ya hay cargado. */
+          openTasks: this.openTasks(client.nombre),
+          nextMeeting: this.nextMeeting(client.nombre)
         };
       });
       const orphans = Object.keys(byClient).reduce((all, k) => all.concat(byClient[k]), []).sort(byName);
@@ -91,6 +95,21 @@
         const matches = e.contacts.filter(has).length;
         return Object.assign({}, e, {nameMatch:nameMatch, matches:matches});
       }).filter((e) => e.nameMatch || e.matches);
+    }
+
+    /* Tareas sin terminar del cliente: primero las que tienen fecha, de la más próxima a la más lejana. */
+    openTasks(name){
+      const TaskModel = Workhub.models.TaskModel;
+      return this.tasks.items.filter((t) => t.cliente === name && !TaskModel.isDone(t))
+        .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999') || TaskModel.byOrder(a, b));
+    }
+
+    /* Primera reunión del cliente de hoy en adelante (null si no hay). */
+    nextMeeting(name){
+      const today = Workhub.utils.dates.todayYmd();
+      const MeetingModel = Workhub.models.MeetingModel;
+      return this.meetings.items.filter((m) => m.cliente === name && m.date && m.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date) || MeetingModel.byStart(a, b))[0] || null;
     }
 
     selectedClientName(){

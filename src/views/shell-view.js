@@ -52,6 +52,9 @@
       this.pageTitle = document.getElementById('pageTitle');
       this.pageDesc = document.getElementById('pageDesc');
       this.btnNewTask = document.getElementById('btnNew');
+      /* Herramientas de cada sección dentro de la barra de la vista. */
+      this.bars = Array.from(document.querySelectorAll('.bar-tools[data-bar]'));
+      this.btnTheme = document.getElementById('btnThemeToggle');
       this.storageLabel = document.getElementById('storageLabel');
       this.storageStatus = document.getElementById('storageStatus');
       this.clientsOn = true;
@@ -71,6 +74,16 @@
           handler(view);
           if(view === 'plugins' && this.pluginNavHasItems) this.setPluginNavExpanded(true);
         });
+      });
+    }
+
+    /* Botón de sol/luna del pie de la barra: alterna entre claro y oscuro. */
+    bindThemeToggle(handler){
+      if(!this.btnTheme) return;
+      this.btnTheme.addEventListener('click', () => {
+        const attr = document.documentElement.getAttribute('data-theme');
+        const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        handler(dark ? 'light' : 'dark');
       });
     }
 
@@ -126,6 +139,7 @@
       });
       Object.keys(this.sections).forEach((k) => { this.sections[k].hidden = k !== view; });
       this.btnNewTask.hidden = view !== 'tasks';
+      this.bars.forEach((b) => { b.hidden = b.getAttribute('data-bar') !== view; });
       this.currentView = view;
       document.body.classList.toggle('plugin-open', view === 'plugins' && !document.getElementById('pluginStage').hidden);
       this._renderInfo();

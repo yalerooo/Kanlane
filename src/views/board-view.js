@@ -4,7 +4,20 @@
 (function(){
   const {esc, closest, iconSpan, PLUS_ICON} = Workhub.utils.html;
   const clientColors = Workhub.views.clientColors;
-  const {fmtDate} = Workhub.utils.dates;
+  const {fmtDate, ymd} = Workhub.utils.dates;
+  const prefs = Workhub.services.preferences;
+  /* Tablero o lista: se recuerda en este navegador. */
+  const MODE_KEY = 'workhub_task_mode';
+  /* Clientes que se ofrecen como filtro rápido (los que más tareas abiertas tienen). */
+  const QUICK_CLIENTS = 5;
+
+  /* Lunes y domingo de la semana en curso, como AAAA-MM-DD. */
+  function weekRange(){
+    const d = new Date();
+    const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+    const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+    return [ymd(mon), ymd(sun)];
+  }
   const {bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const TaskModel = Workhub.models.TaskModel;
   const COL_MIME = 'text/x-workhub-column';
@@ -24,6 +37,19 @@
       this.btnNew = document.getElementById('btnNew');
       this.tabs = document.getElementById('boardTabs');
       this.keyboardStatus = document.getElementById('boardKeyboardStatus');
+      this.wrap = document.getElementById('boardWrap');
+      this.list = document.getElementById('taskList');
+      this.quick = document.getElementById('quickFilters');
+      this.modeSeg = document.getElementById('taskMode');
+      this.filterBtn = document.getElementById('btnTaskFilter');
+      this.filterPanel = document.getElementById('taskFilterPanel');
+      this.filterDot = document.getElementById('taskFilterDot');
+      this.filterClear = document.getElementById('btnTaskFilterClear');
+      /* Filtro rápido «Vencen esta semana». */
+      this.week = false;
+      this.mode = prefs.read(MODE_KEY, 'board') === 'list' ? 'list' : 'board';
+      this._applyMode();
+      this._bindFilterPanel();
 
       /* Línea que marca dónde caerá la tarea al soltarla. */
       this.indicator = document.createElement('div');
@@ -97,9 +123,121 @@
       this.search.addEventListener('input', handler);
       this.filterCliente.addEventListener('change', handler);
       this.filterAssignee.addEventListener('change', handler);
+      const pick = (el, value) => {
+        el.value = el.value === value ? '' : value;
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+      };
+      /* Filtros rápidos: cada uno actúa sobre el filtrado real del tablero. */
+      if(this.quick) this.quick.addEventListener('click', (ev) => {
+        const b = closest(ev.target, '[data-quick]');
+        if(!b) return;
+        const kind = b.getAttribute('data-quick');
+        if(kind === 'all') this.clearFilters();
+        else if(kind === 'week'){ this.week = !this.week; handler(); }
+        else if(kind === 'mine') pick(this.filterAssignee, 'me');
+        else if(kind === 'client') pick(this.filterCliente, b.getAttribute('data-client'));
+      });
+      if(this.filterClear) this.filterClear.addEventListener('click', () => { this.clearFilters(); this._toggleFilterPanel(false); });
+      /* Tablero o lista. */
+      if(this.modeSeg) this.modeSeg.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-task-mode]');
+        if(!b) return;
+        this.mode = b.getAttribute('data-task-mode') === 'list' ? 'list' : 'board';
+        prefs.write(MODE_KEY, this.mode);
+        this._applyMode();
+        handler();
+      });
+      this._refilter = handler;
+    }
+
+    /* Quita cliente, miembro y «esta semana» (la búsqueda escrita se deja). */
+    clearFilters(){
+      this.week = false;
+      let fired = false;
+      [this.filterCliente, this.filterAssignee].forEach((el) => {
+        if(!el.value) return;
+        el.value = '';
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+        fired = true;
+      });
+      if(!fired && this._refilter) this._refilter();
+    }
+
+    /* Al cambiar de proyecto. */
+    resetQuick(){
+      this.week = false;
+    }
+
+    _applyMode(){
+      const list = this.mode === 'list';
+      if(this.wrap) this.wrap.classList.toggle('is-list', list);
+      if(this.modeSeg) this.modeSeg.querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-checked', (b.getAttribute('data-task-mode') === 'list') === list ? 'true' : 'false');
+      });
+    }
+
+    /* Panel con los desplegables de cliente y miembro, bajo el botón de filtrar. */
+    _toggleFilterPanel(open){
+      if(!this.filterPanel) return;
+      this.filterPanel.hidden = !open;
+      this.filterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    _bindFilterPanel(){
+      if(!this.filterBtn || !this.filterPanel) return;
+      this.filterBtn.addEventListener('click', () => this._toggleFilterPanel(this.filterPanel.hidden));
+      document.addEventListener('click', (ev) => {
+        if(this.filterPanel.hidden) return;
+        /* El menú de un desplegable vive fuera del panel (capa superior). */
+        if(closest(ev.target, '.bar-filter') || closest(ev.target, '.dd-menu')) return;
+        this._toggleFilterPanel(false);
+      });
+      document.addEventListener('keydown', (ev) => {
+        if(ev.key !== 'Escape' || this.filterPanel.hidden || document.querySelector('.dd.is-open')) return;
+        this._toggleFilterPanel(false);
+        this.filterBtn.focus();
+      });
+    }
+
+    /* «Vencen esta semana»: sin terminar y con fecha entre el lunes y el domingo de esta semana. */
+    dueThisWeek(tasks){
+      const r = weekRange();
+      return tasks.filter((t) => t.dueDate && !TaskModel.isDone(t) && t.dueDate >= r[0] && t.dueDate <= r[1]);
+    }
+
+    renderQuick(all){
+      if(!this.quick) return;
+      const T = Workhub.views.team;
+      const cliente = this.filterCliente.value, assignee = this.filterAssignee.value;
+      const chip = (kind, label, on, extra) => '<button type="button" class="chip" data-quick="' + kind + '"' + (extra || '') + ' aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>';
+      let html = chip('all', esc(Workhub.t('Todas')), !cliente && !assignee && !this.week);
+      if(T.enabled()) html += chip('mine', esc(Workhub.t('Asignadas a mí')), assignee === 'me');
+      html += chip('week', esc(Workhub.t('Vencen esta semana')), this.week);
+      if(Workhub.clientsEnabled !== false){
+        const open = {};
+        all.forEach((t) => { if(t.cliente && !TaskModel.isDone(t)) open[t.cliente] = (open[t.cliente] || 0) + 1; });
+        let names = Object.keys(open).sort((a, b) => open[b] - open[a] || a.localeCompare(b)).slice(0, QUICK_CLIENTS);
+        if(cliente && cliente !== 'Sin cliente' && names.indexOf(cliente) === -1) names = [cliente].concat(names).slice(0, QUICK_CLIENTS);
+        html += names.map((n) => chip('client', '<i class="client-dot" style="--h:' + clientColors.hueOf(n) + '"></i><span translate="no">' + esc(n) + '</span>', cliente === n, ' data-client="' + esc(n) + '"')).join('');
+      }
+      this.quick.innerHTML = html;
+      if(this.filterDot) this.filterDot.hidden = !cliente && !assignee;
     }
 
     bindOpen(handler){
+      if(this.list){
+        this.list.addEventListener('click', (ev) => {
+          const row = closest(ev.target, '.tl-row');
+          if(row) handler(row.getAttribute('data-id'));
+        });
+        this.list.addEventListener('keydown', (ev) => {
+          const row = closest(ev.target, '.tl-row');
+          if(row && (ev.key === 'Enter' || ev.key === ' ')){
+            ev.preventDefault();
+            handler(row.getAttribute('data-id'));
+          }
+        });
+      }
       this.board.addEventListener('click', (ev) => {
         const card = closest(ev.target, '.card');
         if(!card || consumeDragClick(card)) return;
@@ -261,7 +399,7 @@
     }
 
     filters(){
-      return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value};
+      return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value, week:this.week};
     }
 
     /* Filtro por miembro (solo en equipos). Sin miembros se vacía y se olvida la elección. */
@@ -313,8 +451,10 @@
     fitHeight(){
       if(this.board.hidden || !this.board.offsetParent) return;
       const top = this.board.getBoundingClientRect().top + window.scrollY;
-      const main = this.board.closest('.main');
-      const bottomSpace = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
+      /* Hueco inferior: el relleno exterior de la estructura (o el de .main en móvil). */
+      const app = this.board.closest('.app'), main = this.board.closest('.main');
+      const pad = (el) => (el ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0);
+      const bottomSpace = pad(app) + pad(main);
       this.board.style.setProperty('--board-top', Math.round(top + bottomSpace) + 'px');
     }
 
@@ -329,8 +469,8 @@
       const today = tasks.filter((t) => TaskModel.dueState(t) === 'today').length;
       this.summary.innerHTML =
         '<span class="stat"><b>' + open.length + '</b>' + (open.length === 1 ? 'abierta' : 'abiertas') + '</span>' +
-        (today ? '<span class="stat is-warn"><span class="dot" style="background:var(--st-wait)"></span><b>' + today + '</b>para hoy</span>' : '') +
-        (overdue ? '<span class="stat is-danger"><span class="dot" style="background:var(--danger)"></span><b>' + overdue + '</b>' + (overdue === 1 ? 'vencida' : 'vencidas') + '</span>' : '') +
+        (today ? '<span class="stat is-warn"><b>' + today + '</b>para hoy</span>' : '') +
+        (overdue ? '<span class="stat is-danger"><b>' + overdue + '</b>' + (overdue === 1 ? 'vencida' : 'vencidas') + '</span>' : '') +
         (tasks.length - open.length ? '<span class="stat"><b>' + (tasks.length - open.length) + '</b>' + (tasks.length - open.length === 1 ? 'completada' : 'completadas') + '</span>' : '') +
         (hiddenCount ? '<button type="button" class="stat stat-link" data-show-hidden>' + hiddenCount + (hiddenCount === 1 ? ' columna oculta' : ' columnas ocultas') + ' · Mostrar</button>' : '');
 
@@ -340,10 +480,13 @@
         scrolls[c.getAttribute('data-status')] = c.querySelector('.cards').scrollTop;
       });
 
+      this.renderQuick(all);
+      this.renderList(tasks, stages);
+      const canEdit = Workhub.views.team.canEdit();
       const n = stages.length;
       this.board.style.setProperty('--cols', n);
       this.board.classList.toggle('is-many', n > 4);
-      this.board.innerHTML = stages.map((s) => {
+      this.board.innerHTML = stages.map((s, si) => {
         const items = tasks.filter((t) => TaskModel.stageKey(t) === s.key).sort(TaskModel.byOrder);
         const total = all.filter((t) => TaskModel.stageKey(t) === s.key).length;
         const state = s.limit ? (total > s.limit ? ' is-over' : total === s.limit ? ' is-full' : '') : '';
@@ -351,7 +494,7 @@
         const cardsHtml = items.length
           ? items.map(cardHtml).join('')
           : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
-        return '<section class="col' + state + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
+        return '<section class="col' + state + (s.done ? ' is-final' : '') + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
           '<header class="col-head" draggable="' + (Workhub.views.team.canEdit() ? 'true' : 'false') + '" title="Arrastra para mover la columna">' +
             '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count" title="' + (s.limit ? 'Límite: ' + s.limit + ' tarjetas' : '') + '">' + countTxt + '</span></span>' +
             '<span class="col-tools">' +
@@ -359,7 +502,9 @@
               '<button type="button" class="col-add" data-col-menu="' + esc(s.key) + '" aria-haspopup="menu" aria-expanded="false" aria-label="Opciones de ' + esc(s.label) + '" title="Opciones de la columna">' + DOTS_ICON + '</button>' +
             '</span>' +
           '</header>' +
-          '<div class="cards">' + cardsHtml + '</div></section>';
+          '<div class="cards">' + cardsHtml + '</div>' +
+          (si === 0 && canEdit ? '<button type="button" class="col-new" data-add-status="' + esc(s.key) + '">' + PLUS_ICON + Workhub.t('Añadir tarea') + '</button>' : '') +
+          '</section>';
       }).join('');
 
       this.board.querySelectorAll('.col').forEach((c) => {
@@ -371,7 +516,7 @@
       }
       this.tabs.innerHTML = stages.map((s) => {
         const count = tasks.filter((t) => TaskModel.stageKey(t) === s.key).length;
-        return '<button type="button" class="board-tab" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
+        return '<button type="button" class="board-tab' + (s.done ? ' is-final' : '') + '" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +
           '<span class="dot"></span><span translate="no">' + esc(s.label) + '</span><span class="count">' + count + '</span></button>';
       }).join('');
       this.syncTabs();
@@ -379,43 +524,91 @@
     }
   }
 
-  function cardHtml(t){
-    let due = '';
-    if(t.dueDate){
-      const ds = TaskModel.dueState(t);
-      const dueCls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
-      const dueTxt = ds === 'overdue' ? 'Vencida · ' + fmtDate(t.dueDate) : (ds === 'today' ? 'Hoy' : fmtDate(t.dueDate));
-      due = '<span class="' + dueCls + '">' + iconSpan('calendar') + esc(dueTxt) + '</span>';
-    }
+  /* ---- Piezas comunes de la tarjeta y de la fila de la lista ---- */
+
+  function dueHtml(t){
+    if(!t.dueDate) return '';
+    const ds = TaskModel.dueState(t);
+    const cls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
+    const txt = ds === 'today' ? 'Hoy' : fmtDate(t.dueDate);
+    const title = ds === 'overdue' ? ' title="' + esc(Workhub.t('Vencida')) + '"' : '';
+    return '<span class="' + cls + '"' + title + '>' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(txt) + '</span>';
+  }
+
+  /* Progreso de las subtareas: anillo y «hechas/total». */
+  function progressHtml(t){
     const prog = TaskModel.checklistProgress(t);
-    const percent = prog.total ? Math.round(prog.done / prog.total * 100) : 0;
-    const check = prog.total ? '<span class="check-progress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + percent + '"><span class="check-progress-track"><span style="width:' + percent + '%"></span></span><span class="check-progress-value">' + percent + '%</span></span>' : '';
-    const repeat = t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '';
+    if(!prog.total) return '';
+    const percent = Math.round(prog.done / prog.total * 100);
+    return '<span class="card-progress"><span class="check-progress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + percent + '">' +
+      '<i class="check-ring" style="--p:' + percent + '"></i><span class="check-progress-value">' + prog.done + '/' + prog.total + '</span></span></span>';
+  }
+
+  function clientHtml(t){
+    if(!t.cliente || Workhub.clientsEnabled === false) return '';
+    return '<span class="card-client" translate="no"><i class="client-dot" style="--h:' + clientColors.hueOf(t.cliente) + '"></i><span>' + esc(t.cliente) + '</span></span>';
+  }
+
+  /* Etiquetas en texto neutro: las dos primeras y «+N». */
+  function tagsHtml(t){
+    const list = Array.isArray(t.labels) ? t.labels : [];
+    if(!list.length) return '';
+    return '<span class="card-tag" translate="no" title="' + esc(list.join(', ')) + '">' + esc(list.slice(0, 2).join(' · ')) + (list.length > 2 ? ' +' + (list.length - 2) : '') + '</span>';
+  }
+
+  function cardHtml(t){
+    const T = Workhub.views.team;
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
     const ext = Workhub.views.extensions ? Workhub.views.extensions.badgesHtml(t.id) : '';
-    const gh = t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '';
-    const T = Workhub.views.team;
     const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
-    const meta = [
-      gh,
+    const top = clientHtml(t) + tagsHtml(t);
+    const foot = [
+      dueHtml(t),
+      progressHtml(t),
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
-      repeat,
+      t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '',
+      t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '',
       who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');
     const contact = t.contacto ? '<div class="card-contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></div>' : '';
-    const bottom = check || due ? '<div class="card-bottom">' + (check ? '<div class="card-progress">' + check + '</div>' : '') + due + '</div>' : '';
-    return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
-      (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
+    return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + (TaskModel.isDone(t) ? ' is-done' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
+      (top ? '<div class="card-top">' + top + '</div>' : '') +
       '<h3 translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
-      (Array.isArray(t.labels) && t.labels.length ? '<div class="card-labels">' + Workhub.views.labels.chips(t.labels, 3) + '</div>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
-      (meta ? '<div class="meta">' + meta + '</div>' : '') +
       contact +
-      bottom +
+      (foot ? '<div class="card-foot">' + foot + '</div>' : '') +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';
   }
+
+  /* Fila de la vista de lista: lo mismo que la tarjeta, en una línea. */
+  function rowHtml(t){
+    const T = Workhub.views.team;
+    const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
+    return '<div class="tl-row' + (TaskModel.isDone(t) ? ' is-done' : '') + (t._undecryptable ? ' is-undecryptable' : '') + '" role="button" tabindex="0" data-id="' + esc(t.id) + '">' +
+      '<span class="tl-title" translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</span>' +
+      /* Cada dato en su columna (vacía si no lo hay), para que las filas queden alineadas. */
+      (clientHtml(t) || '<span class="card-client"></span>') +
+      (tagsHtml(t) || '<span class="card-tag"></span>') +
+      '<span class="tl-extra">' + progressHtml(t) + (t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '') + '</span>' +
+      (who ? '<span class="card-assignees">' + who + '</span>' : '') +
+      '<span class="tl-due">' + dueHtml(t) + '</span>' +
+      '</div>';
+  }
+
+  /* Las mismas tareas que el tablero, agrupadas por etapa, una por fila. Para moverlas
+     entre etapas se usa el tablero o el desplegable de estado de la ficha. */
+  BoardView.prototype.renderList = function(tasks, stages){
+    if(!this.list) return;
+    this.list.innerHTML = stages.map((s) => {
+      const items = tasks.filter((t) => TaskModel.stageKey(t) === s.key).sort(TaskModel.byOrder);
+      return '<section class="tl-group' + (s.done ? ' is-final' : '') + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
+        '<h2 class="tl-head"><span class="dot"></span><span translate="no">' + esc(s.label) + '</span><span class="count">' + items.length + '</span></h2>' +
+        (items.length ? '<div class="tl-rows">' + items.map(rowHtml).join('') + '</div>' : '<p class="tl-empty">' + esc(Workhub.t('Sin tareas')) + '</p>') +
+        '</section>';
+    }).join('');
+  };
 
   Workhub.views.BoardView = BoardView;
 })();

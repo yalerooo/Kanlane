@@ -43,20 +43,23 @@ module.exports = async function checkLanding(browser, origin){
     await page.locator('.card-progress').first().waitFor();
     for(const width of [1024,1280,390]){
       await page.setViewportSize({width,height:900});
-      /* Los tres valores usan la misma estructura producida por BoardView. */
+      /* Los tres valores usan la misma estructura producida por BoardView: anillo y «hechas/total». */
       for(const percent of [0,50,100]){
         await page.locator('.check-progress').evaluateAll((bars, value) => bars.forEach(bar => {
-          bar.querySelector('.check-progress-value').textContent = value + '%';
-          bar.querySelector('.check-progress-track > span').style.width = value + '%';
+          bar.querySelector('.check-progress-value').textContent = (value / 25) + '/4';
+          bar.querySelector('.check-ring').style.setProperty('--p', String(value));
           bar.setAttribute('aria-valuenow', String(value));
         }), percent);
-        const measurements = await page.locator('.card-progress').evaluateAll(rows => rows.map(row => {
+        const measurements = await page.locator('.card .card-progress').evaluateAll(rows => rows.map(row => {
+          const card = row.closest('.card').getBoundingClientRect();
           const bounds = row.getBoundingClientRect();
           const value = row.querySelector('.check-progress-value').getBoundingClientRect();
-          const track = row.querySelector('.check-progress-track').getBoundingClientRect();
-          const contact = row.parentElement.querySelector('.card-contact')?.getBoundingClientRect();
+          const ring = row.querySelector('.check-ring').getBoundingClientRect();
+          const contact = row.closest('.card').querySelector('.card-contact')?.getBoundingClientRect();
           const date = row.parentElement.querySelector('.due-badge')?.getBoundingClientRect();
-          return value.left >= track.right && value.right <= bounds.right + 1 && track.width > 20 && (!contact || contact.bottom <= row.getBoundingClientRect().top) && (!date || value.right <= date.left);
+          /* El texto va a la derecha del anillo, dentro de la tarjeta, sin pisar la fecha ni el contacto. */
+          return value.left >= ring.right && ring.width >= 12 && bounds.right <= card.right + 1 &&
+            (!contact || contact.bottom <= bounds.top) && (!date || date.right <= bounds.left + 1);
         }));
         assert.ok(measurements.length > 0 && measurements.every(Boolean), 'progreso ' + percent + '% separado y contenido a ' + width);
       }

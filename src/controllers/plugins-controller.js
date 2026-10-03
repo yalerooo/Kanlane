@@ -20,6 +20,7 @@
   const PALETTES = ['default', 'warm', 'cool', 'slate'];
   const FONTS = ['default', 'system', 'serif', 'mono'];
   const TEXT_SIZES = ['small', 'normal', 'large'];
+  const NAVS = ['side', 'top'];
 
   const {fail, str, sameSet, cleanTask, cleanClient, cleanContact, cleanMeeting, cleanForm, YMD, HM, HEX} = Workhub.pluginClean;
 
@@ -207,6 +208,10 @@
         if(TEXT_SIZES.indexOf(params.textSize) === -1) throw fail('bad-params', 'textSize: "small", "normal" o "large".');
         v.textSize = params.textSize;
       }
+      if(params.nav != null){
+        if(NAVS.indexOf(params.nav) === -1) throw fail('bad-params', 'nav: "side" o "top".');
+        v.nav = params.nav;
+      }
       this.appearance = {pluginId:pluginId, values:v};
       this.applyAppearance();
       return true;
@@ -226,17 +231,21 @@
       settings.view.applyAccent(settings.model.currentAccent());
       settings.view.applyTheme(v.theme || settings.model.theme, !!v.theme || this.appearanceThemeOverridden);
       this.appearanceThemeOverridden = !!v.theme;
+      /* Navegación: la del plugin para este proyecto o, si no la fija, la de Ajustes. */
+      settings.view.applyNav(v.nav || settings.model.nav);
       if(v.accent){
         const hex = v.accent;
         const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-        const ink = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#111113' : '#FFFFFF';
+        const ink = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#0A0A0C' : '#FFFFFF';
         const set = (k, val) => root.style.setProperty(k, val);
         set('--acc-solid-l', hex); set('--acc-solid-d', hex);
         set('--acc-ink-l', ink); set('--acc-ink-d', ink);
         set('--acc-text-l', 'color-mix(in srgb, ' + hex + ' 80%, #000)');
         set('--acc-text-d', 'color-mix(in srgb, ' + hex + ' 60%, #fff)');
-        set('--acc-soft-l', 'color-mix(in srgb, ' + hex + ' 10%, #fff)');
-        set('--acc-soft-d', 'color-mix(in srgb, ' + hex + ' 18%, #161619)');
+        set('--acc-soft-l', 'color-mix(in srgb, ' + hex + ' 10%, transparent)');
+        set('--acc-soft-d', 'color-mix(in srgb, ' + hex + ' 16%, transparent)');
+        /* El velo del fondo sigue al acento elegido. */
+        set('--hue-a', hex); set('--hue-b', hex);
       }
       const radius = RADII[v.radius];
       ['sm', 'md', 'lg', 'xl'].forEach((k) => {

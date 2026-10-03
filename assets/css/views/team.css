@@ -9,14 +9,17 @@ body.team-project #tabVault{display:none;}
 /* Rol de lector: solo lectura. */
 body.is-readonly #btnNew,
 body.is-readonly .col-add,
+body.is-readonly .col-new,
+body.is-readonly #btnTvDone,
 body.is-readonly #btnTvEdit,
 body.is-readonly .tv-status-edit{display:none !important;}
 
 /* Avatares de miembros */
-.avatar.is-mini{width:20px;height:20px;font-size:8.5px;overflow:hidden;box-shadow:0 0 0 2px var(--surface);}
+/* Al apilarse llevan un anillo del color de la superficie. */
+.avatar.is-mini{width:20px;height:20px;font-size:8.5px;overflow:hidden;box-shadow:0 0 0 2px var(--surface-solid);}
 .avatar.is-mini img,.avatar.is-sm img,.avatar.is-xs img{width:100%;height:100%;object-fit:cover;display:block;}
 .avatar-stack{display:inline-flex;align-items:center;}
-.avatar-stack .avatar + .avatar{margin-left:-6px;}
+.avatar-stack .avatar + .avatar{margin-left:-4px;}
 .avatar-more{background:var(--surface-2);color:var(--ink-soft);font-size:8px;}
 
 /* Punto en el botón del proyecto cuando hay invitaciones */
@@ -30,7 +33,7 @@ body.is-readonly .tv-status-edit{display:none !important;}
   height:8px;
   border-radius:50%;
   background:var(--accent-solid, var(--accent));
-  box-shadow:0 0 0 2px var(--sidebar, var(--surface));
+  box-shadow:0 0 0 2px var(--surface-solid);
 }
 
 /* Menú de proyectos: equipos e invitaciones */
@@ -49,7 +52,7 @@ body.is-readonly .tv-status-edit{display:none !important;}
 .invite-btns{display:flex;gap:6px;}
 
 /* Invitaciones dentro del diálogo del primer proyecto */
-.invite-box{display:grid;gap:8px;margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);}
+.invite-box{display:grid;gap:8px;margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg);}
 .invite-box-title{margin:0;font-size:12.5px;font-weight:600;color:var(--ink);}
 .invite-box-or{margin:2px 0 0;font-size:12.5px;color:var(--ink-faint);}
 
@@ -101,17 +104,16 @@ body.is-readonly .tv-status-edit{display:none !important;}
   cursor:pointer;
   transition:background .12s ease, border-color .12s ease, color .12s ease;
 }
-.assignee-chip:hover{background:var(--surface-2);}
-.assignee-chip.is-on{color:var(--ink);border-color:var(--accent);background:var(--accent-soft, var(--surface-2));}
+.assignee-chip:hover{background:var(--hover);}
+.assignee-chip.is-on{color:var(--ink);font-weight:500;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);}
 .assignee-chip .avatar{box-shadow:none;}
 .assignee-picker .field-help{margin:0;}
 
-/* En la tarjeta del tablero */
-.card-assignees{margin-left:auto;display:inline-flex;align-items:center;}
-.card .meta{align-items:center;}
+/* En la tarjeta del tablero: a la derecha del pie. */
+.card-assignees{margin-left:auto;display:inline-flex;align-items:center;flex:none;}
 
 /* En la ficha de la tarea */
-.tv-assignees{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+.tv-assignees{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-weight:500;}
 .tv-assignee{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);}
 .tv-assignee .avatar{box-shadow:none;}
 .tv-assign-me{margin-left:2px;}

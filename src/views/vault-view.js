@@ -206,7 +206,21 @@
       }
       this.stateMsg.hidden = true;
       this.grid.hidden = false;
-      this.grid.innerHTML = entries.map((v) => cardHtml(v, vault)).join('');
+      /* Agrupadas por cliente, conservando dentro de cada grupo el orden manual. */
+      const groups = [];
+      const byClient = {};
+      entries.forEach((v) => {
+        const key = Workhub.clientsEnabled === false ? '' : (v.cliente || '');
+        if(!byClient[key]) groups.push(byClient[key] = {name:key, items:[]});
+        byClient[key].items.push(v);
+      });
+      const showGroups = Workhub.clientsEnabled !== false;
+      this.grid.innerHTML = '<div class="vault-head" aria-hidden="true"><span>Nombre</span><span>Usuario</span><span>Contraseña</span><span>Dominio o host</span><span>Puerto</span></div>' +
+        groups.map((g) => (showGroups
+          ? '<div class="vault-group" translate="no">' + (g.name ? '<i class="client-dot" style="--h:' + clientColors.hueOf(g.name) + '"></i>' + esc(g.name) : '<span translate="yes">' + esc(Workhub.t('Sin cliente')) + '</span>') + '</div>'
+          : '') + g.items.map((v) => cardHtml(v, vault)).join('')).join('');
+      const meta = document.getElementById('vaultMeta');
+      if(meta) meta.textContent = entries.length + (entries.length === 1 ? ' credencial' : ' credenciales');
     }
 
     showGridMessage(msg, hideGrid){
@@ -336,38 +350,35 @@
     }
   }
 
-  function line(icon, text){
-    return text ? '<p class="line">' + iconSpan(icon) + esc(text) + '</p>' : '';
-  }
+  const TYPE_ICON = {correo:'mail', usuario:'user', servidor:'server', rdp:'monitor', vpn:'link'};
+  const EYE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+  const EYE_OFF_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l16 16M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.8M6.2 7.6A16.500 16.500 0 0 0 2.500 12S6 18.5 12 18.5a9.300 9.300 0 0 0 3.900-.9M9.900 9.900a2.800 2.800 0 0 0 4 4"/></svg>'.replace(/(\d)\.(\d)00\b/g, '$1.$2');
+  const COPY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h.5"/></svg>';
 
+  /* Fila de la tabla: nombre con icono, usuario, contraseña oculta con mostrar y copiar,
+     dominio o host y puerto (estos dos, en Geist Mono). */
   function cardHtml(v, vault){
     const tipo = v.tipo || 'correo';
-    /* Sin etiqueta, el título ya es el correo/usuario/IP: no repetirlo debajo. */
-    const titled = (text) => (v.label ? text : '');
-    let lines;
-    if(tipo === 'correo'){
-      lines = line('mail', titled(v.correo)) + line('link', v.web);
-    } else if(tipo === 'usuario'){
-      lines = line('user', titled(v.usuario)) + line('link', v.web);
-    } else if(tipo === 'rdp'){
-      const hostText = v.ip ? (v.puerto ? v.ip + ':' + v.puerto : v.ip) : '';
-      const userText = v.dominio ? v.dominio + '\\' + (v.usuario || '') : v.usuario;
-      lines = line('monitor', v.label || v.puerto ? hostText : '') + line('user', userText);
-    } else if(tipo === 'vpn'){
-      lines = line('user', titled(v.usuario));
-    } else {
-      lines = line('server', titled(v.ip)) + line('user', v.usuario);
-    }
+    /* Sin etiqueta, el título ya es el correo/usuario/IP: no repetirlo en su columna. */
+    const titled = (text) => (v.label ? (text || '') : '');
+    let user = '', host = '';
+    if(tipo === 'correo'){ user = titled(v.correo); host = v.web || ''; }
+    else if(tipo === 'usuario'){ user = titled(v.usuario); host = v.web || ''; }
+    else if(tipo === 'rdp'){ user = v.dominio ? v.dominio + '\\' + (v.usuario || '') : (v.usuario || ''); host = v.label ? (v.ip || '') : ''; }
+    else if(tipo === 'vpn'){ user = titled(v.usuario); }
+    else { user = v.usuario || ''; host = titled(v.ip); }
     const visible = vault.isVisible(v.id);
     const data = vault.revealed[v.id];
-    const notesHtml = visible && data && data.notas ? '<div class="notes" translate="no">' + esc(data.notas) + '</div>' : '';
+    const notesHtml = visible && data && data.notas ? '<div class="vault-notes" translate="no">' + esc(data.notas) + '</div>' : '';
+    const cell = (cls, text, label) => '<span class="' + cls + '" translate="no"' + (text ? ' title="' + esc(text) + '"' : '') + ' data-label="' + esc(Workhub.t(label)) + '">' + (text ? esc(text) : '<span class="v-none" aria-hidden="true">—</span>') + '</span>';
     return '<div class="vault-card" draggable="true" data-id="' + esc(v.id) + '">' +
-      '<div class="cat">' + (v.cliente ? clientColors.chip(v.cliente) : '<span></span>') + '<span class="type-badge">' + esc(VaultModel.typeLabel(tipo)) + '</span></div>' +
-      '<h3 translate="no">' + esc(VaultModel.titleFor(v)) + '</h3>' +
-      '<div translate="no">' + lines + '</div>' +
-      '<div class="pass-row"><span class="pass-value" translate="no">' + esc(vault.passwordText(v.id)) + '</span>' +
-      '<button type="button" class="icon-btn" data-action="toggle" data-id="' + esc(v.id) + '">' + (visible ? 'Ocultar' : 'Mostrar') + '</button>' +
-      '<button type="button" class="icon-btn" data-action="copy" data-id="' + esc(v.id) + '">Copiar</button></div>' +
+      '<span class="v-name"><i class="v-ic" title="' + esc(Workhub.t(VaultModel.typeLabel(tipo))) + '">' + iconSpan(TYPE_ICON[tipo] || 'link') + '</i><span translate="no">' + esc(VaultModel.titleFor(v)) + '</span></span>' +
+      cell('v-user', user, 'Usuario') +
+      '<span class="pass-row"><span class="pass-value' + (visible ? ' is-shown' : '') + '" translate="no">' + esc(vault.passwordText(v.id)) + '</span>' +
+      '<button type="button" class="icon-only is-sm" data-action="toggle" data-id="' + esc(v.id) + '" aria-label="' + (visible ? 'Ocultar' : 'Mostrar') + '" title="' + (visible ? 'Ocultar' : 'Mostrar') + '">' + (visible ? EYE_OFF_ICON : EYE_ICON) + '</button>' +
+      '<button type="button" class="icon-only is-sm" data-action="copy" data-id="' + esc(v.id) + '" aria-label="Copiar" title="Copiar">' + COPY_ICON + '</button></span>' +
+      cell('v-host mono', host, 'Dominio o host') +
+      cell('v-port mono', v.puerto ? String(v.puerto) : '', 'Puerto') +
       notesHtml +
       '</div>';
   }

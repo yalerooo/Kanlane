@@ -62,6 +62,7 @@
       this.managed = $('plManaged');
       this.managedError = $('plManagedError');
       this.btnManagedRetry = $('plManagedRetry');
+      this.keyNote = $('plKeyNote');
 
       this.dlg = $('dlgEncKey');
       this.ekForm = $('ekForm');
@@ -76,12 +77,15 @@
       this.ekKeyPanel = $('ekKeyPanel');
       this.ekError = $('ekError');
       this.ekSubmit = $('ekSubmit');
+      this.ekCancel = $('ekCancel');
+      this.ekMembers = $('ekMembers');
+      this.ekProgress = $('ekProgress');
       this.ekMode = '';
     }
 
     /* handlers: {unlock(pw, trusted), recover(clave, pw, pw2, trusted), keyDone(), check(pw) → resultado,
        download(clave) → Promise, change(actual, nueva, repetida), newRecovery(actual), recoveryDone(),
-       retryManaged()} */
+       retryManaged(), rotate(actual), rotateConfirm(), rotateClosed()} */
     bind(handlers){
       this.handlers = handlers;
       this.btnManagedRetry.addEventListener('click', () => handlers.retryManaged());
@@ -105,15 +109,23 @@
 
       this.ekNew.addEventListener('input', () => paintMeter(this.ekMeter, this.ekNew.value ? handlers.check(this.ekNew.value) : null));
       this.ekKey = keyPanel({box:$('ekKey'), copy:$('ekKeyCopy'), download:$('ekKeyDownload'), saved:$('ekKeySaved')},
-        handlers.download, (on) => { if(this.ekMode === 'recovery-key') this.ekSubmit.disabled = !on; });
+        handlers.download, (on) => { if(this.ekMode === 'recovery-key' || this.ekMode === 'rotate-key') this.ekSubmit.disabled = !on; });
       $('ekCancel').addEventListener('click', () => this.closeDialog());
       this.ekForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         if(this.ekMode === 'password') handlers.change(this.ekCurrent.value, this.ekNew.value, this.ekNew2.value);
         else if(this.ekMode === 'recovery') handlers.newRecovery(this.ekCurrent.value);
         else if(this.ekMode === 'recovery-key' && this.ekKey.isSaved()) handlers.recoveryDone();
+        else if(this.ekMode === 'rotate') handlers.rotate(this.ekCurrent.value);
+        else if(this.ekMode === 'rotate-key' && this.ekKey.isSaved()) handlers.rotateConfirm();
       });
-      this.dlg.addEventListener('close', () => this._resetDialog());
+      /* Mientras se cambia la clave el diálogo no se cierra con Esc. */
+      this.dlg.addEventListener('cancel', (ev) => { if(this.ekMode === 'rotate-run') ev.preventDefault(); });
+      this.dlg.addEventListener('close', () => {
+        const rotating = this.ekMode.indexOf('rotate') === 0;
+        this._resetDialog();
+        if(rotating && handlers.rotateClosed) handlers.rotateClosed();
+      });
     }
 
     /* ---------- pantalla de desbloqueo ---------- */
@@ -155,6 +167,11 @@
       this.managedError.hidden = !!busy || !msg;
     }
 
+    /* La clave guardada en este navegador es de antes de un cambio de clave: se explica por qué se pide. */
+    showRotated(name){
+      this.desc.textContent = Workhub.t('La clave de «{nombre}» ha cambiado. Escribe tu contraseña de cifrado para seguir.', {nombre:name || ''});
+    }
+
     focus(){
       if(!this.screen.hidden && !this.card.hidden) this.pass.focus();
     }
@@ -181,11 +198,14 @@
       this.recoverError.hidden = false;
     }
 
-    /* Tras recuperar el acceso: la clave de recuperación nueva (la anterior deja de valer). */
-    showKey(text){
+    /* Tras recuperar el acceso: la clave de recuperación nueva (la anterior deja de valer).
+       note (opcional): por qué hay una clave nueva (el propietario cambió la clave del proyecto). */
+    showKey(text, note){
       this.card.hidden = true;
       this.keyCard.hidden = false;
       this.keyError.hidden = true;
+      this.keyNote.textContent = note || '';
+      this.keyNote.hidden = !note;
       this.lockKey.show(text);
     }
 
@@ -206,6 +226,34 @@
         'Escribe tu contraseña de cifrado. Se creará una clave de recuperación nueva y la anterior dejará de valer.', 'Siguiente');
     }
 
+    /* «Cambiar la clave del proyecto» (PR10). members: [{name, pub, fp}] de los demás miembros de un
+       equipo; quien no tiene clave pública publicada no puede recibir la clave nueva. */
+    openRotate(members, team){
+      const esc = Workhub.utils.html.esc;
+      this._openDialog('rotate', 'Cambiar la clave del proyecto',
+        team
+          ? 'Se crea una clave nueva y todo el contenido se vuelve a cifrar con ella: la clave que tenía quien ya no está en el equipo deja de servir. Tendrás una clave de recuperación nueva. Puede tardar si el proyecto es grande; no cierres la pestaña.'
+          : 'Se crea una clave nueva y todo el contenido se vuelve a cifrar con ella. Tu contraseña no cambia, pero tendrás una clave de recuperación nueva. Puede tardar si el proyecto es grande; no cierres la pestaña.',
+        'Siguiente');
+      const list = members || [];
+      this.ekMembers.hidden = !list.length;
+      this.ekMembers.innerHTML = list.map((m) => '<li' + (m.pub ? '' : ' class="is-out"') + '><span translate="no">' + esc(m.name) + '</span><span class="rotate-state">' +
+        esc(m.pub ? Workhub.t('Recibirá la clave nueva al escribir su contraseña · huella {huella}', {huella:m.fp})
+          : Workhub.t('Perderá el acceso: aún no ha abierto el proyecto con esta versión de Kanlane. Tendrás que quitarle y volver a invitarle.')) + '</span></li>').join('');
+    }
+
+    /* Mientras se cambia la clave: solo el avance. Con '' vuelve al paso de la clave de recuperación. */
+    setRotateProgress(text){
+      this.ekMode = text ? 'rotate-run' : 'rotate-key';
+      this.ekProgress.hidden = !text;
+      this.ekProgress.textContent = text || '';
+      this.ekKeyPanel.hidden = !!text;
+      this.ekLead.hidden = !!text;
+      this.ekError.hidden = true;
+      this.ekCancel.disabled = !!text;
+      this.ekSubmit.disabled = !!text || !this.ekKey.isSaved();
+    }
+
     _openDialog(mode, title, lead, button){
       this._resetDialog();
       this.ekMode = mode;
@@ -217,19 +265,21 @@
       this.ekCurrent.focus();
     }
 
-    /* Segundo paso de «clave de recuperación nueva»: se enseña antes de guardarla. */
-    showDialogKey(text){
-      this.ekMode = 'recovery-key';
+    /* Segundo paso de «clave de recuperación nueva» (y de «cambiar la clave», mode 'rotate-key'):
+       se enseña antes de guardarla. */
+    showDialogKey(text, mode){
+      this.ekMode = mode || 'recovery-key';
       this.ekFields.hidden = true;
+      this.ekMembers.hidden = true;
       this.ekKeyPanel.hidden = false;
       this.ekError.hidden = true;
       this.ekLead.textContent = 'Es la única forma de abrir este proyecto si olvidas la contraseña. Kanlane no puede restablecerla ni enviártela por correo. Guárdala fuera de Kanlane: en un gestor de contraseñas o en papel.';
-      this.ekSubmit.textContent = 'Usar esta clave';
+      this.ekSubmit.textContent = this.ekMode === 'rotate-key' ? 'Cambiar la clave' : 'Usar esta clave';
       this.ekKey.show(text);
     }
 
     setDialogBusy(on){
-      this.ekSubmit.disabled = on || (this.ekMode === 'recovery-key' && !this.ekKey.isSaved());
+      this.ekSubmit.disabled = on || ((this.ekMode === 'recovery-key' || this.ekMode === 'rotate-key') && !this.ekKey.isSaved());
     }
 
     showDialogError(msg){
@@ -250,6 +300,12 @@
       this.ekKeyPanel.hidden = true;
       this.ekError.hidden = true;
       this.ekSubmit.disabled = false;
+      this.ekCancel.disabled = false;
+      this.ekLead.hidden = false;
+      this.ekMembers.hidden = true;
+      this.ekMembers.innerHTML = '';
+      this.ekProgress.hidden = true;
+      this.ekProgress.textContent = '';
       paintMeter(this.ekMeter, null);
       this.ekKey.clear();
     }

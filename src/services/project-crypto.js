@@ -11,9 +11,10 @@
    - Datos: e = base64url(iv[12] ‖ texto cifrado ‖ etiqueta[16]), IV aleatorio en CADA escritura,
      AAD «kanlane/v1|pid|kid|ruta|id|ev».
    - Errores: Error con name 'ProjectCryptoError' y .code = 'unavailable' | 'bad-format' | 'bad-key' |
-     'extractable-key' | 'short-password' | 'bad-password' | 'bad-recovery' | 'bad-code' | 'undecryptable'.
+     'extractable-key' | 'short-password' | 'bad-password' | 'bad-recovery' | 'bad-code' | 'bad-kms' |
+     'bad-rekey' | 'undecryptable'.
      AES-GCM no distingue «clave errónea», «AAD distinta» y «blob manipulado»: las tres dan
-     'undecryptable' (y 'bad-password' / 'bad-recovery' / 'bad-code' al desenvolver).
+     'undecryptable' (y 'bad-password' / 'bad-recovery' / 'bad-code' / 'bad-rekey' al desenvolver).
    Este archivo no guarda claves en ningún sitio (ni localStorage ni IndexedDB): eso es keystore.js. */
 (function(){
   'use strict';
@@ -30,7 +31,7 @@
   const DEK_BYTES = 32, IV_BYTES = 12, TAG_BYTES = 16, SALT_BYTES = 16, PID_BYTES = 16, KID_BYTES = 8;
   const RECOVERY_BYTES = 20, CODE_CHARS = 20;
   const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';   /* el de crypto.js: sin I, L, O, U */
-  const AAD_PREFIX = 'kanlane/v1', WRAP_PREFIX = 'kanlane/wrap/v1', RK_INFO = 'kanlane/rk/v1';
+  const AAD_PREFIX = 'kanlane/v1', WRAP_PREFIX = 'kanlane/wrap/v1', RK_INFO = 'kanlane/rk/v1', ECDH_INFO = 'kanlane/ecdh/v1';
   const KCV_TEXT = 'kanlane-kcv';
   const PID_RE = /^[A-Za-z0-9_-]{22}$/;
   const KID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -330,6 +331,61 @@
     }
   }
 
+  /* Rotación de la clave de un equipo (PR10, apartado 13.1 del plan): el propietario entrega la clave
+     nueva a cada miembro con su clave pública. Par efímero ECDH P-256 → 256 bits compartidos →
+     HKDF-SHA256(sal = bytes del pid, info «kanlane/ecdh/v1») → AES-GCM, con la AAD de siempre
+     («kanlane/wrap/v1|ecdh|pid|kid|uid», uid = el miembro que la recibe). */
+  function validPub(pub){
+    return !!pub && pub.kty === 'EC' && pub.crv === 'P-256' && typeof pub.x === 'string' && typeof pub.y === 'string' &&
+      /^[A-Za-z0-9_-]{43}$/.test(pub.x) && /^[A-Za-z0-9_-]{43}$/.test(pub.y);
+  }
+  function importPub(pub){
+    if(!validPub(pub)) return Promise.reject(fail('bad-format'));
+    return subtle().importKey('jwk', {kty:'EC', crv:'P-256', x:pub.x, y:pub.y, ext:true}, {name:'ECDH', namedCurve:'P-256'}, false, [])
+      .catch((e) => { throw fail('bad-format', e); });
+  }
+  async function ecdhKek(privateKey, publicKey, pid){
+    const s = subtle();
+    const bits = new Uint8Array(await s.deriveBits({name:'ECDH', public:publicKey}, privateKey, 256));
+    try{
+      const ikm = await s.importKey('raw', bits, {name:'HKDF'}, false, ['deriveKey']);
+      return await s.deriveKey({name:'HKDF', hash:'SHA-256', salt:fromB64url(pid, PID_BYTES), info:enc.encode(ECDH_INFO)},
+        ikm, {name:'AES-GCM', length:256}, false, ['encrypt', 'unwrapKey']);
+    }finally{
+      bits.fill(0);
+    }
+  }
+  /* wrapForMember(dek, pública del miembro, {pid, kid, uid del miembro}) → {epk, iv, ct}. */
+  async function wrapForMember(dek, pub, ctx){
+    checkCtx(ctx);
+    const s = subtle();
+    const theirs = await importPub(pub);
+    const eph = await s.generateKey({name:'ECDH', namedCurve:'P-256'}, true, ['deriveBits']);
+    const w = await wrapWith(await ecdhKek(eph.privateKey, theirs, ctx.pid), dek, 'ecdh', ctx);
+    const jwk = await s.exportKey('jwk', eph.publicKey);
+    return {epk:{kty:jwk.kty, crv:jwk.crv, x:jwk.x, y:jwk.y}, iv:w.iv, ct:w.ct};
+  }
+  /* unwrapFromOwner(wrap, mi privada (PKCS#8), ctx, extractable) → CryptoKey ('bad-rekey' si no abre). */
+  async function unwrapFromOwner(wrap, priv, ctx, extractable){
+    checkCtx(ctx);
+    if(!wrap || !(priv instanceof Uint8Array) || !priv.length || priv.length > MAX_PRIVATE_BYTES) throw fail('bad-format');
+    fromB64url(wrap.iv, IV_BYTES);
+    fromB64url(wrap.ct, DEK_BYTES + TAG_BYTES);
+    const theirs = await importPub(wrap.epk);
+    let mine;
+    try{ mine = await subtle().importKey('pkcs8', priv, {name:'ECDH', namedCurve:'P-256'}, false, ['deriveBits']); }
+    catch(e){ throw fail('bad-format', e); }
+    return unwrapWith(await ecdhKek(mine, theirs, ctx.pid), wrap, 'ecdh', ctx, extractable, 'bad-rekey');
+  }
+  /* Huella de una clave pública para compararla por otro canal: 60 bits de SHA-256, XXXX-XXXX-XXXX. */
+  async function fingerprint(pub){
+    if(!validPub(pub)) throw fail('bad-format');
+    const hash = new Uint8Array(await subtle().digest('SHA-256', enc.encode('kanlane/fp/v1|' + pub.x + '|' + pub.y)));
+    let out = '';
+    for(let i = 0; i < 12; i++){ out += ALPHABET[hash[i] & 31]; }
+    return out.match(/.{4}/g).join('-');
+  }
+
   /* Clave de recuperación: 160 bits en base32 legible, 8 grupos de 4 (XXXX-XXXX-…). */
   function newRecoveryKey(){
     const bytes = randomBytes(RECOVERY_BYTES);
@@ -552,7 +608,7 @@
     newDekBytes, newPid, newKid, importDek,
     kcv, checkKcv,
     wrapPassword, unwrapPassword,
-    newKeyPair, unwrapPrivate,
+    newKeyPair, unwrapPrivate, wrapForMember, unwrapFromOwner, fingerprint,
     newRecoveryKey, parseRecoveryKey, wrapRecovery, unwrapRecovery,
     wrapManaged, unwrapManaged,
     newAccessCode, parseAccessCode, wrapCode, unwrapCode,

@@ -50,6 +50,7 @@
       this.controllers.crypto = new C.ProjectCryptoController(this, new V.ProjectLockView());
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       this.controllers.teamCrypto = new C.TeamCryptoController(this, new V.JoinView());
+      this.controllers.rotation = new C.KeyRotationController(this, this.controllers.crypto.view);
       this.controllers.team = new C.TeamController(this, new V.ShareView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
@@ -217,7 +218,7 @@
         /* syncEncryption() volverá a llamar cuando llegue la lista de proyectos. */
         this.disconnectProject();
         this.pendingConnect = true;
-        this.encPid = '';
+        this.encSig = '';
         return;
       }
       this.pendingConnect = false;
@@ -226,10 +227,10 @@
         return;
       }
       this.disconnectProject();
-      this.encPid = enc.pid;
+      this.encSig = AppController.encSig(enc);
       this.projectKey(enc).then((cipher) => {
         if(seq !== this.connectSeq) return;
-        if(cipher) this.openProject(cipher, enc.pid);
+        if(cipher) this.openProject(cipher, this.encSig);
         else this.lockProject();
       });
     }
@@ -241,10 +242,10 @@
       this.controllers.backup.syncEncrypted();
     }
 
-    openProject(cipher, pid){
+    openProject(cipher, sig){
       const P = M.ProjectModel;
       this.cipher = cipher;
-      this.encPid = pid;
+      this.encSig = sig;
       this.shell.setProjectLocked(false);
       /* Equipo cifrado: los cambios de campos secretos van en transacción (dos personas a la vez). */
       if(cipher) cipher.transaction = P.isTeam(this.projectId) && this.rootDb.teams && this.rootDb.teams.runTransaction
@@ -259,6 +260,8 @@
       this.models.plugins.connect(db, this.projectId === P.MAIN_ID);
       /* La sección de copias cambia con el cifrado (exportar cifrado o no). */
       if(this.controllers && this.controllers.backup) this.controllers.backup.syncEncrypted();
+      /* Cifrado: publicar mi clave pública en el equipo y terminar un cambio de clave a medias. */
+      if(cipher && this.controllers && this.controllers.rotation) this.controllers.rotation.onOpen();
     }
 
     disconnectProject(){
@@ -269,15 +272,31 @@
       this.models.plugins.disconnect();
     }
 
-    /* Cifrador del proyecto si su clave está guardada en este navegador y es la vigente; si no, null. */
+    /* Lo que identifica el cifrado de un proyecto: si cambia (otra clave, un cambio de clave que
+       empieza o termina) hay que volver a conectar. */
+    static encSig(enc){
+      return enc ? [enc.pid, enc.kid, enc.rot && enc.rot.kid ? enc.rot.kid : ''].join('|') : '';
+    }
+
+    /* Cifrador del proyecto si su clave está guardada en este navegador y es la vigente; si no, null.
+       Durante un cambio de clave (enc.rot) lleva además la anterior, si está aquí, para leer lo que
+       aún no se ha vuelto a cifrar. */
     projectKey(enc){
       const keystore = Workhub.services.keystore;
       const PC = Workhub.services.projectCrypto;
+      const P = M.ProjectModel;
       if(!keystore || !PC || !PC.isAvailable() || !M.ProjectCipher) return Promise.resolve(null);
-      return keystore.get(this.rootDb.me.uid, enc.pid).then((rec) => {
-        if(!rec || rec.kid !== enc.kid) return null;
-        return PC.checkKcv(rec.key, enc.pid, enc.kid, enc.kcv).then((ok) => {
-          return ok ? new M.ProjectCipher({pid:enc.pid, kid:enc.kid, key:rec.key}) : null;
+      const uid = this.rootDb.me.uid;
+      /* Clave guardada de una versión (kid) del proyecto, comprobada con su kcv. */
+      const find = (slot, kid, kcv) => keystore.get(uid, slot).then((rec) => {
+        if(!rec || rec.kid !== kid) return null;
+        return PC.checkKcv(rec.key, enc.pid, kid, kcv).then((ok) => (ok ? rec.key : null));
+      });
+      return find(enc.pid, enc.kid, enc.kcv).then((key) => {
+        if(!key) return null;
+        const rot = enc.rot && enc.rot.kid ? enc.rot : null;
+        return (rot ? find(P.keySlot(enc.pid, rot.kid), rot.kid, rot.kcv).catch(() => null) : Promise.resolve(null)).then((old) => {
+          return new M.ProjectCipher({pid:enc.pid, kid:enc.kid, key:key, prev:old ? [{kid:rot.kid, key:old}] : []});
         });
       }).catch(() => null);
     }
@@ -287,8 +306,8 @@
     syncEncryption(){
       if(!this.rootDb || !this.rootDb.me || !this.models.projects.loaded) return;
       const p = this.models.projects.get(this.projectId);
-      const pid = M.ProjectModel.isEncrypted(p) ? p.enc.pid : '';
-      if(this.pendingConnect || pid !== (this.encPid || '')) this.connectProject();
+      const sig = AppController.encSig(M.ProjectModel.isEncrypted(p) ? p.enc : null);
+      if(this.pendingConnect || sig !== (this.encSig || '')) this.connectProject();
     }
 
     /* Cambia de proyecto sin recargar: cierra lo que hubiera abierto, vacía los

@@ -72,7 +72,7 @@ Principios:
 - **El dispositivo del usuario**: malware, extensiones del navegador con acceso a la página, alguien con la sesión abierta. Con «Este dispositivo es de confianza», la clave sobrevive al cierre de sesión.
 - **Los metadatos en claro** (apartado 5.6): nombre del proyecto, columnas, etiquetas del catálogo, fechas, estados, orden, asignados, número y tamaño aproximado de los documentos, fechas de cambio, quién es miembro.
 - **Lo que ya ha salido**: notificaciones del navegador de los recordatorios (título de la tarea en el centro de notificaciones del sistema), archivos exportados sin cifrar, lo que reciben los plugins con permiso, lo que se guarda en `wh.storage.user` (no se cifra, es de la cuenta).
-- **Un miembro expulsado** conserva lo que ya descifró y, hasta la rotación de clave (PR10), la propia DEK.
+- **Un miembro expulsado** conserva lo que ya descifró y la DEK que tuviera. Cambiar la clave del proyecto (PR10, hecho) hace que esa DEK no abra nada de lo que hay ahora en el servidor ni de lo que se guarde después.
 - **Pérdida**: sin contraseña ni clave de recuperación el proyecto es irrecuperable. Kanlane no puede ayudar. Es una propiedad, no un fallo.
 
 ### 3.3 Modo C (gestionado)
@@ -98,7 +98,7 @@ Solo cuando PR4 (B personal) y, para equipos, PR7 estén desplegados:
 - «Nadie puede leer tus datos» o «conocimiento cero» sin matices (los metadatos van en claro y el código lo sirve Kanlane).
 - «Se cifra todo» (nombre del proyecto, columnas, etiquetas del catálogo, fechas y estados no; ver 5.6).
 - «Protegido aunque tu ordenador esté comprometido».
-- «Si expulsas a alguien, deja de poder leer» (hasta PR10, solo deja de poder **descargar** datos nuevos).
+- «Si expulsas a alguien, deja de poder leer» a secas: deja de poder **descargar** datos y, si después se cambia la clave del proyecto (PR10), la clave que tuviera deja de servir; lo que ya vio o copió no se le puede quitar.
 - Nada del modo C hasta PR9, y nunca que en C «Kanlane no puede leerlo».
 - «Auditado», «certificado» o similares.
 
@@ -185,7 +185,7 @@ enc: {
 }
 ```
 
-Reglas: inmutable una vez creado (salvo `kid`/`kcv` en PR10); incompatible con el campo `github`; solo se puede añadir al crear el documento o al reescribir el principal marcado `deleted:true` (PR11 lo amplía).
+Reglas: inmutable una vez creado (salvo `kid`/`kcv` y `rot` al cambiar la clave, PR10); incompatible con el campo `github`; solo se puede añadir al crear el documento o al reescribir el principal marcado `deleted:true` (PR11 lo amplía).
 
 ### 5.4 Documento `crypto/{uid}`
 
@@ -983,6 +983,21 @@ Sin cambios de formato: el JSON se cifra con la clave de copias de la cuenta (`l
 - **Proceso**: `kid2` nuevo; cada documento lleva su `kid`, así que conviven `kid1` y `kid2` mientras se recifra de uno en uno (12 a la vez, sin lotes); el cliente guarda ambas claves hasta terminar; al acabar, `enc.kid/kcv` = `kid2` (las reglas de PR10 permiten cambiar solo `kid` y `kcv` al propietario). Se puede reanudar si se corta.
 - **[MANUAL] publicar reglas** de PR10.
 
+**Hecho en PR10** (rama `claude/cifrado-pr10`). Lo que concreta o cambia respecto a lo de arriba:
+
+- **Quién y dónde**: «Cambiar la clave del proyecto» en «Editar proyecto → Privacidad» y en el aviso que sale en «Compartir» tras quitar a alguien. Solo proyectos con contraseña (`mode: 'pw'`): personales, y equipos si eres el propietario. Los gestionados por Kanlane no (no tienen contraseña). `KeyRotationController` (`src/controllers/key-rotation-controller.js`) y `ProjectReseal` (`src/models/project-reseal.js`).
+- **Orden** (un corte en cualquier punto no pierde nada): clave y clave de recuperación nuevas (la de recuperación se enseña y se confirma antes de escribir nada) → `crypto/{uid}` del propietario con la clave nueva y, en `old`, la anterior → `rekey/{uid}` de cada miembro → las dos claves en el navegador → **el documento del proyecto pasa a `kid`/`kcv` nuevos y apunta la anterior en `enc.rot = {kid, kcv, at}`** → recifrado → se quita `enc.rot` y se olvida la anterior. El cambio de `enc` va **antes** de recifrar (no al final, como decía el proceso de arriba): así las reglas pueden exigir desde ese momento que todo lo que se selle lleve la clave nueva y no aparecen documentos nuevos con la vieja.
+- **Si se corta antes de cambiar `enc`**, no ha cambiado nada: `readWrap` ve que `crypto/{uid}` es de una clave que el proyecto no tiene y que `old` es la vigente, y la restaura. **Si se corta después**, el propietario lo termina solo al abrir el proyecto (`KeyRotationController.onOpen` → `resume`): el recifrado se salta lo que ya lleva la clave nueva. Si su navegador no tiene la anterior (cerró sesión), al desbloquear con la contraseña se cargan las dos desde `crypto/{uid}.old`.
+- **Leer con dos claves**: `ProjectCipher` admite `prev: [{kid, key}]`; abre cada documento con la clave de su `kid` y escribe siempre con la vigente. La anterior se guarda en el almacén del navegador en la casilla `pid.kid` (`ProjectModel.keySlot`); `AppController.projectKey` la carga mientras exista `enc.rot` y `AppController.encSig` (pid, kid y rot) decide cuándo hay que reconectar.
+- **Entrega a los miembros (D9)**: `PC.wrapForMember` / `PC.unwrapFromOwner` (par efímero ECDH P-256 → HKDF-SHA256 con sal = pid e info `kanlane/ecdh/v1` → AES-GCM, AAD `kanlane/wrap/v1|ecdh|pid|kid|uid`; error `bad-rekey`). Colecciones nuevas: `teams/{tid}/pubkeys/{uid}` (`{v, pub, updatedAt}`; la publica cada miembro al abrir el proyecto, porque `crypto/{uid}` solo lo lee su dueño) y `teams/{tid}/rekey/{uid}` (`{v, kid, from, epk, iv, ct, createdAt}`; la escribe el propietario y solo la lee su destinatario).
+- **El miembro** ve la pantalla de desbloqueo («La clave de «…» ha cambiado»), escribe su contraseña (que abre su clave privada), recibe la clave nueva y **una clave de recuperación nueva** (la anterior envolvía la clave vieja; se enseña antes de guardar nada). Conserva su par de claves. Quien no tenía clave pública publicada, o intenta entrar con una clave de recuperación anterior al cambio, recibe un mensaje que le dice que pida al propietario que le quite y le vuelva a invitar. No se ha hecho una forma de entregar la clave más tarde a quien publique su clave pública después del cambio.
+- **Huellas** (mitigación de confiar en el servidor para las claves públicas): `PC.fingerprint` (60 bits de SHA-256, `XXXX-XXXX-XXXX`), visibles en «Compartir» y en el diálogo del cambio de clave.
+- **Cambiar la contraseña, crear otra clave de recuperación y «He olvidado la contraseña»** con un cambio a medias conservan también la clave anterior (`crypto/{uid}.old`).
+- **Versiones locales de las copias**: llevan su `kid`; se vuelven a sellar con la clave vigente mientras el navegador aún tenga la anterior (`backupHistory.sealPlain`). Las de un navegador que no la tenga dejan de poder abrirse.
+- **Lo que no se podía leer** antes del cambio (otra clave, manipulado) se deja como está y se cuenta en un aviso.
+- **Reglas**: `enc` admite `rot`; `encRotation` permite solo empezar (kid/kcv nuevos con `rot` = la clave vigente, sin otro cambio a medias) y terminar (quitar `rot`), con pid, modo y fecha intactos, y en un equipo solo al propietario; `validPwCrypto` admite `old`; `teamKid` exige en los equipos que lo sellado lleve la clave vigente (o que no se toque el contenido sellado); `pubkeys` y `rekey`. 257 pruebas (59 nuevas), con chequeo de mutaciones (32 reglas rotas a propósito, todas detectadas). **[MANUAL] publicar las reglas antes de fusionar.** En los proyectos personales no se exige el `kid` en cada escritura (costaría una lectura por escritura): el recifrado da varias pasadas hasta que no queda nada.
+- **Pruebas**: `tests/crypto/key-rotation.test.js` (ECDH, cifrador con dos claves, cambio completo en un proyecto personal, fallo antes de empezar, corte tras guardar la clave envuelta, corte a medias y reanudación, cambios de contraseña a medias, equipo con miembro que recibe la clave, miembro sin clave pública, miembro a mitad del cambio) y `tests/e2e/crypto-rotate.js` (navegador, emuladores y reglas reales, tres cuentas). **No se ha probado en producción** ni con un proyecto grande (el recifrado es una escritura por documento, 12 a la vez).
+
 ### 13.2 PR11: convertir un proyecto A existente en B
 
 - Requiere: no estar enlazado con GitHub (8.4), ser propietario, conexión.
@@ -1195,7 +1210,7 @@ PR0 y PR1 son independientes y pueden ir en paralelo. **PR5 debería desplegarse
 | El navegador no guarda `CryptoKey` en IndexedDB | Baja | Baja | Se cae a memoria y se pide la contraseña en cada recarga. |
 | Perder el secreto del Worker (C) | Baja | Total para los C | Copia fuera de Cloudflare antes de activar; versionado; clave de recuperación opcional. |
 | Promesas públicas antes de tiempo | Media | Legal/reputación | PR8 solo tras despliegue; lista del apartado 18. |
-| Miembro expulsado conserva acceso a la clave | Segura hasta PR10 | Media | Aviso en la confirmación y en la documentación; PR10. |
+| Miembro expulsado conserva acceso a la clave | Segura | Media | Aviso en la confirmación y, tras quitarle, la oferta de cambiar la clave del proyecto (PR10, hecho). |
 | El modo invitado o local intenta crear B | — | — | No se ofrece (decisión 6). |
 
 ### 16.1 Plan de reversión por fase

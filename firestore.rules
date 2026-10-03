@@ -17,7 +17,11 @@ rules_version = '2';
 //    llevar el campo 'enc' (solo al crearse): sus documentos de datos se
 //    guardan sellados (campos 'e', 'ev' y 'kid') y las reglas no dejan
 //    degradarlos a texto en claro. Los proyectos sin 'enc' funcionan igual
-//    que siempre. 'github' y 'enc' son incompatibles.
+//    que siempre. 'github' y 'enc' son incompatibles. La clave se puede cambiar
+//    (enc.kid y enc.kcv, con la anterior apuntada en enc.rot mientras se vuelve a
+//    cifrar todo); en un equipo solo el propietario, que deja la clave nueva a
+//    cada miembro en rekey/{uid}, envuelta con la clave pública que ese miembro
+//    publica en pubkeys/{uid}.
 // 5. Todo lo demás está cerrado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -202,24 +206,43 @@ service cloud.firestore {
     // Campo 'enc' del documento del proyecto. Modo 'pw' (cifrado total: la clave se abre con la
     // contraseña del proyecto) o 'managed' (gestionado: la clave que la envuelve la custodia el
     // Worker de Kanlane). Los equipos solo admiten 'pw'.
+    // 'rot' solo existe mientras se cambia la clave: la clave anterior, con la que aún puede haber
+    // documentos sellados.
     function validEnc(e) {
-      return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt'])
+      return e is map && e.keys().hasOnly(['v', 'mode', 'pid', 'kid', 'kcv', 'createdAt', 'rot'])
         && e.keys().hasAll(['v', 'mode', 'pid', 'kid', 'kcv'])
         && e.v == 1 && e.mode in ['pw', 'managed']
         && e.pid is string && e.pid.size() >= 16 && e.pid.size() <= 32
         && e.kid is string && e.kid.size() >= 8 && e.kid.size() <= 32
-        && e.kcv is string && e.kcv.size() > 0 && e.kcv.size() <= 128;
+        && e.kcv is string && e.kcv.size() > 0 && e.kcv.size() <= 128
+        && (!('rot' in e) || (e.rot is map && e.rot.keys().hasOnly(['kid', 'kcv', 'at'])
+            && e.rot.keys().hasAll(['kid', 'kcv'])
+            && e.rot.kid is string && e.rot.kid.size() >= 8 && e.rot.kid.size() <= 32
+            && e.rot.kcv is string && e.rot.kcv.size() > 0 && e.rot.kcv.size() <= 128));
     }
 
-    // 'enc' se pone al crear el proyecto (o al recrear el principal marcado como borrado), no cambia
-    // después y no convive con 'github'.
+    // Cambio de clave de un proyecto cifrado (solo con contraseña). El proyecto (pid), el modo y la
+    // fecha no cambian nunca. Dos pasos permitidos: empezar (kid y kcv nuevos, con la clave vigente
+    // apuntada en 'rot'; no se empieza otro cambio con uno a medias) y terminar (se quita 'rot').
+    function encRotation(next, cur) {
+      return cur.mode == 'pw' && next.v == cur.v && next.mode == cur.mode && next.pid == cur.pid
+        && next.get('createdAt', 0) == cur.get('createdAt', 0)
+        && ((!('rot' in cur) && 'rot' in next && next.kid != cur.kid
+              && next.rot.kid == cur.kid && next.rot.kcv == cur.kcv)
+            || ('rot' in cur && !('rot' in next) && next.kid == cur.kid && next.kcv == cur.kcv));
+    }
+
+    // 'enc' se pone al crear el proyecto (o al recrear el principal marcado como borrado) y no convive
+    // con 'github'. Después solo cambia para cambiar la clave (encRotation).
     function validProjectEnc() {
       let d = request.resource.data;
       let had = resource != null && resource.data.get('enc', null) != null;
       let has = d.get('enc', null) != null;
       return (!has || (validEnc(d.enc) && d.get('github', null) == null))
-        && (!had || (has && d.enc == resource.data.enc) || (d.get('deleted', false) == true && !has))
-        && (had || !has || resource == null || resource.data.get('deleted', false) == true);
+        && (!had || (has && (d.enc == resource.data.enc || encRotation(d.enc, resource.data.enc)))
+            || (d.get('deleted', false) == true && !has))
+        && (had || !has || resource == null || resource.data.get('deleted', false) == true)
+        && (had || !has || !('rot' in d.enc));
     }
 
     // Envoltorio de la clave de datos de una persona: crypto/{uid}. Con la contraseña y la clave de
@@ -242,7 +265,7 @@ service cloud.firestore {
 
     function validPwCrypto() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['v', 'kid', 'kdf', 'pw', 'rk', 'pub', 'priv', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['v', 'kid', 'kdf', 'pw', 'rk', 'pub', 'priv', 'old', 'createdAt', 'updatedAt'])
         && d.keys().hasAll(['v', 'kid', 'kdf', 'pw', 'rk'])
         && d.v == 1
         && d.kid is string && d.kid.size() >= 8 && d.kid.size() <= 32
@@ -252,7 +275,29 @@ service cloud.firestore {
         && d.kdf.salt is string && d.kdf.salt.size() >= 16 && d.kdf.salt.size() <= 64
         && wrapBlob(d.pw, 256) && wrapBlob(d.rk, 256)
         && (!('pub' in d) || (d.pub is map && d.pub.keys().size() <= 8))
-        && (!('priv' in d) || wrapBlob(d.priv, 1024));
+        && (!('priv' in d) || wrapBlob(d.priv, 1024))
+        // La clave anterior, mientras dura un cambio de clave.
+        && (!('old' in d) || (d.old is map && d.old.keys().hasOnly(['kid', 'kdf', 'pw', 'rk', 'priv'])
+            && d.old.keys().hasAll(['kid', 'kdf', 'pw', 'rk'])
+            && d.old.kid is string && d.old.kid.size() >= 8 && d.old.kid.size() <= 32
+            && d.old.kdf is map && d.old.kdf.keys().size() <= 4
+            && wrapBlob(d.old.pw, 256) && wrapBlob(d.old.rk, 256)
+            && (!('priv' in d.old) || wrapBlob(d.old.priv, 1024))));
+    }
+
+    // Clave pública P-256 (JWK) de un miembro de un equipo cifrado.
+    function validPub(p) {
+      return p is map && p.keys().hasOnly(['kty', 'crv', 'x', 'y']) && p.keys().hasAll(['kty', 'crv', 'x', 'y'])
+        && p.kty == 'EC' && p.crv == 'P-256'
+        && p.x is string && p.x.size() == 43 && p.y is string && p.y.size() == 43;
+    }
+
+    // En un equipo cifrado, lo que se sella se sella con la clave vigente del equipo. Un cambio que no
+    // toca el contenido sellado (mover, reprogramar) deja el documento con la clave que tuviera.
+    function teamKid(tid) {
+      let d = request.resource.data;
+      return !isSealed(d) || !teamEnc(tid) || d.kid == team(tid).enc.kid
+        || (resource != null && isSealed(resource.data) && d.kid == resource.data.kid && d.e == resource.data.e);
     }
 
     match /users/{uid} {
@@ -343,11 +388,17 @@ service cloud.firestore {
         && request.resource.data.members[request.auth.uid].role == 'owner'
         && (request.resource.data.get('enc', null) == null
             || (validEnc(request.resource.data.enc) && request.resource.data.enc.mode == 'pw'
+                && !('rot' in request.resource.data.enc)
                 && request.resource.data.get('github', null) == null));
 
-      // El cifrado de un equipo no cambia después de crearlo y no convive con 'github'.
+      // El cifrado de un equipo no se pone ni se quita después de crearlo y no convive con 'github'.
+      // Solo el propietario puede cambiar la clave (encRotation).
       allow update: if verified()
-        && request.resource.data.get('enc', null) == resource.data.get('enc', null)
+        && (request.resource.data.get('enc', null) == resource.data.get('enc', null)
+            || (resource.data.get('enc', null) != null && request.resource.data.get('enc', null) != null
+                && resource.data.members[request.auth.uid].role == 'owner'
+                && validEnc(request.resource.data.enc)
+                && encRotation(request.resource.data.enc, resource.data.enc)))
         && (request.resource.data.get('enc', null) == null || request.resource.data.get('github', null) == null)
         && (
         // El propietario cambia lo que quiera, menos quién es el propietario.
@@ -384,15 +435,17 @@ service cloud.firestore {
       allow read: if isTeamCollection(col) && isMember(tid);
       allow delete: if isTeamCollection(col) && canEdit(tid);
       allow create: if isTeamCollection(col) && canEdit(tid) && validWrite(col)
-        && (!sealRequired(col) || isSealed(request.resource.data) || !teamEnc(tid));
-      allow update: if isTeamCollection(col) && canEdit(tid) && validWrite(col);
+        && (!sealRequired(col) || isSealed(request.resource.data) || !teamEnc(tid))
+        && teamKid(tid);
+      allow update: if isTeamCollection(col) && canEdit(tid) && validWrite(col) && teamKid(tid);
     }
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);
       allow delete: if canEdit(tid);
       allow create: if canEdit(tid) && validWrite('notes')
-        && (isSealed(request.resource.data) || !teamEnc(tid));
-      allow update: if canEdit(tid) && validWrite('notes');
+        && (isSealed(request.resource.data) || !teamEnc(tid))
+        && teamKid(tid);
+      allow update: if canEdit(tid) && validWrite('notes') && teamKid(tid);
     }
 
     // Envoltorio de la clave del proyecto de cada miembro: lo lee y escribe cada uno; el propietario puede borrar los de otros.
@@ -401,6 +454,32 @@ service cloud.firestore {
       allow create, update: if verified() && who == request.auth.uid && validPwCrypto()
         && (isMember(tid)
             || request.auth.uid in getAfter(/databases/$(database)/documents/teams/$(tid)).data.memberIds);
+      allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
+    }
+
+    // Clave pública de cada miembro de un equipo cifrado: la publica él y la leen los demás miembros
+    // (el propietario la usa para entregarle la clave nueva al cambiar la clave del proyecto).
+    match /teams/{tid}/pubkeys/{who} {
+      allow read: if isMember(tid);
+      allow create, update: if who == request.auth.uid && isMember(tid)
+        && request.resource.data.keys().hasOnly(['v', 'pub', 'updatedAt'])
+        && request.resource.data.v == 1 && validPub(request.resource.data.pub);
+      allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
+    }
+
+    // Clave nueva del proyecto para un miembro, envuelta con su clave pública: la escribe el
+    // propietario al cambiar la clave y solo la lee ese miembro.
+    match /teams/{tid}/rekey/{who} {
+      allow read: if who == request.auth.uid && isMember(tid);
+      allow create, update: if isOwner(tid) && who in team(tid).memberIds
+        && request.resource.data.keys().hasOnly(['v', 'kid', 'from', 'epk', 'iv', 'ct', 'createdAt'])
+        && request.resource.data.keys().hasAll(['v', 'kid', 'from', 'epk', 'iv', 'ct'])
+        && request.resource.data.v == 1
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.kid is string && request.resource.data.kid.size() >= 8
+        && request.resource.data.kid.size() <= 32
+        && validPub(request.resource.data.epk)
+        && wrapBlob({'iv': request.resource.data.iv, 'ct': request.resource.data.ct}, 256);
       allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
     }
 

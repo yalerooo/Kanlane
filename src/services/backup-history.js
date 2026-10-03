@@ -61,15 +61,23 @@
     return request('readonly', (store) => store.get(id)).then((entry) => {
       if(!entry || !entry.e) return entry;
       if(!cipher) throw new Error('locked');
-      return cipher.openBlob(SEAL_PATH, entry.id, entry.e).then((json) => Object.assign({}, entry, {json:json}));
+      return cipher.openBlob(SEAL_PATH, entry.id, entry.e, entry.kid).then((json) => Object.assign({}, entry, {json:json}));
     });
   }
   function remove(id){ return request('readwrite', (store) => store.delete(id)); }
 
-  /* Versiones de un proyecto cifrado guardadas en claro por una versión anterior de la app: se sellan. */
+  /* Versiones de un proyecto cifrado guardadas en claro por una versión anterior de la app: se sellan.
+     Las selladas con una clave anterior del proyecto (se cambió la clave) se vuelven a sellar con la
+     vigente mientras el cifrador aún pueda abrirlas. */
   function sealPlain(scope, cipher){
-    return list(scope).then((entries) => Promise.all(entries.filter((entry) => typeof entry.json === 'string').map((entry) =>
-      sealed(entry, entry.json, cipher).then((out) => request('readwrite', (store) => store.put(out))))));
+    const put = (out) => request('readwrite', (store) => store.put(out));
+    return list(scope).then((entries) => Promise.all(entries.map((entry) => {
+      if(typeof entry.json === 'string') return sealed(entry, entry.json, cipher).then(put);
+      if(entry.e && entry.kid && entry.kid !== cipher.kid && cipher.canOpen && cipher.canOpen(entry.kid)){
+        return cipher.openBlob(SEAL_PATH, entry.id, entry.e, entry.kid).then((json) => sealed(entry, json, cipher)).then(put).catch(() => null);
+      }
+      return null;
+    })));
   }
 
   Workhub.services.backupHistory = {list, save, get, remove, sealPlain};

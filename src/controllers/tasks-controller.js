@@ -79,6 +79,10 @@
         this.moveWithActivity(id, status);
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
+      this.detail.bindDone((id, status) => {
+        this.moveWithActivity(id, status);
+        toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
+      });
       this.detail.bindChecklist((id, itemId, done) => {
         this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
       });
@@ -94,7 +98,9 @@
     render(){
       const f = this.board.filters();
       this.board.setHidden(this.hiddenColumns());
-      this.board.render(this.tasks.filter(f.query, f.cliente, f.assignee), this.tasks.items);
+      let list = this.tasks.filter(f.query, f.cliente, f.assignee);
+      if(f.week) list = this.board.dueThisWeek(list);
+      this.board.render(list, this.tasks.items);
     }
 
     logActivity(id, text){

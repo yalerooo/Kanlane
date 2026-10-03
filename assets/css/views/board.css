@@ -1,45 +1,46 @@
 /* ---------- Tablero de tareas ---------- */
 /* El tablero ocupa hasta el final de la ventana (--board-top lo calcula
-   BoardView) y cada columna desplaza sus tarjetas por dentro. */
+   BoardView) y cada columna desplaza sus tarjetas por dentro.
+   Las columnas no son cajas: título y tarjetas van directamente sobre el fondo. */
 .board{
   --board-top:240px;
   display:grid;
   grid-template-columns:repeat(var(--cols, 4),minmax(0,1fr));
-  gap:12px;
+  gap:18px;
   height:calc(100vh - var(--board-top));
   height:calc(100dvh - var(--board-top));
   min-height:420px;
 }
+/* Tablero o lista (BoardView._applyMode). */
+#boardWrap.is-list .board,#boardWrap.is-list .board-tabs{display:none;}
+#boardWrap:not(.is-list) .task-list,.board[hidden] ~ .task-list{display:none;}
+
 .col{
-  --st:var(--st-pend);
+  --st:var(--dot-pend);
   display:flex;
   flex-direction:column;
+  min-width:0;
   min-height:0;
-  background:var(--surface-2);
-  background:color-mix(in srgb, var(--surface-2) 70%, var(--bg));
   border-radius:var(--r-xl);
-  transition:background .15s ease, box-shadow .15s ease;
+  transition:background .15s ease;
 }
-.col.drag-over{
-  background:var(--surface-2);
-  background:color-mix(in srgb, var(--accent-solid) 5%, var(--surface-2));
-  box-shadow:inset 0 0 0 1px var(--accent-solid);
-  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent-solid) 35%, transparent);
-}
+.col.drag-over{background:var(--hover);}
 .col-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:8px;
-  height:44px;
-  padding:0 8px 0 14px;
+  height:28px;
+  margin:0 2px 8px;
 }
-.col-head .name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--ink);min-width:0;}
-.col-head .dot{background:var(--st);}
+.col-head .name{font-size:12.5px;font-weight:550;display:flex;align-items:center;gap:8px;color:var(--ink);min-width:0;}
+/* Anillo de estado de 9px; relleno en las etapas finales. */
 .dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;}
+.col-head .dot,.board-tab .dot,.tl-head .dot{width:9px;height:9px;border:2px solid var(--st);background:transparent;}
+.col.is-final .col-head .dot,.board-tab.is-final .dot,.tl-group.is-final .tl-head .dot{background:var(--st);}
 .col-head .count{
-  font-size:12px;
-  font-weight:500;
+  font-size:12.5px;
+  font-weight:450;
   color:var(--ink-faint);
   font-variant-numeric:tabular-nums;
 }
@@ -50,24 +51,47 @@
   height:26px;
   flex:none;
   border:none;
-  border-radius:var(--r-md);
+  border-radius:7px;
   background:transparent;
   color:var(--ink-faint);
   cursor:pointer;
   transition:background .12s ease, color .12s ease;
 }
 .col-add:hover{background:var(--hover);color:var(--ink);}
+.col-add svg{width:14px;height:14px;}
+/* «Añadir tarea» al pie de la primera columna. */
+.col-new{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex:none;
+  height:32px;
+  margin:2px 0 0;
+  padding:0 10px;
+  font-family:inherit;
+  font-size:13px;
+  color:var(--ink-faint);
+  background:transparent;
+  border:0;
+  border-radius:var(--r-md);
+  cursor:pointer;
+  text-align:left;
+}
+.col-new:hover{background:var(--hover);color:var(--ink);}
+.col-new svg{width:14px;height:14px;}
 
 .cards{
   position:relative;
-  flex:1;
-  min-height:0;
+  flex:0 1 auto;
+  min-height:60px;
   overflow-y:auto;
   overscroll-behavior:contain;
   display:flex;
   flex-direction:column;
-  gap:6px;
-  padding:0 6px 8px;
+  gap:8px;
+  /* Sitio para la sombra y el desplazamiento de 1px al pasar el ratón. */
+  padding:2px 2px 8px;
+  margin:-2px -2px 0;
   scrollbar-width:thin;
   scrollbar-color:transparent transparent;
 }
@@ -82,20 +106,26 @@
   background:var(--surface);
   border:1px solid var(--line);
   border-radius:var(--r-lg);
-  padding:10px 12px 11px;
+  padding:12px;
   box-shadow:var(--shadow-sm);
   cursor:pointer;
-  transition:border-color .12s ease, box-shadow .12s ease, opacity .15s ease;
+  transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease, opacity .15s ease;
 }
-.card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);}
+.card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);transform:translateY(-1px);}
 .card:active{cursor:grabbing;}
 .card.dragging{
   opacity:.4;
   box-shadow:none;
+  transform:none;
   border-style:dashed;
   border-color:var(--line-strong);
 }
-.card .client-chip{margin-bottom:7px;}
+/* Cliente con su punto a la izquierda y las etiquetas, en texto neutro, a la derecha. */
+.card-top{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:7px;font-size:12px;color:var(--ink-soft);}
+.card-client{display:inline-flex;align-items:center;gap:7px;min-width:0;}
+.card-client > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-tag{margin-left:auto;flex:0 1 auto;min-width:0;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-top .card-tag:first-child{margin-left:0;}
 .cat{
   font-size:12px;
   color:var(--ink-soft);
@@ -105,85 +135,90 @@
   white-space:nowrap;
 }
 /* Tarea que no se puede descifrar (proyectos con cifrado total). */
-.card.is-undecryptable h3,.tv-note-text.is-undecryptable,.note-text.is-undecryptable{color:var(--ink-faint);}
-.card h3{font-size:13.5px;font-weight:500;margin:0;line-height:1.4;letter-spacing:-0.005em;color:var(--ink);}
+.card.is-undecryptable h3,.tl-row.is-undecryptable .tl-title,.tv-note-text.is-undecryptable,.note-text.is-undecryptable{color:var(--ink-faint);}
+.card h3{font-size:13.5px;font-weight:550;margin:0;line-height:1.35;letter-spacing:-0.005em;color:var(--ink);overflow-wrap:anywhere;}
+.card.is-done h3{color:var(--ink-soft);}
 .card p{
   font-size:12.5px;
-  color:var(--ink-faint);
-  margin:3px 0 0;
+  color:var(--ink-soft);
+  margin:4px 0 0;
   line-height:1.45;
   display:-webkit-box;
   -webkit-line-clamp:2;
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
-.card .meta{
+/* Pie: fecha, progreso de subtareas, vínculos, repetición y, a la derecha, las personas asignadas. */
+.card-foot{
   display:flex;
-  flex-wrap:wrap;
   align-items:center;
-  gap:10px;
+  gap:8px;
+  min-width:0;
+  margin-top:12px;
   font-size:12px;
   color:var(--ink-faint);
-  margin-top:9px;
+  font-variant-numeric:tabular-nums;
 }
-.card .meta .icon{display:inline-flex;color:var(--ink-faint);margin-right:0;}
-.card .contact{display:inline-flex;align-items:center;gap:5px;min-width:0;flex:1 1 90px;max-width:100%;}
-.card .contact > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.card .links{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums;}
-.card .meta .due-badge{margin-left:auto;}
+.card-foot .icon,.tl-row .icon{display:inline-flex;color:inherit;margin-right:0;}
+.card-foot .links,.card-foot .repeat-badge,.tl-row .repeat-badge{display:inline-flex;align-items:center;gap:4px;flex:none;}
+.card-foot .due-badge{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.card-progress{display:inline-flex;flex:none;}
+.check-progress{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.check-ring{
+  --p:0;
+  width:14px;
+  height:14px;
+  flex:none;
+  border-radius:50%;
+  background:conic-gradient(var(--accent-solid) calc(var(--p) * 1%), var(--line-strong) 0);
+  -webkit-mask:radial-gradient(circle, transparent 4px, #000 4.5px);
+  mask:radial-gradient(circle, transparent 4px, #000 4.5px);
+}
+.card-contact{display:flex;align-items:center;gap:5px;min-width:0;margin-top:8px;font-size:12px;color:var(--ink-faint);}
+.card-contact .icon{display:inline-flex;flex:none;margin:0;color:var(--ink-faint);}
+.card-contact > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .empty-col{
   font-size:12.5px;
   color:var(--ink-faint);
   text-align:center;
   line-height:1.5;
-  padding:20px 8px;
+  padding:18px 8px;
   border:1px dashed var(--line-strong);
   border-radius:var(--r-lg);
 }
 .empty-col span{font-size:12px;}
-.col.drag-over .empty-col{border-color:var(--accent-solid);color:var(--accent);}
+.col.drag-over .empty-col{border-color:var(--accent-solid);color:var(--ink);}
 
 .drop-indicator{
   position:absolute;
-  left:8px;
-  right:8px;
+  left:4px;
+  right:4px;
   height:2px;
   border-radius:2px;
   background:var(--accent-solid);
   pointer-events:none;
   z-index:2;
 }
-.drop-indicator::before{
-  content:"";
-  position:absolute;
-  left:-3px;
-  top:-3px;
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:var(--surface);
-  box-shadow:inset 0 0 0 2px var(--accent-solid);
-}
 .col .empty-col ~ .drop-indicator{display:none;}
 
+/* Fecha: etiqueta que se tiñe si vence hoy, está vencida o ya está hecha. */
 .due-badge{
   display:inline-flex;
   align-items:center;
-  gap:4px;
-  font-size:11.5px;
-  font-weight:500;
-  height:20px;
-  padding:0 6px;
+  gap:5px;
+  height:22px;
+  padding:0 8px;
+  font-size:12px;
   border-radius:var(--r-sm);
   color:var(--ink-soft);
   background:var(--surface-2);
   white-space:nowrap;
   font-variant-numeric:tabular-nums;
 }
-.due-badge .icon{color:inherit !important;opacity:.75;}
-.due-badge.is-today{background:var(--st-wait-bg);color:var(--st-wait);}
-.due-badge.is-overdue{background:var(--danger-bg);color:var(--danger);}
+.due-badge .icon{display:inline-flex;color:inherit !important;margin:0;}
+.due-badge.is-today{background:var(--today-bg);color:var(--today);}
+.due-badge.is-overdue{background:var(--late-bg);color:var(--late);}
 .due-badge.is-done{background:var(--st-done-bg);color:var(--st-done);}
 
 /* El número de columnas depende del tipo de proyecto. Con más de cuatro, cada
@@ -198,35 +233,59 @@
 /* Cabecera de columna: herramientas, límite y arrastre de la propia columna. */
 .col-head{cursor:grab;}
 .col-head:active{cursor:grabbing;}
-.col-tools{display:flex;align-items:center;gap:2px;flex:none;}
+.col-tools{display:flex;align-items:center;gap:0;flex:none;}
 .col-tools .col-add{cursor:pointer;}
-.col.is-full .col-head .count{color:var(--st-wait);}
-.col.is-over .col-head .count{color:var(--danger);font-weight:600;}
-.col.is-over{box-shadow:inset 0 0 0 1px var(--danger);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent);}
+.col.is-full .col-head .count{color:var(--today);}
+.col.is-over .col-head .count{color:var(--late);font-weight:600;}
 .col.col-dragging{opacity:.45;}
-.col.drop-before{box-shadow:-6px 0 0 -3px var(--accent-solid);}
-.col.drop-after{box-shadow:6px 0 0 -3px var(--accent-solid);}
+/* Dónde caerá la columna que se arrastra: fondo suave en la de destino. */
+.col.drop-before,.col.drop-after{background:var(--surface-2);}
 .stat-link{
   font:inherit;
-  color:var(--accent);
+  color:var(--ink-soft);
   background:none;
   border:none;
   padding:0;
   cursor:pointer;
+  text-decoration:underline;
+  text-decoration-color:var(--line-strong);
+  text-underline-offset:3px;
 }
-.stat-link:hover{text-decoration:underline;}
+.stat-link:hover{color:var(--ink);}
 @media (hover:none){.col-head{cursor:default;}}
 
-/* Subtareas y repetición en la tarjeta. */
-.card-contact{display:flex;align-items:center;gap:5px;min-width:0;margin-top:10px;font-size:12px;color:var(--ink-faint);}
-.card-contact .icon{display:inline-flex;flex:none;margin:0;color:var(--ink-faint);}
-.card-contact > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.card-bottom{display:flex;align-items:center;gap:8px;min-width:0;margin-top:9px;}
-.card-bottom > .due-badge{margin-left:auto;}
-.card-bottom .card-progress{flex:1 1 70px;min-width:0;}
-.card-progress .check-progress{display:flex;align-items:center;gap:10px;width:100%;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums;color:var(--ink-soft);}
-.card-progress .check-progress-track{display:block;flex:1;min-width:0;height:4px;overflow:hidden;border-radius:99px;background:var(--line-strong);}
-.card-progress .check-progress-track > span{display:block;height:100%;border-radius:inherit;background:var(--accent-solid);}
-.card-progress .check-progress-value{flex:0 0 4ch;text-align:right;white-space:nowrap;}
-.card-bottom .due-badge{flex:none;max-width:60%;overflow:hidden;text-overflow:ellipsis;}
-.card .meta .repeat-badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-faint);}
+/* ---------- Vista de lista ----------
+   Las mismas tareas agrupadas por etapa: un panel por etapa y una fila por tarea. */
+.task-list{display:flex;flex-direction:column;gap:18px;max-width:1100px;}
+.tl-head{display:flex;align-items:center;gap:8px;margin:0 2px 8px;font-size:12.5px;font-weight:550;letter-spacing:0;}
+.tl-head .count{color:var(--ink-faint);font-weight:450;font-variant-numeric:tabular-nums;}
+.tl-rows{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tl-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:42px;
+  padding:6px 14px;
+  font-size:13px;
+  color:var(--ink-faint);
+  cursor:pointer;
+}
+.tl-row + .tl-row{border-top:1px solid var(--line);}
+.tl-row:hover{background:var(--hover);}
+.tl-row:focus-visible{outline:2px solid var(--accent-solid);outline-offset:-2px;}
+.tl-title{flex:1 1 220px;min-width:0;font-size:13.5px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tl-row.is-done .tl-title{color:var(--ink-soft);}
+.tl-row .card-client{flex:0 0 170px;font-size:12.5px;color:var(--ink-soft);}
+.tl-row .card-tag{margin-left:0;flex:0 0 130px;font-size:12.5px;}
+.tl-extra{display:flex;align-items:center;gap:8px;flex:0 0 76px;}
+.tl-row .card-assignees{margin-left:0;}
+.tl-due{display:flex;justify-content:flex-end;flex:0 0 96px;}
+body.no-clients .tl-row .card-client{display:none;}
+.tl-empty{margin:0 2px;font-size:12.5px;color:var(--ink-faint);}
+@media (max-width:700px){
+  .tl-row{flex-wrap:wrap;gap:6px 10px;padding:9px 12px;}
+  .tl-title{flex:1 1 100%;white-space:normal;}
+  .tl-row .card-client,.tl-row .card-tag,.tl-extra,.tl-due{flex:0 1 auto;}
+  .tl-row .card-client:empty,.tl-row .card-tag:empty,.tl-extra:empty,.tl-due:empty{display:none;}
+  .tl-due{margin-left:auto;}
+}

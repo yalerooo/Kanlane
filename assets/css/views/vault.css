@@ -1,6 +1,24 @@
 /* ---------- Contraseñas: bloqueo y recuperación ----------
    Las pantallas de bloqueo (cofre y proyecto cifrado) usan el mismo cristal que la ficha. */
 .lock-screen{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:48px 0;}
+/* Cofre: la tarjeta queda centrada en el alto que deja libre la barra de la vista.
+   margin:auto en vez de centrar el contenedor: si no cabe (recuperación), se puede
+   desplazar hasta arriba. La del proyecto cifrado tiene su regla en privacy.css. */
+#viewVault > .lock-screen{
+  flex-direction:column;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:flex-start;
+  min-height:calc(100vh - 108px);
+  min-height:calc(100dvh - 108px);
+  padding:16px 0 24px;
+}
+#viewVault > .lock-screen > .lock-card{margin-top:auto;margin-bottom:auto;}
+#viewVault > .lock-screen .btn-primary{height:36px;}
+@media (max-width: 900px){
+  /* En móvil hay barra arriba y navegación abajo. */
+  #viewVault > .lock-screen{min-height:calc(100vh - var(--nav-h, 64px) - 158px);min-height:calc(100dvh - var(--nav-h, 64px) - 158px);padding:12px 0;}
+}
 .lock-card{
   width:min(400px, 100%);
   background:var(--sheet);

@@ -27,6 +27,9 @@
   border-radius:50%;
 }
 .gh-step-body{display:flex;flex-direction:column;gap:10px;min-width:0;}
+/* Lo que va tras los pasos (qué se envía, el error y el botón) sigue en la misma columna que los campos. */
+.gh-form > .gh-box,.gh-form > .lock-error,.gh-form > .gh-actions{margin-left:36px;}
+.gh-form > .lock-error{margin-top:0;margin-bottom:0;}
 .gh-step-body > h4{line-height:24px;}
 .gh-step-body .field{gap:6px;}
 .gh-step-body .field input,.gh-step-body .field select,.gh-step-body .field .dd{width:100%;}

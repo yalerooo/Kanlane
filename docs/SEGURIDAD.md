@@ -27,7 +27,7 @@ Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus 
 
 ### 1. Publicar las reglas nuevas
 
-Cada vez que cambia `firestore.rules` hay que publicarlas. Las últimas añaden los **proyectos de equipo** (`teams`, `invites`): sin ellas, compartir proyectos no funciona.
+Cada vez que cambia `firestore.rules` hay que publicarlas. Las últimas añaden los **proyectos de equipo** (`teams`, `invites`): sin ellas, compartir proyectos no funciona. Las del cifrado por proyecto (PR 2 del plan) son compatibles con el código actual, así que se pueden publicar antes de que exista ningún proyecto cifrado; **hay que publicarlas y confirmarlo antes de desplegar el código que cree proyectos cifrados.**
 
 Con la terminal, en la carpeta de Kanlane:
 

@@ -21,7 +21,7 @@
 .bsk{
   display:grid;
   grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:12px;
+  gap:18px;
   height:calc(100dvh - 240px);
   min-height:420px;
   overflow:hidden;
@@ -31,12 +31,8 @@
   display:flex;
   flex-direction:column;
   gap:8px;
-  padding:0 8px 8px;
-  background:var(--surface-2);
-  background:color-mix(in srgb, var(--surface-2) 70%, var(--bg));
-  border-radius:var(--r-xl);
 }
-.bsk-head{display:flex;align-items:center;gap:8px;height:44px;padding:0 6px;}
+.bsk-head{display:flex;align-items:center;gap:8px;height:28px;padding:0 2px;}
 .bsk-head .dot{width:8px;height:8px;border-radius:50%;}
 .bsk-head .lbl{height:11px;}
 .bsk-card{
@@ -59,6 +55,8 @@
   inset:0;
   z-index:49;
   grid-template-columns:236px minmax(0, 1fr);
+  gap:12px;
+  padding:12px;
   background:var(--bg);
   overflow:hidden;
 }
@@ -68,9 +66,11 @@ html.boot-session .app-skel,html.skel-on .app-skel{display:grid;}
   display:flex;
   flex-direction:column;
   gap:10px;
-  padding:14px 10px 10px;
-  background:var(--sidebar);
-  border-right:1px solid var(--line);
+  padding:12px 10px 10px;
+  background:var(--glass);
+  border:1px solid var(--glass-line);
+  border-radius:var(--r-glass);
+  box-shadow:var(--glass-shadow);
 }
 .ask-project,.ask-topbar{display:flex;align-items:center;gap:10px;}
 .ask-project{padding:2px 8px 10px;}
@@ -87,36 +87,42 @@ html.boot-session .app-skel,html.skel-on .app-skel{display:grid;}
 .ask-foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding:8px;}
 .ask-avatar{width:28px;height:28px;border-radius:50%;flex:none;}
 
-.app-skel-main{min-width:0;padding:22px 32px 24px;overflow:hidden;}
+.app-skel-main{min-width:0;overflow:hidden;}
 .ask-topbar,.ask-round,.ask-tabbar{display:none;}
 .ask-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:16px;
-  padding-bottom:18px;
-  margin-bottom:18px;
-  border-bottom:1px solid var(--line);
+  height:52px;
+  padding:0 10px 0 16px;
+  margin-bottom:14px;
+  background:var(--glass);
+  border:1px solid var(--glass-line);
+  border-radius:var(--r-glass);
+  box-shadow:var(--glass-shadow);
 }
-.ask-title{width:104px;height:22px;margin-bottom:9px;}
-.ask-sub{width:min(460px, 58vw);height:12px;}
-.ask-cta{width:132px;height:36px;flex:none;}
-.ask-toolbar{display:flex;gap:10px;margin-bottom:14px;}
-.ask-tsearch{flex:1 1 240px;max-width:520px;height:40px;}
-.ask-tselect{width:210px;height:40px;}
+.ask-title{width:84px;height:14px;}
+.ask-sub{display:none;}
+.ask-cta{width:118px;height:32px;flex:none;}
+.ask-toolbar{display:flex;gap:8px;margin:0 6px 12px;}
+.ask-tsearch{flex:0 0 74px;height:26px;border-radius:99px;}
+.ask-tselect{width:150px;height:26px;border-radius:99px;}
+.app-skel-main .bsk{margin:0 6px;}
 
 @media (max-width:900px){
-  .app-skel{grid-template-columns:minmax(0, 1fr);grid-template-rows:minmax(0, 1fr) auto;}
+  .app-skel{grid-template-columns:minmax(0, 1fr);grid-template-rows:minmax(0, 1fr) auto;gap:0;padding:0;}
   .ask-tabbar{display:flex;justify-content:space-around;align-items:center;height:62px;padding:0 8px;background:var(--sidebar);border-top:1px solid var(--line);}
   .ask-tab{display:grid;justify-items:center;gap:6px;}
   .ask-tab .ic{width:20px;height:20px;border-radius:6px;}
   .ask-tab .tx{width:34px;height:8px;}
   .app-skel-side{display:none;}
-  .app-skel-main{padding:0 16px 16px;}
-  .ask-topbar{display:flex;height:56px;margin:0 -16px 14px;padding:0 16px;border-bottom:1px solid var(--line);}
+  .app-skel-main{padding:0 12px 16px;}
+  .ask-topbar{display:flex;height:56px;margin:0 -12px 12px;padding:0 12px;border-bottom:1px solid var(--line);}
   .ask-round{display:block;width:34px;height:34px;border-radius:9px;flex:none;}
-  .ask-head{padding-bottom:14px;margin-bottom:14px;}
-  .ask-cta{width:44px;height:38px;}
+  .ask-head{margin-bottom:12px;}
+  .ask-cta{width:44px;height:32px;}
+  .app-skel-main .bsk,.ask-toolbar{margin-left:0;margin-right:0;}
   .ask-tselect{display:none;}
   .ask-tsearch{max-width:none;}
   .bsk{grid-template-columns:minmax(0, 1fr);height:auto;min-height:0;}

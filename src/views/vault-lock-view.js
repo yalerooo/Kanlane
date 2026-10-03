@@ -11,6 +11,9 @@
       this.lockScreen.hidden = screen !== 'lock';
       this.recoveryReveal.hidden = screen !== 'recovery';
       this.content.hidden = screen !== 'content';
+      /* Buscador, filtros y «Nueva credencial» están en la barra de la vista: solo con el cofre abierto. */
+      const tools = document.getElementById('vaultTools');
+      if(tools) tools.classList.toggle('is-locked', screen !== 'content');
     },
 
     showCryptoUnavailable(){

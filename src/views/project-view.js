@@ -42,6 +42,7 @@
       this.trigger = $('btnProject');
       this.mark = $('projectMark');
       this.name = $('projectName');
+      this.sub = $('projectSub');
       this.lockIcon = $('projectLock');
       this.menu = $('projectMenu');
       if(supportsPopover){
@@ -154,6 +155,8 @@
       this.mark.style.setProperty('--h', hue);
       this.mark.textContent = initials(project.nombre);
       this.name.textContent = project.nombre;
+      /* Debajo del nombre, el tipo de proyecto (la marca Kanlane ya está encima). */
+      if(this.sub) this.sub.textContent = PT.template(project.tipo).name;
       this.trigger.setAttribute('title', 'Proyecto: ' + project.nombre);
       /* Candado junto al nombre en los proyectos con cifrado total. */
       this.lockIcon.hidden = !isEncrypted(project);

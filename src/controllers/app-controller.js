@@ -80,6 +80,7 @@
         this.navigate(view);
       });
       this.shell.bindPluginNav((id) => this.controllers.plugins.open(id));
+      this.shell.bindThemeToggle((theme) => this.controllers.settings.setTheme(theme));
       this.shell.setStorageMode(platform.mode());
     }
 
@@ -327,6 +328,7 @@
       this.projectId = id;
       const p = this.models.projects.get(id) || {id:id, nombre:''};
       if(p.nombre) this.rememberProject(p);
+      if(this.controllers.tasks) this.controllers.tasks.board.resetQuick();
       this.shell.resetFilters();
       this.connectProject();
       this.controllers.backup.scheduleAuto();

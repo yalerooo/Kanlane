@@ -114,5 +114,60 @@
     return false;
   }
 
-  Workhub.utils.ui = {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick};
+  /* Cambio de tema sin golpe: la luz se enciende desde el botón pulsado (un círculo que se
+     abre) o se apaga hacia él (el círculo se cierra). apply() es lo que cambia el tema.
+     Sin View Transitions o con movimiento reducido, el cambio es inmediato. */
+  function isDark(){
+    const attr = document.documentElement.getAttribute('data-theme');
+    return attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function themeSwitch(origin, apply){
+    const root = document.documentElement;
+    if(!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      apply();
+      return;
+    }
+    const wasDark = isDark();
+    const box = origin && origin.getBoundingClientRect ? origin.getBoundingClientRect() : null;
+    const x = box ? box.left + box.width / 2 : window.innerWidth / 2;
+    const y = box ? box.top + box.height / 2 : window.innerHeight / 2;
+    const r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    let off = false;
+    let anim = null;
+    /* La animación se cancela al terminar: si se quedara, taparía la del cambio siguiente. */
+    const clean = () => {
+      if(anim) anim.cancel();
+      root.classList.remove('theme-vt', 'theme-off');
+    };
+    let vt;
+    try{
+      vt = document.startViewTransition(() => {
+        /* Sin transiciones propias: la imagen del tema nuevo se toma ya terminada. */
+        root.classList.add('theme-vt');
+        apply();
+        off = isDark();
+        root.classList.toggle('theme-off', off);
+      });
+    }catch(e){
+      clean();
+      apply();
+      return;
+    }
+    vt.ready.then(() => {
+      /* El tema no ha cambiado de claro a oscuro ni al revés (p. ej. «Sistema»): nada que animar. */
+      if(off === wasDark) return;
+      const small = 'circle(0px at ' + x + 'px ' + y + 'px)';
+      const big = 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)';
+      anim = root.animate({clipPath: off ? [big, small] : [small, big]}, {
+        duration: off ? 480 : 560,
+        easing: 'cubic-bezier(.4, 0, .2, 1)',
+        fill: 'forwards',
+        pseudoElement: off ? '::view-transition-old(root)' : '::view-transition-new(root)'
+      });
+    }).catch(() => {});
+    vt.finished.then(clean, clean);
+  }
+
+  Workhub.utils.ui = {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick, themeSwitch};
 })();

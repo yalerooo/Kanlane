@@ -83,7 +83,7 @@
       this.btnTheme.addEventListener('click', () => {
         const attr = document.documentElement.getAttribute('data-theme');
         const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        handler(dark ? 'light' : 'dark');
+        Workhub.utils.ui.themeSwitch(this.btnTheme, () => handler(dark ? 'light' : 'dark'));
       });
     }
 

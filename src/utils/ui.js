@@ -39,8 +39,9 @@
      - onDrop(payload, target, ev)
      - onOver(ev, target) y onEnd(): opcionales, para pintar dónde caerá.
      - accept(ev): opcional; si devuelve false se ignora ese arrastre.
-     - ghost: true para llevar bajo el cursor una copia opaca del elemento (ver dragGhost)
-       en vez de la imagen semitransparente del navegador.
+     - ghost: true para llevar bajo el cursor una copia opaca del elemento (ver ghostStart)
+       en vez de la imagen semitransparente del navegador. Con ratón, además, el arrastre lo
+       lleva este código con eventos de puntero y no el navegador (ver bindPointerDrag).
      Mientras se arrastra, la página y las listas se desplazan solas al
      acercarse a sus bordes (ver utils/autoscroll.js). */
   /* Copia del elemento que se arrastra, pegada al cursor. El navegador pinta su propia imagen
@@ -53,7 +54,8 @@
 
   function ghostStart(item, ev){
     ghostStop(true);
-    if(!ev.dataTransfer.setDragImage) return;
+    /* Arrastre nativo: sin poder quitar la imagen del navegador no se pone la copia. */
+    if(ev.dataTransfer && !ev.dataTransfer.setDragImage) return;
     const rect = item.getBoundingClientRect();
     const el = item.cloneNode(true);
     el.classList.remove('dragging');
@@ -64,7 +66,7 @@
     el.style.width = rect.width + 'px';
     el.style.height = rect.height + 'px';
     document.body.appendChild(el);
-    ev.dataTransfer.setDragImage(BLANK, 0, 0);
+    if(ev.dataTransfer) ev.dataTransfer.setDragImage(BLANK, 0, 0);
     const reduced = document.documentElement.getAttribute('data-motion') === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     Object.assign(ghost, {el:el, origin:rect, grabX:ev.clientX - rect.left, grabY:ev.clientY - rect.top,
       x:rect.left, y:rect.top, tx:rect.left, ty:rect.top, tilt:0, reduced:reduced});
@@ -83,7 +85,7 @@
       ghost.raf = requestAnimationFrame(step);
     };
     ghost.raf = requestAnimationFrame(step);
-    document.addEventListener('dragover', ghostFollow, true);
+    if(ev.dataTransfer) document.addEventListener('dragover', ghostFollow, true);
   }
 
   function ghostFollow(ev){
@@ -113,19 +115,127 @@
     back.onfinish = back.oncancel = () => el.remove();
   }
 
+  /* Arrastre con el ratón llevado a mano (eventos de puntero), para los elementos con «ghost».
+     Durante un arrastre nativo el navegador pone su propio cursor y no deja cambiarlo; así el
+     cursor es la mano cerrada de principio a fin. Con el dedo se deja el arrastre nativo.
+     hooks: {over(x, y), drop(x, y) → bool, clear()} los pone bindDragAndDrop. */
+  function bindPointerDrag(container, opts, hooks){
+    const {closest} = Workhub.utils.html;
+    const autoscroll = Workhub.utils.autoscroll;
+    const THRESHOLD = 5;
+    let s = null;
+
+    function finish(dropped){
+      if(!s) return;
+      const item = s.item, started = s.started;
+      document.removeEventListener('pointermove', onMove, true);
+      document.removeEventListener('pointerup', onUp, true);
+      document.removeEventListener('pointercancel', onCancel, true);
+      document.removeEventListener('keydown', onKey, true);
+      s = null;
+      if(!started) return;
+      item.classList.remove('dragging');
+      setTimeout(() => { item.removeAttribute('data-dragged'); }, 0);
+      document.body.classList.remove('is-dragging', 'is-grabbing');
+      autoscroll.stop();
+      hooks.clear();
+      ghostStop(dropped);
+    }
+
+    function onMove(ev){
+      if(!s || ev.pointerId !== s.pointerId) return;
+      if(!s.started){
+        if(Math.hypot(ev.clientX - s.x, ev.clientY - s.y) < THRESHOLD) return;
+        s.started = true;
+        s.item.setAttribute('data-dragged', '1');
+        ghostStart(s.item, {clientX:s.x, clientY:s.y});
+        s.item.classList.add('dragging');
+        document.body.classList.add('is-dragging', 'is-grabbing');
+        const sel = window.getSelection && window.getSelection();
+        if(sel && sel.removeAllRanges) sel.removeAllRanges();
+        autoscroll.start();
+      }
+      ev.preventDefault();
+      ghostFollow(ev);
+      autoscroll.point(ev.clientX, ev.clientY);
+      hooks.over(ev.clientX, ev.clientY);
+    }
+
+    function onUp(ev){
+      if(!s || ev.pointerId !== s.pointerId) return;
+      if(!s.started){ finish(false); return; }
+      const payload = opts.getPayload(s.item);
+      const x = ev.clientX, y = ev.clientY;
+      /* La copia sigue viva mientras se suelta: quien recibe la suelta puede preguntar dónde está. */
+      const dropped = hooks.drop(payload, x, y);
+      finish(dropped);
+    }
+
+    function onCancel(){ finish(false); }
+    function onKey(ev){
+      if(ev.key !== 'Escape' || !s || !s.started) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      finish(false);
+    }
+
+    container.addEventListener('pointerdown', (ev) => {
+      if(ev.button !== 0 || ev.pointerType === 'touch' || s) return;
+      const item = closest(ev.target, opts.itemSelector);
+      if(!item || item.getAttribute('draggable') !== 'true') return;
+      /* Enlaces y botones de dentro del elemento siguen siendo suyos. */
+      if(closest(ev.target, 'a, button, input, select, textarea')) return;
+      s = {item:item, x:ev.clientX, y:ev.clientY, pointerId:ev.pointerId, started:false};
+      document.addEventListener('pointermove', onMove, true);
+      document.addEventListener('pointerup', onUp, true);
+      document.addEventListener('pointercancel', onCancel, true);
+      document.addEventListener('keydown', onKey, true);
+    });
+
+    /* true mientras este código lleva (o puede empezar a llevar) el arrastre. */
+    return () => !!s;
+  }
+
   function bindDragAndDrop(container, opts){
     const {closest} = Workhub.utils.html;
     const autoscroll = Workhub.utils.autoscroll;
     let over = null;
+    let byPointer = () => false;
 
     function clearOver(){
       if(over){ over.classList.remove('drag-over'); over = null; }
       if(opts.onEnd) opts.onEnd();
     }
 
+    if(opts.ghost && window.PointerEvent){
+      byPointer = bindPointerDrag(container, opts, {
+        over: (x, y) => {
+          const el = document.elementFromPoint(x, y);
+          const target = el && container.contains(el) ? closest(el, opts.targetSelector) : null;
+          if(over !== target){
+            if(over) over.classList.remove('drag-over');
+            if(target) target.classList.add('drag-over');
+            over = target;
+            if(!target && opts.onEnd) opts.onEnd();
+          }
+          if(target && opts.onOver) opts.onOver({clientX:x, clientY:y}, target);
+        },
+        drop: (payload, x, y) => {
+          const el = document.elementFromPoint(x, y);
+          const target = el && container.contains(el) ? closest(el, opts.targetSelector) : null;
+          if(!target) return false;
+          opts.onDrop(payload, target, {clientX:x, clientY:y});
+          return true;
+        },
+        clear: clearOver
+      });
+    }
+
     container.addEventListener('dragstart', (ev) => {
       const item = closest(ev.target, opts.itemSelector);
       if(!item) return;
+      /* Con el ratón el arrastre lo lleva bindPointerDrag: se anula el nativo. */
+      if(byPointer()){ ev.preventDefault(); return; }
       item.setAttribute('data-dragged', '1');
       ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('text/plain', opts.getPayload(item));

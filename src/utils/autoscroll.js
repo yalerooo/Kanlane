@@ -78,6 +78,14 @@
     lastEvent = performance.now();
   }
 
+  /* Para un arrastre que no es el nativo del navegador (sin «dragover»): el puntero se pasa a mano. */
+  function point(px, py){
+    x = px;
+    y = py;
+    hasPoint = true;
+    lastEvent = performance.now();
+  }
+
   function start(){
     if(active) return;
     active = true;
@@ -92,5 +100,5 @@
     document.removeEventListener('dragover', onDragOver, true);
   }
 
-  Workhub.utils.autoscroll = {start, stop};
+  Workhub.utils.autoscroll = {start, stop, point};
 })();

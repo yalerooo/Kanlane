@@ -143,6 +143,12 @@
   transform-origin:50% 30%;
   will-change:transform;
 }
+/* Mientras se arrastra con el ratón (Workhub.utils.ui, bindPointerDrag): mano cerrada en toda
+   la página, sin seleccionar texto y sin que las demás tarjetas reaccionen al pasar. */
+body.is-grabbing,body.is-grabbing *{cursor:grabbing !important;user-select:none !important;-webkit-user-select:none !important;}
+body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--line);}
+/* Antes de agarrarla, la mano abierta avisa de que se puede arrastrar. */
+.card[draggable="true"]{cursor:grab;}
 /* El hueco que deja mientras se arrastra: se hunde y queda punteado. */
 .card.dragging,.card[draggable="true"].dragging:active{
   opacity:.4;

@@ -291,6 +291,7 @@
       bindDragAndDrop(this.board, {
         itemSelector: '.card',
         targetSelector: '.col',
+        ghost: true,
         accept: (ev) => !isColumnDrag(ev),
         getPayload: (card) => card.getAttribute('data-id'),
         onOver: (ev, colEl) => this._placeIndicator(colEl, ev.clientY),
@@ -301,7 +302,7 @@
         onDrop: (id, colEl, ev) => {
           const status = colEl.getAttribute('data-status');
           /* Dónde se soltó: la tarjeta se asienta desde ahí (ver _animateMoves). */
-          if(id && ev) this.dropPoint = {id:id, x:ev.clientX, y:ev.clientY, at:Date.now()};
+          if(id && ev) this.dropPoint = {id:id, x:ev.clientX, y:ev.clientY, ghost:Workhub.utils.ui.dragGhostRect(), at:Date.now()};
           if(id && status) handler(id, status, this.dropBeforeId);
         }
       });
@@ -496,8 +497,11 @@
         if(drop && drop.id === id){
           if(Math.abs(old.left - now.left) < 1 && Math.abs(old.top - now.top) < 1) return;
           this.dropPoint = null;
+          /* Desde donde estaba la copia que se llevaba bajo el cursor (o, sin ella, desde el cursor). */
+          const fromX = drop.ghost ? drop.ghost.left - now.left : drop.x - (now.left + now.width / 2);
+          const fromY = drop.ghost ? drop.ghost.top - now.top : drop.y - (now.top + now.height / 2);
           moves.push([card, [
-            {transform:'translate(' + clamp(drop.x - (now.left + now.width / 2), 60) + 'px,' + clamp(drop.y - (now.top + now.height / 2), 120) + 'px) scale(1.03)', boxShadow:'var(--shadow-drag)'},
+            {transform:'translate(' + clamp(fromX, 80) + 'px,' + clamp(fromY, 160) + 'px) scale(1.03)', boxShadow:'var(--shadow-drag)'},
             {transform:'none'}
           ], 280]);
           return;

@@ -39,8 +39,80 @@
      - onDrop(payload, target, ev)
      - onOver(ev, target) y onEnd(): opcionales, para pintar dónde caerá.
      - accept(ev): opcional; si devuelve false se ignora ese arrastre.
+     - ghost: true para llevar bajo el cursor una copia opaca del elemento (ver dragGhost)
+       en vez de la imagen semitransparente del navegador.
      Mientras se arrastra, la página y las listas se desplazan solas al
      acercarse a sus bordes (ver utils/autoscroll.js). */
+  /* Copia del elemento que se arrastra, pegada al cursor. El navegador pinta su propia imagen
+     de arrastre semitransparente y no deja cambiarla: se sustituye por una imagen vacía y la
+     copia la mueve este código. Sigue al cursor con un poco de retraso y se inclina según la
+     velocidad, como algo que cuelga de la mano. */
+  const BLANK = new Image();
+  BLANK.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  const ghost = {el:null, raf:0};
+
+  function ghostStart(item, ev){
+    ghostStop(true);
+    if(!ev.dataTransfer.setDragImage) return;
+    const rect = item.getBoundingClientRect();
+    const el = item.cloneNode(true);
+    el.classList.remove('dragging');
+    el.classList.add('drag-ghost');
+    el.removeAttribute('draggable');
+    el.removeAttribute('tabindex');
+    el.setAttribute('aria-hidden', 'true');
+    el.style.width = rect.width + 'px';
+    el.style.height = rect.height + 'px';
+    document.body.appendChild(el);
+    ev.dataTransfer.setDragImage(BLANK, 0, 0);
+    const reduced = document.documentElement.getAttribute('data-motion') === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    Object.assign(ghost, {el:el, origin:rect, grabX:ev.clientX - rect.left, grabY:ev.clientY - rect.top,
+      x:rect.left, y:rect.top, tx:rect.left, ty:rect.top, tilt:0, reduced:reduced});
+    const paint = () => { el.style.transform = 'translate3d(' + ghost.x + 'px,' + ghost.y + 'px,0) rotate(' + ghost.tilt + 'deg) scale(1.03)'; };
+    paint();
+    const step = () => {
+      if(ghost.el !== el) return;
+      const k = ghost.reduced ? 1 : 0.32;
+      const dx = ghost.tx - ghost.x;
+      ghost.x += dx * k;
+      ghost.y += (ghost.ty - ghost.y) * k;
+      /* Inclinación según lo rápido que va hacia los lados, con vuelta suave a recto. */
+      const want = ghost.reduced ? 0 : Math.max(-7, Math.min(7, dx * 0.12));
+      ghost.tilt += (want - ghost.tilt) * 0.18;
+      paint();
+      ghost.raf = requestAnimationFrame(step);
+    };
+    ghost.raf = requestAnimationFrame(step);
+    document.addEventListener('dragover', ghostFollow, true);
+  }
+
+  function ghostFollow(ev){
+    if(!ghost.el || (!ev.clientX && !ev.clientY)) return;
+    ghost.tx = ev.clientX - ghost.grabX;
+    ghost.ty = ev.clientY - ghost.grabY;
+  }
+
+  /* Dónde está la copia ahora mismo (para que lo soltado se asiente desde ahí). */
+  function dragGhostRect(){
+    return ghost.el ? {left:ghost.x, top:ghost.y} : null;
+  }
+
+  /* dropped: la copia desaparece sin más (lo soltado ya está en su sitio). Si el arrastre se
+     cancela, vuelve a su origen antes de quitarse. */
+  function ghostStop(dropped){
+    const el = ghost.el;
+    if(!el) return;
+    cancelAnimationFrame(ghost.raf);
+    document.removeEventListener('dragover', ghostFollow, true);
+    ghost.el = null;
+    if(dropped || ghost.reduced || !el.animate){ el.remove(); return; }
+    const back = el.animate([
+      {transform:el.style.transform, opacity:1},
+      {transform:'translate3d(' + ghost.origin.left + 'px,' + ghost.origin.top + 'px,0) scale(1)', opacity:.4}
+    ], {duration:220, easing:'cubic-bezier(.2, .7, .2, 1)'});
+    back.onfinish = back.oncancel = () => el.remove();
+  }
+
   function bindDragAndDrop(container, opts){
     const {closest} = Workhub.utils.html;
     const autoscroll = Workhub.utils.autoscroll;
@@ -57,6 +129,7 @@
       item.setAttribute('data-dragged', '1');
       ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('text/plain', opts.getPayload(item));
+      if(opts.ghost) ghostStart(item, ev);
       /* La clase se añade después para que la imagen fantasma salga opaca. */
       requestAnimationFrame(() => item.classList.add('dragging'));
       document.body.classList.add('is-dragging');
@@ -72,6 +145,7 @@
       document.body.classList.remove('is-dragging');
       autoscroll.stop();
       clearOver();
+      if(opts.ghost) ghostStop(ev.dataTransfer && ev.dataTransfer.dropEffect !== 'none');
     });
 
     container.addEventListener('dragover', (ev) => {
@@ -102,6 +176,11 @@
       const payload = ev.dataTransfer.getData('text/plain') || '';
       opts.onDrop(payload, target, ev);
       clearOver();
+      /* Si al soltar se repinta la lista, el elemento arrastrado ya no está en la página y su
+         «dragend» no llega hasta aquí: se recoge también en este momento. */
+      document.body.classList.remove('is-dragging');
+      autoscroll.stop();
+      if(opts.ghost) ghostStop(true);
     });
   }
 
@@ -177,5 +256,5 @@
     vt.finished.then(clean, clean);
   }
 
-  Workhub.utils.ui = {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick, themeSwitch};
+  Workhub.utils.ui = {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick, themeSwitch, dragGhostRect};
 })();

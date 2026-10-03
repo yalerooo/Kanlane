@@ -125,6 +125,24 @@
   transition:transform .16s cubic-bezier(.3, 1.5, .5, 1), box-shadow .16s ease, border-color .16s ease;
   z-index:2;
 }
+/* La copia que va bajo el cursor mientras se arrastra (Workhub.utils.ui, opción ghost):
+   opaca, con sombra, por encima de todo y sin recibir el ratón. */
+.card.drag-ghost{
+  position:fixed;
+  left:0;
+  top:0;
+  z-index:2000;
+  margin:0;
+  pointer-events:none;
+  background:var(--surface-solid);
+  border-color:var(--line-strong);
+  box-shadow:var(--shadow-drag);
+  opacity:1;
+  transition:none;
+  animation:none;
+  transform-origin:50% 30%;
+  will-change:transform;
+}
 /* El hueco que deja mientras se arrastra: se hunde y queda punteado. */
 .card.dragging,.card[draggable="true"].dragging:active{
   opacity:.4;

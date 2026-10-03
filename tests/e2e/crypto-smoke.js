@@ -53,6 +53,18 @@ async function stored(docPath){
   const response = await fetch(storeUrl + docPath, {headers:{Authorization:'Bearer owner'}});
   return {status:response.status, text:await response.text()};
 }
+/* La interfaz pinta una escritura antes de que llegue al servidor (Firestore la aplica primero en local):
+   lo guardado se consulta hasta que cumple la condición, con un tope de 15 s. */
+async function storedWhen(docPath, done){
+  let res;
+  for(let i = 0; i < 75; i++){
+    res = await stored(docPath);
+    if(done(res)) return res;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return res;
+}
+const hasSeal = (res) => res.status === 200 && res.text.indexOf('"ev"') !== -1;
 function assertSealed(res, what){
   assert.equal(res.status, 200, what + ': se puede leer');
   SECRETS.forEach((s) => assert.ok(res.text.indexOf(s) === -1, what + ': «' + s + '» no está en claro'));
@@ -137,13 +149,13 @@ function assertSealed(res, what){
     });
     await page.locator('.card').filter({hasText:'Descripción reservada'}).waitFor();
 
-    assertSealed(await stored(base + '/tasks'), 'tareas');
-    assertSealed(await stored(base + '/tasks/' + taskId + '/notes'), 'notas');
-    assertSealed(await stored(base + '/clients'), 'clientes');
-    assertSealed(await stored(base + '/plugin_data'), 'datos de plugins');
+    assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas');
+    assertSealed(await storedWhen(base + '/tasks/' + taskId + '/notes', hasSeal), 'notas');
+    assertSealed(await storedWhen(base + '/clients', hasSeal), 'clientes');
+    assertSealed(await storedWhen(base + '/plugin_data', hasSeal), 'datos de plugins');
     const assetId = await page.evaluate(() => window.__assetId);
     assert.ok(assetId, 'la imagen se subió');
-    const asset = await stored('users/' + seed.uid + '/assets/' + assetId);
+    const asset = await storedWhen('users/' + seed.uid + '/assets/' + assetId, hasSeal);
     assertSealed(asset, 'imagen');
     assert.ok(asset.text.indexOf('"data"') === -1 && asset.text.indexOf('contentType') === -1, 'la imagen no lleva la data: URL en claro');
 
@@ -174,7 +186,7 @@ function assertSealed(res, what){
     }, taskId);
     assert.deepEqual(moved, {same:true, status:moved.status, changed:true, iv:true});
     await page.locator('.card').filter({hasText:'Título cambiado en cifrado'}).waitFor();
-    assertSealed(await stored(base + '/tasks'), 'tareas tras editar');
+    assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas tras editar');
 
     /* Las reglas publicadas no dejan escribir en claro dentro del proyecto cifrado. */
     const denied = await page.evaluate(async (id) => {
@@ -212,14 +224,14 @@ function assertSealed(res, what){
     await page.locator('#fTitle').fill('Tarea en claro del principal');
     await page.locator('#btnSave').click();
     await page.locator('.card').filter({hasText:'Tarea en claro del principal'}).waitFor();
-    const plain = await stored('users/' + seed.uid + '/tasks');
+    const plain = await storedWhen('users/' + seed.uid + '/tasks', (res) => res.text.indexOf('Tarea en claro del principal') !== -1);
     assert.ok(plain.text.indexOf('Tarea en claro del principal') !== -1, 'el proyecto sin cifrar guarda como siempre');
     assert.ok(plain.text.indexOf('"ev"') === -1);
 
     /* ---------- eliminar el proyecto cifrado ---------- */
     await page.evaluate((id) => Workhub.app.deleteProject(id), seed.id);
-    assert.equal((await stored(base + '/crypto/' + seed.uid)).status, 404, 'la clave envuelta se borra con el proyecto');
-    assert.equal((await stored(base)).status, 404);
+    assert.equal((await storedWhen(base + '/crypto/' + seed.uid, (res) => res.status === 404)).status, 404, 'la clave envuelta se borra con el proyecto');
+    assert.equal((await storedWhen(base, (res) => res.status === 404)).status, 404);
 
     assert.deepEqual(errors, [], 'sin excepciones JavaScript');
     await context.close();

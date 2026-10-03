@@ -298,8 +298,10 @@
           this.indicator.remove();
           this.dropBeforeId = null;
         },
-        onDrop: (id, colEl) => {
+        onDrop: (id, colEl, ev) => {
           const status = colEl.getAttribute('data-status');
+          /* Dónde se soltó: la tarjeta se asienta desde ahí (ver _animateMoves). */
+          if(id && ev) this.dropPoint = {id:id, x:ev.clientX, y:ev.clientY, at:Date.now()};
           if(id && status) handler(id, status, this.dropBeforeId);
         }
       });
@@ -459,6 +461,61 @@
     }
 
     /* tasks: las que se ven (respeta búsqueda y filtro); all: todas, para los límites. */
+    /* Dónde está cada tarjeta antes de repintar (el tablero se repinta entero). Nada si el
+       tablero no se ve o si se pidieron animaciones reducidas. */
+    _cardRects(){
+      const root = document.documentElement;
+      if(!this.board.offsetParent || !this.board.animate) return null;
+      if(root.getAttribute('data-motion') === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+      const rects = new Map();
+      this.board.querySelectorAll('.card').forEach((card) => {
+        const r = card.getBoundingClientRect();
+        rects.set(card.getAttribute('data-id'), {left:r.left, top:r.top, col:closest(card, '.col').getAttribute('data-status')});
+      });
+      return rects.size ? rects : null;
+    }
+
+    /* Movimiento de las tarjetas tras repintar:
+       - las que solo suben o bajan en su columna se deslizan desde donde estaban;
+       - la que cambia de columna llega con un pequeño recorrido desde ese lado (las columnas
+         recortan lo que sobresale, así que no cruza el tablero entera);
+       - la que se acaba de soltar con el ratón se asienta desde el punto donde se soltó. */
+    _animateMoves(before){
+      /* El punto de suelta se gasta cuando la tarjeta cambia de sitio de verdad: puede haber
+         un repintado intermedio antes de que el modelo refleje el movimiento. */
+      if(this.dropPoint && Date.now() - this.dropPoint.at > 1500) this.dropPoint = null;
+      const drop = this.dropPoint;
+      if(!before) return;
+      const clamp = (v, max) => Math.max(-max, Math.min(max, v));
+      const moves = [];
+      this.board.querySelectorAll('.card').forEach((card) => {
+        const id = card.getAttribute('data-id');
+        const old = before.get(id);
+        if(!old) return;
+        const now = card.getBoundingClientRect();
+        if(drop && drop.id === id){
+          if(Math.abs(old.left - now.left) < 1 && Math.abs(old.top - now.top) < 1) return;
+          this.dropPoint = null;
+          moves.push([card, [
+            {transform:'translate(' + clamp(drop.x - (now.left + now.width / 2), 60) + 'px,' + clamp(drop.y - (now.top + now.height / 2), 120) + 'px) scale(1.03)', boxShadow:'var(--shadow-drag)'},
+            {transform:'none'}
+          ], 280]);
+          return;
+        }
+        const dx = old.left - now.left, dy = old.top - now.top;
+        /* Por columna y no por distancia: si se repinta a mitad de una animación, la tarjeta
+           sigue desde donde se ve en ese momento en vez de volver a «llegar». */
+        if(old.col !== closest(card, '.col').getAttribute('data-status')){
+          moves.push([card, [{transform:'translate(' + clamp(dx, 36) + 'px,' + clamp(dy, 24) + 'px) scale(.97)', opacity:.25}, {transform:'none', opacity:1}], 300]);
+        }else if(Math.abs(dy) > 2 || Math.abs(dx) > 2){
+          moves.push([card, [{transform:'translate(' + clamp(dx, 60) + 'px,' + clamp(dy, 400) + 'px)'}, {transform:'none'}], 260]);
+        }
+      });
+      /* Un cambio en bloque (filtro, importación, otro proyecto) no se anima. */
+      if(!moves.length || moves.length > 40) return;
+      moves.forEach(([card, frames, duration]) => card.animate(frames, {duration:duration, easing:'cubic-bezier(.2, .7, .2, 1)'}));
+    }
+
     render(tasks, all){
       all = all || tasks;
       const stages = TaskModel.STATUS.filter((s) => this.hidden.indexOf(s.key) === -1);
@@ -486,6 +543,7 @@
       const n = stages.length;
       this.board.style.setProperty('--cols', n);
       this.board.classList.toggle('is-many', n > 4);
+      const before = this._cardRects();
       this.board.innerHTML = stages.map((s, si) => {
         const items = tasks.filter((t) => TaskModel.stageKey(t) === s.key).sort(TaskModel.byOrder);
         const total = all.filter((t) => TaskModel.stageKey(t) === s.key).length;
@@ -514,6 +572,7 @@
         const focused = Array.from(this.board.querySelectorAll('.card')).find((card) => card.getAttribute('data-id') === this.focusCardId);
         if(focused) focused.focus({preventScroll:true});
       }
+      this._animateMoves(before);
       this.tabs.innerHTML = stages.map((s) => {
         const count = tasks.filter((t) => TaskModel.stageKey(t) === s.key).length;
         return '<button type="button" class="board-tab' + (s.done ? ' is-final' : '') + '" role="tab" aria-selected="false" data-goto="' + s.key + '" style="--st:' + s.dot + '">' +

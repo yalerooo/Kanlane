@@ -17,6 +17,10 @@
     return Workhub.t('hace {n} d', {n:Math.round(h / 24)});
   }
 
+  /* Qué sale de Kanlane hacia GitHub (plan de cifrado, 8.4). Se muestra antes de conectar
+     y en la tarjeta del proyecto enlazado. */
+  const PRIVACY = 'Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.';
+
   const CHECK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
   /* «Conectar con GitHub»: autorizar sin crear ni pegar ningún token. */
@@ -124,6 +128,7 @@
         '</div>';
       return '<form class="gh-form" autocomplete="off">' +
         '<p class="gh-lead">Enlaza este proyecto de Kanlane con un GitHub Project. Las columnas de GitHub pasan a ser las columnas del tablero y las tareas se mantienen sincronizadas en los dos sentidos.</p>' +
+        '<p class="gh-note is-warn gh-privacy">' + esc(Workhub.t(PRIVACY)) + '</p>' +
         tokenField +
         '<div class="field"><label for="ghUrl">Enlace del proyecto de GitHub</label>' +
         '<input id="ghUrl" type="url" spellcheck="false" placeholder="https://github.com/users/tu-usuario/projects/1" value="' + esc(this.form.url) + '"></div>' +
@@ -168,6 +173,7 @@
         (readOnly ? '<p class="gh-note">' + esc(Workhub.t('Eres lector de este proyecto: no puedes sincronizar con GitHub.')) + '</p>' : (
           '<label class="check-row"><input type="checkbox" id="ghPushNew"' + (c.pushNew ? ' checked' : '') + '> Enviar a GitHub las tareas nuevas de Kanlane (como borradores)</label>' +
           '<p class="gh-note">Mover una tarea de columna, cambiar su título o su descripción en un lado se refleja en el otro. Lo que se borra en un lado no se borra en el otro.</p>' +
+          '<p class="gh-note">' + esc(Workhub.t(PRIVACY)) + '</p>' +
           '<div class="gh-actions">' +
           (s.hasToken ? '<button type="button" class="btn btn-primary" data-gh="sync"' + (s.busy ? ' disabled' : '') + '>Sincronizar ahora</button>' : '') +
           '<button type="button" class="btn btn-ghost" data-gh="unlink" title="' + esc(Workhub.t('Quita el enlace de este proyecto con el GitHub Project. No borra ninguna tarea.')) + '">' + esc(Workhub.t('Desvincular proyecto')) + '</button>' +

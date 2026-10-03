@@ -31,11 +31,13 @@
     return use('assets');
   }
 
-  /* Sube una imagen y devuelve su id, o '' si no se pudo. */
+  /* Sube una imagen y devuelve su id ('' si este modo no guarda imágenes). Si la subida
+     falla, la promesa se rechaza (con err.code 'image-too-large' o 'image-unreadable'
+     cuando es por la imagen) para que la nota no se guarde sin ella sin avisar. */
   function uploadAsset(file){
     return use('assets').then((assets) => {
       if(!assets) return '';
-      return assets.upload(file).then((res) => res.id).catch(() => '');
+      return assets.upload(file).then((res) => res.id);
     });
   }
 

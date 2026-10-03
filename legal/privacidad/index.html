@@ -58,7 +58,8 @@
         <ul>
           <li><strong>Solo lo necesario.</strong> Tratamos los datos que hacen falta para que tengas tu cuenta y uses la aplicación.</li>
           <li><strong>Sin publicidad ni rastreo.</strong> No usamos analítica, no hacemos perfiles y no vendemos tus datos.</li>
-          <li><strong>Tus contraseñas guardadas.</strong> La contraseña y las notas de cada credencial se cifran en tu navegador antes de enviarse. Nosotros no podemos leerlas ni recuperarlas.</li>
+          <li><strong>Tus contraseñas guardadas.</strong> La contraseña y las notas de cada credencial se cifran en tu navegador antes de enviarse. Nosotros no podemos leerlas ni recuperarlas. El resto de tu contenido no se cifra de esta forma.</li>
+          <li><strong>GitHub, solo si lo conectas.</strong> Si enlazas un proyecto con GitHub Projects, el título, la descripción, la columna y las etiquetas de sus tareas se envían a GitHub sin cifrar y se quedan allí.</li>
           <li><strong>Modo invitado.</strong> Si entras como invitado, todo se queda en tu navegador y no llega a nuestros servidores.</li>
           <li><strong>Tus derechos.</strong> Puedes acceder a tus datos, corregirlos, llevártelos o pedir que se borren escribiéndonos.</li>
         </ul>
@@ -75,7 +76,7 @@
       <p>Proyectos, tareas, subtareas, etiquetas, notas (texto e imágenes que adjuntes), clientes, personas de contacto (nombre, correo, teléfono y notas), reuniones, ajustes, plugins instalados y los datos que guardan, y, si trabajas en equipo, los miembros del proyecto, sus roles y las invitaciones (con el correo de la persona invitada).</p>
 
       <h3>Contraseñas guardadas</h3>
-      <p>Para cada credencial, la <strong>contraseña y las notas se cifran en tu navegador</strong> con una clave derivada de tu contraseña maestra (AES-GCM de 256 bits, con PBKDF2) antes de enviarse. En nuestros servidores solo hay texto cifrado, y no conocemos tu contraseña maestra, por lo que <strong>no podemos descifrarlo ni recuperarlo</strong> si la pierdes. El resto de datos de cada credencial (tipo, cliente, nombre del servicio, usuario o correo, dirección y similares) se guarda <strong>sin cifrar</strong>, igual que el resto de tu contenido: evita escribir ahí información que no quieras que se almacene en claro.</p>
+      <p>Para cada credencial, la <strong>contraseña y las notas se cifran en tu navegador</strong> con una clave derivada de tu contraseña maestra (AES-GCM de 256 bits, con PBKDF2) antes de enviarse. De esos dos campos, en nuestros servidores solo hay texto cifrado, y no conocemos tu contraseña maestra, por lo que <strong>no podemos descifrarlo ni recuperarlo</strong> si la pierdes. El resto de datos de cada credencial (tipo, cliente, nombre del servicio, usuario o correo, dirección y similares) se guarda <strong>sin cifrar</strong>, igual que el resto de tu contenido: evita escribir ahí información que no quieras que se almacene en claro.</p>
 
       <h3>Datos técnicos</h3>
       <p>Al conectarte, nuestros proveedores de infraestructura (ver el apartado 6) reciben la dirección IP, el tipo de navegador y la fecha y hora de la petición. Los usan para que el servicio funcione y para detectar abusos y ataques; nosotros no los usamos para elaborar perfiles.</p>
@@ -93,7 +94,9 @@
       <p>Si activas las copias cifradas de tu cuenta, el navegador cifra la copia con una clave aleatoria antes de guardarla en Firebase. Firebase recibe el contenido cifrado, el identificador del proyecto, la fecha y el número de elementos de cada tipo. La clave permanece en tu navegador y puedes guardarla para recuperar las copias en otro dispositivo. Se mantienen hasta siete versiones por proyecto. Sin la clave no podemos descifrar esas copias. Puedes borrar versiones y detener las copias automáticas desde Kanlane.</p>
 
       <h3>Integración con GitHub</h3>
-      <p>Si conectas un GitHub Project, tu navegador habla directamente con la API de GitHub usando tu autorización. El acceso (token) se guarda <strong>solo en tu navegador</strong>, nunca en nuestros servidores. Lo que sincronizas con GitHub queda sujeto además a las condiciones y a la política de privacidad de GitHub.</p>
+      <p>Es opcional. Si enlazas un proyecto de Kanlane con un GitHub Project, tu navegador se comunica directamente con la API de GitHub usando tu autorización; esos datos no pasan por nuestros servidores. Al sincronizar, <strong>el título, la descripción, la columna (estado) y las etiquetas</strong> de las tareas de ese proyecto se envían a GitHub <strong>sin cifrar</strong>, y las tareas nuevas que crees en Kanlane se crean allí como borradores si tienes activada esa opción. Si una tarea está vinculada a una incidencia (<em>issue</em>) de un repositorio, los cambios de título, descripción y etiquetas se aplican a esa incidencia. El resto de la tarea (cliente, contacto, fecha límite, subtareas, notas y contraseñas vinculadas) no se envía. En un proyecto de equipo enlazado se envían las tareas de todos los miembros, desde el navegador de quien sincroniza.</p>
+      <p>GitHub trata esos datos como <strong>responsable independiente</strong>, según sus propios términos y su declaración de privacidad, y puede tratarlos en Estados Unidos. Si el GitHub Project o el repositorio son públicos, esas tareas también lo son. Lo enviado <strong>se queda en GitHub</strong> aunque borres la tarea o el proyecto en Kanlane, lo desvincules o cierres tu cuenta: los borrados no se propagan a GitHub y, si quieres eliminarlo, tienes que hacerlo allí.</p>
+      <p>El acceso a GitHub (el token que pegas o la autorización de «Conectar con GitHub») se guarda <strong>solo en tu navegador</strong>, nunca en nuestros servidores, y no viaja con tu cuenta. Da acceso a los proyectos de GitHub de tu cuenta (permiso <code>project</code>). «Olvidar token» o «Quitar mi acceso a GitHub» lo borran de ese navegador; para revocarlo del todo, hazlo en GitHub (<em>Settings → Applications</em> para la autorización, o <em>Developer settings → Personal access tokens</em> para un token).</p>
     </section>
 
     <section id="finalidades">
@@ -132,14 +135,14 @@
 
     <section id="destinatarios">
       <h2>6. Con quién compartimos tus datos</h2>
-      <p>No vendemos ni cedemos tus datos. Para prestar el servicio utilizamos estos proveedores, que actúan como encargados del tratamiento:</p>
+      <p>No vendemos ni cedemos tus datos. Para prestar el servicio utilizamos los proveedores de la tabla. Google (Firebase) y Cloudflare actúan como encargados del tratamiento. Los demás solo intervienen si tú lo eliges (entrar con Google o GitHub, enlazar un GitHub Project o instalar un plugin de un tercero) y se rigen por sus propias condiciones y políticas:</p>
       <div class="legal-table"><table>
         <thead><tr><th>Proveedor</th><th>Para qué</th><th>Qué datos recibe</th></tr></thead>
         <tbody>
           <tr><td>Google Ireland Limited / Google LLC (Firebase Authentication, Cloud Firestore y, cuando se active, reCAPTCHA Enterprise/App Check)</td><td>Inicio de sesión, base de datos y protección frente a accesos automatizados. Datos alojados en <span data-legal="ubicacionDatos"></span> para Firestore.</td><td>Datos de la cuenta, contenido, copias cifradas opcionales y datos técnicos. El código de Firebase se descarga de <code>www.gstatic.com</code> (Google) solo cuando inicias sesión.</td></tr>
           <tr><td>Cloudflare, Inc.</td><td>Alojamiento de la web, red de distribución y el reenvío del inicio de sesión.</td><td>Dirección IP y datos técnicos de la petición.</td></tr>
           <tr><td>Google (Google Sign-In) o GitHub, Inc. (Microsoft)</td><td>Solo si eliges entrar con ese proveedor.</td><td>Los datos que ese proveedor comparte con Kanlane (correo, nombre y foto). Se rigen además por su propia política de privacidad.</td></tr>
-          <tr><td>GitHub, Inc. (Microsoft)</td><td>Solo si activas la integración con GitHub Projects: tu navegador la usa directamente.</td><td>Lo que sincronices. Kanlane no recibe tu token.</td></tr>
+          <tr><td>GitHub, Inc. (Microsoft)</td><td>Solo si enlazas un proyecto con GitHub Projects: tu navegador envía los datos directamente a GitHub, que los trata como responsable independiente según sus propias condiciones (ver el apartado 3).</td><td>El título, la descripción, la columna (estado) y las etiquetas de las tareas del proyecto enlazado, sin cifrar. Kanlane no recibe tu token.</td></tr>
           <tr><td>Desarrolladores de plugins</td><td>Solo si instalas un plugin de un tercero: se carga desde su propia web, aislado de la aplicación.</td><td>Únicamente los datos de los permisos que tú le concedes al instalarlo. Nunca tus contraseñas guardadas.</td></tr>
         </tbody>
       </table></div>
@@ -149,12 +152,14 @@
     <section id="transferencias">
       <h2>7. Transferencias internacionales</h2>
       <p>Algunos proveedores pertenecen a grupos con sede en Estados Unidos. Esas transferencias se amparan en la decisión de adecuación de la Comisión Europea sobre el Marco de Privacidad de Datos UE-EE. UU. (Decisión de Ejecución (UE) 2023/1795), para las empresas adheridas, y, en su defecto, en las cláusulas contractuales tipo aprobadas por la Comisión. Puedes pedirnos más información en el correo del apartado 1.</p>
+      <p>Lo que envías a GitHub con la integración de GitHub Projects no pasa por nuestros servidores: lo envía tu navegador directamente a GitHub, que puede tratarlo en Estados Unidos según sus propias condiciones.</p>
     </section>
 
     <section id="conservacion">
       <h2>8. Cuánto tiempo conservamos tus datos</h2>
       <ul>
         <li><strong>Cuenta y contenido:</strong> mientras mantengas tu cuenta. Puedes borrar proyectos y su contenido desde la aplicación en cualquier momento. Las copias cifradas que actives se conservan hasta que las borres o se sustituyan por versiones más recientes; se guardan siete por proyecto.</li>
+        <li><strong>Datos enviados a GitHub:</strong> se conservan en GitHub según sus condiciones, aunque borres la tarea o el proyecto en Kanlane, lo desvincules o cierres tu cuenta. Para eliminarlos tienes que borrarlos en GitHub.</li>
         <li><strong>Baja de la cuenta:</strong> si nos pides cerrarla, eliminamos tu cuenta y tu contenido en un plazo máximo de 30 días. Los proveedores pueden conservar copias de seguridad cifradas durante un periodo limitado antes de eliminarlas definitivamente.</li>
         <li><strong>Datos técnicos y registros de seguridad:</strong> el tiempo que fijan nuestros proveedores, que es breve.</li>
         <li><strong>Obligaciones legales:</strong> si una ley exige conservar algún dato, lo mantendremos bloqueado, solo a disposición de las autoridades, durante los plazos de prescripción que correspondan, y después lo suprimiremos.</li>

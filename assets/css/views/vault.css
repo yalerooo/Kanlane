@@ -96,7 +96,9 @@
 @media (max-width:520px){
   .vault-card{grid-template-columns:minmax(0,1fr);}
   .pass-row{grid-column:1;grid-row:auto;width:auto;padding-left:38px;}
-  .vault-note{flex-wrap:wrap;}
+  .vault-note{flex-wrap:wrap;align-items:flex-start;}
+  .vault-note > svg{margin-top:2px;}
+  .vault-note > span{flex:1 1 0;min-width:0;}
   .vault-note .btn{margin-left:26px;}
 }
 

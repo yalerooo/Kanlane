@@ -140,6 +140,218 @@ async function t(name, fn){
   await t('alice cierra la versión', () => assertSucceeds(own.collection('backup_versions').doc('v1').update({complete:true})));
   await t('la copia cerrada es inmutable', () => assertFails(own.collection('backup_versions').doc('v1').collection('chunks').doc('1').set({index:1,data:'abc'})));
 
+
+  /* ---------- Cifrado por proyecto (docs/CIFRADO-PROYECTOS.md, apartado 7) ---------- */
+  const SV = () => FVc.serverTimestamp();
+  const zed = env.authenticatedContext('zed', tok('zed@x.com')).firestore();
+  const erin = env.authenticatedContext('erin', tok('erin@x.com')).firestore();
+  const zu = zed.collection('users').doc('zed');
+  const sealed = (extra) => Object.assign({e: 'A'.repeat(60), ev: 1, kid: 'kid-12345'}, extra || {});
+  const ENC = (over) => Object.assign({v: 1, mode: 'pw', pid: 'p'.repeat(22), kid: 'kid-12345', kcv: 'k'.repeat(52), createdAt: 1}, over || {});
+  const proj = (over) => Object.assign({nombre: 'Proyecto', createdAt: 1}, over || {});
+  const cryptoDoc = (over) => Object.assign({v: 1, kid: 'kid-12345',
+    kdf: {name: 'PBKDF2', hash: 'SHA-256', iter: 600000, salt: 's'.repeat(22)},
+    pw: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, rk: {iv: 'i'.repeat(16), ct: 'c'.repeat(64)}, createdAt: 1, updatedAt: 1}, over || {});
+  const wrapDoc = (over) => Object.assign({salt: 's'.repeat(22), iter: 100000, iv: 'i'.repeat(16), ct: 'c'.repeat(64), kid: 'kid-12345', createdAt: SV()}, over || {});
+
+  console.log('Cifrado: documento del proyecto (enc)');
+  await t('zed crea un proyecto cifrado', () => assertSucceeds(zu.collection('projects').doc('pb').set(proj({enc: ENC()}))));
+  await t('un proyecto sin enc se crea como siempre', () => assertSucceeds(zu.collection('projects').doc('pa').set(proj())));
+  await t('el modo gestionado todavía no está permitido', () => assertFails(zu.collection('projects').doc('pm').set(proj({enc: ENC({mode: 'managed'})}))));
+  await t('enc con una versión desconocida se rechaza', () => assertFails(zu.collection('projects').doc('pv').set(proj({enc: ENC({v: 2})}))));
+  await t('enc con un campo de más se rechaza', () => assertFails(zu.collection('projects').doc('px').set(proj({enc: ENC({extra: 1})}))));
+  await t('enc sin kcv se rechaza', () => { const e = ENC(); delete e.kcv; return assertFails(zu.collection('projects').doc('pk').set(proj({enc: e}))); });
+  await t('enc y github no conviven al crear', () => assertFails(zu.collection('projects').doc('pg').set(proj({enc: ENC(), github: {login: 'x', number: 1}}))));
+  await t('quitar enc de un proyecto cifrado se rechaza', () => assertFails(zu.collection('projects').doc('pb').set(proj())));
+  await t('cambiar el kid de enc se rechaza', () => assertFails(zu.collection('projects').doc('pb').set(proj({enc: ENC({kid: 'otro-kid-1'})}))));
+  await t('añadir enc a un proyecto existente se rechaza', () => assertFails(zu.collection('projects').doc('pa').set(proj({enc: ENC()}))));
+  await t('añadir github a un proyecto cifrado se rechaza', () => assertFails(zu.collection('projects').doc('pb').update({github: {login: 'x', number: 1}})));
+  await t('renombrar un proyecto cifrado sin tocar enc se permite', () => assertSucceeds(zu.collection('projects').doc('pb').update({nombre: 'Renombrado'})));
+  await t('un proyecto sin enc puede enlazar github como siempre', () => assertSucceeds(zu.collection('projects').doc('pa').update({github: {login: 'x', number: 1}})));
+  await t('el principal puede nacer cifrado', () => assertSucceeds(zu.collection('projects').doc('main').set(proj({enc: ENC()}))));
+  await t('el principal cifrado se marca como borrado', () => assertSucceeds(zu.collection('projects').doc('main').set({nombre: 'Principal', deleted: true})));
+  await t('el principal borrado se recrea cifrado', () => assertSucceeds(zu.collection('projects').doc('main').set(proj({enc: ENC({kid: 'kid-nuevo1'})}))));
+
+  console.log('Cifrado: documentos sellados en un proyecto personal');
+  const pb = zu.collection('projects').doc('pb');
+  const pa = zu.collection('projects').doc('pa');
+  await t('tarea sellada en un proyecto cifrado', () => assertSucceeds(pb.collection('tasks').doc('s1').set(sealed({status: 'todo', order: 1, assignees: []}))));
+  await t('tarea sellada con title se rechaza', () => assertFails(pb.collection('tasks').doc('s2').set(sealed({title: 'visible'}))));
+  await t('tarea sellada con campos de github se rechaza', () => assertFails(pb.collection('tasks').doc('s3').set(sealed({ghItemId: 'x'}))));
+  await t('bloque cifrado de más de 200 000 caracteres se rechaza', () => assertFails(pb.collection('tasks').doc('s4').set(sealed({e: 'A'.repeat(200001)}))));
+  await t('bloque cifrado de 200 000 caracteres se acepta', () => assertSucceeds(pb.collection('tasks').doc('s5').set(sealed({e: 'A'.repeat(200000)}))));
+  await t('ev 2 se rechaza', () => assertFails(pb.collection('tasks').doc('s6').set(sealed({ev: 2}))));
+  await t('ev que no es entero se rechaza', () => assertFails(pb.collection('tasks').doc('s7').set(sealed({ev: 'uno'}))));
+  await t('ev 0 no cuenta como sellado y se rechaza', () => assertFails(pb.collection('tasks').doc('s8').set(sealed({ev: 0}))));
+  await t('sin kid se rechaza', () => { const d = sealed(); delete d.kid; return assertFails(pb.collection('tasks').doc('s9').set(d)); });
+  await t('mover una tarea sellada (status y order) se permite', () => assertSucceeds(pb.collection('tasks').doc('s1').update({status: 'done', order: 3, updatedAt: 2})));
+  await t('escribir title sobre una tarea sellada se rechaza', () => assertFails(pb.collection('tasks').doc('s1').update({title: 'texto en claro'})));
+  await t('reescribir una tarea sellada en claro se rechaza', () => assertFails(pb.collection('tasks').doc('s1').set({title: 'texto en claro'})));
+  await t('rebajar ev de una tarea sellada se rechaza', () => assertFails(pb.collection('tasks').doc('s1').set(sealed({ev: 0}))));
+  await t('crear una tarea en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('tasks').doc('c1').set({title: 'en claro'})));
+  await t('crear una tarea en claro en un proyecto sin cifrar se permite', () => assertSucceeds(pa.collection('tasks').doc('c1').set({title: 'en claro'})));
+  await t('nota sellada en un proyecto cifrado', () => assertSucceeds(pb.collection('tasks').doc('s1').collection('notes').doc('n1').set(sealed({createdAt: 1, kind: 'comment', actorUid: 'zed'}))));
+  await t('nota en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('tasks').doc('s1').collection('notes').doc('n2').set({text: 'en claro'})));
+  await t('nota en claro en un proyecto sin cifrar se permite', () => assertSucceeds(pa.collection('tasks').doc('c1').collection('notes').doc('n1').set({text: 'en claro'})));
+  await t('clientes, contactos y reuniones sellados', async () => {
+    await assertSucceeds(pb.collection('clients').doc('k1').set(sealed({color: 3, createdAt: 1})));
+    await assertSucceeds(pb.collection('contacts').doc('k1').set(sealed({createdAt: 1, updatedAt: 1})));
+    await assertSucceeds(pb.collection('meetings').doc('k1').set(sealed({date: '2026-10-03', createdAt: 1})));
+  });
+  await t('cliente en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('clients').doc('k2').set({nombre: 'Acme'})));
+  await t('contacto en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('contacts').doc('k2').set({nombre: 'Ana', email: 'a@x.com'})));
+  await t('credencial sellada con la contraseña en cipherV2', () => assertSucceeds(pb.collection('vault').doc('v1').set(sealed({order: 1, ivV2: 'iv', cipherV2: 'cipher'}))));
+  await t('credencial en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('vault').doc('v2').set({tipo: 'correo', cliente: 'Acme', correo: 'a@x.com', ivV2: 'iv', cipherV2: 'c'})));
+  await t('vault_meta (la clave del cofre, ya envuelta) sigue en claro', () => assertSucceeds(pb.collection('vault_meta').doc('check').set({v: 2, salt: 's', check: 'c'})));
+  await t('datos de plugin sellados', () => assertSucceeds(pb.collection('plugin_data').doc('smartgp').set(sealed({updatedAt: 1}))));
+  await t('datos de plugin en claro en un proyecto cifrado se rechazan', () => assertFails(pb.collection('plugin_data').doc('smartgp2').set({values: {a: 1}, updatedAt: 1})));
+  const mark = (over) => Object.assign({_kind: 'plugin-install', pluginId: 'smartgp', url: 'https://x', manifest: {id: 'smartgp'}, granted: [], official: true, installedAt: 1, updatedAt: 1}, over || {});
+  await t('la marca de instalación de un plugin va en claro', () => assertSucceeds(pb.collection('plugin_data').doc('install:smartgp').set(mark())));
+  await t('una marca de instalación con campos de más se rechaza', () => assertFails(pb.collection('plugin_data').doc('install:otro').set(mark({secreto: 'texto'}))));
+  await t('una marca de instalación con _kind distinto se rechaza', () => assertFails(pb.collection('plugin_data').doc('install:raro').set(mark({_kind: 'otra-cosa'}))));
+
+  console.log('Cifrado: proyecto principal cifrado');
+  await t('tarea en claro en el principal cifrado se rechaza', () => assertFails(zu.collection('tasks').doc('m1').set({title: 'en claro'})));
+  await t('tarea sellada en el principal cifrado', () => assertSucceeds(zu.collection('tasks').doc('m1').set(sealed({status: 'todo', order: 1}))));
+  await t('nota en claro en el principal cifrado se rechaza', () => assertFails(zu.collection('tasks').doc('m1').collection('notes').doc('n1').set({text: 'en claro'})));
+  await t('nota sellada en el principal cifrado', () => assertSucceeds(zu.collection('tasks').doc('m1').collection('notes').doc('n1').set(sealed({createdAt: 1}))));
+  await t('imagen sellada en la cuenta', () => assertSucceeds(zu.collection('assets').doc('a1').set({createdAt: 1, e: 'A'.repeat(880000), ev: 1, kid: 'kid-12345'})));
+  await t('imagen sellada con contentType se rechaza', () => assertFails(zu.collection('assets').doc('a2').set({createdAt: 1, e: 'A'.repeat(100), ev: 1, kid: 'kid-12345', contentType: 'image/jpeg'})));
+  await t('el principal sin cifrar sigue aceptando tareas en claro', () => assertSucceeds(alice.collection('users').doc('alice').collection('tasks').doc('claro-2').set({title: 'a'})));
+
+  console.log('Cifrado: envoltorio de la clave (crypto)');
+  await t('zed guarda su envoltorio del principal', () => assertSucceeds(zu.collection('crypto').doc('zed').set(cryptoDoc())));
+  await t('zed guarda su envoltorio de un proyecto', () => assertSucceeds(pb.collection('crypto').doc('zed').set(cryptoDoc())));
+  await t('zed lee su envoltorio', () => assertSucceeds(pb.collection('crypto').doc('zed').get()));
+  await t('bob no lee el envoltorio de zed', () => assertFails(bob.collection('users').doc('zed').collection('crypto').doc('zed').get()));
+  await t('bob no escribe en el envoltorio de zed', () => assertFails(bob.collection('users').doc('zed').collection('crypto').doc('zed').set(cryptoDoc())));
+  await t('zed no escribe el envoltorio de otro uid', () => assertFails(zu.collection('crypto').doc('bob').set(cryptoDoc())));
+  await t('menos de 600 000 iteraciones se rechaza', () => assertFails(zu.collection('crypto').doc('zed').set(cryptoDoc({kdf: {name: 'PBKDF2', hash: 'SHA-256', iter: 300000, salt: 's'.repeat(22)}}))));
+  await t('otro algoritmo de derivación se rechaza', () => assertFails(zu.collection('crypto').doc('zed').set(cryptoDoc({kdf: {name: 'scrypt', hash: 'SHA-256', iter: 600000, salt: 's'.repeat(22)}}))));
+  await t('un envoltorio con campos de más se rechaza', () => assertFails(zu.collection('crypto').doc('zed').set(cryptoDoc({extra: 'x'}))));
+  await t('un envoltorio sin clave de recuperación se rechaza', () => { const d = cryptoDoc(); delete d.rk; return assertFails(zu.collection('crypto').doc('zed').set(d)); });
+  await t('un envoltorio con la clave pública y la privada envuelta (D9) se acepta', () => assertSucceeds(zu.collection('crypto').doc('zed').set(cryptoDoc({
+    pub: {kty: 'EC', crv: 'P-256', x: 'x'.repeat(43), y: 'y'.repeat(43)}, priv: {iv: 'i'.repeat(16), ct: 'c'.repeat(200)}}))));
+  await t('zed borra su envoltorio', () => assertSucceeds(pb.collection('crypto').doc('zed').delete()));
+
+  console.log('Cifrado: proyectos de equipo');
+  const tb = alice.collection('teams').doc('tb');
+  await t('alice crea un equipo cifrado', () => assertSucceeds(tb.set(Object.assign(team('alice'), {enc: ENC()}))));
+  await t('un equipo con enc y github no se crea', () => assertFails(alice.collection('teams').doc('tg').set(Object.assign(team('alice'), {enc: ENC(), github: {login: 'x', number: 1}}))));
+  await t('un equipo con enc inválido no se crea', () => assertFails(alice.collection('teams').doc('tf').set(Object.assign(team('alice'), {enc: ENC({mode: 'managed'})}))));
+  await t('un equipo sin cifrar sigue aceptando tareas en claro', async () => {
+    await assertSucceeds(alice.collection('teams').doc('tc').set(team('alice')));
+    await assertSucceeds(alice.collection('teams').doc('tc').collection('tasks').doc('x').set({title: 'en claro'}));
+  });
+  await t('alice invita a bob (editor) y a carol (lector) al equipo cifrado', async () => {
+    await assertSucceeds(alice.collection('invites').doc('tb_bob@x.com').set(invite('tb', 'bob@x.com', 'editor', 'alice')));
+    await assertSucceeds(alice.collection('invites').doc('tb_carol@x.com').set(invite('tb', 'carol@x.com', 'viewer', 'alice')));
+  });
+  await t('bob y carol entran', async () => {
+    const b1 = bob.batch();
+    b1.update(bob.collection('teams').doc('tb'), {memberIds: FVc.arrayUnion('bob'), ['members.bob']: me('bob', 'bob@x.com', 'editor')});
+    b1.delete(bob.collection('invites').doc('tb_bob@x.com'));
+    await assertSucceeds(b1.commit());
+    const b2 = carol.batch();
+    b2.update(carol.collection('teams').doc('tb'), {memberIds: FVc.arrayUnion('carol'), ['members.carol']: me('carol', 'carol@x.com', 'viewer')});
+    b2.delete(carol.collection('invites').doc('tb_carol@x.com'));
+    await assertSucceeds(b2.commit());
+  });
+  await t('un editor no cambia enc', () => assertFails(bob.collection('teams').doc('tb').update({enc: ENC({kid: 'zzzzzzzz'})})));
+  await t('el propietario no quita enc', () => assertFails(tb.update({enc: FVc.delete()})));
+  await t('el propietario no cambia enc', () => assertFails(tb.update({enc: ENC({kid: 'zzzzzzzz'})})));
+  await t('el propietario no puede añadir github a un equipo cifrado', () => assertFails(tb.update({github: {login: 'x', number: 1}})));
+  await t('el propietario sigue pudiendo renombrar el equipo cifrado', () => assertSucceeds(tb.update({nombre: 'Equipo cifrado'})));
+  await t('tarea en claro en un equipo cifrado se rechaza', () => assertFails(bob.collection('teams').doc('tb').collection('tasks').doc('x1').set({title: 'en claro'})));
+  await t('tarea sellada en un equipo cifrado', () => assertSucceeds(bob.collection('teams').doc('tb').collection('tasks').doc('x1').set(sealed({status: 'todo', assignees: ['bob']}))));
+  await t('nota en claro en un equipo cifrado se rechaza', () => assertFails(bob.collection('teams').doc('tb').collection('tasks').doc('x1').collection('notes').doc('n1').set({text: 'en claro'})));
+  await t('nota sellada en un equipo cifrado', () => assertSucceeds(bob.collection('teams').doc('tb').collection('tasks').doc('x1').collection('notes').doc('n1').set(sealed({createdAt: 1}))));
+  await t('imagen en claro en un equipo cifrado se rechaza', () => assertFails(bob.collection('teams').doc('tb').collection('assets').doc('i1').set({data: 'data:image/jpeg;base64,AAAA', contentType: 'image/jpeg', createdAt: 1})));
+  await t('imagen sellada en un equipo cifrado', () => assertSucceeds(bob.collection('teams').doc('tb').collection('assets').doc('i1').set({createdAt: 1, e: 'A'.repeat(1000), ev: 1, kid: 'kid-12345'})));
+  await t('un lector no escribe tareas selladas', () => assertFails(carol.collection('teams').doc('tb').collection('tasks').doc('x2').set(sealed())));
+  await t('un miembro (lector) guarda su envoltorio', () => assertSucceeds(carol.collection('teams').doc('tb').collection('crypto').doc('carol').set(cryptoDoc())));
+  await t('un miembro no guarda el envoltorio de otro', () => assertFails(carol.collection('teams').doc('tb').collection('crypto').doc('bob').set(cryptoDoc())));
+  await t('un miembro lee su envoltorio', () => assertSucceeds(carol.collection('teams').doc('tb').collection('crypto').doc('carol').get()));
+  await t('un miembro no lee el envoltorio de otro', () => assertFails(bob.collection('teams').doc('tb').collection('crypto').doc('carol').get()));
+  await t('quien no es miembro no lee ningún envoltorio', () => assertFails(dave.collection('teams').doc('tb').collection('crypto').doc('carol').get()));
+  await t('quien no es miembro no escribe un envoltorio', () => assertFails(dave.collection('teams').doc('tb').collection('crypto').doc('dave').set(cryptoDoc())));
+  await t('un editor no borra el envoltorio de otro', () => assertFails(bob.collection('teams').doc('tb').collection('crypto').doc('carol').delete()));
+  await t('el propietario borra el envoltorio de un miembro', () => assertSucceeds(tb.collection('crypto').doc('carol').delete()));
+
+  console.log('Cifrado: invitaciones con código de acceso');
+  const invDave = alice.collection('invites').doc('tb_dave@x.com');
+  await t('alice crea la invitación y la clave envuelta en un lote', async () => {
+    const b = alice.batch();
+    b.set(invDave, invite('tb', 'dave@x.com', 'editor', 'alice'));
+    b.set(invDave.collection('key').doc('wrap'), wrapDoc());
+    await assertSucceeds(b.commit());
+  });
+  await t('una clave envuelta con una hora del cliente (para alargar la caducidad) se rechaza', async () => {
+    const ref = alice.collection('invites').doc('tb_frank@x.com');
+    const b = alice.batch();
+    b.set(ref, invite('tb', 'frank@x.com', 'editor', 'alice'));
+    b.set(ref.collection('key').doc('wrap'), wrapDoc({createdAt: new Date(Date.now() + 3600 * 1000)}));
+    await assertFails(b.commit());
+  });
+  await t('menos de 100 000 iteraciones del código se rechaza', async () => {
+    const ref = alice.collection('invites').doc('tb_frank@x.com');
+    const b = alice.batch();
+    b.set(ref, invite('tb', 'frank@x.com', 'editor', 'alice'));
+    b.set(ref.collection('key').doc('wrap'), wrapDoc({iter: 1000}));
+    await assertFails(b.commit());
+  });
+  await t('la clave envuelta solo la crea el propietario del equipo', async () => {
+    await assertSucceeds(alice.collection('invites').doc('tb_gina@x.com').set(invite('tb', 'gina@x.com', 'viewer', 'alice')));
+    await assertFails(bob.collection('invites').doc('tb_gina@x.com').collection('key').doc('wrap').set(wrapDoc()));
+  });
+  await t('la clave envuelta solo se llama wrap', async () => {
+    const b = alice.batch();
+    b.set(alice.collection('invites').doc('tb_gina@x.com').collection('key').doc('otra'), wrapDoc());
+    await assertFails(b.commit());
+  });
+  await t('el destinatario lee la clave envuelta', () => assertSucceeds(dave.collection('invites').doc('tb_dave@x.com').collection('key').doc('wrap').get()));
+  await t('otra cuenta no la lee', () => assertFails(carol.collection('invites').doc('tb_dave@x.com').collection('key').doc('wrap').get()));
+  await t('quien invitó no la lee', () => assertFails(invDave.collection('key').doc('wrap').get()));
+  await t('nadie modifica la clave envuelta', () => assertFails(invDave.collection('key').doc('wrap').update({ct: 'otra'.repeat(10)})));
+  await t('dave no guarda su envoltorio antes de entrar', () => assertFails(dave.collection('teams').doc('tb').collection('crypto').doc('dave').set(cryptoDoc())));
+  await t('pasadas 24 horas el destinatario ya no lee la clave', async () => {
+    const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await db.collection('invites').doc('tb_erin@x.com').set(invite('tb', 'erin@x.com', 'editor', 'alice'));
+      await db.collection('invites').doc('tb_erin@x.com').collection('key').doc('wrap').set(wrapDoc({createdAt: Timestamp.fromMillis(Date.now() - 25 * 3600 * 1000)}));
+    });
+    await assertFails(erin.collection('invites').doc('tb_erin@x.com').collection('key').doc('wrap').get());
+  });
+  await t('antes de 24 horas sí la lee', async () => {
+    const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('invites').doc('tb_erin@x.com').collection('key').doc('wrap').set(wrapDoc({createdAt: Timestamp.fromMillis(Date.now() - 23 * 3600 * 1000)}));
+    });
+    await assertSucceeds(erin.collection('invites').doc('tb_erin@x.com').collection('key').doc('wrap').get());
+  });
+  await t('el propietario borra primero la clave caducada y después la invitación', async () => {
+    const ref = alice.collection('invites').doc('tb_erin@x.com');
+    await assertSucceeds(ref.collection('key').doc('wrap').delete());
+    await assertSucceeds(ref.delete());
+  });
+  await t('dave acepta: entra, guarda su envoltorio y borra invitación y clave en un lote', async () => {
+    const b = dave.batch();
+    b.update(dave.collection('teams').doc('tb'), {memberIds: FVc.arrayUnion('dave'), ['members.dave']: me('dave', 'dave@x.com', 'editor')});
+    b.set(dave.collection('teams').doc('tb').collection('crypto').doc('dave'), cryptoDoc());
+    b.delete(dave.collection('invites').doc('tb_dave@x.com').collection('key').doc('wrap'));
+    b.delete(dave.collection('invites').doc('tb_dave@x.com'));
+    await assertSucceeds(b.commit());
+  });
+  await t('dave ya lee los datos sellados del equipo', () => assertSucceeds(dave.collection('teams').doc('tb').collection('tasks').doc('x1').get()));
+  await t('dave rechaza una invitación borrando la clave y la invitación', async () => {
+    const ref = alice.collection('invites').doc('tb_gina@x.com');
+    await assertSucceeds(ref.collection('key').doc('wrap').set(wrapDoc()));
+    const ctx = env.authenticatedContext('gina', tok('gina@x.com')).firestore();
+    await assertSucceeds(ctx.collection('invites').doc('tb_gina@x.com').collection('key').doc('wrap').delete());
+    await assertSucceeds(ctx.collection('invites').doc('tb_gina@x.com').delete());
+  });
+
   await env.cleanup();
   console.log('\n' + pass + ' correctas, ' + fail + ' fallidas');
   process.exit(fail ? 1 : 0);

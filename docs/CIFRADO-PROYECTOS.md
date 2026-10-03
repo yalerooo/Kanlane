@@ -1,6 +1,6 @@
 # Cifrado por proyecto: plan de implementación
 
-> Estado: **plan aceptado; PR0 y PR1 hechos, sin fusionar.** PR0 en la rama `claude/cifrado-pr0` (texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app; PR #91). PR1 en `claude/cifrado-pr1`, que sale de PR0 (servicio de cifrado y almacén de claves, sin interfaz ni datos; ver 6.1 y 15.2). PR2–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
+> Estado: **plan aceptado; PR0, PR1 y PR2 hechos.** PR0 en `claude/cifrado-pr0` (PR #91, fusionado); PR1 en `claude/cifrado-pr1` (PR #92); **PR2 (reglas en doble formato) en `claude/cifrado-pr2`: hay que PUBLICAR las reglas a mano antes de desplegar PR3.** PR0 en la rama `claude/cifrado-pr0` (texto de seguridad, límite de imágenes, GitHub en la política y aviso de GitHub en la app; PR #91). PR1 en `claude/cifrado-pr1`, que sale de PR0 (servicio de cifrado y almacén de claves, sin interfaz ni datos; ver 6.1 y 15.2). PR2–PR11 sin empezar. Redactado en octubre de 2026 a partir del código de `main` (commit `c39c011`).
 > Las decisiones del dueño (modos A/B/C, sin migración, GitHub incompatible con B, compartir con código de un solo uso, orden reglas → código) se dan por cerradas y aquí solo se concretan. **El 3-oct-2026 el dueño aceptó todas las recomendaciones D1–D18 del apartado 20**: ya son decisiones vinculantes para los PR siguientes y no hay ninguna pendiente.
 > Las marcas **[MANUAL]** son pasos que tiene que hacer el dueño a mano (consola de Firebase, Cloudflare, revisión de textos). Las marcas **[SIN VERIFICAR]** son supuestos que no se han podido comprobar contra un servicio real.
 
@@ -438,6 +438,21 @@ Si falla 3, no hay nada que deshacer. Si falla 4, queda un `crypto/{uid}` huérf
 ## 7. Reglas de Firestore
 
 ### 7.1 Esbozo (PR2)
+
+> **Hecho en PR2** (`firestore.rules`, 178 casos en `tests/rules`: los 72 de antes más 106 nuevos, y comprobados con un chequeo de mutaciones). Diferencias con el esbozo de abajo, todas por corregir incoherencias con la tabla de 5.6:
+>
+> 1. **`vault_meta` y las marcas de instalación de plugins pueden ir en claro en un proyecto B.** El esbozo exigía sellado en todas las colecciones de datos, lo que habría impedido crear `vault_meta/check` y `plugin_data/install:{id}`. Ahora `sealRequired(col)` excluye `vault_meta` y las marcas (`_kind == 'plugin-install'` con exactamente los campos `_kind, pluginId, url, manifest, granted, official, installedAt, updatedAt`; si PluginModel añade un campo, hay que añadirlo también a `isInstallMark()`).
+> 2. **`validWrite` solo se aplica a las colecciones sellables** (`tasks, notes, clients, contacts, meetings, vault, plugin_data, assets`); `projects`, `settings`, `plugins` y `vault_meta` siguen con `validData` como siempre.
+> 3. **`github` puede ser `null` o no estar** en un proyecto cifrado (`get('github', null) == null`); lo que se rechaza es un valor real. Así `github: null` al desvincular sigue permitido.
+> 4. **`assets` personales** siguen aceptando texto en claro aunque el proyecto sea cifrado: las imágenes viven en la cuenta y la regla no sabe a qué proyecto pertenecen (la AAD del cifrado sí las ata a su proyecto). En equipos cifrados sí se exige sellado.
+> 5. **`validCrypto` ya admite `pub` y `priv`** (D9 aceptada): `pub` es un mapa de hasta 8 claves y `priv` un envoltorio `{iv, ct}` de hasta 1 024 caracteres. Se exigen `v, kid, kdf, pw, rk`; `kdf.iter` entre 600 000 y 10 000 000 (el mismo rango que el cliente).
+> 6. `validEnc` exige `pid` de 16–32 caracteres, `kid` de 8–32 y las claves `v, mode, pid, kid, kcv`.
+> 7. La clave envuelta de una invitación pide `salt, iter, iv, ct, createdAt` (y admite `kid`, `kcv`), con `iter` entre 100 000 y 10 000 000; `createdAt` tiene que ser la hora del servidor (`serverTimestamp()`).
+> 8. **Coste:** crear en claro dentro de un proyecto (sin cifrar) pasa a hacer una lectura más (`exists` + `get` del documento del proyecto). Las escrituras selladas no la hacen.
+>
+> **Chequeo de mutaciones:** se rompió a propósito cada regla nueva (21 variantes: degradar sellados, quitar el tope de `e`, no exigir sellado en principal/personales/equipos, `enc` mutable o añadible, `enc`+`github`, sin caducidad de 24 h, `createdAt` del cliente, `kdf.iter` bajo, `crypto` legible por otro o escribible por no miembros, marcas de plugin abiertas…) y alguna prueba falló en todas salvo dos que son redundantes: `isOwner` en la creación de la clave envuelta (ya lo cubre `invitedByUid == auth.uid` y el propietario de un equipo no cambia) y `who == uid` en la lectura de `crypto` personal (ya lo cubre `canUse(uid)`). Una prueba usaba `new Date()` como «hora del cliente» y a veces coincidía al milisegundo con la del emulador; ahora usa una hora futura.
+>
+> **[SIN VERIFICAR]** el emulador no aplica el límite de 20 accesos por lote ni el de 10 por operación suelta; hay que comprobar en producción (PR7) que aceptar una invitación cifrada (lote de 4 operaciones) cabe.
 
 Se añaden funciones y cláusulas; **ninguna regla actual se relaja** y todo lo que escribe el código de hoy sigue permitido (por eso se pueden publicar antes del código).
 
@@ -1032,6 +1047,7 @@ Un único `push` por PR (Cloudflare construye una vista previa por cada `push`).
 - **[MANUAL] Publicación, en este orden**: (1) fusionar PR2; (2) el dueño pega `firestore.rules` en *Firestore Database → Reglas* (o `firebase deploy --only firestore:rules`) y pulsa «Publicar»; (3) comprueba en la app de producción que crear, editar y borrar una tarea, una nota con imagen, un cliente y aceptar una invitación siguen funcionando; (4) avisa de que están publicadas. **No se despliega PR3 hasta ese aviso.** Se le pegan las reglas sin comentarios en el chat (preferencia del usuario).
 - Reversión: volver a pegar las reglas anteriores (se guardan en la descripción del PR).
 - Criterios: 70 casos antiguos + nuevos en verde; publicadas y confirmadas.
+- **Hecho:** reglas, 106 casos nuevos (178 en total) y chequeo de mutaciones (cada regla nueva se rompió a propósito y alguna prueba falló). Pendiente: **[MANUAL]** publicar y confirmar.
 
 **PR3 — Capa de cifrado (L)**
 

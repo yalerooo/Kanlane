@@ -1,0 +1,187 @@
+/* ---------- Portada: acabado y movimiento ----------
+   Va detrás de landing.css y landing-product.css. Dos partes:
+   1. Acabado: cabecera, portada, marco de la demo, bloque de presentación, cierre.
+   2. Movimiento al bajar: solo bajo html.js-motion, que pone landing-boot.js cuando hay JavaScript,
+      IntersectionObserver y la persona no ha pedido menos movimiento. Sin esa clase todo se ve
+      tal cual, sin estados ocultos: así se lee sin JavaScript y con movimiento reducido.
+   Plano: líneas finas, sin sombras de color ni degradados de relleno, sin rayas laterales. */
+
+:root{--ease-out:cubic-bezier(.16,1,.3,1);--ease-soft:cubic-bezier(.2,.7,.2,1);}
+
+/* ===== 1. Acabado ===== */
+
+/* Cabecera translúcida y línea de avance de lectura. */
+.top{background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);}
+.scroll-progress{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent-solid);transform:scaleX(var(--scroll,0));transform-origin:0 50%;pointer-events:none;}
+
+/* Portada: retícula de puntos que se desvanece hacia abajo. */
+.hero{position:relative;isolation:isolate;}
+.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:760px;z-index:-1;pointer-events:none;
+  background-image:radial-gradient(circle at 1px 1px,var(--line-strong) 1px,transparent 1.5px);background-size:30px 30px;
+  -webkit-mask-image:radial-gradient(ellipse 78% 72% at 50% 0%,#000 18%,transparent 72%);mask-image:radial-gradient(ellipse 78% 72% at 50% 0%,#000 18%,transparent 72%);
+  opacity:.75;}
+.hero h1{font-size:clamp(44px,4.7vw,66px);letter-spacing:-.055em;}
+.hero-eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;}
+.live-dot{position:relative;}
+.hero-eyebrow .live-dot::after,.preview-kicker .live-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--accent);opacity:0;animation:dot-ping 2.6s var(--ease-out) infinite;}
+.day-preview{transform-style:preserve-3d;transition:transform .5s var(--ease-out),border-color .3s;}
+.day-task{transition:background-color .2s;}
+
+/* Etiquetas de sección: monoespaciadas y numeradas, en lugar del rótulo azul repetido. */
+main{counter-reset:seccion;}
+.section-head > .eyebrow,.flow-copy > .eyebrow{counter-increment:seccion;display:flex;align-items:center;gap:12px;margin-bottom:22px;font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);}
+.section-head > .eyebrow::before,.flow-copy > .eyebrow::before{content:counter(seccion,decimal-leading-zero);color:var(--accent);}
+.section-head > .eyebrow::after,.flow-copy > .eyebrow::after{content:"";flex:none;width:44px;height:1px;background:var(--line-strong);order:-1;margin-right:-2px;display:none;}
+.narrow .section-head > .eyebrow{justify-content:flex-start;}
+
+/* Marco de navegador para la demo. */
+.demo{border-radius:16px;transform-origin:50% 0;}
+.demo::before{content:"kanlane.com/demo";display:flex;align-items:center;justify-content:center;height:40px;border-bottom:1px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;color:var(--ink-faint);}
+.demo::after{content:"";position:absolute;left:18px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--line-strong);box-shadow:17px 0 0 var(--line-strong),34px 0 0 var(--line-strong);}
+.demo{position:relative;}
+
+/* Presentación: la frase que se ilumina al bajar y cuatro datos. */
+.statement{padding:150px 0 130px;border-top:1px solid var(--line);}
+.statement-text{max-width:25ch;font-size:clamp(30px,4.6vw,60px);font-weight:600;line-height:1.1;letter-spacing:-.045em;color:var(--ink);text-wrap:balance;}
+.statement-text .w{transition:opacity .25s linear;}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:88px;border-top:1px solid var(--line-strong);}
+.facts li{padding:26px 24px 0 0;}
+.facts li + li{padding-left:24px;border-left:1px solid var(--line);}
+.facts strong{display:block;font-size:clamp(30px,3.4vw,44px);font-weight:600;line-height:1;letter-spacing:-.04em;font-variant-numeric:tabular-nums;}
+.facts span{display:block;margin-top:12px;font-size:14px;line-height:1.45;color:var(--ink-soft);}
+
+/* Tarjetas: un punto de luz que sigue al cursor. */
+.feat,.anywhere-grid article,.day-preview,.client-detail,.team-preview,.plugin-window,.flow-stage{position:relative;}
+.grid3:not(.plain) .feat::after,.anywhere-grid article::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent-solid) 11%,transparent),transparent 65%);}
+.grid3:not(.plain) .feat:hover::after,.anywhere-grid article:hover::after{opacity:1;}
+.grid3:not(.plain) .feat:hover{background:var(--bg);}
+.section-alt .grid3:not(.plain) .feat:hover{background:var(--surface);}
+.feat > *,.anywhere-grid article > *{position:relative;z-index:1;}
+
+/* Pasos: la línea superior se rellena al avanzar. */
+.steps{position:relative;}
+.steps li{position:relative;}
+.steps li::before{content:"";position:absolute;left:0;top:-1px;width:100%;height:1px;background:var(--accent-solid);transform:scaleX(var(--fill,0));transform-origin:0 50%;transition:transform .9s var(--ease-out);}
+
+/* Preguntas: fila que responde al cursor. */
+.faq summary{transition:color .2s,padding-left .3s var(--ease-out);}
+.faq summary:hover{padding-left:6px;}
+
+/* Cierre: sin el adorno de barras, con retícula y titular grande. */
+.closing{padding:150px 0 140px;isolation:isolate;border-top:1px solid var(--line);}
+.closing::before{content:"";position:absolute;inset:0;z-index:-1;margin:0;font-size:0;
+  background-image:radial-gradient(circle at 1px 1px,var(--line-strong) 1px,transparent 1.5px);background-size:30px 30px;
+  -webkit-mask-image:radial-gradient(ellipse 60% 75% at 50% 100%,#000 10%,transparent 70%);mask-image:radial-gradient(ellipse 60% 75% at 50% 100%,#000 10%,transparent 70%);opacity:.7;}
+.closing h2{max-width:14ch;font-size:clamp(40px,6.6vw,84px);line-height:1.02;letter-spacing:-.055em;}
+.closing p{font-size:19px;}
+
+@keyframes dot-ping{0%{opacity:.7;transform:scale(.6)}70%,100%{opacity:0;transform:scale(1.9)}}
+
+@media (max-width:900px){
+  .statement{padding:96px 0 88px;}
+  .facts{grid-template-columns:1fr 1fr;margin-top:56px;}
+  .facts li{padding:22px 16px 22px 0;}
+  .facts li + li{padding-left:0;border-left:0;}
+  .facts li:nth-child(even){padding-left:20px;border-left:1px solid var(--line);}
+  .facts li:nth-child(n+3){border-top:1px solid var(--line);}
+  .closing{padding:104px 0 96px;}
+}
+@media (max-width:700px){
+  .hero::before{height:520px;}
+  .demo::before{height:34px;font-size:10.5px;}
+  .demo::after{left:13px;top:13px;width:8px;height:8px;box-shadow:13px 0 0 var(--line-strong),26px 0 0 var(--line-strong);}
+}
+
+/* ===== 2. Movimiento al bajar ===== */
+
+/* Titulares: cada línea sube desde detrás de una máscara. */
+.js-motion .ln{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.14em;margin-bottom:-.14em;}
+.js-motion .ln > span{display:inline-block;transform:translateY(112%);transition:transform 1s var(--ease-out);transition-delay:calc(var(--l,0) * 90ms + var(--d,0ms));will-change:transform;}
+.js-motion .is-in > .ln > span,.js-motion .is-in .ln > span{transform:none;}
+/* Antes de trocear el titular de la portada no se enseña (evita el salto); si el script no llega, aparece solo. */
+.js-motion .hero h1:not(.is-split){opacity:0;animation:m-show 0s 1.6s forwards;}
+.js-motion .hero h1{animation:none;}
+
+/* Entrada de la portada. */
+.js-motion .hero-copy > *{animation:none;}
+.js-motion .hero-copy > :not(h1){opacity:0;transform:translateY(16px);transition:opacity .8s var(--ease-soft),transform .8s var(--ease-out);}
+.js-motion .hero.is-in .hero-copy > :not(h1){opacity:1;transform:none;}
+.js-motion .hero.is-in .hero-copy > .lead{transition-delay:.28s;}
+.js-motion .hero.is-in .hero-copy > .hero-cta{transition-delay:.38s;}
+.js-motion .hero.is-in .hero-copy > .hero-note{transition-delay:.46s;}
+.js-motion .hero.is-in .hero-copy > .hero-platforms{transition-delay:.52s;}
+.js-motion .hero-layout > .day-preview{animation:none;opacity:0;transform:perspective(1400px) translateY(34px) rotateX(9deg) rotateY(-7deg) scale(.97);transition:opacity .9s var(--ease-soft) .2s,transform 1.3s var(--ease-out) .2s;}
+.js-motion .hero.is-in .hero-layout > .day-preview{opacity:1;transform:perspective(1400px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));}
+.js-motion .hero.is-settled .hero-layout > .day-preview{transition:transform .5s var(--ease-out);}
+.js-motion .hero::before{opacity:0;transition:opacity 1.6s ease .1s;}
+.js-motion .hero.is-in::before{opacity:.75;}
+/* Las filas de la jornada entran una a una. */
+.js-motion .hero .day-metrics > div,.js-motion .hero .day-task,.js-motion .hero .day-meeting{opacity:0;transform:translateY(10px);transition:opacity .6s var(--ease-soft),transform .7s var(--ease-out);transition-delay:calc(.55s + var(--i,0) * 70ms);}
+.js-motion .hero.is-in .day-metrics > div,.js-motion .hero.is-in .day-task,.js-motion .hero.is-in .day-meeting{opacity:1;transform:none;}
+
+/* Aparición general: sustituye el desplazamiento corto por uno con más recorrido y mejor curva. */
+.js-motion .reveal{transition:opacity .9s var(--ease-soft),transform 1.1s var(--ease-out);transition-delay:var(--reveal-delay,0ms);}
+.js-motion .reveal.is-waiting{opacity:0;transform:translateY(44px);}
+.js-motion .feat{transition:background .25s,opacity .9s var(--ease-soft),transform 1.1s var(--ease-out);transition-delay:var(--reveal-delay,0ms);}
+
+/* Variantes (las pone landing-motion.js con la clase m y un tipo). */
+.js-motion .m{opacity:0;transition:opacity .9s var(--ease-soft),transform 1.15s var(--ease-out),clip-path 1.15s var(--ease-out);transition-delay:calc(var(--i,0) * 75ms + var(--d,0ms));}
+.js-motion .m-up{transform:translateY(28px);}
+.js-motion .m-left{transform:translateX(-56px);}
+.js-motion .m-right{transform:translateX(56px);}
+.js-motion .m-scale{transform:scale(.94) translateY(24px);}
+.js-motion .m-pop{transform:scale(.8);transition-duration:.5s,.7s,.7s;}
+.js-motion .m-fade{transform:none;}
+.js-motion .m.is-in{opacity:1;transform:none;}
+
+/* Etiqueta de sección: la raya crece. */
+.js-motion .section-head > .eyebrow,.js-motion .flow-copy > .eyebrow{opacity:0;transform:translateX(-12px);transition:opacity .7s var(--ease-soft),transform .8s var(--ease-out);}
+.js-motion .is-in > .eyebrow,.js-motion .section-head.is-in > .eyebrow{opacity:1;transform:none;}
+.js-motion .section-head > .section-lead,.js-motion .flow-copy > .section-lead,.js-motion .demo-intro > p{opacity:0;transform:translateY(18px);transition:opacity .9s var(--ease-soft) .25s,transform 1s var(--ease-out) .25s;}
+.js-motion .is-in > .section-lead,.js-motion .demo-intro.is-in > p{opacity:1;transform:none;}
+/* Estos bloques ya no se mueven enteros: se mueven sus partes. */
+.js-motion .section-head.reveal.is-waiting,.js-motion .flow-copy.reveal.is-waiting,.js-motion .demo-intro.reveal.is-waiting,.js-motion .closing .wrap.reveal.is-waiting,.js-motion .split.reveal.is-waiting{opacity:1;transform:none;}
+
+/* Demo: llega inclinada y se endereza con el scroll. */
+.js-motion .demo{transform:perspective(1800px) rotateX(var(--demo-rx,0deg)) scale(var(--demo-s,1));will-change:transform;}
+
+/* Presentación: palabras apagadas hasta que el scroll las alcanza. */
+.js-motion .statement-text .w{opacity:.16;}
+.js-motion .statement-text .w.is-lit{opacity:1;}
+
+/* Iconos de las funciones: se dibujan. */
+.js-motion .feat .ico{stroke-dasharray:90;stroke-dashoffset:90;transition:stroke-dashoffset 1.4s var(--ease-out) calc(var(--reveal-delay,0ms) + .25s),transform .3s,color .3s;}
+.js-motion .feat:not(.is-waiting) .ico{stroke-dashoffset:0;}
+
+/* Calendario y cofre: las piezas llegan en cadena. */
+.js-motion .calendar-preview .ev,.js-motion .vault .vrow{opacity:0;transform:translateY(8px) scale(.96);transition:opacity .5s var(--ease-soft),transform .6s var(--ease-out);transition-delay:calc(.35s + var(--i,0) * 70ms);}
+.js-motion .mock.is-in .ev,.js-motion .mock.is-in .vrow{opacity:1;transform:none;}
+.js-motion .vault .vrow{transform:translateX(18px);}
+
+/* Paralaje suave de las maquetas (la propiedad translate no pisa las transformaciones de entrada). */
+.js-motion [data-parallax]{translate:0 var(--py,0px);}
+
+/* Cierre. */
+.js-motion .closing p,.js-motion .closing .hero-cta{opacity:0;transform:translateY(18px);transition:opacity .9s var(--ease-soft),transform 1s var(--ease-out);}
+.js-motion .closing .wrap.is-in p{opacity:1;transform:none;transition-delay:.3s;}
+.js-motion .closing .wrap.is-in .hero-cta{opacity:1;transform:none;transition-delay:.42s;}
+.js-motion .closing::before{opacity:0;transition:opacity 1.6s ease;}
+.js-motion .closing.is-in::before{opacity:.7;}
+
+/* Pie. */
+.js-motion .foot .m{transition-duration:.7s,.8s,.8s;}
+
+@keyframes m-show{to{opacity:1;}}
+
+@media (max-width:700px){
+  .js-motion .m-left,.js-motion .m-right{transform:translateY(28px);}
+  .js-motion .demo{transform:none;}
+  .js-motion [data-parallax]{translate:none;}
+  .js-motion .hero-layout > .day-preview{transform:translateY(28px);}
+  .js-motion .hero.is-in .hero-layout > .day-preview{transform:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  .live-dot::after{display:none;}
+  .steps li::before{transition:none;}
+}

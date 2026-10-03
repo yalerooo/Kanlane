@@ -254,7 +254,43 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     try{ cipher.check(this.name, secret); }catch(err){ return Promise.reject(err); }
     /* Un documento en claro dentro de un proyecto cifrado se sustituye entero por su versión sellada. */
     if(entry.legacy) return this._writeSealed(id, secret, clear, (col, s) => col.doc(id).set(Object.assign({}, clear, s)));
+    /* Equipo cifrado y con conexión: el blob es un solo campo, así que dos personas que cambian a la
+       vez campos secretos distintos se pisarían. Se lee, se mezcla y se escribe en una transacción. */
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    if(cipher.transaction && online){
+      return this._writeSealed(id, secret, clear, (col, s, written) => this._updateInTransaction(col, id, parts, s, written));
+    }
     return this._writeSealed(id, secret, clear, (col, s) => col.doc(id).update(Object.assign({}, parts.clear, s)));
+  }
+
+  /* s: el sellado hecho con lo que había en memoria (se usa si no hay conexión). written: la entrada
+     de la caché de esta escritura, que se corrige con lo que de verdad se guarda. */
+  _updateInTransaction(col, id, parts, s, written){
+    const cipher = this.cipher, path = this.name;
+    const ref = col.doc(id);
+    return cipher.transaction((tx) => tx.get(ref).then((snap) => {
+      const raw = snap.exists ? snap.data() || {} : null;
+      if(!raw || !cipher.isSealed(raw)){
+        tx.update(ref, Object.assign({}, parts.clear, s));
+        return null;
+      }
+      return cipher.open(path, id, raw).then((r) => {
+        const merged = Object.assign({}, r.plain, parts.secret);
+        return cipher.sealSecret(path, id, merged).then((sealed) => {
+          tx.update(ref, Object.assign({}, parts.clear, sealed));
+          /* Antes de confirmar: la instantánea que traiga esta escritura tiene que reconocerla. */
+          if(this.cipher === cipher && this._plain[id] === written){
+            written.plain = merged;
+            written.iv = cipher.ivOf(sealed.e);
+          }
+          return null;
+        });
+      });
+    })).catch((err) => {
+      /* Sin conexión una transacción no puede leer: se escribe con la caché, como en un proyecto personal. */
+      if(err && err.code === 'unavailable') return ref.update(Object.assign({}, parts.clear, s));
+      throw err;
+    });
   }
 
   _setSealed(id, data){
@@ -287,7 +323,7 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     const issued = (chain[id] || Promise.resolve()).then(() => cipher.sealSecret(path, id, secret)).then((s) => {
       if(mine()) entry.iv = cipher.ivOf(s.e);
       /* Sin conexión la escritura no termina hasta volver la red: la cadena no espera por ella. */
-      return {write:issue(col, s)};
+      return {write:issue(col, s, entry)};
     });
     const tail = issued.then(() => {}, () => {});
     chain[id] = tail;

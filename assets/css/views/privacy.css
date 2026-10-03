@@ -44,6 +44,12 @@
 .lock-recover{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);}
 .lock-recover textarea{font-family:var(--mono);font-size:12.5px;width:100%;}
 #dlgEncKey .recovery-confirm{margin-top:12px;}
+/* Compartir un proyecto con cifrado total: clave de recuperación del equipo, código de acceso y unirse. */
+#shKeyPanel .type-note,#jnKeyPanel .type-note{margin-top:12px;}
+#shKeyPanel .recovery-confirm,#jnKeyPanel .recovery-confirm{margin-top:12px;margin-bottom:14px;}
+#shCodePanel .recovery-key-box{font-size:17px;letter-spacing:.06em;}
+.invite-pass{margin-top:10px;}
+.enc-badge{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid var(--line);border-radius:999px;font-size:11px;line-height:17px;font-weight:500;color:var(--ink-soft);vertical-align:1px;}
 
 @media (max-width:600px){
   .privacy-actions .btn{width:100%;justify-content:center;}

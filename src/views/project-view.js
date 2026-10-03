@@ -21,7 +21,8 @@
   /* Una invitación con sus botones (en el menú o en el diálogo del primer proyecto). */
   function inviteRow(i, kind){
     const attr = kind === 'menu' ? 'data-menu' : 'data-invite';
-    return '<div class="invite-row-item"><div class="invite-text"><strong translate="no">' + esc(i.teamName) + '</strong>' +
+    return '<div class="invite-row-item"><div class="invite-text"><strong translate="no">' + esc(i.teamName) +
+      (i.enc ? '<span class="enc-badge">' + esc(Workhub.t('Cifrado')) + '</span>' : '') + '</strong>' +
       '<span>' + esc(Workhub.t('{who} te invita como {role}', {who:i.invitedByName || i.email, role:Workhub.t(i.role === 'editor' ? 'editor' : 'lector')})) + '</span></div>' +
       '<div class="invite-btns"><button type="button" class="btn btn-primary btn-sm" ' + attr + '="accept" data-id="' + esc(i.id) + '">' + esc(Workhub.t('Aceptar')) + '</button>' +
       '<button type="button" class="btn btn-ghost btn-sm" ' + attr + '="decline" data-id="' + esc(i.id) + '">' + esc(Workhub.t('Rechazar')) + '</button></div></div>';

@@ -49,6 +49,7 @@
       };
       this.controllers.crypto = new C.ProjectCryptoController(this, new V.ProjectLockView());
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
+      this.controllers.teamCrypto = new C.TeamCryptoController(this, new V.JoinView());
       this.controllers.team = new C.TeamController(this, new V.ShareView());
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
@@ -245,6 +246,9 @@
       this.cipher = cipher;
       this.encPid = pid;
       this.shell.setProjectLocked(false);
+      /* Equipo cifrado: los cambios de campos secretos van en transacción (dos personas a la vez). */
+      if(cipher) cipher.transaction = P.isTeam(this.projectId) && this.rootDb.teams && this.rootDb.teams.runTransaction
+        ? (fn) => this.rootDb.teams.runTransaction(fn) : null;
       /* Las imágenes las cifra y descifra firebase-backend, que no sabe de proyectos. */
       window.__assetCipher = cipher ? {
         sealBytes: (id, bytes) => cipher.sealBytes('assets', id, bytes),

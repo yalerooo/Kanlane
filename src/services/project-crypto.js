@@ -37,6 +37,7 @@
   const RECOVERY_RE = /^[0-9A-HJKMNP-TV-Z]{32}$/;
   const CODE_RE = /^[0-9A-HJKMNP-TV-Z]{20}$/;
   const MAX_FIELD = 1500;
+  const MAX_PRIVATE_BYTES = 512;          /* PKCS#8 de P-256 ocupa 138; las reglas admiten 1 024 caracteres */
 
   const enc = new TextEncoder();
   const dec = new TextDecoder('utf-8', {fatal:true});
@@ -255,25 +256,33 @@
   function normalizePassword(password){
     return String(password == null ? '' : password).normalize('NFC');
   }
-  async function pbkdf2Kek(secret, salt, iterations){
+  async function pbkdf2Kek(secret, salt, iterations, usages){
     const s = subtle();
     const baseKey = await s.importKey('raw', enc.encode(secret), {name:'PBKDF2'}, false, ['deriveKey']);
     return s.deriveKey({name:'PBKDF2', hash:'SHA-256', salt:salt, iterations:iterations},
-      baseKey, {name:'AES-GCM', length:256}, false, ['encrypt', 'unwrapKey']);
+      baseKey, {name:'AES-GCM', length:256}, false, usages || ['encrypt', 'unwrapKey']);
   }
 
-  /* wrapPassword(dek, contraseña, {pid, kid, uid}) → {kdf, pw}. dek: Uint8Array(32) o CryptoKey extraíble.
+  /* wrapPassword(dek, contraseña, {pid, kid, uid}, priv) → {kdf, pw} (y priv si se pasa).
+     dek: Uint8Array(32) o CryptoKey extraíble. priv (opcional): la clave privada del miembro (PKCS#8,
+     ver newKeyPair), que se envuelve con la misma clave derivada de la contraseña.
      Rechaza contraseñas de menos de 12 caracteres ('short-password'). */
-  async function wrapPassword(dek, password, ctx){
+  async function wrapPassword(dek, password, ctx, priv){
     checkCtx(ctx);
     const pw = normalizePassword(password);
     if(Array.from(pw).length < MIN_PASSWORD_LENGTH) throw fail('short-password');
+    if(priv != null && !(priv instanceof Uint8Array && priv.length > 0 && priv.length <= MAX_PRIVATE_BYTES)) throw fail('bad-format');
     const salt = randomBytes(SALT_BYTES);
     const kek = await pbkdf2Kek(pw, salt, KDF_ITERATIONS);
-    return {
+    const out = {
       kdf:{name:'PBKDF2', hash:'SHA-256', iter:KDF_ITERATIONS, salt:b64url(salt)},
       pw:await wrapWith(kek, dek, 'pw', ctx)
     };
+    if(priv != null){
+      const blob = await gcmSeal(kek, priv, wrapAad('priv', ctx));
+      out.priv = {iv:b64url(blob.subarray(0, IV_BYTES)), ct:b64url(blob.subarray(IV_BYTES))};
+    }
+    return out;
   }
   /* unwrapPassword(doc, contraseña, ctx, extractable) → CryptoKey. doc es crypto/{uid} (o {kdf, pw}).
      Respeta doc.kdf.iter (entre 600 000 y 10 000 000; fuera de ahí, 'bad-format'). */
@@ -289,6 +298,36 @@
     if(!pw) throw fail('bad-password');   /* algunos navegadores no admiten PBKDF2 con clave vacía */
     const kek = await pbkdf2Kek(pw, salt, kdf.iter);
     return unwrapWith(kek, doc.pw, 'pw', ctx, extractable, 'bad-password');
+  }
+
+  /* Par de claves de un miembro de un equipo cifrado (D9): ECDH P-256. La pública se publica en su
+     crypto/{uid} y la privada se guarda envuelta con su contraseña, para que una rotación de la clave
+     del proyecto (PR10) pueda entregarle la clave nueva sin un código de acceso.
+     newKeyPair() → {pub:{kty, crv, x, y}, priv:Uint8Array (PKCS#8)}. */
+  async function newKeyPair(){
+    const s = subtle();
+    const pair = await s.generateKey({name:'ECDH', namedCurve:'P-256'}, true, ['deriveKey']);
+    const jwk = await s.exportKey('jwk', pair.publicKey);
+    return {pub:{kty:jwk.kty, crv:jwk.crv, x:jwk.x, y:jwk.y}, priv:new Uint8Array(await s.exportKey('pkcs8', pair.privateKey))};
+  }
+  /* unwrapPrivate(doc, contraseña, ctx) → Uint8Array (PKCS#8) de doc.priv ('bad-password' si no abre). */
+  async function unwrapPrivate(doc, password, ctx){
+    checkCtx(ctx);
+    const kdf = doc && doc.kdf;
+    if(!kdf || kdf.name !== 'PBKDF2' || kdf.hash !== 'SHA-256' || !Number.isInteger(kdf.iter) ||
+       kdf.iter < MIN_KDF_ITERATIONS || kdf.iter > MAX_KDF_ITERATIONS || !doc.priv) throw fail('bad-format');
+    const salt = fromB64url(kdf.salt, SALT_BYTES);
+    const iv = fromB64url(doc.priv.iv, IV_BYTES);
+    const ct = fromB64url(doc.priv.ct);
+    if(ct.length <= TAG_BYTES || ct.length > MAX_PRIVATE_BYTES + TAG_BYTES) throw fail('bad-format');
+    const pw = normalizePassword(password);
+    if(!pw) throw fail('bad-password');
+    const kek = await pbkdf2Kek(pw, salt, kdf.iter, ['decrypt']);
+    try{
+      return new Uint8Array(await subtle().decrypt({name:'AES-GCM', iv:iv, additionalData:wrapAad('priv', ctx), tagLength:128}, kek, ct));
+    }catch(e){
+      throw fail('bad-password', e);
+    }
   }
 
   /* Clave de recuperación: 160 bits en base32 legible, 8 grupos de 4 (XXXX-XXXX-…). */
@@ -486,6 +525,7 @@
     newDekBytes, newPid, newKid, importDek,
     kcv, checkKcv,
     wrapPassword, unwrapPassword,
+    newKeyPair, unwrapPrivate,
     newRecoveryKey, parseRecoveryKey, wrapRecovery, unwrapRecovery,
     newAccessCode, parseAccessCode, wrapCode, unwrapCode,
     aad, seal, open, ivOf, sealBytes, openBytes,

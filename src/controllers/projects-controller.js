@@ -134,11 +134,17 @@
     acceptInvite(id){
       const inv = this.invites().find((i) => i.id === id);
       if(!inv) return;
-      this.app.models.team.accept(inv).then(() => {
+      const joined = () => {
         /* Cuando el equipo llegue a la lista se abre (ver onProjectsChange). */
         this.pendingSwitch = Workhub.models.ProjectModel.teamKey(inv.teamId);
         this.onProjectsChange();
-      }, () => toast.error('No se pudo aceptar la invitación. Puede que ya no exista.'));
+      };
+      /* Equipo con cifrado total: hacen falta el código de acceso y una contraseña de cifrado propia. */
+      if(inv.enc){
+        this.app.controllers.teamCrypto.openJoin(inv, joined);
+        return;
+      }
+      this.app.models.team.accept(inv).then(joined, () => toast.error('No se pudo aceptar la invitación. Puede que ya no exista.'));
     }
 
     declineInvite(id){

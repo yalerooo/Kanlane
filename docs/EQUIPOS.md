@@ -66,6 +66,34 @@ Los equipos **no funcionan hasta que se publican las reglas nuevas** (`firestore
 
 Estas reglas se prueban contra el emulador de Firestore con `tests/rules` (59 comprobaciones): ver [tests/rules/README.md](../tests/rules/README.md).
 
+## Equipos con cifrado total
+
+Un proyecto con **cifrado total** (ver `docs/CIFRADO-PROYECTOS.md`) también se puede compartir. El servidor sigue sin ver el contenido, así que la clave del proyecto tiene que llegar a cada persona por otro camino: un **código de acceso**.
+
+**Convertir.** En «Compartir» se pide la contraseña de cifrado del proyecto y se enseña una **clave de recuperación nueva, la del equipo** (hay que confirmar que se ha guardado antes de crear nada). El equipo tiene su propia clave: todo se copia descifrando con la del original y volviendo a cifrar con la del equipo, imágenes incluidas. Lo que se edite después en el original no se puede leer con la clave del equipo, y al revés. La contraseña de cifrado de la propietaria en el equipo es la misma que la del proyecto original.
+
+**Invitar.** Además del correo y el rol, el propietario escribe **su contraseña de cifrado**. Kanlane crea un código de 20 caracteres (`XXXX-XXXX-XXXX-XXXX-XXXX`) y lo enseña **una sola vez**: hay que dárselo a esa persona por un canal distinto del correo de la invitación (en persona, por mensaje…). El código no se guarda en ningún sitio, **caduca a las 24 horas** y solo sirve una vez. Invitar de nuevo al mismo correo crea otro código y anula el anterior.
+
+**Aceptar.** Quien recibe la invitación (lleva la insignia «Cifrado») escribe el código y elige **su propia contraseña de cifrado** para ese proyecto; después ve **su propia clave de recuperación** y tiene que confirmar que la ha guardado. Cada miembro tiene su contraseña y su clave de recuperación: nadie conoce las de los demás. Si el código ha caducado hay que pedir otra invitación.
+
+**Roles.** Igual que en cualquier equipo. Un lector también recibe la clave (la necesita para leer), pero las reglas no le dejan escribir.
+
+**Expulsar.** Quitar a alguien le cierra el acceso al servidor y borra su clave envuelta, pero **lo que ya haya visto o descargado no se le puede quitar**, y pudo quedarse con la clave. Mientras no exista la rotación de la clave (PR10 del plan), si esa persona consiguiese los datos cifrados por otra vía podría leerlos. La confirmación lo dice.
+
+**Editar a la vez.** En un proyecto cifrado todo el contenido de una tarea va en un único campo, así que dos personas que cambiasen a la vez el título y la descripción se pisarían. En los equipos cifrados esos cambios se hacen con una transacción (leer, mezclar, escribir); sin conexión se escribe con lo que hay en memoria y gana el último.
+
+**Sin cofre.** Igual que en el resto de equipos, no hay gestor de contraseñas.
+
+Cómo se guarda:
+
+- `teams/{id}` lleva el campo `enc` (`pid`, `kid`, `kcv`), que no cambia.
+- `teams/{id}/crypto/{uid}`: la clave del proyecto envuelta con la contraseña y con la clave de recuperación **de esa persona** (solo la lee ella), más su par de claves: `pub` (pública, ECDH P-256) y `priv` (privada, envuelta con su contraseña). El par no se usa todavía: servirá para repartir una clave nueva al rotar sin tener que invitar otra vez. Si la persona recupera el acceso con su clave de recuperación se le crea un par nuevo.
+- `invites/{idEquipo}_{correo}` añade `enc` (`pid`, `kid`, `kcv`) y `expiresAt` (orientativo, para la interfaz).
+- `invites/{…}/key/wrap`: la clave del proyecto envuelta con el código (PBKDF2, 100 000 iteraciones). Solo la lee el destinatario y solo durante 24 horas desde que el servidor la creó: eso lo aplican las reglas, no la app. Se borra al aceptar.
+- Aceptar es un lote de cuatro escrituras: entrar en el equipo, guardar la clave envuelta propia, borrar la clave envuelta con el código y borrar la invitación.
+
+**Pendiente de comprobar en producción:** el emulador no aplica el límite de 20 consultas de reglas por lote, así que ese lote de cuatro hay que probarlo con dos cuentas reales.
+
 ## Compartir contraseñas: siguiente fase
 
 Lo acordado es **cifrado extremo a extremo por miembro**, sin compartir ninguna contraseña maestra:

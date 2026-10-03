@@ -4,6 +4,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const {fakeDb} = require('./fake-firestore.js');
 
 const root = path.resolve(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -21,68 +22,8 @@ const Workhub = {
 const PC = Workhub.services.projectCrypto;
 const {CollectionModel, TaskModel, ProjectCipher, EncSchema} = Workhub.models;
 
-const clone = (v) => JSON.parse(JSON.stringify(v));
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 0));
 const code = (c) => (err) => { assert.equal(err && err.name, 'ProjectCipherError', 'error tipado: ' + (err && err.message)); assert.equal(err.code, c); return true; };
-
-/* ---------- Firestore en memoria ---------- */
-function fakeDb(){
-  const cols = new Map();
-  const log = {writes:[], wheres:0};
-  let auto = 0;
-  function store(p){
-    if(!cols.has(p)) cols.set(p, {docs:new Map(), listeners:new Set()});
-    return cols.get(p);
-  }
-  function snapOf(c, orderBy){
-    let rows = [...c.docs.entries()];
-    if(orderBy) rows.sort((a, b) => (a[1][orderBy] || 0) - (b[1][orderBy] || 0));
-    return {docs:rows.map(([id, data]) => ({id, data:() => clone(data)}))};
-  }
-  function notify(c){
-    c.listeners.forEach((l) => Promise.resolve().then(() => { if(c.listeners.has(l)) l.cb(snapOf(c, l.orderBy)); }));
-  }
-  function listen(c, orderBy, cb){
-    const l = {cb, orderBy};
-    c.listeners.add(l);
-    Promise.resolve().then(() => { if(c.listeners.has(l)) cb(snapOf(c, orderBy)); });
-    return () => c.listeners.delete(l);
-  }
-  function collection(p){
-    const c = store(p);
-    return {
-      path:p,
-      doc(id){
-        const docId = id || 'auto' + (++auto);
-        return {
-          id:docId,
-          set(data){ c.docs.set(docId, clone(data)); log.writes.push({op:'set', path:p, id:docId, data:clone(data)}); notify(c); return Promise.resolve(); },
-          update(patch){
-            if(!c.docs.has(docId)) return Promise.reject(new Error('not-found'));
-            c.docs.set(docId, Object.assign({}, c.docs.get(docId), clone(patch)));
-            log.writes.push({op:'update', path:p, id:docId, data:clone(patch)});
-            notify(c);
-            return Promise.resolve();
-          },
-          delete(){ c.docs.delete(docId); log.writes.push({op:'delete', path:p, id:docId}); notify(c); return Promise.resolve(); },
-          collection(name){ return collection(p + '/' + docId + '/' + name); }
-        };
-      },
-      add(data){ const ref = this.doc(); return ref.set(data).then(() => ref); },
-      onSnapshot(cb){ return listen(c, null, cb); },
-      get(){ return Promise.resolve(snapOf(c)); },
-      where(field, op, value){
-        log.wheres++;
-        return {get:() => Promise.resolve({docs:snapOf(c).docs.filter((d) => d.data()[field] === value)})};
-      },
-      orderBy(field){
-        return {onSnapshot:(cb) => listen(c, field, cb), get:() => Promise.resolve(snapOf(c, field))};
-      }
-    };
-  }
-  return {collection, log, raw:(p, id) => store(p).docs.get(id), rawAll:(p) => store(p).docs,
-    put:(p, id, data) => { const c = store(p); c.docs.set(id, clone(data)); notify(c); }};
-}
 
 async function newCipher(){
   const key = await PC.importDek(PC.newDekBytes());

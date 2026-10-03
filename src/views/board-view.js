@@ -404,9 +404,9 @@
     ].join('');
     const contact = t.contacto ? '<div class="card-contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></div>' : '';
     const bottom = check || due ? '<div class="card-bottom">' + (check ? '<div class="card-progress">' + check + '</div>' : '') + due + '</div>' : '';
-    return '<article class="card" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
+    return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
       (t.cliente && Workhub.clientsEnabled !== false ? clientColors.chip(t.cliente) : '') +
-      '<h3 translate="no">' + esc(t.title) + '</h3>' +
+      '<h3 translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
       (Array.isArray(t.labels) && t.labels.length ? '<div class="card-labels">' + Workhub.views.labels.chips(t.labels, 3) + '</div>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +

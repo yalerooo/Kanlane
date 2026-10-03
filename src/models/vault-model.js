@@ -131,6 +131,8 @@
        las copias v2 sustituye los metadatos. Así cualquier fallo deja el
        tablero antiguo recuperable con su contraseña. */
     unlockLegacy(password){
+      /* En un proyecto con cifrado total no puede haber cofres del formato antiguo. */
+      if(this.cipher) return Promise.reject(new Error('legacy-in-encrypted'));
       let meta, oldKey, newDekBytes, newKey;
       return this.getMeta().then((snap) => {
         meta = snap.data() || {};
@@ -190,10 +192,10 @@
 
     /* Cada proyecto tiene su propio gestor: al cambiar, se bloquea y se vuelve
        a comprobar si tiene contraseña maestra. */
-    connect(db){
+    connect(db, cipher){
       this.lock();
       this.metaState = null;
-      super.connect(db);
+      super.connect(db, cipher);
     }
 
     lock(){

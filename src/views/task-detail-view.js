@@ -365,13 +365,14 @@
 
   function noteHtml(d){
     const n = d.data() || {};
+    const text = n._undecryptable ? Workhub.t('No se puede descifrar') : (n.text ? (n.kind === 'activity' ? Workhub.t(n.text) : n.text) : '');
     const actor = n.actorName ? '<span class="tv-note-author" translate="no">' + esc(n.actorName) + '</span> · ' : '';
     const img = n.imageAssetId
       ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="Imagen de la nota">'
       : '';
     return '<article class="tv-note' + (n.kind === 'activity' ? ' is-activity' : '') + '">' +
       '<div class="tv-note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (n.text ? '<div class="tv-note-text" translate="no">' + esc(n.kind === 'activity' ? Workhub.t(n.text) : n.text) + '</div>' : '') +
+      (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') +
       img +
       '</article>';
   }

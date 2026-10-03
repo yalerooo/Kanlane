@@ -280,6 +280,7 @@
     openDetail(id){
       const t = this.tasks.find(id);
       if(!t) return;
+      if(t._undecryptable){ toast.error('Esta tarea no se puede descifrar con la clave de este proyecto.'); return; }
       this.releaseDetail();
       this.detailId = id;
       this.detail.open(t, this.detailContext());
@@ -364,6 +365,7 @@
     openEdit(id, fromDetail){
       const t = this.tasks.find(id);
       if(!t) return;
+      if(t._undecryptable){ toast.error('Esta tarea no se puede descifrar con la clave de este proyecto.'); return; }
       this.releaseTask();
       this.backToDetailId = fromDetail ? id : null;
       this.linkedContacts = Array.isArray(t.linkedContacts) ? t.linkedContacts.slice() : [];

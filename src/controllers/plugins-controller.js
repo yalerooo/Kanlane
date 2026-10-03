@@ -493,7 +493,7 @@
     bucket(pluginId, scope){
       return scope === 'user'
         ? PluginModel.userBucket(this.app.rootDb, pluginId)
-        : PluginModel.projectBucket(this.db(), pluginId);
+        : PluginModel.projectBucket(this.db(), pluginId, this.app.cipher);
     }
 
     api(p, method, params, frame){

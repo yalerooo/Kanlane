@@ -129,7 +129,7 @@
 
   function themeSwitch(origin, apply){
     const root = document.documentElement;
-    if(!document.startViewTransition || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    if(!document.startViewTransition || root.getAttribute('data-motion') === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
       apply();
       return;
     }

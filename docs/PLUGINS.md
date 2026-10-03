@@ -345,7 +345,11 @@ await wh.ui.setAppearance({
   textSize: 'large',     // 'small', 'normal' o 'large'
   radius: 'round',       // 'sharp' (rectas), 'normal' o 'round' (redondeadas)
   density: 'compact',    // 'compact', 'normal' o 'comfortable'
-  nav: 'top'             // 'side' (lateral), 'top' (barra arriba) o null para seguir Ajustes
+  nav: 'top',            // 'side' (lateral), 'top' (barra arriba) o null para seguir Ajustes
+  glass: 'strong',       // cristal de las barras y lo superpuesto: 'solid' (opaco), 'soft', 'normal' o 'strong'
+  wash: 'soft',          // velo de color del fondo: 'none', 'soft', 'normal' o 'strong'
+  veil: ['#9B4DFF', '#0EA5A4'],  // dos colores (#RRGGBB) para el velo, uno por esquina; null = el del acento
+  motion: 'reduced'      // 'normal' o 'reduced' (sin transiciones ni animaciones)
 });
 await wh.ui.resetAppearance();   // volver al aspecto normal
 ```

@@ -1136,6 +1136,7 @@
     '{campo}: máximo {n}':'{campo}: maximum {n}',
     'Temporizador':'Timer',
     'Mide el tiempo que dedicas a cada tarea con un cronómetro y consulta el total por tarea y por cliente.':'Track the time you spend on each task with a stopwatch and see totals per task and per client.',
+    'Temas listos y ajustes finos para cada proyecto: colores, cristal y velo del fondo, navegación, tipografía, esquinas, espaciado y animaciones.':'Ready-made themes and fine-tuning for each project: colors, glass and background veil, navigation, typography, corners, spacing and animations.',
     'Personaliza el tema, los colores, la navegación, la tipografía, el tamaño del texto, las esquinas y el espaciado de cada proyecto.':'Customize each project’s theme, colors, navigation, typography, text size, corners and spacing.',
     'Contacto':'Contact',
     'Proyecto':'Project',

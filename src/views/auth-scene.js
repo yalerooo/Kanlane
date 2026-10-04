@@ -40,13 +40,15 @@
 
     /* Dónde está plantado el cerezo (lo fija main antes de nada): el terreno le hace una loma. */
     'vec2 gTree;',
+    /* Altura del suelo al pie del cerezo. Es una constante a propósito: si se calculara con */
+    /* terrain() en cada píxel, con tarjeta gráfica el resultado baila en el último decimal de un */
+    /* fotograma a otro y el árbol entero salta un píxel arriba y abajo. */
+    'const float TREE_H = 1.80;',
     /* Terreno: un montículo bajo el ordenador, otro bajo el cerezo, lomas suaves que se van */
     /* solapando hacia el fondo y sierras a lo lejos. */
     'float terrain(vec2 p){',
     '  float r2 = dot(p, p);',
     '  float h = 1.5 * exp(-r2 / 30.);',
-    '  vec2 dt = p - gTree;',
-    '  h += .85 * exp(-dot(dt, dt) / 16.);',
     /* Lomas intermedias: crestas anchas, cada una asomando tras la anterior. */
     '  float roll = sin(p.x * .105 + p.y * .060 + 2.4 * noise(p * .045)) * .5 + .5;',
     '  h += smoothstep(4., 30., p.y) * 1.5 * roll * roll;',
@@ -56,7 +58,10 @@
     '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
     '  h += smoothstep(8., 60., p.y) * 4.2 * fbm3(p * .05 + 3.1);',
     '  h -= smoothstep(2., -9., p.y) * 1.1;',
-    '  return h;',
+    /* La loma del cerezo: el terreno sube y se alisa hacia TREE_H al acercarse al árbol. */
+    '  vec2 dt = p - gTree;',
+    '  float k = exp(-dot(dt, dt) / 14.);',
+    '  return mix(h + .55 * k, TREE_H, k * k);',
     '}',
     /* Sombra que el propio terreno se hace con el sol bajo. */
     'float terrainShadow(vec3 p, vec3 l){',
@@ -288,7 +293,7 @@
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
 
     /* El cerezo, plantado: las raíces quedan a medias entre la hierba. */
-    '  vec3 treeB = vec3(gTree.x, terrain(gTree) + .22 * treeSc, gTree.y);',
+    '  vec3 treeB = vec3(gTree.x, TREE_H + .22 * treeSc, gTree.y);',
 
     /* El ordenador (solo si el rayo pasa cerca). */
     '  float tObj = -1.;',

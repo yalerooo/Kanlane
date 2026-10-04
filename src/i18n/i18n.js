@@ -9,7 +9,12 @@
    texto, ni el contenido de los plugins (van en su propio marco).
 
    Idioma: localStorage 'workhub_lang' (y la cuenta del usuario, ver
-   SettingsModel) o, si no hay, el del navegador. Cambiarlo recarga la app. */
+   SettingsModel) o, si no hay, el del navegador. Cambiarlo recarga la app.
+
+   La pantalla de acceso lo cambia en vivo (setLang(código, {live:true})): la página vuelve a
+   traducirse o recupera el español que tenía, sin recargar. Como dentro de la app hay textos
+   que se calcularon al cargar en el idioma anterior, queda apuntado en i18n.stale y la app se
+   recarga una vez al entrar (AuthController.enter). */
 (function(){
   const LANGS = {
     es: {name:'Español', locale:'es-ES'},
@@ -29,7 +34,11 @@
     return /^es\b/i.test(nav) ? 'es' : 'en';
   }
 
-  const lang = detect();
+  let lang = detect();
+  /* Lo que había en español en cada texto y atributo traducido, para poder volver a él. */
+  const sourceText = new WeakMap();
+  const sourceAttrs = new WeakMap();
+  let stale = false;
   const dicts = {};
   const patterns = {};
   const missing = new Set();
@@ -90,7 +99,9 @@
     if(out === text) return;
     const lead = raw.slice(0, raw.indexOf(text));
     const trail = raw.slice(raw.indexOf(text) + text.length);
-    node.nodeValue = lead + out + trail;
+    const done = lead + out + trail;
+    sourceText.set(node, {src:raw, out:done});
+    node.nodeValue = done;
   }
 
   function translateAttrs(el){
@@ -100,7 +111,12 @@
       if(!v || !/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(v)) continue;
       const out = lookup(v.trim());
       if(out === null){ missing.add(v.trim()); continue; }
-      if(out !== v) el.setAttribute(a, out);
+      if(out !== v){
+        const kept = sourceAttrs.get(el) || {};
+        kept[a] = {src:v, out:out};
+        sourceAttrs.set(el, kept);
+        el.setAttribute(a, out);
+      }
     }
   }
 
@@ -164,17 +180,51 @@
     }).observe(titleEl, {childList:true, characterData:true, subtree:true});
   }
 
-  function setLang(code){
+  /* Devuelve al español lo que este módulo tradujo y sigue como lo dejó. */
+  function restoreTree(root){
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    for(let n = walker.currentNode; n; n = walker.nextNode()){
+      if(n.nodeType === 3){
+        const kept = sourceText.get(n);
+        if(kept && n.nodeValue === kept.out) n.nodeValue = kept.src;
+        sourceText.delete(n);
+      } else {
+        const kept = sourceAttrs.get(n);
+        if(kept){
+          Object.keys(kept).forEach((a) => { if(n.getAttribute(a) === kept[a].out) n.setAttribute(a, kept[a].src); });
+          sourceAttrs.delete(n);
+        }
+      }
+    }
+  }
+
+  /* options.live: sin recargar (ver la cabecera). */
+  function setLang(code, options){
     if(!LANGS[code]) return;
     try{ localStorage.setItem(KEY, code); }catch(e){}
-    if(code !== lang) location.reload();
+    if(code === lang) return;
+    if(!(options && options.live)){ location.reload(); return; }
+    /* Primero al español de origen y, desde ahí, al idioma nuevo. */
+    restoreTree(document.body);
+    lang = code;
+    stale = true;
+    document.documentElement.lang = lang;
+    if(lang !== 'es'){
+      if(observer){
+        translateTree(document.body);
+        document.title = t(document.title);
+      } else observe();
+    }
   }
 
   document.documentElement.lang = lang;
 
   Workhub.i18n = {
-    LANGS, lang, add, t, setLang, observe, translateTree,
-    locale: LANGS[lang].locale,
+    LANGS, add, t, setLang, observe, translateTree,
+    get lang(){ return lang; },
+    get locale(){ return LANGS[lang].locale; },
+    /* true si el idioma se cambió sin recargar: la app tiene que recargarse antes de usarse. */
+    get stale(){ return stale; },
     /* Textos que no se encontraron (para completar el diccionario). */
     missing: () => {
       const done = new Set(Object.values(dicts[lang] || {}));

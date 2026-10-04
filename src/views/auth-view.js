@@ -88,7 +88,14 @@
       /* Idioma en la pantalla de acceso (antes de entrar no hay cuenta). */
       $('authLang').addEventListener('click', (ev) => {
         const b = ev.target.closest('button[data-lang-choice]');
-        if(b) Workhub.i18n.setLang(b.getAttribute('data-lang-choice'));
+        if(!b) return;
+        const code = b.getAttribute('data-lang-choice');
+        if(code === Workhub.i18n.lang) return;
+        /* Con el formulario a la vista el idioma cambia en vivo, sin recargar (la recarga cortaba
+           la escena y hacía parpadear la página). En los demás estados, como siempre. */
+        if(this.panel.hidden || this.busy){ Workhub.i18n.setLang(code); return; }
+        Workhub.i18n.setLang(code, {live:true});
+        this.relabel();
       });
       $('authLang').querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
@@ -260,11 +267,9 @@
       this.loading.hidden = true;
       this.panel.hidden = false;
       const social = providers.filter((p) => PROVIDERS[p]);
+      this.social = social;
       this.hasPassword = providers.indexOf('password') !== -1;
-      this.providersEl.innerHTML = social.map((p) =>
-        '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
-          PROVIDERS[p].icon + SPIN + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
-      ).join('');
+      this.paintProviders();
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
       this.form.hidden = !this.hasPassword;
@@ -274,6 +279,29 @@
       const wantsSignup = this.registroRequested && this.hasPassword && this.allowSignup;
       this.registroRequested = false;
       this.setMode(wantsSignup ? 'signup' : 'signin', true);
+    }
+
+    paintProviders(){
+      this.providersEl.innerHTML = (this.social || []).map((p) =>
+        '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
+          PROVIDERS[p].icon + SPIN + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
+      ).join('');
+    }
+
+    /* Tras cambiar de idioma sin recargar: se vuelve a pintar lo que esta vista escribió con el
+       idioma anterior (lo demás lo traduce o lo devuelve al español el módulo de idiomas). */
+    relabel(){
+      $('authLang').querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
+      });
+      const guest = this.panel.classList.contains('is-guest');
+      const shown = this.pass.type === 'text';
+      this.paintProviders();
+      if(guest) this.setGuestStep(true); else this.setMode(this.mode);
+      this.setPassVisible(shown);
+      this.panel.classList.remove('is-swap');
+      void this.panel.offsetWidth;
+      this.panel.classList.add('is-swap');
     }
 
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,

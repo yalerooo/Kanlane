@@ -173,7 +173,9 @@ async function rotate(app, id, password){
     await assert.rejects(PC.unwrapFromOwner(w, pair.priv, Object.assign({}, ctx, {uid:'marta'})), pcErr('bad-rekey'));
     await assert.rejects(PC.unwrapFromOwner(w, pair.priv, Object.assign({}, ctx, {kid:PC.newKid()})), pcErr('bad-rekey'));
     await assert.rejects(PC.unwrapFromOwner(w, pair.priv, Object.assign({}, ctx, {pid:PC.newPid()})), pcErr('bad-rekey'));
-    await assert.rejects(PC.unwrapFromOwner(Object.assign({}, w, {ct:w.ct.slice(0, -2) + 'AA'}), pair.priv, ctx), pcErr('bad-rekey'));
+    /* Un carácter distinto seguro: con un texto fijo, si el cifrado ya terminaba así no cambiaba nada. */
+    const flip = (s) => s.slice(0, -1) + (s.slice(-1) === 'A' ? 'B' : 'A');
+    await assert.rejects(PC.unwrapFromOwner(Object.assign({}, w, {ct:flip(w.ct)}), pair.priv, ctx), pcErr('bad-rekey'));
     await assert.rejects(PC.wrapForMember(raw, {kty:'EC', crv:'P-384', x:pair.pub.x, y:pair.pub.y}, ctx), pcErr('bad-format'));
     await assert.rejects(PC.wrapForMember(raw, {kty:'EC', crv:'P-256', x:'corta', y:pair.pub.y}, ctx), pcErr('bad-format'));
     await assert.rejects(PC.wrapForMember(raw, null, ctx), pcErr('bad-format'));

@@ -17,11 +17,32 @@
   grid-template-columns:minmax(0, 1fr) 248px;
   grid-template-rows:auto minmax(0, 1fr) auto;
   grid-template-areas:"head head" "body side" "form side";
-  animation:tv-in .26s cubic-bezier(.2,.8,.2,1);
+  animation:tv-in .36s cubic-bezier(.2, .9, .25, 1);
 }
+/* Entrada: el panel llega desde la derecha y, un instante después, su contenido sube y
+   aparece por partes (cabecera, contenido, propiedades y el campo de la nota). */
+#dlgTaskView[open] > .tv-head,
+#dlgTaskView[open] .tv-body,
+#dlgTaskView[open] .tv-side,
+#dlgTaskView[open] > .tv-comment-form{animation:tv-rise .42s cubic-bezier(.2, .8, .2, 1) backwards;}
+#dlgTaskView[open] > .tv-head{animation-delay:.05s;}
+#dlgTaskView[open] .tv-body{animation-delay:.1s;}
+#dlgTaskView[open] .tv-side{animation-delay:.16s;}
+#dlgTaskView[open] > .tv-comment-form{animation-delay:.2s;}
+@keyframes tv-rise{from{opacity:0;transform:translateY(10px);}}
+/* Salida: se va por donde vino, más deprisa, y el velo se apaga a la vez. */
+#dlgTaskView.is-closing[open]{animation:tv-out .22s cubic-bezier(.4, 0, 1, 1) forwards;pointer-events:none;}
+#dlgTaskView.is-closing[open] > .tv-head,
+#dlgTaskView.is-closing[open] .tv-body,
+#dlgTaskView.is-closing[open] .tv-side,
+#dlgTaskView.is-closing[open] > .tv-comment-form{animation:none;}
+#dlgTaskView.is-closing[open]::backdrop{animation:tv-veil-out .22s ease forwards;}
+@keyframes tv-out{to{opacity:0;transform:translateX(44px) scale(.985);}}
+@keyframes tv-out-down{to{opacity:0;transform:translateY(40px);}}
+@keyframes tv-veil-out{to{opacity:0;}}
 /* El envoltorio solo cuenta en pantallas estrechas, donde cuerpo y propiedades se desplazan juntos. */
 .tv-scroll{display:contents;}
-@keyframes tv-in{from{opacity:0;transform:translateX(28px);}}
+@keyframes tv-in{from{opacity:0;transform:translateX(56px) scale(.985);}}
 /* El tablero se sigue viendo detrás: velo ligero y sin desenfocar. */
 #dlgTaskView::backdrop{background:color-mix(in srgb, var(--overlay) 50%, transparent);-webkit-backdrop-filter:none;backdrop-filter:none;}
 
@@ -246,9 +267,10 @@
   /* En móvil la ficha ocupa toda la pantalla. */
   #dlgTaskView{width:100vw !important;max-width:100vw !important;height:100dvh;max-height:100dvh !important;margin:0 !important;border-radius:0;border:0;}
   #dlgTaskView[open]{animation-name:sheet-in;}
+  #dlgTaskView.is-closing[open]{animation-name:tv-out-down;}
   .tv-head{padding:10px 10px 10px 16px;flex-wrap:wrap;}
   .tv-body{padding:18px 16px 20px;}
   .tv-side{padding:16px 16px 18px;}
   .tv-comment-form{padding:10px 12px calc(12px + env(safe-area-inset-bottom, 0px));}
 }
-@media (prefers-reduced-motion: reduce){#dlgTaskView[open]{animation:none;}}
+@media (prefers-reduced-motion: reduce){#dlgTaskView[open],#dlgTaskView[open] *{animation:none;}}

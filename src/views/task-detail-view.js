@@ -73,6 +73,13 @@
 
     bindClose(handler){
       this.btnClose.addEventListener('click', handler);
+      /* Escape cierra el diálogo de golpe: se pasa por el mismo cierre animado que la X. */
+      this.dlg.addEventListener('cancel', (ev) => {
+        ev.preventDefault();
+        this.btnClose.click();
+      });
+      /* Cerrada por otra vía (cambio de proyecto): no dejar la salida a medias. */
+      this.dlg.addEventListener('close', () => this._endClosing());
       /* Un clic en el velo (fuera del panel) cierra la ficha. Tiene que empezar y acabar fuera:
          soltar el ratón fuera tras seleccionar texto dentro no cuenta. */
       const outside = (ev) => {
@@ -159,19 +166,49 @@
 
     /* ---------- Estado ---------- */
 
-    isOpen(){ return this.dlg.open; }
+    /* Mientras se está cerrando (animación de salida) ya no cuenta como abierta. */
+    isOpen(){ return this.dlg.open && !this.closing; }
 
     open(t, ctx){
       this.ghShown = null;
       this.render(t, ctx);
       this.notes.innerHTML = '<p class="tv-empty">Cargando notas…</p>';
       this.notesCount.textContent = '';
+      /* Si se reabre a mitad de la salida, la salida se deshace y el panel se queda. */
+      this._endClosing();
       if(!this.dlg.open) this.dlg.showModal();
       /* Que el foco inicial no abra el desplegable de estado. */
       this.btnEdit.focus({preventScroll:true});
     }
 
-    close(){ if(this.dlg.open) this.dlg.close(); }
+    /* Cierra con la animación de salida: el panel se va por la derecha (en móvil, hacia abajo)
+       y el velo se apaga; el diálogo se cierra de verdad al terminar. Sin animaciones
+       (movimiento reducido), se cierra al momento. */
+    close(){
+      if(!this.dlg.open || this.closing) return;
+      const still = document.documentElement.getAttribute('data-motion') === 'reduced' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if(still){ this.dlg.close(); return; }
+      this.closing = true;
+      this.dlg.classList.add('is-closing');
+      const finish = (ev) => {
+        if(ev && (ev.target !== this.dlg || String(ev.animationName).indexOf('tv-out') !== 0)) return;
+        const wasClosing = this.closing;
+        this._endClosing();
+        if(wasClosing && this.dlg.open) this.dlg.close();
+      };
+      this._closeDone = finish;
+      this.dlg.addEventListener('animationend', finish);
+      /* Por si la animación no llega a terminar (pestaña en segundo plano). */
+      this._closeTimer = setTimeout(() => finish(), 400);
+    }
+
+    _endClosing(){
+      if(this._closeDone) this.dlg.removeEventListener('animationend', this._closeDone);
+      clearTimeout(this._closeTimer);
+      this._closeDone = null;
+      this.closing = false;
+      this.dlg.classList.remove('is-closing');
+    }
 
     /* Actividad y pull requests que llegan de GitHub. data null + err → no se pudo cargar. */
     renderGithub(taskId, data, err){

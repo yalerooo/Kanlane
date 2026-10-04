@@ -38,10 +38,19 @@
     'mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }',
     'float smin(float a, float b, float k){ float h = clamp(.5 + .5 * (b - a) / k, 0., 1.); return mix(b, a, h) - k * h * (1. - h); }',
 
-    /* Terreno: un montículo bajo el ordenador, lomas suaves y sierras a lo lejos. */
+    /* Dónde está plantado el cerezo (lo fija main antes de nada): el terreno le hace una loma. */
+    'vec2 gTree;',
+    /* Terreno: un montículo bajo el ordenador, otro bajo el cerezo, lomas suaves que se van */
+    /* solapando hacia el fondo y sierras a lo lejos. */
     'float terrain(vec2 p){',
     '  float r2 = dot(p, p);',
     '  float h = 1.5 * exp(-r2 / 30.);',
+    '  vec2 dt = p - gTree;',
+    '  h += .85 * exp(-dot(dt, dt) / 16.);',
+    /* Lomas intermedias: crestas anchas, cada una asomando tras la anterior. */
+    '  float roll = sin(p.x * .105 + p.y * .060 + 2.4 * noise(p * .045)) * .5 + .5;',
+    '  h += smoothstep(4., 30., p.y) * 1.5 * roll * roll;',
+    '  h += smoothstep(-2., 14., abs(p.x + 3.) - 6.) * .55 * (sin(p.x * .16 - p.y * .21 + 1.1) * .5 + .5);',
     '  h += .60 * sin(p.x * .23 + 1.3) * cos(p.y * .19 + .4);',
     /* Bultos y hondonadas: lo que da relieve a la luz rasante (lisos bajo el ordenador). */
     '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
@@ -218,8 +227,21 @@
     '  return best;',
     '}',
 
+    /* El cerezo: a qué distancia va y cuánto mide (unidades de escena por unidad del modelo). */
+    'const float TREE_Z = -2.2;',
+    'const float TREE_SC = .80;',
+
     'void main(){',
     '  vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    /* El tronco del cerezo cae siempre en el mismo punto de la pantalla (uTreeX), cerca del */
+    /* borde izquierdo. Se calcula con la cámara en reposo, para que al moverla el árbol también */
+    /* se desplace respecto al fondo, y antes que nada, porque el terreno le hace una loma. */
+    '  {',
+    '    vec3 fw0 = normalize(vec3(-2.2, .40, 11.5)), rt0 = normalize(cross(vec3(0., 1., 0.), fw0));',
+    '    vec3 rdT = normalize(fw0 * 1.5 + (uTreeX - uFocus.x) / uRes.y * rt0);',
+    '    gTree = vec2(2.2 + rdT.x * (TREE_Z + 11.5) / rdT.z, TREE_Z);',
+    '  }',
+    '  float treeSc = TREE_SC * uTreeS;',
     '  float base = terrain(vec2(0.));',
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
     '  vec3 ro = vec3(2.2 + uMouse.x * .9, base + .62 + uMouse.y * .3 + .03 * sin(uTime * .25), -11.5);',
@@ -249,14 +271,8 @@
     /* Por debajo del horizonte siempre hay suelo. */
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
 
-    /* El cerezo: su tronco cae siempre en el mismo punto de la pantalla (uTreeX), a la izquierda */
-    /* de la tarjeta. Se calcula con la cámara en reposo, para que al moverla el árbol también */
-    /* se desplace respecto al fondo. */
-    '  vec3 ro0 = vec3(2.2, base + .62, -11.5);',
-    '  vec3 fw0 = normalize(ta - ro0), rt0 = normalize(cross(vec3(0., 1., 0.), fw0));',
-    '  vec3 rdT = normalize(fw0 * 1.5 + (uTreeX - uFocus.x) / uRes.y * rt0);',
-    '  vec3 treeB = vec3(ro0.x + rdT.x * (3.4 - ro0.z) / rdT.z, 0., 3.4);',
-    '  treeB.y = terrain(treeB.xz) + .12;',
+    /* El cerezo, plantado: las raíces quedan a medias entre la hierba. */
+    '  vec3 treeB = vec3(gTree.x, terrain(gTree) + .22 * treeSc, gTree.y);',
 
     /* El ordenador (solo si el rayo pasa cerca). */
     '  float tObj = -1.;',
@@ -285,7 +301,7 @@
     '    vec2 grad = vec2(terrain(p0.xz + vec2(e, 0.)) - g0, terrain(p0.xz + vec2(0., e)) - g0) / e;',
     '    vec3 n = normalize(vec3(-grad.x, 1., -grad.y));',
     /* Dentro de la capa de hierba, brizna a brizna (solo cerca: de lejos no se distinguen). */
-    '    float near = 1. - smoothstep(9., 16., tHit);',
+    '    float near = 1. - smoothstep(11., 19., tHit);',
     '    float tt = tHit;',
     '    vec4 b = vec4(1., 1., .5, 0.);',
     '    float hitBlade = 0.;',
@@ -305,8 +321,8 @@
     '    float kk = b.y;',
     /* Color de la brizna: oscura en la raíz, clara en la punta; algunas, secas. */
     '    float patch = fbm3(p.xz * .55);',
-    '    vec3 root = mix(vec3(.030, .040, .016), vec3(.055, .070, .026), patch);',
-    '    vec3 tip = mix(vec3(.17, .32, .08), vec3(.33, .46, .13), patch);',
+    '    vec3 root = mix(vec3(.040, .060, .020), vec3(.070, .100, .032), patch);',
+    '    vec3 tip = mix(vec3(.20, .40, .09), vec3(.42, .58, .15), patch);',
     '    tip = mix(tip, vec3(.56, .50, .20), smoothstep(.72, .98, b.z) * .8);',
     '    vec3 alb = mix(root, tip, kk * kk * .25 + kk * .75);',
     '    alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(p.xz * .23 + 8.)) * .22 * (1. - uNight));',
@@ -315,7 +331,7 @@
     '    float sway = .5 + .5 * sin(p.x * 1.3 + p.z * .7 + uTime * .9);',
     '    float fine = noise(vec2(p.x * 150. + sway * 2., p.z * 26.)) * .5 + noise(p.xz * 70.) * .3 + noise(p.xz * 19.) * .2;',
     '    float streak = fine;',
-    '    vec3 far = mix(vec3(.045, .080, .025), vec3(.20, .31, .09), patch * .6 + fine * .4);',
+    '    vec3 far = mix(vec3(.060, .105, .030), vec3(.25, .39, .10), patch * .6 + fine * .4);',
     '    far = mix(far, vec3(.44, .36, .15), smoothstep(.62, .92, fine) * .55);',
     '    far = mix(far, vec3(.30, .14, .09), smoothstep(.55, .85, fbm3(p.xz * .21 + 8.)) * .35 * (1. - uNight));',
     '    float kFar = .35 + .65 * fine;',
@@ -323,7 +339,7 @@
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
     /* dejan pasar la luz cuando se miran a contraluz. */
-    '    float ao = mix(.16, 1., smoothstep(0., .85, kk));',
+    '    float ao = mix(.26, 1., smoothstep(0., .85, kk));',
     '    float dif = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
     '    float through = pow(max(dot(rd, L), 0.), 3.) * kk;',
     '    float sh = 1.;',
@@ -333,11 +349,22 @@
     /* Manchas de sombra de las nubes, que barren las lomas despacio. */
     '    float cloudSh = smoothstep(.34, .66, fbm3(p.xz * .075 + vec2(uTime * .035, uTime * .014)));',
     '    sh *= mix(.40, 1., cloudSh);',
-    '    vec2 tsh = (p.xz - treeB.xz) / uTreeS + L.xz * 5.;',
-    '    sh *= 1. - .55 * smoothstep(5.6, 1.6, length(tsh * vec2(1., 1.4))) * (.55 + .45 * noise(p.xz * 1.6)) * uTreeOn;',
+    /* El cerezo: la sombra de la copa, a manchas que se mueven con el viento, y la del pie */
+    /* del tronco, que es lo que lo planta en el suelo. */
+    '    vec2 tsh = (p.xz - treeB.xz) / treeSc + L.xz * 4.2;',
+    '    float dapple = smoothstep(.30, .62, noise(p.xz * 2.4 + vec2(uTime * .10, 0.)) * .6 + noise(p.xz * 6.1) * .4);',
+    '    sh *= 1. - .62 * smoothstep(5.4, 2.2, length(tsh * vec2(1., 1.3))) * mix(1., .25, dapple) * uTreeOn;',
+    '    float foot = length((p.xz - treeB.xz) * vec2(1., 1.6)) / treeSc;',
+    '    float contact = mix(1., smoothstep(.25, 1.9, foot) * .72 + .28, uTreeOn);',
+    '    sh *= contact;',
+    '    ao *= .45 + .55 * contact;',
     '    sh = mix(sh, 1., uNight * .5);',
-    '    gcol = alb * (ambient * 1.1 * ao + skyLight * 1.4 * ao + sunCol * dif * 2.3 * ao * sh);',
-    '    gcol += sunCol * vec3(.70, .50, .16) * through * .85 * sh * (.4 + .6 * streak);',
+    '    gcol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * dif * 2.4 * ao * sh);',
+    '    gcol += sunCol * vec3(.78, .62, .18) * through * 1.25 * sh * (.4 + .6 * streak);',
+    /* Las puntas, al sol, brillan: un filo de luz en lo alto de cada brizna. */
+    '    gcol += sunCol * vec3(.60, .66, .26) * pow(kk, 5.) * (.35 + .65 * b.z) * dif * .50 * sh * near;',
+    /* Luz rasante en las crestas de las lomas. */
+    '    gcol += alb * sunCol * pow(clamp(1. - n.y, 0., 1.), .7) * max(dot(n, L), 0.) * 2.2 * sh;',
     '    float gustWave = smoothstep(.55, 1., sin(p.x * .55 + p.z * .33 - uTime * .9) * .5 + .5) * (.5 + .5 * noise(p.xz * .7 + uTime * .1));',
     '    gcol += alb * sunCol * gustWave * kk * .55 * sh * (1. - uNight * .7);',
     /* La pantalla ilumina la hierba que tiene delante. */
@@ -435,7 +462,7 @@
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      vec3 hp = ro + rd * tp - treeB;',
     /* En unidades del modelo (la imagen abarca 9,2 de lado, con el suelo a 0,9 del borde de abajo). */
-    '      vec2 u = vec2(dot(hp, pr), hp.y) / (1.02 * uTreeS);',
+    '      vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
     '      float up = smoothstep(.8, 7., u.y);',
     '      u.x += (.060 * sin(uTime * .65 + u.y * .55) + .018 * sin(uTime * 1.7 + u.x * 2.6 + u.y * 1.9)) * up;',
     '      u.y += .012 * sin(uTime * 1.3 + u.x * 2.2) * up;',
@@ -574,14 +601,15 @@
       return [(x - box.left) * scale, (box.height - (y - box.top)) * scale];
     }
 
-    /* El cerezo va a la izquierda de la tarjeta. Devuelve dónde cae su tronco (en píxeles del
-       lienzo) y su tamaño: entero si cabe en el hueco, más pequeño si la ventana es estrecha. */
+    /* El cerezo sale desde la izquierda, en primer término. Devuelve dónde cae su tronco (en
+       píxeles del lienzo): cerca del borde, algo más adentro cuanto más hueco deja la tarjeta;
+       y su tamaño: entero en horizontal, más pequeño en pantallas estrechas. */
     function treePlace(){
       const box = canvas.getBoundingClientRect();
       const card = focusEl && focusEl.parentElement ? focusEl.parentElement.getBoundingClientRect() : null;
       const left = card ? Math.max(card.left - box.left, 0) : box.width * 0.2;
-      const size = Math.min(Math.max(left / (box.height * 0.5), 0.82), 1);
-      return {x: Math.max(left * 0.5, left - box.height * 0.27 * size) * scale, size};
+      const size = Math.min(Math.max(box.width / box.height * 0.8, 0.6), 1);
+      return {x: Math.max(left * 0.36, box.height * 0.05) * scale, size};
     }
 
     function draw(now){

@@ -163,7 +163,50 @@ html.auth-gate .app{display:none !important;}
 .auth-pass-toggle .ic-eye-off{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye-off{display:block;}
-.auth-submit{width:100%;height:44px;margin-top:6px;font-size:14px;border-radius:calc(var(--r-md) + 2px);}
+.auth-submit{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:44px;margin-top:6px;font-size:14px;border-radius:calc(var(--r-md) + 2px);}
+.auth-submit:disabled{cursor:progress;}
+
+/* Campo que hay que corregir: borde y aviso debajo, pegado a él. */
+.auth-form input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.auth-form input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+.auth-form input[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus{border-color:var(--danger);}
+.auth-field-msg{margin:0 2px;font-size:12.5px;line-height:1.4;color:var(--danger);}
+.auth-caps{display:flex;align-items:center;gap:6px;margin:0 2px;font-size:12.5px;line-height:1.4;color:var(--ink-soft);}
+.auth-caps[hidden]{display:none;}
+.auth-caps svg{flex:none;}
+.auth-meter{margin:2px 2px 0;}
+.auth-meter[hidden]{display:none;}
+
+/* Indicador de carga dentro del botón que se ha pulsado. */
+.auth-spin{display:none;flex:none;width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:auth-spin .7s linear infinite;}
+.is-busy > .auth-spin{display:block;}
+.auth-provider.is-busy > svg{display:none;}
+@keyframes auth-spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){.auth-spin{animation-duration:1.6s;}}
+/* Mientras se espera la respuesta no se cambia de modo. */
+#authPanel.is-busy .auth-forgot,#authPanel.is-busy .auth-switch a{pointer-events:none;opacity:.55;}
+
+/* Al cambiar de modo (entrar, crear cuenta, recuperar) el contenido entra con suavidad. */
+#authPanel.is-swap > *{animation:auth-swap .28s cubic-bezier(.2,.7,.2,1) both;}
+@keyframes auth-swap{from{opacity:0;transform:translateY(6px);}}
+@media (prefers-reduced-motion: reduce){#authPanel.is-swap > *{animation:none;}}
+
+/* ---------- «Revisa tu correo» (enlace de contraseña y verificación de la cuenta) ---------- */
+.auth-badge{display:grid;place-items:center;width:44px;height:44px;margin:0 0 16px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:calc(var(--r-md) + 4px);}
+.auth-badge[hidden]{display:none;}
+.auth-sent-text{display:block;margin:0 0 8px;font-size:13.5px;line-height:1.5;color:var(--ink-soft);}
+.auth-sent-hint{display:block;margin:0 0 18px;font-size:12.5px;line-height:1.5;color:var(--ink-faint);}
+.auth-mail{font-weight:550;color:var(--ink);overflow-wrap:anywhere;}
+.auth-sent .auth-submit{margin-top:0;}
+.auth-link{align-self:center;margin-top:14px;padding:2px 4px;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink);background:none;border:none;border-radius:6px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
+.auth-link:hover{text-decoration-color:currentColor;}
+.auth-link:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+/* Paso «correo enviado»: solo el aviso y sus botones. */
+#authPanel.is-sent #authNotice,
+#authPanel.is-sent #authEmailForm,
+#authPanel.is-sent #authDivider,
+#authPanel.is-sent #authAlt,
+#authPanel.is-sent #authSwitch{display:none;}
 .auth-msg{font-size:12.5px;line-height:1.45;color:var(--danger);margin:0 0 10px;}
 .auth-msg.is-info{color:var(--st-done);}
 .auth-switch{margin:18px 0 0;text-align:center;font-size:12.5px;color:var(--ink-faint);}
@@ -251,11 +294,19 @@ html.auth-gate .app{display:none !important;}
 .auth-foot a{color:#fff;text-decoration-color:rgba(255, 255, 255, 0.45);text-underline-offset:3px;}
 .auth-foot a:hover{text-decoration-color:#fff;}
 
+/* El aviso de cookies sale abajo a la izquierda, encima del formulario: aquí pasa a la derecha,
+   sobre el paisaje, donde no tapa nada. */
+@media (min-width: 861px){
+  body.is-authing .consent{left:auto;right:16px;}
+}
+
 /* ---------- Estados: carga, error y correo sin verificar ---------- */
 .auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}
 .auth-loading.is-error{color:var(--danger);align-items:flex-start;flex-direction:column;}
-.auth-loading.is-verify{flex-direction:column;align-items:flex-start;gap:10px;color:var(--ink-soft);}
-.auth-loading.is-verify strong{color:var(--ink);font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;}
+.auth-loading.is-verify{flex-direction:column;align-items:stretch;gap:0;color:var(--ink-soft);}
+.auth-verify-title{margin:0 0 8px;color:var(--ink);font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;}
+.auth-verify-msg{margin:0 0 12px;}
+.auth-verify-actions{display:flex;flex-direction:column;}
 .auth-verify-msg{font-size:12.5px;color:var(--danger);}
 .auth-verify-msg:empty{display:none;}
 .auth-verify-msg.is-info{color:var(--st-done);}

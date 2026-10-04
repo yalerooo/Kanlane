@@ -95,6 +95,7 @@
         </a>
         <div id="authLoading" class="auth-loading" role="status" hidden></div>
         <div id="authPanel" hidden>
+          <span class="auth-badge" id="authBadge" hidden aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
           <h1 id="authTitle">Inicia sesión</h1>
           <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
           <div class="auth-notice" id="authNotice" role="status" hidden></div>
@@ -105,18 +106,22 @@
             </div>
             <div class="field">
               <label class="sr-only" for="authEmail">Correo electrónico</label>
-              <input id="authEmail" type="email" autocomplete="email" placeholder="Correo electrónico" required>
+              <input id="authEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Correo electrónico" aria-describedby="authEmailErr" required>
+              <p class="auth-field-msg" id="authEmailErr" role="alert" hidden></p>
             </div>
             <div class="field" id="authPassField">
               <label class="sr-only" for="authPass">Contraseña</label>
               <div class="auth-pass">
-                <input id="authPass" type="password" autocomplete="current-password" minlength="6" placeholder="Contraseña" required>
+                <input id="authPass" type="password" autocomplete="current-password" placeholder="Contraseña" aria-describedby="authPassErr authCaps authMeter" required>
                 <button type="button" class="auth-pass-toggle" id="authPassToggle" aria-label="Mostrar contraseña" title="Mostrar contraseña" aria-pressed="false"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="ic-eye-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.5 6.6C3.7 8.5 2 12 2 12s3.6 7 10 7a10.6 10.6 0 0 0 5.4-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button>
               </div>
+              <p class="auth-field-msg" id="authPassErr" role="alert" hidden></p>
+              <p class="auth-caps" id="authCaps" role="status" hidden><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l7 8h-4v4H9v-4H5z"/><path d="M9 20h6"/></svg><span>Bloq Mayús está activado.</span></p>
+              <div class="pw-meter auth-meter" id="authMeter" hidden><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text" role="status"></span></div>
               <a href="#" class="auth-forgot" id="authForgot">¿La has olvidado?</a>
             </div>
             <p class="auth-msg" id="authMsg" role="alert" hidden></p>
-            <button type="submit" class="btn btn-primary auth-submit" id="authSubmit">Iniciar sesión</button>
+            <button type="submit" class="btn btn-primary auth-submit" id="authSubmit"><span class="auth-spin" aria-hidden="true"></span><span id="authSubmitLabel">Iniciar sesión</span></button>
           </form>
           <div class="auth-divider" id="authDivider"><span>o continúa con</span></div>
           <div class="auth-alt" id="authAlt">
@@ -124,6 +129,13 @@
             <button type="button" class="auth-provider" id="authGuestBtn" title="Sin cuenta: los datos se quedan en este navegador."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Invitado</span></button>
           </div>
           <p class="auth-switch" id="authSwitch"><span id="authSwitchText">¿No tienes cuenta?</span> <a href="#" id="authSwitchLink">Crear una</a></p>
+          <div class="auth-sent" id="authSent" hidden>
+            <p class="auth-sent-text" id="authSentText"></p>
+            <p class="auth-sent-hint">Puede tardar un par de minutos. Si no lo ves, mira en la carpeta de spam.</p>
+            <p class="auth-msg" id="authSentMsg" role="status" hidden></p>
+            <button type="button" class="btn btn-primary auth-submit" id="authSentBack">Volver a iniciar sesión</button>
+            <button type="button" class="btn btn-ghost auth-guest-back" id="authSentResend">Reenviar correo</button>
+          </div>
           <div class="auth-guest" id="authGuest">
             <form id="authGuestForm" class="auth-form" hidden novalidate>
               <div class="field">

@@ -50,8 +50,25 @@ async function verify(email){
     await page.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
     if(await page.locator('.consent [data-act="reject"]').isVisible()) await page.locator('.consent [data-act="reject"]').click();
     await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+    /* Un correo mal escrito se avisa en su campo, sin llegar al servidor. */
+    await page.locator('#authEmail').fill('no-es-un-correo');
+    await page.locator('#authSubmit').click();
+    await page.locator('#authEmailErr').waitFor({state:'visible'});
+    assert.equal(await page.locator('#authEmail').getAttribute('aria-invalid'), 'true');
+    /* Pedir el enlace de la contraseña lleva al paso «Revisa tu correo», aunque no haya cuenta. */
+    await page.locator('#authForgot').click();
+    await page.locator('#authEmail').fill('nadie-' + Date.now() + '@example.test');
+    await page.locator('#authSubmit').click();
+    await page.locator('#authSent').waitFor({state:'visible'});
+    assert.equal(await page.locator('#authEmailForm').isVisible(), false);
+    assert.equal(await page.locator('#authSentResend').isDisabled(), true, 'reenviar descansa unos segundos');
+    await page.locator('#authSentBack').click();
+    await page.locator('#authPass').waitFor({state:'visible'});
     await page.locator('#authSwitchLink').click();
-    const email = 'test-' + Date.now() + '@example.test';
+    /* Al crear la cuenta, el medidor acompaña a la contraseña. */
+    await page.locator('#authPass').fill('corta');
+    assert.equal(await page.locator('#authMeter').getAttribute('data-level'), 'short');
+    const email ='test-' + Date.now() + '@example.test';
     await page.locator('#authName').fill('Persona de prueba');
     await page.locator('#authEmail').fill(email);
     await page.locator('#authPass').fill('contraseña-prueba-123');

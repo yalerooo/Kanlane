@@ -18,6 +18,24 @@
     reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
   };
 
+  const SPIN = '<span class="auth-spin" aria-hidden="true"></span>';
+  const MAIL_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+  const METER_LEVELS = {short:1, weak:2, fair:3, good:4};
+  const RESEND_WAIT = 30;
+
+  /* Medidor de la contraseña de la cuenta (mínimo 8; la del cifrado de un proyecto es otra, más
+     exigente). Solo orienta: lo único que bloquea es que sea corta. */
+  function strength(pw){
+    const len = Array.from(pw).length;
+    if(len < 8) return {level:'short', message:Workhub.t('Mínimo 8 caracteres.')};
+    let classes = 0;
+    [/[a-zà-ÿ]/, /[A-ZÀ-Þ]/, /[0-9]/, /[^A-Za-z0-9À-ÿ]/].forEach((re) => { if(re.test(pw)) classes++; });
+    if(new Set(Array.from(pw.toLowerCase())).size < 5) classes = 1;
+    if((len >= 14 && classes >= 2) || (len >= 12 && classes >= 3)) return {level:'good', message:Workhub.t('Buena')};
+    if((len >= 10 && classes >= 2) || classes >= 3) return {level:'fair', message:Workhub.t('Aceptable')};
+    return {level:'weak', message:Workhub.t('Débil: alárgala o mezcla letras, números y símbolos.')};
+  }
+
   class AuthView {
     constructor(){
       this.screen = $('authScreen');
@@ -37,6 +55,13 @@
       this.msg = $('authMsg');
       this.notice = $('authNotice');
       this.submit = $('authSubmit');
+      this.submitLabel = $('authSubmitLabel');
+      this.emailErr = $('authEmailErr');
+      this.passErr = $('authPassErr');
+      this.caps = $('authCaps');
+      this.meter = $('authMeter');
+      this.sent = $('authSent');
+      this.timers = [];
       this.switchWrap = $('authSwitch');
       this.switchText = $('authSwitchText');
       this.switchLink = $('authSwitchLink');
@@ -75,15 +100,27 @@
       this.passToggle = $('authPassToggle');
       this.passToggle.addEventListener('click', () => this.setPassVisible(this.pass.type === 'password'));
 
+      /* Al corregir un campo se quita su aviso. */
+      this.email.addEventListener('input', () => { this.clearFieldError('email'); this.msg.hidden = true; });
+      this.pass.addEventListener('input', () => { this.clearFieldError('password'); this.msg.hidden = true; this.paintMeter(); });
+      /* Bloq Mayús: se avisa mientras se escribe la contraseña. */
+      const caps = (ev) => { if(ev.getModifierState) this.caps.hidden = !ev.getModifierState('CapsLock'); };
+      this.pass.addEventListener('keydown', caps);
+      this.pass.addEventListener('keyup', caps);
+      this.pass.addEventListener('blur', () => { this.caps.hidden = true; });
+
       this.switchLink.addEventListener('click', (ev) => {
         ev.preventDefault();
-        this.setMode(this.mode === 'signin' ? 'signup' : 'signin');
+        if(this.busy) return;
+        this.setMode(this.mode === 'signin' ? 'signup' : 'signin', true);
       });
+      $('authSentBack').addEventListener('click', () => this.setMode('signin', true));
       this.guestBtn.addEventListener('click', () => this.setGuestStep(true));
       $('authGuestBack').addEventListener('click', () => this.setGuestStep(false));
       this.forgot.addEventListener('click', (ev) => {
         ev.preventDefault();
-        this.setMode('reset');
+        if(this.busy) return;
+        this.setMode('reset', true);
       });
     }
 
@@ -107,6 +144,7 @@
     bindEmail(handler){
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
+        if(this.busy) return;
         this.clearMessage();
         handler(this.mode, {name:this.name.value.trim(), email:this.email.value.trim(), password:this.pass.value});
       });
@@ -183,7 +221,7 @@
       this.hasPassword = providers.indexOf('password') !== -1;
       this.providersEl.innerHTML = social.map((p) =>
         '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
-          PROVIDERS[p].icon + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
+          PROVIDERS[p].icon + SPIN + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
       ).join('');
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
@@ -193,7 +231,7 @@
       /* Venir de «Crear cuenta» en la portada abre directamente el registro (una sola vez). */
       const wantsSignup = this.registroRequested && this.hasPassword && this.allowSignup;
       this.registroRequested = false;
-      this.setMode(wantsSignup ? 'signup' : 'signin');
+      this.setMode(wantsSignup ? 'signup' : 'signin', true);
     }
 
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
@@ -206,41 +244,68 @@
       this.loading.hidden = false;
       this.loading.classList.remove('is-error');
       this.loading.classList.add('is-verify');
-      this.loading.textContent = '';
-      const title = document.createElement('strong');
-      title.textContent = 'Verifica tu correo';
-      const text = document.createElement('span');
-      text.textContent = 'Te hemos enviado un enlace a ' + (email || 'tu correo') + '. Ábrelo para activar la cuenta y después pulsa "Ya lo he verificado". Si no lo ves, mira en la carpeta de spam.';
-      this.verifyMsg = document.createElement('span');
-      this.verifyMsg.className = 'auth-verify-msg';
-      this.verifyMsg.setAttribute('role', 'status');
-      const actions = document.createElement('div');
-      actions.className = 'auth-noaccess-actions';
-      const check = document.createElement('button');
-      check.type = 'button';
-      check.className = 'btn btn-primary';
-      check.textContent = 'Ya lo he verificado';
-      const resend = document.createElement('button');
-      resend.type = 'button';
-      resend.className = 'btn btn-ghost';
-      resend.textContent = 'Reenviar correo';
-      const out = document.createElement('button');
-      out.type = 'button';
-      out.className = 'btn btn-ghost';
-      out.textContent = 'Usar otra cuenta';
-      check.addEventListener('click', () => {
-        check.disabled = true;
+      const t = Workhub.t;
+      const mail = email ? '<strong class="auth-mail" translate="no">' + esc(email) + '</strong>' : esc(t('tu correo'));
+      this.loading.innerHTML =
+        '<span class="auth-badge" aria-hidden="true">' + MAIL_ICON + '</span>' +
+        '<strong class="auth-verify-title">' + esc(t('Verifica tu correo')) + '</strong>' +
+        '<span class="auth-sent-text">' + t('Te hemos enviado un enlace a {email}. Ábrelo para activar la cuenta.', {email:mail}) + '</span>' +
+        '<span class="auth-sent-hint">' + esc(t('Al abrirlo, esta página lo detecta sola cuando vuelvas a ella. Si no lo ves, mira en la carpeta de spam.')) + '</span>' +
+        '<span class="auth-verify-msg" role="status"></span>' +
+        '<div class="auth-verify-actions">' +
+          '<button type="button" class="btn btn-primary auth-submit" data-act="check">' + SPIN + '<span>' + esc(t('Ya lo he verificado')) + '</span></button>' +
+          '<button type="button" class="btn btn-ghost auth-guest-back" data-act="resend">' + esc(t('Reenviar correo')) + '</button>' +
+          '<button type="button" class="auth-link" data-act="out">' + esc(t('Usar otra cuenta')) + '</button>' +
+        '</div>';
+      this.verifyMsg = this.loading.querySelector('.auth-verify-msg');
+      const check = this.loading.querySelector('[data-act="check"]');
+      const resend = this.loading.querySelector('[data-act="resend"]');
+      let checking = false;
+      /* quiet: comprobación automática al volver a la pestaña; no dice nada si aún no está verificado. */
+      const run = (quiet) => {
+        if(checking) return;
+        checking = true;
+        if(!quiet){ check.disabled = true; check.classList.add('is-busy'); this.showVerifyMessage(''); }
         handlers.check().then((ok) => {
-          if(!ok) this.showVerifyMessage('Todavía no consta como verificado. Abre el enlace del correo y vuelve a probar.');
-        }, () => this.showVerifyMessage('No se pudo comprobar. Revisa tu conexión.')).finally(() => { check.disabled = false; });
-      });
+          if(!ok && !quiet) this.showVerifyMessage(t('Todavía no consta como verificado. Abre el enlace del correo y vuelve a probar.'));
+        }, () => {
+          if(!quiet) this.showVerifyMessage(t('No se pudo comprobar. Revisa tu conexión.'));
+        }).finally(() => { checking = false; check.disabled = false; check.classList.remove('is-busy'); });
+      };
+      check.addEventListener('click', () => run(false));
       resend.addEventListener('click', () => {
         resend.disabled = true;
-        handlers.resend().then((ok) => { if(ok) this.showVerifyMessage('Correo reenviado.', true); }).finally(() => { resend.disabled = false; });
+        handlers.resend().then((ok) => {
+          if(ok){ this.showVerifyMessage(t('Correo reenviado.'), true); this.cooldown(resend); }
+          else resend.disabled = false;
+        }, () => { resend.disabled = false; });
       });
-      out.addEventListener('click', handlers.signOut);
-      actions.append(check, resend, out);
-      this.loading.append(title, text, this.verifyMsg, actions);
+      this.loading.querySelector('[data-act="out"]').addEventListener('click', handlers.signOut);
+      if(!this.verifyWatch){
+        this.verifyWatch = () => { if(document.visibilityState === 'visible' && this.verifyRun) this.verifyRun(true); };
+        document.addEventListener('visibilitychange', this.verifyWatch);
+        window.addEventListener('focus', this.verifyWatch);
+      }
+      this.verifyRun = run;
+    }
+
+    /* Tras enviar un correo, «Reenviar» descansa unos segundos (evita reenvíos en ráfaga). */
+    cooldown(btn){
+      const label = Workhub.t('Reenviar correo');
+      let left = RESEND_WAIT;
+      btn.disabled = true;
+      const paint = () => { btn.textContent = Workhub.t('Reenviar en {n} s', {n:left}); };
+      paint();
+      const done = () => { clearInterval(timer); btn.disabled = false; btn.textContent = label; };
+      const timer = setInterval(() => {
+        left--;
+        if(left > 0) paint(); else done();
+      }, 1000);
+      this.timers.push(done);
+    }
+
+    stopTimers(){
+      this.timers.splice(0).forEach((stop) => stop());
     }
 
     showVerifyMessage(text, isInfo){
@@ -253,6 +318,8 @@
       document.documentElement.classList.remove('auth-gate');
       document.body.classList.remove('is-authing');
       this.screen.hidden = true;
+      this.verifyRun = null;
+      this.stopTimers();
     }
 
     /* Paso «invitado»: solo el nombre; sustituye al resto del formulario de acceso. */
@@ -261,6 +328,8 @@
       this.guestForm.hidden = !on;
       this.guestMsg.hidden = true;
       if(on){
+        this.setSent(false);
+        this.sub.hidden = false;
         this.title.textContent = Workhub.t('Entrar como invitado');
         this.sub.textContent = Workhub.t('Solo necesitas un nombre. No hace falta cuenta.');
         this.guestName.focus();
@@ -277,13 +346,22 @@
       this.passToggle.title = label;
     }
 
-    setMode(mode){
+    /* focus: el cambio lo ha pedido la persona; el cursor va al primer campo vacío. */
+    setMode(mode, focus){
+      const changed = this.mode !== mode;
       this.mode = mode;
       this.setPassVisible(false);
+      this.stopTimers();
+      this.setSent(false);
       const t = TEXT[mode];
       this.title.textContent = t.title;
       this.sub.textContent = t.sub;
-      this.submit.textContent = t.submit;
+      this.sub.hidden = false;
+      this.submitLabel.textContent = t.submit;
+      /* La contraseña no pasa de un modo a otro; el correo, sí. */
+      if(changed) this.pass.value = '';
+      this.email.autocomplete = mode === 'signup' ? 'email' : 'username';
+      this.caps.hidden = true;
       this.switchText.textContent = t.switchText;
       this.switchLink.textContent = t.switchLink;
       this.nameField.hidden = mode !== 'signup';
@@ -298,11 +376,35 @@
       this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
       this.guest.hidden = mode === 'reset';
       this.clearMessage();
+      this.paintMeter();
+      if(changed){
+        /* Vuelve a lanzar la entrada suave del contenido. */
+        this.panel.classList.remove('is-swap');
+        void this.panel.offsetWidth;
+        this.panel.classList.add('is-swap');
+      }
+      if(focus) this.focusFirst();
     }
 
-    setBusy(busy){
+    /* Cursor en el primer campo vacío. En pantallas táctiles no: abriría el teclado sin pedirlo. */
+    focusFirst(){
+      if(this.form.hidden || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      const fields = [this.nameField.hidden ? null : this.name, this.email, this.passField.hidden ? null : this.pass].filter(Boolean);
+      (fields.find((el) => !el.value) || fields[fields.length - 1]).focus({preventScroll:true});
+    }
+
+    /* who: 'submit' o la clave del proveedor; ese botón enseña el indicador de carga. */
+    setBusy(busy, who){
+      this.busy = busy;
+      this.panel.classList.toggle('is-busy', busy);
+      this.panel.setAttribute('aria-busy', busy ? 'true' : 'false');
       this.submit.disabled = busy;
-      this.providersEl.querySelectorAll('button').forEach((b) => { b.disabled = busy; });
+      this.submit.classList.toggle('is-busy', busy && who === 'submit');
+      this.alt.querySelectorAll('button').forEach((b) => {
+        b.disabled = busy;
+        b.classList.toggle('is-busy', busy && !!who && b.getAttribute('data-provider') === who);
+      });
+      [this.name, this.email, this.pass].forEach((el) => { el.readOnly = busy; });
     }
 
     showMessage(text, isInfo){
@@ -311,9 +413,74 @@
       this.msg.hidden = false;
     }
 
+    /* Aviso pegado al campo que hay que corregir ('email' | 'password'), con el cursor en él. */
+    showFieldError(field, text){
+      const input = field === 'email' ? this.email : this.pass;
+      const box = field === 'email' ? this.emailErr : this.passErr;
+      box.textContent = text;
+      box.hidden = false;
+      input.setAttribute('aria-invalid', 'true');
+      this.msg.hidden = true;
+      input.focus();
+      if(field === 'password') input.select();
+    }
+
+    clearFieldError(field){
+      const input = field === 'email' ? this.email : this.pass;
+      const box = field === 'email' ? this.emailErr : this.passErr;
+      box.hidden = true;
+      input.removeAttribute('aria-invalid');
+    }
+
     clearMessage(){
       this.msg.hidden = true;
       this.notice.hidden = true;
+      this.clearFieldError('email');
+      this.clearFieldError('password');
+    }
+
+    /* Medidor de la contraseña: solo al crear la cuenta y con algo escrito. */
+    paintMeter(){
+      const on = this.mode === 'signup' && !!this.pass.value;
+      this.meter.hidden = !on;
+      if(!on) return;
+      const r = strength(this.pass.value);
+      const n = METER_LEVELS[r.level];
+      this.meter.setAttribute('data-level', r.level);
+      this.meter.querySelectorAll('i').forEach((el, i) => el.classList.toggle('is-on', i < n));
+      this.meter.querySelector('.pw-meter-text').textContent = r.message;
+    }
+
+    setSent(on){
+      this.panel.classList.toggle('is-sent', on);
+      this.sent.hidden = !on;
+      $('authBadge').hidden = !on;
+    }
+
+    /* Enlace de cambio de contraseña pedido: paso propio, con «Reenviar». onResend() → Promise<bool>. */
+    showResetSent(email, onResend){
+      const t = Workhub.t;
+      this.stopTimers();
+      this.clearMessage();
+      this.setSent(true);
+      this.title.textContent = t('Revisa tu correo');
+      this.sub.hidden = true;
+      $('authSentText').innerHTML = t('Si existe una cuenta con {email}, te hemos enviado un enlace para cambiar la contraseña.',
+        {email:'<strong class="auth-mail" translate="no">' + esc(email) + '</strong>'});
+      const msg = $('authSentMsg');
+      msg.hidden = true;
+      const resend = $('authSentResend');
+      resend.onclick = () => {
+        resend.disabled = true;
+        onResend().then((ok) => {
+          msg.textContent = ok ? t('Correo reenviado.') : t('No se pudo reenviar. Inténtalo dentro de un momento.');
+          msg.classList.toggle('is-info', !!ok);
+          msg.hidden = false;
+          if(ok) this.cooldown(resend); else resend.disabled = false;
+        });
+      };
+      this.cooldown(resend);
+      $('authSentBack').focus();
     }
 
     /* El correo ya tiene cuenta con otro método: aviso con la explicación y los dos pasos. */

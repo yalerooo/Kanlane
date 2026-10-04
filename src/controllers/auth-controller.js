@@ -40,7 +40,16 @@
     'auth/too-many-requests': 'Demasiados intentos seguidos. Espera un momento.',
     'auth/popup-blocked': 'El navegador bloqueó la ventana de acceso. Permite las ventanas emergentes para este sitio.'
   };
-  const PROVIDER_NAMES = {'github.com':'GitHub', 'google.com':'Google', 'microsoft.com':'Microsoft', 'apple.com':'Apple'};
+  /* Errores que se enseñan pegados a su campo; el resto va en el aviso general del formulario. */
+  const FIELD_OF = {
+    'auth/invalid-email':'email', 'auth/missing-email':'email', 'auth/email-already-in-use':'email',
+    'auth/user-not-found':'password', 'auth/wrong-password':'password', 'auth/invalid-credential':'password',
+    'auth/invalid-login-credentials':'password', 'auth/missing-password':'password', 'auth/weak-password':'password',
+    'auth/password-does-not-meet-requirements':'password'
+  };
+  /* Forma de un correo: algo@algo.algo, sin espacios. Lo demás lo decide el servidor. */
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const PROVIDER_NAMES ={'github.com':'GitHub', 'google.com':'Google', 'microsoft.com':'Microsoft', 'apple.com':'Apple'};
   /* Cerrar la ventana de acceso no es un error. */
   const SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
 
@@ -174,7 +183,9 @@
         this.view.showLinkNotice(err.email, provider);
         return;
       }
-      this.view.showMessage(messageFor(err));
+      const field = err && FIELD_OF[err.code];
+      if(field) this.view.showFieldError(field, messageFor(err));
+      else this.view.showMessage(messageFor(err));
     }
 
     /* Aviso de que un acceso nuevo (p. ej. GitHub) se unió a la cuenta. */
@@ -186,29 +197,27 @@
 
     signInWith(key){
       this.view.clearMessage();
-      this.view.setBusy(true);
+      this.view.setBusy(true, key);
       firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
     }
 
     submitEmail(mode, v){
-      if(!v.email){ this.view.showMessage(ERRORS['auth/missing-email']); return; }
+      if(!v.email){ this.view.showFieldError('email', ERRORS['auth/missing-email']); return; }
+      if(!EMAIL_RE.test(v.email)){ this.view.showFieldError('email', ERRORS['auth/invalid-email']); return; }
       let p;
       if(mode === 'reset'){
-        p = firebase.resetPassword(v.email).then(() => {
-          this.view.setMode('signin');
-          this.view.showMessage('Si existe una cuenta con ' + v.email + ', te hemos enviado un enlace para cambiar la contraseña.', true);
-        }).catch((err) => {
-          /* No revelar si el correo tiene cuenta. */
-          if(err && err.code === 'auth/user-not-found'){
-            this.view.setMode('signin');
-            this.view.showMessage('Si existe una cuenta con ' + v.email + ', te hemos enviado un enlace para cambiar la contraseña.', true);
-          } else this.showError(err);
+        /* No revelar si el correo tiene cuenta: «no existe» cuenta como enviado. */
+        const send = () => firebase.resetPassword(v.email).catch((err) => {
+          if(!err || err.code !== 'auth/user-not-found') throw err;
         });
+        p = send().then(() => {
+          this.view.showResetSent(v.email, () => send().then(() => true, () => false));
+        }).catch((err) => this.showError(err));
       } else if(!v.password){
-        this.view.showMessage(ERRORS['auth/missing-password']);
+        this.view.showFieldError('password', ERRORS['auth/missing-password']);
         return;
       } else if(mode === 'signup'){
-        if(v.password.length < MIN_PASSWORD){ this.view.showMessage(ERRORS['auth/weak-password']); return; }
+        if(Array.from(v.password).length < MIN_PASSWORD){ this.view.showFieldError('password', ERRORS['auth/weak-password']); return; }
         /* El nombre se guarda justo después de crear la cuenta: se repinta al terminar. */
         p = firebase.signUpWithEmail(v.email, v.password, v.name).then((cred) => {
           if(this.user && cred && cred.user) this.view.showAccount(cred.user);
@@ -216,7 +225,7 @@
       } else {
         p = firebase.signInWithEmail(v.email, v.password).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err));
       }
-      this.view.setBusy(true);
+      this.view.setBusy(true, 'submit');
       p.finally(() => this.view.setBusy(false));
     }
 

@@ -1,28 +1,32 @@
 /* Paisaje en 3D de la pantalla de acceso.
-   Una escena dibujada en tiempo real con WebGL (un único sombreador que traza rayos, sin
-   librerías ni imágenes): una colina con hierba brizna a brizna, mecida por el viento, con
-   su luz y sus sombras; cielo con nubes y, en lo alto, un monitor de tubo antiguo
-   con un tablero en la pantalla. Atardecer en tema claro y noche en
-   oscuro. La cámara está fija: lo único que se mueve es la hierba, las nubes, los pétalos y
-   las luciérnagas.
+   Una escena pintada en tiempo real con WebGL 2, sin librerías: una colina de hierba mecida
+   por el viento, cielo con nubes, un cerezo y, en lo alto, un monitor de tubo antiguo con un
+   tablero en la pantalla. Atardecer en tema claro y noche en oscuro. La cámara está fija: lo
+   único que se mueve es la hierba, las nubes, los pétalos y las luciérnagas.
+
+   Se pinta en tres pasadas:
+   1. La escena (FRAG): un sombreador que traza rayos (terreno, ordenador, cielo, el cerezo
+      como imagen) y escribe además la profundidad de lo que pinta.
+   2. La hierba (GRASS_VERT / GRASS_FRAG): geometría de verdad, una cinta por brizna, cientos
+      de miles, dibujadas de una vez (instancias). La profundidad de la pasada 1 decide qué
+      briznas quedan delante o detrás del ordenador y del tronco.
+   3. Lo que va por delante (OVER): pétalos y luciérnagas.
+   COMMON son las funciones que comparten (ruido, terreno, ordenador, cielo...).
 
    El ordenador se coloca siempre en el centro del panel de cristal de la tarjeta de acceso
    (uFocus), sea cual sea el tamaño de la ventana.
 
    Se pinta a resolución reducida y a 30 fotogramas por segundo, solo mientras la pantalla de
    acceso está a la vista. Con movimiento reducido se pinta un único fotograma. Si el
-   navegador no tiene WebGL, queda el degradado de cielo que pone auth.css. */
+   navegador no tiene WebGL 2, queda el degradado de cielo que pone auth.css. */
 (function(){
-  const VERT = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
-
-  const FRAG = [
-    'precision highp float;',
+  const HEAD = '#version 300 es\nprecision highp float;\n';
+  const VERT = HEAD + 'layout(location = 0) in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+  const COMMON = [
     'uniform vec2 uRes;',
     'uniform float uTime;',
     'uniform vec2 uFocus;',
     'uniform float uNight;',
-    'uniform sampler2D uTree;',
-    'uniform float uTreeOn;',
     'uniform float uTreeX;',
     'uniform float uTreeS;',
 
@@ -201,47 +205,28 @@
     '}',
 
     /* ---------- Hierba ---------- */
-    /* Cada brizna es un tallo fino que sale de una celda del suelo, se curva hacia un lado y */
-    /* se mece con el viento. Devuelve (distancia, altura relativa 0..1, azar de la brizna, flor). */
-    'const float GRASS_H = .22;',
-    'const float GRASS_N = 18.;',
-    'vec2 wind(vec2 r){',
-    '  float gust = sin(uTime * .9 + r.x * .55 + r.y * .35) * .5 + sin(uTime * .47 + r.x * .21 - r.y * .3) * .5;',
-    '  return vec2(1., .45) * (.030 * gust + .022 * (noise(r * .35 + uTime * .12) - .5));',
-    '}',
-    'vec4 blade(vec2 xz, float y, float wide){',
-    '  vec2 g = xz * GRASS_N;',
-    '  vec2 id0 = floor(g - .5);',
-    '  vec4 best = vec4(1e3, 0., 0., 0.);',
-    '  for(int i = 0; i < 2; i++){',
-    '    for(int j = 0; j < 2; j++){',
-    '      vec2 id = id0 + vec2(float(i), float(j));',
-    '      vec2 r = hash2(id);',
-    /* Altura por zonas (matas) y, de vez en cuando, una brizna que sobresale. */
-    '      float tall = step(.90, fract(r.y * 7.31));',
-    '      float hb = GRASS_H * (.34 + .44 * r.x + .22 * tall) * (.70 + .50 * noise(id * .09));',
-    '      vec2 root = (id + .5 + (r - .5) * .7) / GRASS_N;',
-    '      float k = y / hb;',
-    '      float kk = clamp(k, 0., 1.);',
-    '      float a = r.y * 6.283;',
-    '      vec2 lean = (vec2(cos(a), sin(a)) * (.014 + .026 * r.x) + wind(root) * .8) * kk * kk;',
-    '      float flower = 0.;',
-    '      float w = (.0062 + wide) * (1. - kk * .88);',
-    '      float d = max(length(xz - root - lean) - w, y - hb);',
-    '      if(d < best.x) best = vec4(d, kk, r.x, flower);',
-    '    }',
-    '  }',
-    '  return best;',
-    '}',
+    /* La hierba es geometría: una cinta por brizna (grass.vert). Aquí solo va hasta dónde llega: */
+    /* entre GRASS_F0 y GRASS_F1 unidades de la cámara las briznas se encogen y el suelo pasa a */
+    /* pintarse como textura. */
+    'const float GRASS_F0 = 19.;',
+    'const float GRASS_F1 = 27.;',
 
     /* ---------- Luciérnagas ---------- */
     /* Vuelan sobre la hierba, cada una por su camino, y se encienden y se apagan despacio. */
     'const int FF_N = 24;',
+    'float groundApprox(vec2 p){',
+    '  float r2 = dot(p, p);',
+    '  float h = 1.5 * exp(-r2 / 30.) + .60 * sin(p.x * .23 + 1.3) * cos(p.y * .19 + .4);',
+    '  h += .42 * smoothstep(1.5, 22., r2) - smoothstep(2., -9., p.y) * 1.1;',
+    '  vec2 dt = p - gTree;',
+    '  float k = exp(-dot(dt, dt) / 14.);',
+    '  return mix(h + .55 * k, TREE_H, k * k);',
+    '}',
     'vec4 firefly(float fi){',
     '  vec2 h = hash2(vec2(fi, 3.7));',
     '  vec2 xz = vec2(mix(-9.5, 9., h.x), mix(-8.5, 5., h.y));',
     '  xz += vec2(sin(uTime * .19 + fi * 2.1) + .5 * sin(uTime * .47 + fi), cos(uTime * .15 + fi * 1.3) + .5 * cos(uTime * .41 + fi * 2.7)) * 1.1;',
-    '  float y = terrain(xz) + .30 + .85 * hash(vec2(fi, 8.1)) + .16 * sin(uTime * .55 + fi * 4.);',
+    '  float y = groundApprox(xz) + .50 + .85 * hash(vec2(fi, 8.1)) + .16 * sin(uTime * .55 + fi * 4.);',
     /* Destello: sube rápido, se apaga despacio y pasa un rato a oscuras. */
     '  float ph = fract(uTime * (.11 + .09 * hash(vec2(fi, 5.3))) + h.x * 7.);',
     '  float bl = smoothstep(0., .08, ph) * (1. - smoothstep(.14, .80, ph));',
@@ -252,16 +237,36 @@
     'const float TREE_Z = -2.2;',
     'const float TREE_SC = .80;',
 
+    /* Coloca el cerezo: su tronco cae siempre en el mismo punto de la pantalla (uTreeX), cerca */
+    /* del borde izquierdo. Hay que llamarla antes que a terrain(), que le hace una loma. */
+    'void setupTree(){',
+    '  vec3 fw0 = normalize(vec3(-2.2, .40, 11.5)), rt0 = normalize(cross(vec3(0., 1., 0.), fw0));',
+    '  vec3 rdT = normalize(fw0 * 1.5 + (uTreeX - uFocus.x) / uRes.y * rt0);',
+    '  gTree = vec2(2.2 + rdT.x * (TREE_Z + 11.5) / rdT.z, TREE_Z);',
+    '}',
+    /* Profundidad (0..1) a partir de la distancia a lo largo del eje de la cámara: la misma */
+    /* cuenta en la escena (que la escribe a mano) y en la hierba (que la saca de su proyección). */
+    'const float Z_NEAR = .3;',
+    'const float Z_FAR = 400.;',
+    'float depth01(float zv){ return clamp(Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * max(zv, 1e-3)), 0., 1.); }',
+    /* Revelado final, igual para todo lo que se pinta: viñeta, recorte, contraste y grano. */
+    'vec3 post(vec3 col, vec2 fc){',
+    '  vec2 vq = fc / uRes - .5;',
+    '  col *= 1. - .34 * dot(vq, vq) * 2.2;',
+    '  col = clamp(col, 0., 1.);',
+    '  col = mix(col, col * col * (3. - 2. * col), .35);',
+    '  col += (hash(fc + fract(uTime) * 91.7) - .5) * .045;',
+    '  return clamp(col, 0., 1.);',
+    '}'
+  ].join('\n');
+  const FRAG = [
+    'uniform sampler2D uTree;',
+    'uniform float uTreeOn;',
+    'out vec4 fragColor;',
+
     'void main(){',
     '  vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
-    /* El tronco del cerezo cae siempre en el mismo punto de la pantalla (uTreeX), cerca del */
-    /* borde izquierdo. Se calcula con la cámara en reposo, para que al moverla el árbol también */
-    /* se desplace respecto al fondo, y antes que nada, porque el terreno le hace una loma. */
-    '  {',
-    '    vec3 fw0 = normalize(vec3(-2.2, .40, 11.5)), rt0 = normalize(cross(vec3(0., 1., 0.), fw0));',
-    '    vec3 rdT = normalize(fw0 * 1.5 + (uTreeX - uFocus.x) / uRes.y * rt0);',
-    '    gTree = vec2(2.2 + rdT.x * (TREE_Z + 11.5) / rdT.z, TREE_Z);',
-    '  }',
+    '  setupTree();',
     '  float treeSc = TREE_SC * uTreeS;',
     '  float base = terrain(vec2(0.));',
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
@@ -278,13 +283,13 @@
     '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
     '  vec3 sc = vec3(0., 1.16, -.66); sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
 
-    /* Terreno: se avanza hasta la altura de las puntas de la hierba. */
+    /* Terreno: el suelo. La hierba se pinta después, encima, como geometría. */
     '  float t = .4, tHit = -1.;',
     '  if(rd.y < .2){',
     '    for(int i = 0; i < 130; i++){',
     '      vec3 p = ro + rd * t;',
-    '      float d = p.y - terrain(p.xz) - GRASS_H;',
-    '      if(d < .0025 * t){ tHit = t; break; }',
+    '      float d = p.y - terrain(p.xz);',
+    '      if(d < .0015 * t){ tHit = t; break; }',
     '      t += max(.02 + t * .005, d * .48);',
     '      if(t > 170.) break;',
     '    }',
@@ -340,29 +345,18 @@
     '    float g0 = terrain(p0.xz);',
     '    vec2 grad = vec2(terrain(p0.xz + vec2(e, 0.)) - g0, terrain(p0.xz + vec2(0., e)) - g0) / e;',
     '    vec3 n = normalize(vec3(-grad.x, 1., -grad.y));',
-    /* Dentro de la capa de hierba, brizna a brizna (solo cerca: de lejos no se distinguen). */
-    '    float near = 1. - smoothstep(11., 19., tHit);',
+    /* Cerca, lo que se ve entre las briznas: el fondo de la hierba, oscuro. Lejos, donde ya */
+    /* no hay briznas, la hierba como textura. */
+    '    float near = 1. - smoothstep(GRASS_F0, GRASS_F1, tHit);',
     '    float tt = tHit;',
-    '    vec4 b = vec4(1., 1., .5, 0.);',
-    '    float hitBlade = 0.;',
-    '    if(near > 0.){',
-    '      float wide = tHit * .0005;',
-    '      for(int i = 0; i < 64; i++){',
-    '        vec3 p = ro + rd * tt;',
-    '        float y = p.y - (g0 + dot(grad, p.xz - p0.xz));',
-    '        if(y < 0.){ b = vec4(0., 0., .5, 0.); break; }',
-    '        b = blade(p.xz, y, wide);',
-    '        if(b.x < .0012 * tt){ hitBlade = 1.; break; }',
-    '        tt += clamp(b.x * .85, .006, .028);',
-    '      }',
-    '    }',
+    '    vec4 b = vec4(0., .16, .5, 0.);',
     '    tGround = tt;',
     '    vec3 p = ro + rd * tt;',
     '    float kk = b.y;',
     /* Color de la brizna: oscura en la raíz, clara en la punta; algunas, secas. */
-    '    float patch = fbm3(p.xz * .55);',
-    '    vec3 root = mix(vec3(.040, .060, .020), vec3(.070, .100, .032), patch);',
-    '    vec3 tip = mix(vec3(.20, .40, .09), vec3(.42, .58, .15), patch);',
+    '    float zone = fbm3(p.xz * .55);',
+    '    vec3 root = mix(vec3(.040, .060, .020), vec3(.070, .100, .032), zone);',
+    '    vec3 tip = mix(vec3(.20, .40, .09), vec3(.42, .58, .15), zone);',
     '    tip = mix(tip, vec3(.56, .50, .20), smoothstep(.72, .98, b.z) * .8);',
     '    vec3 alb = mix(root, tip, kk * kk * .25 + kk * .75);',
     /* Cada brizna, con su tono: unas más claras, otras más azuladas o más amarillas. */
@@ -375,7 +369,7 @@
     '    float sway = .5 + .5 * sin(p.x * 1.3 + p.z * .7 + uTime * .9);',
     '    float fine = noise(vec2(p.x * 150. + sway * 2., p.z * 26.)) * .5 + noise(p.xz * 70.) * .3 + noise(p.xz * 19.) * .2;',
     '    float streak = fine;',
-    '    vec3 far = mix(vec3(.060, .105, .030), vec3(.25, .39, .10), patch * .6 + fine * .4);',
+    '    vec3 far = mix(vec3(.060, .105, .030), vec3(.25, .39, .10), zone * .6 + fine * .4);',
     '    far = mix(far, vec3(.44, .36, .15), smoothstep(.62, .92, fine) * .55);',
     '    far = mix(far, vec3(.30, .14, .09), smoothstep(.55, .85, fbm3(p.xz * .21 + 8.)) * .35 * (1. - uNight));',
     '    float kFar = .35 + .65 * fine;',
@@ -389,7 +383,7 @@
     '    float sh = 1.;',
     '    vec3 ql = toLocal(p, base);',
     '    if(dot(ql.xz, ql.xz) < 30.) sh = computerShadow(ql, Ll);',
-    '    sh *= terrainShadow(vec3(p.x, g0 + dot(grad, p.xz - p0.xz) + GRASS_H, p.z), L);',
+    '    sh *= terrainShadow(vec3(p.x, g0 + .08, p.z), L);',
     /* Manchas de sombra de las nubes, que barren las lomas despacio. */
     '    float cloudSh = smoothstep(.34, .66, fbm3(p.xz * .075 + vec2(uTime * .035, uTime * .014)));',
     '    sh *= mix(.40, 1., cloudSh);',
@@ -509,6 +503,7 @@
     '    float mist = exp(-max(py - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., tFin) * (1. - smoothstep(70., 150., tFin));',
     '    col = mix(col, mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight), mist * .42);',
     '  }',
+    '  float zTree = -1.;',
     /* ---------- El cerezo ---------- */
     /* Es un modelo 3D renderizado aparte a una imagen con transparencia (assets/img/sakura.webp), */
     /* puesta sobre un plano fijo, de cara a la cámara en reposo. No se mueve ni se deforma: lo */
@@ -523,7 +518,7 @@
     '    vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
     /* Se lee siempre, fuera de cualquier condición: dentro, el nivel de detalle de la textura */
     /* queda indefinido y hay equipos que la pintan a saltos. */
-    '    vec4 tr = texture2D(uTree, clamp(tuv, 0., 1.));',
+    '    vec4 tr = texture(uTree, clamp(tuv, 0., 1.));',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
@@ -535,6 +530,7 @@
     '        float tf = (1. - exp(-tp * mix(.021, .024, uNight))) * .7;',
     '        tc = mix(tc, mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28) * tr.a, tf);',
     '        col = col * (1. - tr.a) + tc;',
+    '        if(tr.a > .5) zTree = tp;',
     '      }',
     '    }',
     '  }',
@@ -543,6 +539,216 @@
     '  float bq = dot(oc, rd);',
     '  float dq = length(oc + rd * max(-bq, 0.));',
     '  col += screenGlow * .06 * exp(-dq * dq * 1.5) * mix(.5, 1.5, uNight) * step(0., -bq);',
+    '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.);',
+    /* Profundidad de lo pintado, para que la hierba quede delante o detrás de cada cosa. */
+    '  float zr = tFin > 0. ? tFin : 1e4;',
+    '  if(zTree > 0.) zr = min(zr, zTree);',
+    '  gl_FragDepth = depth01(zr * dot(rd, fw));',
+    '}'
+  ].join('\n');
+  const GRASS_VERT = [
+    /* ---------- La hierba: una cinta por brizna ---------- */
+    /* Cada brizna es una cinta de cuatro tramos que acaba en punta. Sale de su raíz en el suelo, */
+    /* se curva hacia un lado y el viento la tumba a rachas que recorren la colina. */
+    'layout(location = 0) in vec2 aBlade;',
+    'layout(location = 1) in vec4 aInst;',
+    'uniform float uWide;',
+    'out vec3 vN;',
+    'out vec3 vPos;',
+    'out vec4 vBlade;',
+    'out vec4 vLight;',
+    'out vec4 vFog;',
+    'out vec3 vExtra;',
+
+    'void main(){',
+    '  setupTree();',
+    '  float treeSc = TREE_SC * uTreeS;',
+    '  float base = terrain(vec2(0.));',
+    '  vec3 ta = vec3(0., base + 1.02, 0.);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
+
+    /* aBlade: lado (-1..1) y altura dentro de la brizna (0 raíz, 1 punta). */
+    /* aInst: raíz (x, z) y dos números al azar. */
+    '  vec2 r0 = aInst.xy;',
+    '  float rA = aInst.z, rB = aInst.w;',
+    '  float t = aBlade.y;',
+    '  vec3 root = vec3(r0.x, terrain(r0), r0.y);',
+    '  float dist = length(root - ro);',
+
+    /* Hasta dónde hay briznas; bajo el ordenador, ninguna. */
+    '  float fade = 1. - smoothstep(GRASS_F0, GRASS_F1, dist);',
+    '  vec3 ql = toLocal(root, base);',
+    '  fade *= 1. - step(abs(ql.x), .70) * step(abs(ql.z - .04), .58);',
+
+    /* Matas: la hierba crece a manchas, más alta y más espesa en unas zonas que en otras. */
+    '  float clump = noise(r0 * .85 + 3.);',
+    '  float tuft = noise(r0 * 3.1 + 11.);',
+    '  float stray = step(.94, fract(rB * 7.31));',
+    '  float h = (.095 + .125 * rA + .10 * clump + .05 * tuft) * (1. + .60 * stray) * fade;',
+    /* De lejos las briznas se ensanchan para seguir cubriendo con menos. */
+    '  float w = (.0046 + .0032 * fract(rB * 3.7)) * (1. + dist * .13) * uWide;',
+
+    /* Viento: rachas anchas que cruzan la colina, una onda que las acompaña y un temblor fino */
+    /* en cada brizna. */
+    '  vec2 wdir = normalize(vec2(1., .45));',
+    '  float gust = noise(r0 * .16 - wdir * uTime * .50);',
+    '  gust = gust * gust * (3. - 2. * gust);',
+    '  float wave = sin(dot(r0, wdir) * 1.1 - uTime * 1.7 + noise(r0 * .35) * 5.) * .5 + .5;',
+    '  float blow = .03 + .50 * gust + .16 * wave * gust;',
+    '  float flutter = sin(uTime * (3.2 + 2.6 * rA) + rB * 43.) * (.035 + .07 * gust);',
+    '  float ang = rB * 19.;',
+    '  vec2 own = vec2(cos(ang), sin(ang));',
+    '  vec2 lean = own * (.14 + .36 * rA) + wdir * blow + vec2(-wdir.y, wdir.x) * flutter;',
+    '  float lm2 = min(dot(lean, lean), 1.);',
+
+    /* La curva de la brizna y su tangente. */
+    '  float tc = pow(t, 1.7);',
+    '  vec3 p = root + vec3(lean.x, 0., lean.y) * h * tc;',
+    '  p.y += h * t * (1. - .30 * lm2 * t);',
+    '  vec3 tang = normalize(vec3(lean.x * 1.7 * pow(max(t, .02), .7), 1. - .60 * lm2 * t, lean.y * 1.7 * pow(max(t, .02), .7)));',
+
+    /* El ancho mira a medias a la cámara: así ninguna brizna queda de canto y desaparece. */
+    '  vec3 toCam = normalize(ro - p);',
+    '  vec3 camSide = normalize(cross(tang, toCam));',
+    '  vec3 ownSide = vec3(-own.y, 0., own.x);',
+    '  ownSide *= sign(dot(ownSide, camSide) + 1e-4);',
+    '  vec3 side = normalize(mix(ownSide, camSide, .60));',
+    '  float taper = 1. - pow(t, 1.5);',
+    '  p += side * aBlade.x * w * taper;',
+
+    '  vec3 n = normalize(cross(side, tang));',
+    '  n *= sign(dot(n, toCam) + 1e-4);',
+    /* Algo de curva a lo ancho, como una hoja doblada por su nervio. */
+    '  vN = normalize(n + side * aBlade.x * .55);',
+    '  vPos = p;',
+    '  vBlade = vec4(t, rA, rB, clump);',
+
+    /* Sombras: el terreno, el ordenador, las nubes y el cerezo (copa a manchas y pie del tronco). */
+    '  float sh = terrainShadow(vec3(root.x, root.y + .10, root.z), L);',
+    '  if(dot(ql.xz, ql.xz) < 30.){',
+    '    vec3 Ll = L; Ll.xz = rot(YAW) * Ll.xz;',
+    '    sh *= computerShadow(vec3(ql.x, ql.y + .08, ql.z), Ll);',
+    '  }',
+    '  float cloudSh = smoothstep(.34, .66, fbm3(r0 * .075 + vec2(uTime * .035, uTime * .014)));',
+    '  sh *= mix(.40, 1., cloudSh);',
+    '  vec2 tsh = (r0 - gTree) / treeSc + L.xz * 4.2;',
+    '  float dapple = smoothstep(.30, .62, noise(r0 * 2.4 + vec2(uTime * .10, 0.)) * .6 + noise(r0 * 6.1) * .4);',
+    '  sh *= 1. - .62 * smoothstep(5.4, 2.2, length(tsh * vec2(1., 1.3))) * mix(1., .25, dapple);',
+    '  float foot = length((r0 - gTree) * vec2(1., 1.6)) / treeSc;',
+    '  float contact = smoothstep(.25, 1.9, foot) * .72 + .28;',
+    /* Al pie del ordenador la hierba también queda en penumbra. */
+    '  contact *= .45 + .55 * smoothstep(.55, 1.5, length(ql.xz - vec2(0., .04)));',
+    '  sh *= contact;',
+    '  sh = mix(sh, 1., uNight * .5);',
+    '  vLight = vec4(sh, .45 + .55 * contact, gust, wave);',
+
+    /* Bruma: la misma que el suelo. */
+    '  vec3 rd = normalize(root - ro);',
+    '  vec3 fogCol = mix(vec3(.66, .26, .17), vec3(.09, .09, .22), uNight);',
+    '  fogCol += mix(vec3(.30, .16, .05), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  float fog = 1. - exp(-dist * mix(.021, .024, uNight));',
+    '  vec3 fc = mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28);',
+    '  float mist = exp(-max(root.y - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., dist);',
+    '  vec3 mistCol = mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight);',
+    /* Dos mezclas seguidas (bruma y bruma baja) resumidas en un color y una cantidad. */
+    '  float fa = 1. - (1. - fog) * (1. - mist * .42);',
+    '  vFog = vec4((fc * fog * (1. - mist * .42) + mistCol * mist * .42) / max(fa, 1e-4), fa);',
+
+    /* Luces de cerca: la pantalla del ordenador y, de noche, las luciérnagas. */
+    '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
+    '  vec3 sc = vec3(0., 1.16, -.66); sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 tl = sc - root;',
+    '  float dl = length(tl);',
+    '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
+    '  vec3 extra = vec3(1., .91, .70) * spill * mix(1.6, 9., uNight);',
+    '  if(uNight > .01){',
+    '    vec3 fl = vec3(0.);',
+    '    for(int i = 0; i < FF_N; i++){',
+    '      vec4 f = firefly(float(i));',
+    '      vec3 d = f.xyz - root;',
+    '      fl += vec3(.80, 1., .34) * max(f.w - .18, 0.) * exp(-dot(d, d) * 2.2);',
+    '    }',
+    '    extra += fl * 2.4 * uNight;',
+    '  }',
+    '  vExtra = extra;',
+
+    /* Proyección: la misma cámara que la escena (el punto de fuga está en uFocus, no en el centro). */
+    '  vec3 v = p - ro;',
+    '  float zv = dot(v, fw);',
+    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '  vec2 ndc = frag / uRes * 2. - 1.;',
+    '  float zn = (Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * zv)) * 2. - 1.;',
+    '  gl_Position = vec4(ndc * zv, zn * zv, zv);',
+    '}'
+  ].join('\n');
+  const GRASS_FRAG = [
+    /* ---------- La hierba: el color de cada brizna ---------- */
+    'in vec3 vN;',
+    'in vec3 vPos;',
+    'in vec4 vBlade;',
+    'in vec4 vLight;',
+    'in vec4 vFog;',
+    'in vec3 vExtra;',
+    'out vec4 fragColor;',
+
+    'void main(){',
+    '  float t = vBlade.x, rA = vBlade.y, rB = vBlade.z, clump = vBlade.w;',
+    '  float sh = vLight.x, contact = vLight.y, gust = vLight.z;',
+    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
+    '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
+    '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
+    '  vec3 skyLight = mix(vec3(.12, .13, .17), vec3(.05, .07, .16), uNight);',
+    '  vec3 ro = vec3(2.2, 2.65, -11.5);',
+    '  vec3 V = normalize(ro - vPos);',
+    '  vec3 N = normalize(vN);',
+
+    /* Color: raíz oscura, cuerpo verde y punta más clara y amarilla. Cada mata tiene su verde */
+    /* y cada brizna, su tono; algunas están secas. */
+    '  vec3 rootCol = mix(vec3(.020, .040, .012), vec3(.036, .066, .020), clump);',
+    '  vec3 midCol = mix(vec3(.105, .26, .050), vec3(.20, .40, .075), clump);',
+    '  vec3 tipCol = mix(vec3(.34, .58, .12), vec3(.62, .76, .20), clump * .6 + rA * .4);',
+    '  vec3 alb = mix(rootCol, midCol, smoothstep(0., .45, t));',
+    '  alb = mix(alb, tipCol, smoothstep(.35, 1., t));',
+    '  alb *= .78 + .44 * fract(rB * 9.7);',
+    '  alb = mix(alb, alb * vec3(.78, 1.02, 1.12), smoothstep(.6, 1., fract(rB * 23.3)) * .45);',
+    '  float dry = smoothstep(.80, .97, fract(rA * 5.3 + rB * 1.7));',
+    '  alb = mix(alb, vec3(.50, .43, .17) * (.35 + .65 * t), dry * .75);',
+    /* Manchas rojizas de tierra seca, de día. */
+    '  alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(vPos.xz * .23 + 8.)) * .20 * (1. - uNight));',
+
+    /* Luz. Abajo, entre las demás briznas, casi no llega; arriba recibe el sol, lo deja pasar */
+    /* a contraluz y brilla en el filo cuando el viento la tumba. */
+    '  float ao = mix(.14, 1., smoothstep(0., .80, t)) * contact;',
+    '  float nl = dot(N, L);',
+    '  float dif = clamp((abs(nl) * .75 + nl * .25 + .30) / 1.30, 0., 1.);',
+    '  float back = pow(max(dot(-V, L), 0.), 3.);',
+    '  float through = back * smoothstep(.10, .9, t);',
+    '  vec3 H = normalize(L + V);',
+    '  float spec = pow(max(dot(N, H), 0.), 26.) * smoothstep(.15, .7, t);',
+    '  float rim = pow(1. - max(dot(N, V), 0.), 3.) * t;',
+
+    '  vec3 col = alb * (ambient * 1.5 * ao + skyLight * 2.4 * ao + sunCol * dif * 3.0 * ao * sh);',
+    '  col += sunCol * mix(vec3(.62, .70, .16), vec3(.90, .62, .18), back) * through * 1.45 * sh * (.55 + .45 * rA);',
+    '  col += sunCol * vec3(.95, .90, .62) * spec * .75 * sh * (.45 + .9 * gust);',
+    '  col += sunCol * alb * rim * .9 * sh;',
+    /* La racha se ve pasar: la hierba tumbada enseña el envés, más claro. */
+    '  col += alb * sunCol * gust * smoothstep(.2, 1., t) * .40 * sh * (1. - uNight * .6);',
+    '  col += alb * vExtra * (.30 + .70 * t);',
+
+    '  col = mix(col, vFog.rgb, vFog.a);',
+    '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.);',
+    '}'
+  ].join('\n');
+  const OVER = [
+    /* ---------- Lo que va por delante de la hierba: pétalos y luciérnagas ---------- */
+    'out vec4 fragColor;',
+
+    'void main(){',
+    '  setupTree();',
+    '  vec3 col = vec3(0.);',
+    '  float alpha = 0.;',
     /* Pétalos del cerezo: caen despacio y el viento los lleva hacia la derecha. */
     '  vec2 pa = gl_FragCoord.xy / uRes.y;',
     '  float asp = uRes.x / uRes.y;',
@@ -555,65 +761,124 @@
     '    vec2 dp = rot(uTime * (.6 + hash(vec2(fi, 5.5))) + fi) * (pa - pp);',
     '    float petal = 1. - smoothstep(.0020, .0042, length(dp * vec2(1., 1.9)));',
     '    float fade = smoothstep(0., .08, ph) * smoothstep(1., .85, ph);',
-    '    col = mix(col, mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6), petal * fade * .9);',
+    '    float a = petal * fade * .9;',
+    '    col = col * (1. - a) + mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6) * a;',
+    '    alpha = alpha * (1. - a) + a;',
     '  }',
-    /* Luciérnagas, de noche: un punto vivo, un halo y un resplandor amplio. Las tapa lo que */
-    /* tengan delante (una loma, el ordenador). */
+    /* Luciérnagas, de noche: un punto vivo, un halo y un resplandor amplio. Las tapa el ordenador. */
     '  if(uNight > .01){',
-    '    for(int i = 0; i < FF_N; i++){',
-    '      vec3 v = ff[i].xyz - ro;',
-    '      float tc = dot(v, rd);',
-    '      if(tc > 0. && (tFin < 0. || tc < tFin)){',
-    '        float d2 = max(dot(v, v) - tc * tc, 0.);',
-    '        float g = 1.3 * exp(-d2 / .0011) + .42 * exp(-d2 / .018) + .11 * exp(-d2 / .22);',
-    '        col += ffCol * g * ff[i].w * uNight;',
+    '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    '    float base = terrain(vec2(0.));',
+    '    vec3 ta = vec3(0., base + 1.02, 0.);',
+    '    vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '    vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '    vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
+    '    float tObj = 1e4;',
+    '    float t0 = sph(ro, rd, ta, 1.95);',
+    '    if(t0 >= 0.){',
+    '      float tt = t0;',
+    '      for(int i = 0; i < 48; i++){',
+    '        float d = computer(toLocal(ro + rd * tt, base));',
+    '        if(d < .003){ tObj = tt; break; }',
+    '        tt += d;',
+    '        if(tt > t0 + 5.) break;',
     '      }',
     '    }',
+    '    vec3 glow = vec3(0.);',
+    '    for(int i = 0; i < FF_N; i++){',
+    '      vec4 f = firefly(float(i));',
+    '      vec3 v = f.xyz - ro;',
+    '      float tc = dot(v, rd);',
+    '      if(tc > 0. && tc < tObj){',
+    '        float d2 = max(dot(v, v) - tc * tc, 0.);',
+    '        glow += vec3(.80, 1., .34) * (1.3 * exp(-d2 / .0011) + .42 * exp(-d2 / .018) + .11 * exp(-d2 / .22)) * f.w;',
+    '      }',
+    '    }',
+    '    col += min(glow, vec3(1.)) * uNight;',
     '  }',
-    /* Viñeta y grano. */
-    '  vec2 vq = gl_FragCoord.xy / uRes - .5;',
-    '  col *= 1. - .34 * dot(vq, vq) * 2.2;',
-    /* Lo que se pasa de blanco (el centro de una luciérnaga) se recorta antes del contraste. */
-    '  col = clamp(col, 0., 1.);',
-    /* Contraste suave y sombras algo frías, como en una foto al atardecer. */
-    '  col = mix(col, col * col * (3. - 2. * col), .35);',
-    '  col += (hash(gl_FragCoord.xy + fract(uTime) * 91.7) - .5) * .045;',
-    '  gl_FragColor = vec4(clamp(col, 0., 1.), 1.);',
+    '  fragColor = vec4(col, alpha);',
     '}'
   ].join('\n');
 
-  /* Lado mayor del lienzo, en píxeles: por encima de esto se estira (la escena es suave y lo admite). */
-  const MAX_SIDE = 1600;
+  /* Lado mayor del lienzo, en píxeles: por encima de esto se estira. */
+  const MAX_SIDE = 1920;
   const FRAME_MS = 1000 / 30;
   /* Desde /app/. La imagen es cuadrada (1024 px), con el árbol centrado y el suelo abajo. */
   const TREE_URL = '../assets/img/sakura.webp';
+  /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
+     lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo
+     una parte: el orden es al azar, así que cualquier tramo inicial cubre toda la colina. */
+  const BLADES = 420000;
+  const BLADE_LEVELS = [1, 0.55, 0.3, 0.16];
+  /* La cámara de la escena, vista desde arriba: dónde está y hacia dónde mira. */
+  const CAM_X = 2.2, CAM_Z = -11.5, CAM_YAW = Math.atan2(-2.2, 11.5);
+
+  function blades(){
+    const data = new Float32Array(BLADES * 4);
+    /* Azar con semilla: la colina es la misma en cada visita. */
+    let seed = 20261004;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    for(let i = 0; i < BLADES; i++){
+      const r = 0.7 + 27 * Math.pow(rnd(), 1.32);
+      const a = CAM_YAW + (rnd() - 0.5) * 1.7;
+      data[i * 4] = CAM_X + Math.sin(a) * r;
+      data[i * 4 + 1] = CAM_Z + Math.cos(a) * r;
+      data[i * 4 + 2] = rnd();
+      data[i * 4 + 3] = rnd();
+    }
+    return data;
+  }
 
   function start(canvas, screen, focusEl){
     let gl = null;
-    try{ gl = canvas.getContext('webgl', {antialias:false, alpha:false, powerPreference:'low-power'}); }catch(e){}
+    try{ gl = canvas.getContext('webgl2', {antialias:true, alpha:false, depth:true, stencil:false}); }catch(e){}
     if(!gl) return false;
 
-    function shader(type, src){
-      const s = gl.createShader(type);
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+    function program(vsrc, fsrc){
+      const make = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+      };
+      const vs = make(gl.VERTEX_SHADER, vsrc), fs = make(gl.FRAGMENT_SHADER, fsrc);
+      if(!vs || !fs) return null;
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+      const U = {};
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      return {prog, U};
     }
-    const vs = shader(gl.VERTEX_SHADER, VERT), fs = shader(gl.FRAGMENT_SHADER, FRAG);
-    if(!vs || !fs) return false;
-    const prog = gl.createProgram();
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
-    gl.useProgram(prog);
+    const scene = program(VERT, HEAD + COMMON + '\n' + FRAG);
+    const grass = program(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG);
+    const over = program(VERT, HEAD + COMMON + '\n' + OVER);
+    if(!scene || !grass || !over) return false;
+
+    /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
+    const fullVao = gl.createVertexArray();
+    gl.bindVertexArray(fullVao);
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, 'p');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const U = {};
-    ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    /* La brizna: una cinta de cuatro tramos que acaba en punta (lado, altura). */
+    const grassVao = gl.createVertexArray();
+    gl.bindVertexArray(grassVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 0.3, 1, 0.3, -1, 0.55, 1, 0.55, -1, 0.78, 1, 0.78, 0, 1]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, blades(), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribDivisor(1, 1);
+    gl.bindVertexArray(null);
+
     /* El cerezo: un modelo 3D renderizado aparte a una imagen con transparencia. Hasta que
        llega, la escena se pinta sin él. */
     let treeReady = false;
@@ -643,8 +908,10 @@
 
     let scale = 1, night = isDark() ? 1 : 0;
     let raf = 0, last = 0, t0 = performance.now();
-    /* Calidad: si los fotogramas llegan tarde, se baja la resolución (hasta dos veces). */
-    let side = MAX_SIDE, slow = 0, counted = 0, drops = 0;
+    /* Calidad: si los fotogramas llegan tarde, se pintan menos briznas (más anchas) y a menos
+       resolución, hasta tres veces. */
+    /* En móviles y tabletas se empieza ya con menos briznas. */
+    let side = MAX_SIDE, level = window.matchMedia('(pointer: coarse)').matches ? 2 : 0, slow = 0, counted = 0;
 
     function resize(){
       const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
@@ -680,33 +947,64 @@
       return {w, h, fx, fy, tx: Math.max(left * 0.36, h * 0.05), ts: Math.min(Math.max(w / h * 0.8, 0.6), 1)};
     }
 
+    function uniforms(p, time){
+      gl.useProgram(p.prog);
+      gl.uniform2f(p.U.uRes, canvas.width, canvas.height);
+      gl.uniform1f(p.U.uTime, time);
+      gl.uniform2f(p.U.uFocus, place.fx * scale, (place.h - place.fy) * scale);
+      gl.uniform1f(p.U.uNight, night);
+      gl.uniform1f(p.U.uTreeX, place.tx * scale);
+      gl.uniform1f(p.U.uTreeS, place.ts);
+    }
+
     function draw(now){
       const still = isStill();
       const target = isDark() ? 1 : 0;
       night += (target - night) * (still ? 1 : 0.06);
       if(Math.abs(target - night) < 0.002) night = target;
-      gl.uniform2f(U.uRes, canvas.width, canvas.height);
-      gl.uniform1f(U.uTime, still ? 12 : (now - t0) / 1000);
-      gl.uniform2f(U.uFocus, place.fx * scale, (place.h - place.fy) * scale);
-      gl.uniform1f(U.uNight, night);
+      const time = still ? 12 : (now - t0) / 1000;
+
+      /* 1. La escena, que escribe también la profundidad. */
+      gl.disable(gl.BLEND);
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.ALWAYS);
+      gl.depthMask(true);
+      uniforms(scene, time);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
-      gl.uniform1i(U.uTree, 0);
-      gl.uniform1f(U.uTreeOn, treeReady ? 1 : 0);
-      gl.uniform1f(U.uTreeX, place.tx * scale);
-      gl.uniform1f(U.uTreeS, place.ts);
+      gl.uniform1i(scene.U.uTree, 0);
+      gl.uniform1f(scene.U.uTreeOn, treeReady ? 1 : 0);
+      gl.bindVertexArray(fullVao);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      /* 2. La hierba, delante o detrás de lo ya pintado según su profundidad. */
+      gl.depthFunc(gl.LESS);
+      uniforms(grass, time);
+      const part = BLADE_LEVELS[level];
+      gl.uniform1f(grass.U.uWide, 1 / Math.sqrt(part));
+      gl.bindVertexArray(grassVao);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 9, Math.round(BLADES * part));
+
+      /* 3. Pétalos y luciérnagas, por delante de todo. */
+      gl.disable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      uniforms(over, time);
+      gl.bindVertexArray(fullVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.depthMask(true);
     }
 
     function loop(now){
       raf = 0;
       if(screen.hidden || document.hidden) return;
       if(now - last >= FRAME_MS - 2){
-        if(last && drops < 2){
+        if(last && level < BLADE_LEVELS.length - 1){
           counted++;
           if(now - last > 70) slow++;
           if(counted >= 24){
-            if(slow > 12){ side = Math.round(side * 0.72); drops++; resize(); }
+            if(slow > 12){ level++; side = Math.round(side * 0.8); resize(); }
             counted = 0; slow = 0;
           }
         }

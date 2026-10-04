@@ -86,45 +86,11 @@
       });
     }
 
-    /* Paisaje de fondo: reparte las estrellas y las motas de luz (siempre en los mismos
-       sitios) y mueve un poco las capas con el ratón. Lo demás es CSS (auth.css). */
+    /* Paisaje en 3D de detrás del acceso (src/views/auth-scene.js). Si no hay WebGL se queda
+       el degradado de cielo de auth.css. */
     buildScene(){
-      const scene = $('authScene');
-      if(!scene) return;
-      /* Generador sencillo con semilla: el cielo es igual en cada visita. */
-      let seed = 7;
-      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-      const fill = (id, n, make) => {
-        const box = $(id);
-        for(let i = 0; i < n; i++){
-          const dot = document.createElement('i');
-          make(dot.style);
-          box.appendChild(dot);
-        }
-      };
-      fill('authStars', 46, (st) => {
-        st.left = (rnd() * 100).toFixed(2) + '%';
-        st.top = (rnd() * 100).toFixed(2) + '%';
-        st.animationDelay = (-rnd() * 4).toFixed(2) + 's';
-        st.opacity = (0.45 + rnd() * 0.55).toFixed(2);
-        if(rnd() > 0.8){ st.width = '3px'; st.height = '3px'; }
-      });
-      fill('authFlies', 16, (st) => {
-        st.left = (4 + rnd() * 92).toFixed(2) + '%';
-        st.top = (10 + rnd() * 80).toFixed(2) + '%';
-        st.animationDelay = (-rnd() * 9).toFixed(2) + 's';
-        st.animationDuration = (7 + rnd() * 6).toFixed(2) + 's';
-      });
-      if(!window.matchMedia('(pointer: fine)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      let frame = 0;
-      this.screen.addEventListener('pointermove', (ev) => {
-        if(frame || document.documentElement.getAttribute('data-motion') === 'reduced') return;
-        frame = requestAnimationFrame(() => {
-          frame = 0;
-          scene.style.setProperty('--mx', (0.5 - ev.clientX / window.innerWidth).toFixed(3));
-          scene.style.setProperty('--my', (0.5 - ev.clientY / window.innerHeight).toFixed(3));
-        });
-      });
+      const canvas = $('authCanvas');
+      if(canvas && Workhub.views.authScene) Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));
     }
 
     /* ---------- Eventos hacia el controlador ---------- */

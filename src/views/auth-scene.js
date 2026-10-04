@@ -4,13 +4,15 @@
    tablero en la pantalla. Atardecer en tema claro y noche en oscuro. La cámara está fija: lo
    único que se mueve es la hierba, las nubes, los pétalos y las luciérnagas.
 
-   Se pinta en tres pasadas:
+   Se pinta en cuatro pasadas:
    1. La escena (FRAG): un sombreador que traza rayos (terreno, ordenador, cielo, el cerezo
       como imagen) y escribe además la profundidad de lo que pinta.
-   2. La hierba (GRASS_VERT / GRASS_FRAG): geometría de verdad, una cinta por brizna, cientos
+   2. El arbolado lejano (TREES_VERT / TREES_FRAG): unos cientos de árboles pequeños en las
+      lomas del fondo, cada uno un rectángulo que mira a la cámara.
+   3. La hierba (GRASS_VERT / GRASS_FRAG): geometría de verdad, una cinta por brizna, cientos
       de miles, dibujadas de una vez (instancias). La profundidad de la pasada 1 decide qué
       briznas quedan delante o detrás del ordenador y del tronco.
-   3. Lo que va por delante (OVER): pétalos y luciérnagas.
+   4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas.
    COMMON son las funciones que comparten (ruido, terreno, ordenador, cielo...).
 
    El ordenador se coloca siempre en el centro del panel de cristal de la tarjeta de acceso
@@ -29,6 +31,9 @@
     'uniform float uNight;',
     'uniform float uTreeX;',
     'uniform float uTreeS;',
+    /* Luciérnagas: posición y brillo de cada una (las mueve el JS). */
+    'const int FF_N = 40;',
+    'uniform vec4 uFF[40];',
 
     'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'vec2 hash2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }',
@@ -182,7 +187,8 @@
     '}',
 
     /* ---------- Cielo ---------- */
-    /* Hacia dónde está el sol (o la luna): bajo, al fondo y algo a la derecha, a la vista. */
+    /* De dónde viene la luz: del sol (o de la luna), bajo, al fondo y algo a la derecha. No se */
+    /* ve: queda tras las sierras y solo asoma su resplandor. */
     'vec3 sunDir(){ return normalize(mix(vec3(.21, .108, .97), vec3(.17, .235, .955), uNight)); }',
     /* Nivel del agua del lago. */
     'const float WATER_Y = .62;',
@@ -200,23 +206,18 @@
     '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
     '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
     '  vec3 col = mix(day, night, uNight);',
-    '  float s = max(dot(rd, L), 0.);',
-    '  vec3 glow = mix(vec3(1., .62, .26), vec3(.50, .58, .95), uNight);',
-    '  col += glow * (pow(s, 5.) * .22 + pow(s, 30.) * .32 + pow(s, 300.) * .80) * mix(1., .38, uNight);',
+    /* El resplandor del sol ya puesto: ancho y pegado al horizonte, sin disco. */
+    '  float s = max(dot(rd, normalize(vec3(L.x, .02, L.z))), 0.);',
+    '  vec3 glow = mix(vec3(1., .60, .24), vec3(.42, .50, .90), uNight);',
+    '  col += glow * (pow(s, 5.) * .26 + pow(s, 24.) * .34 * exp(-y * 5.)) * mix(1., .34, uNight);',
     '  return col;',
     '}',
-    /* El cielo entero: sol o luna, estrellas, vía láctea y dos capas de nubes. */
+    /* El cielo entero: estrellas, vía láctea, alguna estrella fugaz y dos capas de nubes. */
     'vec3 sky(vec3 rd, vec3 L){',
     '  vec3 col = skyBase(rd, L);',
-    '  float s = max(dot(rd, L), 0.);',
-    /* El sol: un disco que deslumbra. La luna: más pequeña, con sus manchas. */
-    '  float sun = smoothstep(.99972, .99990, s);',
-    '  float moon = smoothstep(.99968, .99978, s);',
-    '  vec2 mq = (rd.xy - L.xy) * 110.;',
-    '  float maria = .78 + .22 * fbm3(mq * 1.6 + 3.);',
-    '  col = mix(col, mix(vec3(1.9, 1.5, .95) * sun, vec3(.98, .97, .90) * maria * moon, uNight), mix(sun, moon, uNight));',
+    '  float s = max(dot(rd, normalize(vec3(L.x, .02, L.z))), 0.);',
     /* Estrellas: muchas pequeñas, unas pocas grandes, y la vía láctea cruzando. */
-    '  float starry = uNight * smoothstep(.02, .25, rd.y) * (1. - moon);',
+    '  float starry = uNight * smoothstep(.02, .25, rd.y);',
     '  vec2 sp = rd.xy / (1. + abs(rd.z)) * 420.;',
     '  vec2 si = floor(sp);',
     '  float st = step(.986, hash(si)) * smoothstep(.42, .05, length(fract(sp) - .5));',
@@ -230,6 +231,18 @@
     '  vec3 stars = vec3(.9, .92, 1.) * st + mix(vec3(1., .88, .74), vec3(.78, .86, 1.), hash(si2)) * big * 1.4;',
     '  stars += vec3(.30, .30, .50) * band * (.25 + .75 * dust) * .50;',
     '  stars += vec3(.9, .92, 1.) * step(.955, hash(si + 91.)) * smoothstep(.40, .05, length(fract(sp) - .5)) * band * dust * 1.2;',
+    /* De vez en cuando, una estrella fugaz. */
+    '  float cyc = uTime * .11;',
+    '  float sid = floor(cyc), sf = fract(cyc);',
+    '  vec2 sh2 = hash2(vec2(sid, 4.7));',
+    '  vec2 sq = rd.xy / (1. + abs(rd.z));',
+    '  vec2 sdir = normalize(vec2(-.8 - .4 * sh2.y, -.34));',
+    '  vec2 head = vec2(mix(-.25, .55, sh2.x), mix(.24, .44, sh2.y)) + sdir * sf * 1.5;',
+    '  vec2 rel = sq - head;',
+    '  float along = dot(rel, -sdir);',
+    '  float perp = length(rel + sdir * along);',
+    '  float streak = exp(-perp * perp * 120000.) * smoothstep(.10, 0., along) * step(0., along);',
+    '  stars += vec3(.92, .96, 1.) * streak * smoothstep(0., .03, sf) * (1. - smoothstep(.10, .20, sf)) * step(.45, hash(vec2(sid, 1.3))) * 1.6;',
     /* Nubes altas: jirones finos y alargados, encendidos por debajo. */
     '  float sunny = pow(max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.), 2.);',
     '  vec2 c1 = rd.xz / (rd.y + .10);',
@@ -257,28 +270,6 @@
     /* pintarse como textura. */
     'const float GRASS_F0 = 19.;',
     'const float GRASS_F1 = 27.;',
-
-    /* ---------- Luciérnagas ---------- */
-    /* Vuelan sobre la hierba, cada una por su camino, y se encienden y se apagan despacio. */
-    'const int FF_N = 24;',
-    'float groundApprox(vec2 p){',
-    '  float r2 = dot(p, p);',
-    '  float h = 1.5 * exp(-r2 / 30.) + .60 * sin(p.x * .23 + 1.3) * cos(p.y * .19 + .4);',
-    '  h += .42 * smoothstep(1.5, 22., r2) - smoothstep(2., -9., p.y) * 1.1;',
-    '  vec2 dt = p - gTree;',
-    '  float k = exp(-dot(dt, dt) / 14.);',
-    '  return mix(h + .55 * k, TREE_H, k * k);',
-    '}',
-    'vec4 firefly(float fi){',
-    '  vec2 h = hash2(vec2(fi, 3.7));',
-    '  vec2 xz = vec2(mix(-9.5, 9., h.x), mix(-8.5, 5., h.y));',
-    '  xz += vec2(sin(uTime * .19 + fi * 2.1) + .5 * sin(uTime * .47 + fi), cos(uTime * .15 + fi * 1.3) + .5 * cos(uTime * .41 + fi * 2.7)) * 1.1;',
-    '  float y = groundApprox(xz) + .50 + .85 * hash(vec2(fi, 8.1)) + .16 * sin(uTime * .55 + fi * 4.);',
-    /* Destello: sube rápido, se apaga despacio y pasa un rato a oscuras. */
-    '  float ph = fract(uTime * (.11 + .09 * hash(vec2(fi, 5.3))) + h.x * 7.);',
-    '  float bl = smoothstep(0., .08, ph) * (1. - smoothstep(.14, .80, ph));',
-    '  return vec4(xz.x, y, xz.y, .22 + .78 * bl);',
-    '}',
 
     /* El cerezo: a qué distancia va y cuánto mide (unidades de escena por unidad del modelo). */
     'const float TREE_Z = -2.2;',
@@ -383,15 +374,14 @@
     '      float deep = (.34 + fi * .20);',
     '      vec3 mc = mix(hz, mix(vec3(.36, .15, .22), vec3(.05, .055, .16), uNight), deep);',
     /* Bruma al pie y filo de luz arriba. */
+    /* Pliegues de la ladera y, en la cordillera del fondo, la última luz en las cumbres. */
+    '      float fold = noise(vec2(az * fr * 5. + rd.y * 46., rd.y * 30. + fi * 9.));',
+    '      mc *= .86 + .28 * fold;',
+    '      mc = mix(mc, mix(vec3(.96, .50, .40), vec3(.20, .22, .40), uNight), smoothstep(mh - .034, mh, rd.y) * (.42 + .3 * fold) * (1. - min(fi, 1.)) * mix(1., .35, uNight));',
     '      mc = mix(mc, hz, smoothstep(mh, mh - .07, rd.y) * .55);',
-    '      mc += rimCol * toSun * smoothstep(mh - .012, mh, rd.y) * (.30 - fi * .06);',
+    '      mc += rimCol * toSun * smoothstep(mh - .006, mh, rd.y) * (.24 - fi * .05) * mix(1., .22, uNight);',
     '      col = mix(col, mc, inside);',
     '    }',
-    '  }',
-    /* Las luciérnagas, de noche (se calculan una vez por punto). */
-    '  vec4 ff[24];',
-    '  if(uNight > .01){',
-    '    for(int i = 0; i < FF_N; i++) ff[i] = firefly(float(i));',
     '  }',
     '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
@@ -476,15 +466,15 @@
     '    if(uNight > .01){',
     '      vec3 fl = vec3(0.);',
     '      for(int i = 0; i < FF_N; i++){',
-    '        vec3 d = ff[i].xyz - p;',
-    '        fl += ffCol * max(ff[i].w - .18, 0.) * exp(-dot(d, d) * 2.2);',
+    '        vec3 d = uFF[i].xyz - p;',
+    '        fl += ffCol * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 2.2);',
     '      }',
     '      gcol += alb * fl * 2.4 * (.35 + .65 * kk) * uNight;',
     '    }',
     '    col = gcol;',
     '    tFin = tGround;',
     /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
-    /* finas, y el sol deja en él su camino de luz. */
+    /* finas. */
     '    float tW = (WATER_Y - ro.y) / min(rd.y, -1e-4);',
     '    if(rd.y < 0. && tW < tGround){',
     '      vec3 pw = ro + rd * tW;',
@@ -496,7 +486,7 @@
     '      vec3 wc = sky(wr, L) * mix(.80, .92, uNight);',
     /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
     '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
-    '      wc += mix(vec3(1.6, 1.1, .55), vec3(.55, .60, .85), uNight) * pow(max(dot(wr, L), 0.), 180.) * 1.4;',
+    '      wc += mix(vec3(1.2, .78, .40), vec3(.40, .46, .70), uNight) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
     '      float shore = smoothstep(0., .10, depth);',
     '      col = mix(col, wc, shore * .94);',
     /* Un filo claro en la orilla. */
@@ -583,6 +573,8 @@
     /* Bruma baja: se posa en las hondonadas y deja las crestas fuera. */
     '    float py = ro.y + rd.y * tFin;',
     '    float mist = exp(-max(py - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., tFin) * (1. - smoothstep(70., 150., tFin));',
+    '    vec2 mp = (ro + rd * tFin).xz;',
+    '    mist *= .55 + .9 * fbm3(mp * .045 + vec2(uTime * .012, uTime * .005));',
     '    col = mix(col, mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight), mist * .42);',
     '  }',
     '  float zTree = -1.;',
@@ -627,7 +619,7 @@
     '        float tf = (1. - exp(-tp * mix(.017, .024, uNight))) * .7;',
     '        tc = mix(tc, mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28) * tr.a, tf);',
     '        col = col * (1. - tr.a) + tc;',
-    '        if(tr.a > .5) zTree = tp;',
+    '        if(tr.a > .2) zTree = tp;',
     '      }',
     '    }',
     '  }',
@@ -641,6 +633,98 @@
     '  float zr = tFin > 0. ? tFin : 1e4;',
     '  if(zTree > 0.) zr = min(zr, zTree);',
     '  gl_FragDepth = depth01(zr * dot(rd, fw));',
+    '}'
+  ].join('\n');
+  const TREES_VERT = [
+    /* ---------- Arbolado lejano ---------- */
+    /* Árboles pequeños repartidos por las lomas del fondo: cada uno es un rectángulo que mira a */
+    /* la cámara y su silueta se dibuja en trees.frag. */
+    'layout(location = 0) in vec2 aQuad;',
+    'layout(location = 1) in vec4 aInst;',
+    'out vec2 vUv;',
+    'out vec3 vKind;',
+    'out vec4 vFog;',
+
+    'void main(){',
+    '  setupTree();',
+    '  float base = terrain(vec2(0.));',
+    '  vec3 ta = vec3(0., base + 1.02, 0.);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 L = sunDir();',
+
+    /* aQuad: x de -1 a 1, y de 0 (suelo) a 1 (copa). aInst: raíz (x, z), azar y tipo. */
+    '  vec2 r0 = aInst.xy;',
+    '  float rnd = aInst.z, kind = aInst.w;',
+    '  vec3 root = vec3(r0.x, terrain(r0) - .06, r0.y);',
+    /* Ni dentro del lago ni en su orilla. */
+    '  float alive = step(WATER_Y + .12, root.y);',
+    '  float h = (1.25 + 1.7 * rnd) * alive;',
+    /* Tipos: 0 redondo, 1 ciprés (alto y estrecho), 2 cerezo en flor (redondo y rosa). */
+    '  float w = h * mix(.46, .17, step(.5, kind) * step(kind, 1.5));',
+    '  vec3 side = normalize(vec3(rt.x, 0., rt.z));',
+    '  vec3 p = root + side * aQuad.x * w + vec3(0., aQuad.y * h, 0.);',
+    '  vUv = aQuad;',
+    '  vKind = vec3(kind, rnd, fract(rnd * 17.3));',
+
+    /* Bruma: la misma que el suelo. */
+    '  float dist = length(root - ro);',
+    '  vec3 rd = normalize(root - ro);',
+    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
+    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  float fog = 1. - exp(-dist * mix(.017, .024, uNight));',
+    '  fog = max(fog, smoothstep(30., 110., dist) * .92);',
+    '  vFog = vec4(mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
+
+    '  vec3 v = p - ro;',
+    '  float zv = dot(v, fw);',
+    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '  vec2 ndc = frag / uRes * 2. - 1.;',
+    '  float zn = (Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * zv)) * 2. - 1.;',
+    '  gl_Position = vec4(ndc * zv, zn * zv, zv);',
+    '}'
+  ].join('\n');
+  const TREES_FRAG = [
+    /* ---------- Arbolado lejano: la silueta y la luz de cada árbol ---------- */
+    'in vec2 vUv;',
+    'in vec3 vKind;',
+    'in vec4 vFog;',
+    'out vec4 fragColor;',
+
+    'void main(){',
+    '  float kind = vKind.x, seed = vKind.y * 31.;',
+    '  vec2 u = vUv;',
+    '  float cypress = step(.5, kind) * step(kind, 1.5);',
+    '  float pink = step(1.5, kind);',
+    /* Copa. Redonda: tres bultos con el borde irregular. Ciprés: una llama estrecha. */
+    '  float lump = (noise(u * vec2(4., 7.) + seed) - .5) * .30 + (noise(u * vec2(9., 15.) + seed * 2.) - .5) * .14;',
+    '  float r1 = length((u - vec2(0., .64)) / vec2(.92, .36));',
+    '  float r2 = length((u - vec2(-.38, .50)) / vec2(.52, .26));',
+    '  float r3 = length((u - vec2(.40, .54)) / vec2(.50, .25));',
+    '  float round = min(r1, min(r2, r3)) + lump;',
+    '  float flame = abs(u.x) / max(.92 * (1. - pow(clamp((u.y - .10) / .90, 0., 1.), 1.7)) * step(.10, u.y), 1e-3) + lump * .8;',
+    '  float crown = mix(round, flame, cypress);',
+    '  float aCrown = 1. - smoothstep(.88, 1.02, crown);',
+    /* Tronco. */
+    '  float aTrunk = (1. - smoothstep(.05, .09, abs(u.x) * mix(1., .35, cypress))) * step(u.y, .45);',
+    '  float a = max(aCrown, aTrunk * .9);',
+    '  if(a < .01) discard;',
+
+    /* Luz: a contraluz, la copa es oscura y el borde que mira al sol se enciende. */
+    '  float edge = smoothstep(.45, 1., crown);',
+    '  float sunSide = clamp(.55 + u.x * .5 + (u.y - .5) * .5, 0., 1.);',
+    '  vec3 dark = mix(vec3(.030, .070, .034), vec3(.050, .095, .040), vKind.z);',
+    '  vec3 lit = vec3(.46, .44, .14);',
+    '  dark = mix(dark, vec3(.34, .17, .22), pink);',
+    '  lit = mix(lit, vec3(1.10, .62, .58), pink);',
+    /* De noche todo se apaga y se enfría. */
+    '  dark = mix(dark, dark * vec3(.45, .55, 1.1) * .7, uNight);',
+    '  lit = mix(lit, vec3(.10, .13, .26) + pink * vec3(.08, .03, .08), uNight);',
+    '  vec3 col = mix(dark, lit, edge * sunSide * .85);',
+    '  col *= .80 + .40 * noise(u * vec2(11., 17.) + seed);',
+    '  col = mix(col, vec3(.045, .035, .035) * (1. - uNight * .5), (1. - aCrown) * aTrunk);',
+    '  col = mix(col, vFog.rgb, vFog.a);',
+    '  fragColor = vec4(post(col, gl_FragCoord.xy) * a, a);',
     '}'
   ].join('\n');
   const GRASS_VERT = [
@@ -763,9 +847,8 @@
     '  if(uNight > .01){',
     '    vec3 fl = vec3(0.);',
     '    for(int i = 0; i < FF_N; i++){',
-    '      vec4 f = firefly(float(i));',
-    '      vec3 d = f.xyz - root;',
-    '      fl += vec3(.80, 1., .34) * max(f.w - .18, 0.) * exp(-dot(d, d) * 2.2);',
+    '      vec3 d = uFF[i].xyz - root;',
+    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 2.2);',
     '    }',
     '    extra += fl * 2.4 * uNight;',
     '  }',
@@ -840,6 +923,7 @@
   ].join('\n');
   const OVER = [
     /* ---------- Lo que va por delante de la hierba: pétalos y luciérnagas ---------- */
+    'uniform vec4 uFFp[40];',
     'out vec4 fragColor;',
 
     'void main(){',
@@ -862,20 +946,6 @@
     '    col = col * (1. - a) + mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6) * a;',
     '    alpha = alpha * (1. - a) + a;',
     '  }',
-    /* El sol deslumbra: un resplandor que se derrama sobre lo que tiene delante y unos rayos */
-    /* tenues que giran muy despacio. De noche, la luna hace lo mismo, mucho más suave. */
-    '  {',
-    '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
-    '    vec3 fw = normalize(vec3(-2.2, .40, 11.5)), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
-    '    vec3 L = sunDir();',
-    '    vec2 su = 1.5 * vec2(dot(L, rt), dot(L, up)) / dot(L, fw);',
-    '    vec2 d = uv - su;',
-    '    float r = length(d);',
-    '    float ang = atan(d.y, d.x);',
-    '    float rays = noise(vec2(ang * 7. + 2., uTime * .03)) * noise(vec2(ang * 17., 4. - uTime * .02));',
-    '    float bloom = exp(-r * r * 14.) * .20 + exp(-r * 3.4) * rays * .20;',
-    '    col += mix(vec3(1., .62, .28), vec3(.42, .50, .85) * .35, uNight) * bloom;',
-    '  }',
     /* Una bandada cruza el cielo al atardecer, lejos. */
     '  if(uNight < .99){',
     '    float bt = uTime * .011;',
@@ -893,7 +963,7 @@
     '      alpha = alpha * (1. - a) + a;',
     '    }',
     '  }',
-    /* Luciérnagas, de noche: un punto vivo, un halo y un resplandor amplio. Las tapa el ordenador. */
+    /* Luciérnagas, de noche. Las tapa el ordenador. */
     '  if(uNight > .01){',
     '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
     '    float base = terrain(vec2(0.));',
@@ -912,14 +982,33 @@
     '        if(tt > t0 + 5.) break;',
     '      }',
     '    }',
+    /* Cada una: un punto vivo, un halo, un resplandor amplio y la estela de por dónde acaba */
+    /* de pasar. Las que vuelan pegadas a la cámara salen desenfocadas, como discos de luz. */
     '    vec3 glow = vec3(0.);',
     '    for(int i = 0; i < FF_N; i++){',
-    '      vec4 f = firefly(float(i));',
-    '      vec3 v = f.xyz - ro;',
-    '      float tc = dot(v, rd);',
-    '      if(tc > 0. && tc < tObj){',
-    '        float d2 = max(dot(v, v) - tc * tc, 0.);',
-    '        glow += vec3(.80, 1., .34) * (1.3 * exp(-d2 / .0011) + .42 * exp(-d2 / .018) + .11 * exp(-d2 / .22)) * f.w;',
+    '      vec3 v = uFF[i].xyz - ro;',
+    '      float zv = dot(v, fw);',
+    '      if(zv > .25 && length(v) < tObj){',
+    '        vec2 c = 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '        vec2 d = uv - c;',
+    '        float k = zv / 1.5;',
+    '        float d2 = dot(d, d) * k * k;',
+    '        float fi = float(i);',
+    '        vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(fi, 2.9)));',
+    '        float g = 1.35 * exp(-d2 / .0008) + .42 * exp(-d2 / .014) + .10 * exp(-d2 / .19);',
+    /* Estela. */
+    '        vec3 vp = uFFp[i].xyz - ro;',
+    '        vec2 ab = 1.5 * vec2(dot(vp, rt), dot(vp, up)) / max(dot(vp, fw), .25) - c;',
+    '        float h = clamp(dot(d, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
+    '        vec2 dt = d - ab * h;',
+    '        g += .50 * exp(-dot(dt, dt) * k * k / .0011) * (1. - h) * (1. - h);',
+    /* Desenfoque de las cercanas: un disco suave con el borde algo más marcado. */
+    '        float blur = clamp((3.4 - zv) * .020, 0., .05);',
+    '        if(blur > 0.){',
+    '          float rr = length(d) / blur;',
+    '          g = g * .25 + (1. - smoothstep(.82, 1., rr)) * (.20 + .16 * smoothstep(.55, .95, rr));',
+    '        }',
+    '        glow += tint * g * uFF[i].w;',
     '      }',
     '    }',
     '    col += min(glow, vec3(1.)) * uNight;',
@@ -958,6 +1047,84 @@
     return data;
   }
 
+  /* Arbolado lejano: entre 30 y 95 unidades de la cámara, a manchas (bosquetes) y ordenado
+     de lejos a cerca, porque se pinta con transparencia en los bordes. Cada árbol: raíz (x, z),
+     azar y tipo (0 redondo, 1 ciprés, 2 cerezo en flor). */
+  const TREES = 620;
+  function trees(){
+    let seed = 7741;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    /* Unos cuantos centros de bosquete; los árboles caen cerca de alguno. */
+    const groves = [];
+    for(let i = 0; i < 46; i++){
+      const r = 30 + 62 * Math.pow(rnd(), 1.2), a = CAM_YAW + (rnd() - 0.5) * 1.5;
+      groves.push([CAM_X + Math.sin(a) * r, CAM_Z + Math.cos(a) * r, 1.5 + rnd() * 5]);
+    }
+    const list = [];
+    for(let i = 0; i < TREES; i++){
+      const g = groves[Math.floor(rnd() * groves.length)];
+      const a = rnd() * Math.PI * 2, d = g[2] * Math.sqrt(rnd());
+      const x = g[0] + Math.cos(a) * d, z = g[1] + Math.sin(a) * d * 1.6;
+      const k = rnd();
+      list.push([x, z, rnd(), k < 0.62 ? 0 : (k < 0.86 ? 1 : 2)]);
+    }
+    const far = (t) => (t[0] - CAM_X) * (t[0] - CAM_X) + (t[1] - CAM_Z) * (t[1] - CAM_Z);
+    list.sort((p, q) => far(q) - far(p));
+    const data = new Float32Array(TREES * 4);
+    list.forEach((t, i) => data.set(t, i * 4));
+    return data;
+  }
+
+  /* Luciérnagas: las mueve este código (no el sombreador) y pasa sus posiciones a las pasadas
+     que las necesitan: la escena y la hierba, para la luz que dan; lo de delante, para
+     pintarlas. Tres grupos: las de la colina, unas pocas lejanas y otras pocas que pasan
+     pegadas a la cámara. Cada una tiene su casa, su manera de vagar y su ritmo de destello.
+     OJO: TREE_Z y TREE_H repiten las constantes del sombreador. */
+  const FIREFLIES = 40, TREE_Z = -2.2, TREE_H = 1.8, CAM_Y = 2.65;
+  const flies = (function(){
+    let seed = 90210;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const list = [];
+    for(let i = 0; i < FIREFLIES; i++){
+      const kind = i < 30 ? 0 : (i < 36 ? 1 : 2);
+      const home = kind === 0 ? [-9.5 + 18.5 * rnd(), -8.5 + 13.5 * rnd()] : (kind === 1 ? [-7 + 23 * rnd(), 8 + 18 * rnd()] : [0.4 + 3.6 * rnd(), -10.1 + 1.5 * rnd()]);
+      list.push({
+        kind, home,
+        reach: kind === 2 ? 0.5 + 0.5 * rnd() : 1.0 + 1.8 * rnd(),
+        up: kind === 0 ? 0.42 + 0.9 * rnd() : (kind === 1 ? 1.0 + 1.8 * rnd() : -0.30 + 0.5 * rnd()),
+        f: [0.13 + 0.16 * rnd(), 0.31 + 0.25 * rnd(), 0.71 + 0.5 * rnd(), 0.11 + 0.15 * rnd(), 0.37 + 0.22 * rnd(), 0.45 + 0.4 * rnd()],
+        p: [rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283],
+        rate: 0.10 + 0.11 * rnd(), phase: rnd(), dim: 0.10 + 0.14 * rnd()
+      });
+    }
+    return list;
+  })();
+  /* Altura aproximada del suelo (sin el ruido fino): la misma idea que terrain() en el sombreador. */
+  function ground(x, z, tree){
+    const r2 = x * x + z * z;
+    const st = (a, b, v) => { const k = Math.min(Math.max((v - a) / (b - a), 0), 1); return k * k * (3 - 2 * k); };
+    let h = 1.5 * Math.exp(-r2 / 30) + 0.6 * Math.sin(x * 0.23 + 1.3) * Math.cos(z * 0.19 + 0.4);
+    h += 0.42 * st(1.5, 22, r2) - st(2, -9, z) * 1.1;
+    const dx = x - tree[0], dz = z - tree[1];
+    const k = Math.exp(-(dx * dx + dz * dz) / 14);
+    return (h + 0.55 * k) * (1 - k * k) + TREE_H * k * k;
+  }
+  /* Posición (x, y, z) y brillo de la luciérnaga i en el instante t. */
+  function fly(i, t, tree, out, at){
+    const q = flies[i], f = q.f, p = q.p;
+    /* Vaga en curvas: dos vaivenes lentos y uno rápido y corto, que es el que la hace dudar. */
+    const x = q.home[0] + q.reach * (Math.sin(t * f[0] + p[0]) + 0.45 * Math.sin(t * f[1] + p[1]) + 0.12 * Math.sin(t * f[2] * 2.3 + p[2]));
+    const z = q.home[1] + q.reach * (Math.cos(t * f[3] + p[3]) + 0.45 * Math.sin(t * f[4] + p[4]) + 0.12 * Math.cos(t * f[2] * 1.9 + p[5]));
+    const bob = 0.20 * Math.sin(t * f[5] + p[5]) + 0.07 * Math.sin(t * f[2] * 2.7 + p[0]);
+    const y = (q.kind === 2 ? CAM_Y : Math.max(ground(x, z, tree), 0.7)) + q.up + bob;
+    /* Destello: sube rápido, se apaga despacio y pasa un rato casi a oscuras. */
+    const ph = (t * q.rate + q.phase) % 1;
+    const rise = Math.min(ph / 0.07, 1), fall = 1 - Math.min(Math.max((ph - 0.12) / 0.6, 0), 1);
+    const flash = rise * rise * (3 - 2 * rise) * fall * fall;
+    out[at] = x; out[at + 1] = y; out[at + 2] = z;
+    out[at + 3] = (q.dim + (1 - q.dim) * flash) * (q.kind === 2 ? 0.55 : 1);
+  }
+
   function start(canvas, screen, focusEl){
     let gl = null;
     try{ gl = canvas.getContext('webgl2', {antialias:true, alpha:false, depth:true, stencil:false}); }catch(e){}
@@ -978,13 +1145,14 @@
       gl.linkProgram(prog);
       if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     const scene = program(VERT, HEAD + COMMON + '\n' + FRAG);
     const grass = program(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG);
+    const wood = program(HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG);
     const over = program(VERT, HEAD + COMMON + '\n' + OVER);
-    if(!scene || !grass || !over) return false;
+    if(!scene || !grass || !wood || !over) return false;
 
     /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
     const fullVao = gl.createVertexArray();
@@ -1006,7 +1174,21 @@
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
     gl.vertexAttribDivisor(1, 1);
+
+    /* El árbol lejano: un rectángulo (x de -1 a 1, y de 0 a 1). */
+    const woodVao = gl.createVertexArray();
+    gl.bindVertexArray(woodVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, trees(), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribDivisor(1, 1);
     gl.bindVertexArray(null);
+    const ffNow = new Float32Array(FIREFLIES * 4), ffBefore = new Float32Array(FIREFLIES * 4);
 
     /* El cerezo: un modelo 3D renderizado aparte a una imagen con transparencia. Hasta que
        llega, la escena se pinta sin él. */
@@ -1073,7 +1255,14 @@
       }
       const card = focusEl && focusEl.parentElement;
       if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
-      return {w, h, fx, fy, tx: Math.max(left * 0.36, h * 0.05), ts: Math.min(Math.max(w / h * 0.8, 0.6), 1)};
+      const tx = Math.max(left * 0.36, h * 0.05);
+      /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
+         sombreador (el rayo que pasa por tx, hasta la distancia TREE_Z). */
+      const fl = Math.hypot(2.2, 0.4, 11.5), fw = [-2.2 / fl, 0.4 / fl, 11.5 / fl];
+      const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
+      const k = (tx - fx) / h;
+      const dx = fw[0] * 1.5 + k * rt[0], dz = fw[2] * 1.5 + k * rt[2];
+      return {w, h, fx, fy, tx, ts: Math.min(Math.max(w / h * 0.8, 0.6), 1), tree: [2.2 + dx * (TREE_Z + 11.5) / dz, TREE_Z]};
     }
 
     function uniforms(p, time){
@@ -1084,6 +1273,8 @@
       gl.uniform1f(p.U.uNight, night);
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
+      if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffNow);
+      if(p.U.uFFp) gl.uniform4fv(p.U.uFFp, ffBefore);
     }
 
     function draw(now){
@@ -1092,6 +1283,11 @@
       night += (target - night) * (still ? 1 : 0.06);
       if(Math.abs(target - night) < 0.002) night = target;
       const time = still ? 12 : (now - t0) / 1000;
+      /* Las luciérnagas, ahora y hace un instante (para la estela). */
+      for(let i = 0; i < FIREFLIES; i++){
+        fly(i, time, place.tree, ffNow, i * 4);
+        fly(i, time - 0.22, place.tree, ffBefore, i * 4);
+      }
 
       /* 1. La escena, que escribe también la profundidad. */
       gl.disable(gl.BLEND);
@@ -1106,15 +1302,26 @@
       gl.bindVertexArray(fullVao);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      /* 2. La hierba, delante o detrás de lo ya pintado según su profundidad. */
+      /* 2. El arbolado lejano: con prueba de profundidad (lo tapan las lomas), pero sin
+         escribirla, y con los bordes transparentes. */
       gl.depthFunc(gl.LESS);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      uniforms(wood, time);
+      gl.bindVertexArray(woodVao);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, TREES);
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+
+      /* 3. La hierba, delante o detrás de lo ya pintado según su profundidad. */
       uniforms(grass, time);
       const part = BLADE_LEVELS[level];
       gl.uniform1f(grass.U.uWide, 1 / Math.sqrt(part));
       gl.bindVertexArray(grassVao);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 9, Math.round(BLADES * part));
 
-      /* 3. Pétalos y luciérnagas, por delante de todo. */
+      /* 4. Pétalos, pájaros y luciérnagas, por delante de todo. */
       gl.disable(gl.DEPTH_TEST);
       gl.depthMask(false);
       gl.enable(gl.BLEND);

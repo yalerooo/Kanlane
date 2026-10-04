@@ -71,7 +71,23 @@
 
     /* ---------- Eventos hacia el controlador ---------- */
 
-    bindClose(handler){ this.btnClose.addEventListener('click', handler); }
+    bindClose(handler){
+      this.btnClose.addEventListener('click', handler);
+      /* Un clic en el velo (fuera del panel) cierra la ficha. Tiene que empezar y acabar fuera:
+         soltar el ratón fuera tras seleccionar texto dentro no cuenta. */
+      const outside = (ev) => {
+        if(ev.target !== this.dlg) return false;
+        const r = this.dlg.getBoundingClientRect();
+        return ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom;
+      };
+      let downOutside = false;
+      this.dlg.addEventListener('pointerdown', (ev) => { downOutside = outside(ev); });
+      this.dlg.addEventListener('click', (ev) => {
+        const close = downOutside && outside(ev);
+        downOutside = false;
+        if(close) this.btnClose.click();
+      });
+    }
     bindComment(handler){
       this.commentForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
@@ -198,7 +214,12 @@
       if(!crumb.length && !labelNames.length) crumb.push('<span class="status-pill" style="--st:' + s.dot + '"><span class="dot"></span><span translate="no">' + esc(s.label) + '</span></span>');
       this.top.innerHTML = crumb.join('');
       /* Ya terminada o sin etapa final: el botón no tiene nada que hacer. */
-      this.btnDone.hidden = TaskModel.isDone(t) || !TaskModel.STATUS.some((x) => x.done);
+      const isDone = TaskModel.isDone(t);
+      this.btnDone.hidden = !TaskModel.STATUS.some((x) => x.done);
+      this.btnDone.classList.toggle('is-done', isDone);
+      this.btnDone.disabled = isDone;
+      this.btnDone.title = Workhub.t(isDone ? 'Completada' : 'Marcar como completada');
+      this.dlg.classList.toggle('is-done', isDone);
       this.title.textContent = t.title || 'Sin título';
       /* La fecha límite siempre; el resto solo si tiene valor (las tareas
          importadas de copias antiguas no traen fechas reales de creación). */
@@ -388,9 +409,9 @@
       '<div class="gh-event-time">' + esc(ago(e.createdAt)) + '</div></div></li>';
   }
 
-  /* Propiedad de la franja derecha: la etiqueta encima y el valor debajo. */
+  /* Propiedad de la franja derecha: icono y etiqueta encima, y el valor debajo. */
   function fact(icon, label, valueHtml){
-    return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + esc(label) + '</span>' +
+    return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + (FACT_ICONS[icon] || '') + esc(label) + '</span>' +
       '<div class="tv-prop-value tv-fact-value">' + valueHtml + '</div></div>';
   }
 

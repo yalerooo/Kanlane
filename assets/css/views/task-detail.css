@@ -23,7 +23,7 @@
 .tv-scroll{display:contents;}
 @keyframes tv-in{from{opacity:0;transform:translateX(28px);}}
 /* El tablero se sigue viendo detrás: velo ligero y sin desenfocar. */
-#dlgTaskView::backdrop{background:color-mix(in srgb, var(--overlay) 42%, transparent);-webkit-backdrop-filter:none;backdrop-filter:none;}
+#dlgTaskView::backdrop{background:color-mix(in srgb, var(--overlay) 50%, transparent);-webkit-backdrop-filter:none;backdrop-filter:none;}
 
 .tv-head{
   grid-area:head;
@@ -49,9 +49,6 @@
 .tv-top-labels .tv-chips{flex-wrap:nowrap;}
 .tv-head-actions{display:flex;align-items:center;gap:6px;flex:none;}
 .tv-head-actions .ext-slot{margin:0;}
-/* «Marcar como completada»: solo el icono; el texto queda para lectores de pantalla y el aviso al pasar. */
-.tv-status-edit{width:28px;padding:0;}
-.tv-status-edit span{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
 .tv-close{background:var(--surface-2);}
 .status-pill{
   --st:var(--dot-pend);
@@ -73,11 +70,37 @@
   scrollbar-width:thin;
   scrollbar-color:var(--line-strong) transparent;
 }
+/* Título, con el círculo de completar delante: un anillo del color de la etapa que enseña
+   la marca al pasar por encima y queda relleno cuando la tarea está terminada. */
+.tv-title-row{display:flex;align-items:flex-start;gap:12px;}
+.tv-done{
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  flex:none;
+  margin-top:4px;
+  padding:0;
+  color:transparent;
+  background:transparent;
+  border:2px solid var(--st, var(--dot-pend));
+  border-radius:50%;
+  cursor:pointer;
+  transition:background .14s ease, color .14s ease, border-color .14s ease, transform .14s ease;
+}
+.tv-done[hidden]{display:none;}
+.tv-done:hover:not(:disabled){color:var(--dot-done);border-color:var(--dot-done);background:var(--st-done-bg);}
+.tv-done:active:not(:disabled){transform:scale(.92);}
+.tv-done:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.tv-done.is-done{color:#fff;background:var(--dot-done);border-color:var(--dot-done);cursor:default;}
+.task-view.is-done h2#tvTitle{color:var(--ink-soft);}
 .task-view h2#tvTitle{
-  font-size:21px;
+  flex:1;
+  min-width:0;
+  font-size:22px;
   font-weight:600;
-  line-height:1.25;
-  letter-spacing:-0.02em;
+  line-height:1.3;
+  letter-spacing:-0.022em;
   margin:0;
   overflow-wrap:anywhere;
   -webkit-user-select:text;
@@ -85,7 +108,7 @@
 }
 .tv-muted{color:var(--ink-faint);font-weight:400;}
 .tv-desc{
-  margin-top:8px;
+  margin-top:10px;
   font-size:14px;
   line-height:1.6;
   color:var(--ink-soft);
@@ -100,10 +123,10 @@
   grid-area:side;
   display:flex;
   flex-direction:column;
-  gap:14px;
+  gap:18px;
   min-width:0;
   min-height:0;
-  padding:20px 18px 20px;
+  padding:22px 18px 20px;
   overflow-y:auto;
   overscroll-behavior:contain;
   scrollbar-width:thin;
@@ -114,7 +137,11 @@
 .tv-facts{display:contents;}
 .tv-prop{display:flex;flex-direction:column;gap:5px;min-width:0;}
 .tv-prop[hidden]{display:none;}
-.tv-prop-label{font-size:12px;font-weight:400;color:var(--ink-faint);}
+.tv-prop-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:450;color:var(--ink-faint);}
+.tv-prop-label svg{flex:none;width:14px;height:14px;opacity:.9;}
+.tv-fact .tv-prop-value{padding-left:20px;}
+.tv-assignees{display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+.tv-assignee{display:inline-flex;align-items:center;gap:7px;}
 .tv-prop-value{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0;font-size:13px;font-weight:500;color:var(--ink);overflow-wrap:anywhere;line-height:1.4;}
 .tv-prop-value small{font-size:12px;font-weight:400;color:var(--ink-faint);}
 .tv-prop-value a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
@@ -123,7 +150,7 @@
 .tv-chips{display:flex;flex-wrap:wrap;gap:5px;}
 
 /* Secciones: título pequeño en versalitas y, a la derecha, su recuento. */
-.tv-section{margin-top:24px;}
+.tv-section{margin-top:26px;}
 .tv-section > h3{
   display:flex;
   align-items:center;
@@ -133,19 +160,25 @@
   letter-spacing:.06em;
   text-transform:uppercase;
   color:var(--ink-faint);
-  margin:0 0 8px;
+  margin:0 0 10px;
 }
-.tv-count{margin-left:auto;font-size:12px;font-weight:450;letter-spacing:0;text-transform:none;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+/* Una línea fina lleva del título al recuento (en las subtareas ese hueco es la barra de progreso). */
+.tv-section > h3::after{content:"";order:1;flex:1;height:1px;background:var(--line);}
+#tvChecklistWrap > h3::after{display:none;}
+.tv-section > h3 .tv-count{order:2;}
+.tv-count{font-size:12px;font-weight:450;letter-spacing:0;text-transform:none;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
 .tv-count:empty{display:none;}
 .tv-empty{font-size:13px;color:var(--ink-faint);margin:0;}
+.tv-notes > .tv-empty{padding:16px;text-align:center;border:1px dashed var(--line-strong);border-radius:var(--r-lg);}
 .tv-empty strong{color:var(--ink-soft);font-weight:500;}
 
-/* Subtareas: barra de progreso fina y filas sin caja. */
-.tv-section > .tv-check-progress{display:block;margin:0 0 6px;}
-.tv-checks{list-style:none;margin:0 -8px;padding:0;display:flex;flex-direction:column;}
-.tv-checks li{border-radius:8px;}
+/* Subtareas: la barra de progreso va en el título, entre el nombre y el recuento, y la
+   lista en un panel de superficie con una fila por subtarea. */
+.tv-section > h3 .tv-check-progress{flex:1;height:4px;}
+.tv-checks{list-style:none;margin:0;padding:4px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);}
+.tv-checks li{border-radius:calc(var(--r-lg) - 4px);}
 .tv-checks li:hover{background:var(--hover);}
-.tv-checks label{display:flex;align-items:flex-start;gap:12px;padding:8px;font-size:13.5px;line-height:1.4;cursor:pointer;}
+.tv-checks label{display:flex;align-items:flex-start;gap:12px;padding:9px 10px;font-size:13.5px;line-height:1.4;cursor:pointer;}
 .tv-checks input{margin-top:1px;flex:none;}
 .tv-checks .is-done{color:var(--ink-faint);text-decoration:line-through;text-decoration-color:var(--line-strong);}
 

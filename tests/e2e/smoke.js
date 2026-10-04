@@ -142,7 +142,10 @@ async function newProject(page, name){
     /* «Marcar como completada» pasa la tarea a la etapa final. */
     await page.locator('#btnTvDone').click();
     await page.waitForFunction(() => Workhub.models.TaskModel.isDone(Workhub.app.models.tasks.items.find((t) => t.title === 'Vence hoy')));
-    await page.locator('#btnTvClose').click();
+    assert.equal(await page.locator('#btnTvDone').isDisabled(), true, 'ya completada, el círculo queda relleno y sin acción');
+    /* Un clic fuera del panel cierra la ficha. */
+    await page.mouse.click(20, 400);
+    await page.locator('#dlgTaskView').waitFor({state:'hidden'});
     await page.locator('#taskMode [data-task-mode="board"]').click();
     assert.equal(await page.locator('#board').isVisible(), true);
     /* Panel de filtros: se abre y se cierra con Escape. */

@@ -1470,7 +1470,9 @@
       let fx = w / 2, fy = h * 0.6, left = w * 0.2;
       if(focusEl && focusEl.offsetParent){
         const o = offset(focusEl);
-        fx = o.x + focusEl.offsetWidth / 2;
+        /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
+           su fondo, y centrado se arrimaba demasiado al formulario. */
+        fx = o.x + focusEl.offsetWidth * 0.575;
         fy = o.y + focusEl.offsetHeight * 0.585;
       }
       const card = focusEl && focusEl.parentElement;

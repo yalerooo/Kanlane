@@ -6,6 +6,9 @@
 (function(){
   const firebase = Workhub.services.firebase;
   const MIN_PASSWORD = 8;
+  /* Margen tras volver de la ventana de acceso antes de soltar los botones (ms): da tiempo a que
+     un acceso correcto entre en la app sin que el formulario parpadee. */
+  const POPUP_GRACE = 600;
   /* Datos de la sesión que se guardan en este navegador y se borran al salir. */
   const SESSION_PREFS = ['workhub_project'];
   /* Modo invitado: solo el nombre, en este navegador. Los datos van al almacén local (IndexedDB). */
@@ -40,7 +43,16 @@
     'auth/too-many-requests': 'Demasiados intentos seguidos. Espera un momento.',
     'auth/popup-blocked': 'El navegador bloqueó la ventana de acceso. Permite las ventanas emergentes para este sitio.'
   };
-  const PROVIDER_NAMES = {'github.com':'GitHub', 'google.com':'Google', 'microsoft.com':'Microsoft', 'apple.com':'Apple'};
+  /* Errores que se enseñan pegados a su campo; el resto va en el aviso general del formulario. */
+  const FIELD_OF = {
+    'auth/invalid-email':'email', 'auth/missing-email':'email', 'auth/email-already-in-use':'email',
+    'auth/user-not-found':'password', 'auth/wrong-password':'password', 'auth/invalid-credential':'password',
+    'auth/invalid-login-credentials':'password', 'auth/missing-password':'password', 'auth/weak-password':'password',
+    'auth/password-does-not-meet-requirements':'password'
+  };
+  /* Forma de un correo: algo@algo.algo, sin espacios. Lo demás lo decide el servidor. */
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const PROVIDER_NAMES ={'github.com':'GitHub', 'google.com':'Google', 'microsoft.com':'Microsoft', 'apple.com':'Apple'};
   /* Cerrar la ventana de acceso no es un error. */
   const SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
 
@@ -141,8 +153,13 @@
     /* Sesión válida: caché local, datos del usuario y arranque de la app. */
     enter(user){
       try{ localStorage.setItem(SESSION_KEY, '1'); }catch(e){}
-      this.view.showAppSkeleton();
-      firebase.startSession().then(() => {
+      /* Si se entra desde el formulario, la pantalla de acceso se queda un instante con la
+         señal de «hecho» mientras se preparan los datos (no añade espera si tardan más que ella).
+         Si ya había sesión al abrir la página, va directo al esqueleto de la app. */
+      const beat = this.view.celebrate();
+      if(!beat) this.view.showAppSkeleton();
+      Promise.all([firebase.startSession(), beat]).then(() => {
+        if(beat) this.view.showAppSkeleton();
         firebase.install(user);
         this.view.hide();
         this.view.showAccount(user);
@@ -174,7 +191,9 @@
         this.view.showLinkNotice(err.email, provider);
         return;
       }
-      this.view.showMessage(messageFor(err));
+      const field = err && FIELD_OF[err.code];
+      if(field) this.view.showFieldError(field, messageFor(err));
+      else this.view.showMessage(messageFor(err));
     }
 
     /* Aviso de que un acceso nuevo (p. ej. GitHub) se unió a la cuenta. */
@@ -186,29 +205,55 @@
 
     signInWith(key){
       this.view.clearMessage();
-      this.view.setBusy(true);
-      firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
+      const turn = this.hold(key);
+      /* Firebase tarda varios segundos en darse cuenta de que se ha cerrado la ventana de acceso.
+         No se espera a eso: en cuanto esta página recupera el foco, los botones vuelven a servir.
+         Si la ventana se cerró porque el acceso salió bien, la app entra igualmente. */
+      let timer = 0;
+      const back = () => { timer = setTimeout(() => this.release(turn), POPUP_GRACE); };
+      window.addEventListener('focus', back, {once:true});
+      firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => {
+        /* Un intento que ya se dio por abandonado no pinta errores sobre el siguiente. */
+        if(this.busyTurn === turn || !this.busyTurn) this.showError(err);
+      }).finally(() => {
+        window.removeEventListener('focus', back);
+        clearTimeout(timer);
+        this.release(turn);
+      });
+    }
+
+    /* Ocupa el formulario y devuelve el turno; solo ese turno puede liberarlo (un intento anterior
+       que termina tarde no desbloquea el siguiente). */
+    hold(who){
+      this.turns = (this.turns || 0) + 1;
+      this.busyTurn = this.turns;
+      this.view.setBusy(true, who);
+      return this.busyTurn;
+    }
+
+    release(turn){
+      if(this.busyTurn !== turn) return;
+      this.busyTurn = 0;
+      this.view.setBusy(false);
     }
 
     submitEmail(mode, v){
-      if(!v.email){ this.view.showMessage(ERRORS['auth/missing-email']); return; }
+      if(!v.email){ this.view.showFieldError('email', ERRORS['auth/missing-email']); return; }
+      if(!EMAIL_RE.test(v.email)){ this.view.showFieldError('email', ERRORS['auth/invalid-email']); return; }
       let p;
       if(mode === 'reset'){
-        p = firebase.resetPassword(v.email).then(() => {
-          this.view.setMode('signin');
-          this.view.showMessage('Si existe una cuenta con ' + v.email + ', te hemos enviado un enlace para cambiar la contraseña.', true);
-        }).catch((err) => {
-          /* No revelar si el correo tiene cuenta. */
-          if(err && err.code === 'auth/user-not-found'){
-            this.view.setMode('signin');
-            this.view.showMessage('Si existe una cuenta con ' + v.email + ', te hemos enviado un enlace para cambiar la contraseña.', true);
-          } else this.showError(err);
+        /* No revelar si el correo tiene cuenta: «no existe» cuenta como enviado. */
+        const send = () => firebase.resetPassword(v.email).catch((err) => {
+          if(!err || err.code !== 'auth/user-not-found') throw err;
         });
+        p = send().then(() => {
+          this.view.showResetSent(v.email, () => send().then(() => true, () => false));
+        }).catch((err) => this.showError(err));
       } else if(!v.password){
-        this.view.showMessage(ERRORS['auth/missing-password']);
+        this.view.showFieldError('password', ERRORS['auth/missing-password']);
         return;
       } else if(mode === 'signup'){
-        if(v.password.length < MIN_PASSWORD){ this.view.showMessage(ERRORS['auth/weak-password']); return; }
+        if(Array.from(v.password).length < MIN_PASSWORD){ this.view.showFieldError('password', ERRORS['auth/weak-password']); return; }
         /* El nombre se guarda justo después de crear la cuenta: se repinta al terminar. */
         p = firebase.signUpWithEmail(v.email, v.password, v.name).then((cred) => {
           if(this.user && cred && cred.user) this.view.showAccount(cred.user);
@@ -216,8 +261,8 @@
       } else {
         p = firebase.signInWithEmail(v.email, v.password).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err));
       }
-      this.view.setBusy(true);
-      p.finally(() => this.view.setBusy(false));
+      const turn = this.hold('submit');
+      p.finally(() => this.release(turn));
     }
 
     /* Al salir se recarga la página (onUser) y, ya sin sesión, se borra la

@@ -96,11 +96,12 @@
 
       this.buildScene();
       /* La pantalla del ordenador de la escena acompaña al formulario: mientras se escribe
-         enseña un cuadro de acceso con un punto por carácter. Solo se le pasa cuántos hay. */
+         enseña un cuadro de acceso con el correo (o el nombre) letra a letra. De la contraseña
+         solo se le pasa cuántos caracteres hay, y salen como puntos. */
       const fields = [this.name, this.email, this.pass, this.guestName];
       const typing = (ev) => {
         const el = ev.target;
-        if(el && el.tagName === 'INPUT') this.scene({chars:el.value.length, active:fields.some((f) => !!f.value)});
+        if(el && el.tagName === 'INPUT') this.scene({chars:el.value.length, text:el === this.pass ? null : el.value, active:fields.some((f) => !!f.value)});
       };
       ['input', 'focusin'].forEach((type) => this.panel.addEventListener(type, typing));
 
@@ -387,7 +388,7 @@
       this.submitLabel.textContent = t.submit;
       /* La contraseña no pasa de un modo a otro; el correo, sí. */
       if(changed) this.pass.value = '';
-      this.scene({chars:0, active:!!(this.email.value || this.name.value)});
+      this.scene({chars:0, text:null, active:!!(this.email.value || this.name.value)});
       this.email.autocomplete = mode === 'signup' ? 'email' : 'username';
       this.caps.hidden = true;
       this.switchText.textContent = t.switchText;

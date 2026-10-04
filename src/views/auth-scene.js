@@ -40,6 +40,10 @@
     /* El formulario, para la pantalla del ordenador: caracteres escritos, cuánto se ve el */
     /* cuadro de acceso, «entrando…» y el resultado (hacia 1, acceso correcto; hacia -1, error). */
     'uniform vec4 uUI;',
+    /* Lo que se escribe en el campo, pintado como texto en una imagen (el correo o el nombre; */
+    /* la contraseña nunca). uTextW: cuánto ancho de la imagen ocupa, o -1 si toca enseñar puntos. */
+    'uniform sampler2D uText;',
+    'uniform float uTextW;',
     /* Luciérnagas: posición y brillo de cada una (las mueve el JS). */
     'const int FF_N = 40;',
     'uniform vec4 uFF[40];',
@@ -221,35 +225,41 @@
     '  float cur = max(sdBox2(rot(.6) * (u - m), vec2(.035, .06)), -(u.y - m.y - .05));',
     '  col = mix(col, vec3(.08), (1. - smoothstep(0., aa, cur)) * (1. - uUI.y));',
 
-    /* El cuadro de acceso: aparece sobre el tablero mientras se escribe en el formulario. Un */
-    /* punto por carácter (solo cuántos hay, nunca cuáles), el cursor de texto y el botón, que */
-    /* enseña una barra que va y viene mientras se espera la respuesta. */
+    /* El cuadro de acceso: aparece sobre el tablero mientras se escribe en el formulario. El */
+    /* correo se ve con sus letras; la contraseña, un punto por carácter (de ella solo llega */
+    /* cuántos hay). Debajo, el botón, con una barra que va y viene mientras se espera. */
     '  float show = uUI.y;',
     '  vec2 e = vec2(1., .733);',
     '  if(show > .002){',
     '    float bad = max(-uUI.w, 0.);',
     '    col = mix(col, col * .50 + vec3(.11, .10, .09), show * .85);',
-    '    vec2 dc = u - vec2(.045 * sin(uTime * 40.) * bad, -.03 - .10 * (1. - show));',
-    '    float dd = rr(dc, vec2(.60, .40), .08);',
+    '    vec2 dc = u - vec2(.045 * sin(uTime * 40.) * bad, -.02 - .10 * (1. - show));',
+    '    float dd = rr(dc, vec2(.88, .62), .10);',
     '    col = mix(col, vec3(.16, .14, .13), (1. - smoothstep(0., .10, dd)) * .40 * show);',
     '    vec3 dlg = vec3(.99, .975, .94);',
-    '    dlg = mix(dlg, vec3(.20, .20, .23), 1. - smoothstep(0., aa, rr(dc - vec2(-.24, .25), vec2(.24, .034), .03)));',
-    '    float fd = rr(dc - vec2(0., .04), vec2(.50, .095), .06);',
+    '    dlg = mix(dlg, vec3(.20, .20, .23), 1. - smoothstep(0., aa, rr(dc - vec2(-.44, .42), vec2(.30, .045), .04)));',
+    '    float fd = rr(dc - vec2(0., .08), vec2(.78, .19), .08);',
     '    dlg = mix(dlg, mix(vec3(.90, .88, .83), vec3(.98, .72, .68), bad), 1. - smoothstep(0., aa, fd));',
     '    float dots = 1e3;',
     '    for(int i = 0; i < 9; i++){',
     '      float fi = float(i);',
     '      float on = clamp(uUI.x - fi, 0., 1.);',
-    '      dots = min(dots, length((dc - vec2(-.40 + fi * .092, .04)) * e) - .030 * on + (1. - on));',
+    '      dots = min(dots, length((dc - vec2(-.60 + fi * .15, .08)) * e) - .050 * on + (1. - on));',
     '    }',
-    '    dlg = mix(dlg, vec3(.16, .16, .19), 1. - smoothstep(0., aa, dots));',
-    '    float caret = rr(dc - vec2(-.445 + min(uUI.x, 9.) * .092, .04), vec2(.011, .058), .005);',
+    '    float typed = step(0., uTextW);',
+    '    dlg = mix(dlg, vec3(.16, .16, .19), (1. - smoothstep(0., aa, dots)) * (1. - typed));',
+    /* Las letras: la imagen ocupa el interior del campo. */
+    '    vec2 tu = (dc - vec2(-.70, -.05)) / vec2(1.40, .26);',
+    '    float ink = textureLod(uText, clamp(tu, 0., 1.), 0.).a * step(0., tu.x) * step(tu.x, 1.) * step(0., tu.y) * step(tu.y, 1.);',
+    '    dlg = mix(dlg, vec3(.13, .13, .16), ink * typed);',
+    '    float cx = mix(-.675 + min(uUI.x, 9.) * .15, -.685 + uTextW * 1.40, typed);',
+    '    float caret = rr(dc - vec2(cx, .08), vec2(.014, .115), .006);',
     '    dlg = mix(dlg, vec3(.16, .16, .19), (1. - smoothstep(0., aa, caret)) * step(.5, fract(uTime * 1.1)) * (1. - uUI.z));',
-    '    float bd = rr(dc - vec2(0., -.21), vec2(.50, .080), .06);',
+    '    float bd = rr(dc - vec2(0., -.34), vec2(.78, .12), .08);',
     '    vec3 btn = vec3(.11, .11, .13);',
-    '    float sweep = abs(dc.x - .42 * sin(uTime * 2.6));',
-    '    btn = mix(btn, vec3(.62, .66, .78), uUI.z * (1. - smoothstep(.02, .20, sweep)));',
-    '    btn = mix(btn, vec3(.80, .80, .84), (1. - uUI.z) * (1. - smoothstep(0., aa, rr(dc - vec2(0., -.21), vec2(.17, .020), .02))));',
+    '    float sweep = abs(dc.x - .62 * sin(uTime * 2.6));',
+    '    btn = mix(btn, vec3(.62, .66, .78), uUI.z * (1. - smoothstep(.02, .26, sweep)));',
+    '    btn = mix(btn, vec3(.80, .80, .84), (1. - uUI.z) * (1. - smoothstep(0., aa, rr(dc - vec2(0., -.34), vec2(.24, .028), .025))));',
     '    dlg = mix(dlg, btn, 1. - smoothstep(0., aa, bd));',
     '    col = mix(col, dlg, (1. - smoothstep(0., aa, dd)) * show);',
     '  }',
@@ -1265,7 +1275,7 @@
       gl.linkProgram(prog);
       if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     const scene = program(VERT, HEAD + COMMON + '\n' + FRAG);
@@ -1330,6 +1340,40 @@
     };
     treeImg.src = TREE_URL;
     canvas.classList.add('is-on');
+
+    /* Lo que se escribe en el formulario (correo o nombre), como texto para la pantalla del
+       ordenador: se pinta en un lienzo aparte y se sube como imagen cada vez que cambia. Si no
+       cabe, se ve el final, como en un campo de verdad. La contraseña no pasa por aquí. */
+    const textCanvas = document.createElement('canvas');
+    textCanvas.width = 512; textCanvas.height = 96;
+    const textCtx = textCanvas.getContext('2d');
+    const textTex = gl.createTexture();
+    let textW = -1;
+    function setText(value){
+      if(!textCtx) return;
+      if(value === null){ textW = -1; return; }
+      const W = textCanvas.width, H = textCanvas.height;
+      textCtx.clearRect(0, 0, W, H);
+      textCtx.font = '600 62px ui-monospace, Consolas, "Courier New", monospace';
+      textCtx.textBaseline = 'middle';
+      textCtx.fillStyle = '#fff';
+      const w = textCtx.measureText(value).width;
+      const room = W - 28;
+      textCtx.fillText(value, w > room ? room - w : 0, H / 2 + 3);
+      textW = Math.min(w, room) / W;
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, textTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textCanvas);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.activeTexture(gl.TEXTURE0);
+    }
+    setText('');
+    textW = -1;
 
     const root = document.documentElement;
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1470,6 +1514,11 @@
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
       gl.uniform1i(scene.U.uTree, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, textTex);
+      gl.uniform1i(scene.U.uText, 1);
+      gl.uniform1f(scene.U.uTextW, textW);
+      gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(scene.U.uTreeOn, treeReady ? 1 : 0);
       gl.bindVertexArray(fullVao);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1530,14 +1579,16 @@
       raf = requestAnimationFrame(loop);
     }
 
-    /* Lo que pasa en el formulario, para la pantalla del ordenador. Solo llega cuántos
-       caracteres hay en el campo, nunca cuáles.
+    /* Lo que pasa en el formulario, para la pantalla del ordenador. {text}: lo escrito en el
+       correo o el nombre, para enseñarlo con letras (null: enseñar puntos). De la contraseña solo
+       llega cuántos caracteres hay, nunca cuáles.
        {chars, active}: caracteres del campo en uso y si el formulario tiene algo escrito.
        {busy}: se espera la respuesta. {ok:true}: acceso
        correcto. {error:true}: un golpe de error. {reset:true}: todo a cero. */
     function signal(o){
       if(o.reset){ ui.tChars = ui.tShow = ui.tBusy = ui.tRes = 0; }
       if(typeof o.chars === 'number') ui.tChars = Math.min(o.chars, 9);
+      if('text' in o) setText(typeof o.text === 'string' ? o.text : null);
       if('active' in o) ui.active = !!o.active;
       if('busy' in o) ui.tBusy = o.busy ? 1 : 0;
       if(o.error){ ui.res = -1; ui.tRes = -1; }

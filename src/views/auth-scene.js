@@ -3,7 +3,8 @@
    librerías ni imágenes): una colina con hierba brizna a brizna, mecida por el viento, con
    su luz y sus sombras; cielo con nubes y, en lo alto, un monitor de tubo antiguo
    con un tablero en la pantalla. Atardecer en tema claro y noche en
-   oscuro. La cámara se mueve un poco con el ratón.
+   oscuro. La cámara está fija: lo único que se mueve es la hierba, las nubes, los pétalos y
+   las luciérnagas.
 
    El ordenador se coloca siempre en el centro del panel de cristal de la tarjeta de acceso
    (uFocus), sea cual sea el tamaño de la ventana.
@@ -19,7 +20,6 @@
     'uniform vec2 uRes;',
     'uniform float uTime;',
     'uniform vec2 uFocus;',
-    'uniform vec2 uMouse;',
     'uniform float uNight;',
     'uniform sampler2D uTree;',
     'uniform float uTreeOn;',
@@ -260,7 +260,7 @@
     '  float treeSc = TREE_SC * uTreeS;',
     '  float base = terrain(vec2(0.));',
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
-    '  vec3 ro = vec3(2.2 + uMouse.x * .45, base + .62 + uMouse.y * .10, -11.5);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
     '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
@@ -512,13 +512,15 @@
     '    vec3 pn = normalize(vec3(-2.2, 0., 11.5));',
     '    vec3 pr = vec3(pn.z, 0., -pn.x);',
     '    float tp = dot(treeB - ro, pn) / dot(rd, pn);',
-    '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
-    '      vec3 hp = ro + rd * tp - treeB;',
+    '    vec3 hp = ro + rd * tp - treeB;',
     /* En unidades del modelo (la imagen abarca 9,2 de lado, con el suelo a 0,9 del borde de abajo). */
-    '      vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
-    '      vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
+    '    vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
+    '    vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
+    /* Se lee siempre, fuera de cualquier condición: dentro, el nivel de detalle de la textura */
+    /* queda indefinido y hay equipos que la pintan a saltos. */
+    '    vec4 tr = texture2D(uTree, clamp(tuv, 0., 1.));',
+    '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
-    '        vec4 tr = texture2D(uTree, tuv);',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
     '        vec3 tint = mix(vec3(1.12, .90, .86), vec3(.50, .47, .74), uNight) * mix(.86, 1.06, smoothstep(.5, 6.5, u.y));',
     '        vec3 tc = tr.rgb * tint;',
@@ -606,7 +608,7 @@
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = {};
-    ['uRes', 'uTime', 'uFocus', 'uMouse', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+    ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
     /* El cerezo: un modelo 3D renderizado aparte a una imagen con transparencia. Hasta que
        llega, la escena se pinta sin él. */
     let treeReady = false;
@@ -617,8 +619,7 @@
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, treeImg);
-      gl.generateMipmap(gl.TEXTURE_2D);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -635,7 +636,7 @@
     const isDark = () => { const a = root.getAttribute('data-theme'); return a ? a === 'dark' : darkQuery.matches; };
     const isStill = () => stillQuery.matches || root.getAttribute('data-motion') === 'reduced';
 
-    let scale = 1, night = isDark() ? 1 : 0, mx = 0, my = 0, tx = 0, ty = 0;
+    let scale = 1, night = isDark() ? 1 : 0;
     let raf = 0, last = 0, t0 = performance.now();
     /* Calidad: si los fotogramas llegan tarde, se baja la resolución (hasta dos veces). */
     let side = MAX_SIDE, slow = 0, counted = 0, drops = 0;
@@ -646,26 +647,32 @@
       canvas.width = Math.max(2, Math.round(w * scale));
       canvas.height = Math.max(2, Math.round(h * scale));
       gl.viewport(0, 0, canvas.width, canvas.height);
+      if(!place || place.w !== w || place.h !== h) place = layout(w, h);
     }
 
-    /* Centro del panel de cristal, en píxeles del lienzo (con el origen abajo). */
-    function focus(){
-      const box = canvas.getBoundingClientRect();
-      const r = focusEl && focusEl.offsetParent ? focusEl.getBoundingClientRect() : null;
-      const x = r ? r.left + r.width / 2 : box.width / 2;
-      const y = r ? r.top + r.height * 0.56 : box.height * 0.6;
-      return [(x - box.left) * scale, (box.height - (y - box.top)) * scale];
+    /* Dónde va cada cosa, en píxeles de pantalla. Se calcula una vez por tamaño de ventana y
+       no en cada fotograma: si siguiera a la tarjeta, la escena entera (y con ella el árbol)
+       daría saltos cada vez que la tarjeta se anima o cambia de alto. Por eso tampoco se usa
+       getBoundingClientRect, que incluye las transformaciones de la animación de entrada.
+       - fx, fy: centro del panel de cristal, donde se coloca el ordenador.
+       - tx: dónde cae el tronco del cerezo, cerca del borde izquierdo.
+       - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas. */
+    let place = null;
+    function offset(el){
+      let x = 0, y = 0;
+      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
+      return {x, y};
     }
-
-    /* El cerezo sale desde la izquierda, en primer término. Devuelve dónde cae su tronco (en
-       píxeles del lienzo): cerca del borde, algo más adentro cuanto más hueco deja la tarjeta;
-       y su tamaño: entero en horizontal, más pequeño en pantallas estrechas. */
-    function treePlace(){
-      const box = canvas.getBoundingClientRect();
-      const card = focusEl && focusEl.parentElement ? focusEl.parentElement.getBoundingClientRect() : null;
-      const left = card ? Math.max(card.left - box.left, 0) : box.width * 0.2;
-      const size = Math.min(Math.max(box.width / box.height * 0.8, 0.6), 1);
-      return {x: Math.max(left * 0.36, box.height * 0.05) * scale, size};
+    function layout(w, h){
+      let fx = w / 2, fy = h * 0.6, left = w * 0.2;
+      if(focusEl && focusEl.offsetParent){
+        const o = offset(focusEl);
+        fx = o.x + focusEl.offsetWidth / 2;
+        fy = o.y + focusEl.offsetHeight * 0.56;
+      }
+      const card = focusEl && focusEl.parentElement;
+      if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
+      return {w, h, fx, fy, tx: Math.max(left * 0.36, h * 0.05), ts: Math.min(Math.max(w / h * 0.8, 0.6), 1)};
     }
 
     function draw(now){
@@ -673,21 +680,16 @@
       const target = isDark() ? 1 : 0;
       night += (target - night) * (still ? 1 : 0.06);
       if(Math.abs(target - night) < 0.002) night = target;
-      mx += (tx - mx) * 0.06;
-      my += (ty - my) * 0.06;
-      const f = focus();
       gl.uniform2f(U.uRes, canvas.width, canvas.height);
       gl.uniform1f(U.uTime, still ? 12 : (now - t0) / 1000);
-      gl.uniform2f(U.uFocus, f[0], f[1]);
-      gl.uniform2f(U.uMouse, still ? 0 : mx, still ? 0 : my);
+      gl.uniform2f(U.uFocus, place.fx * scale, (place.h - place.fy) * scale);
       gl.uniform1f(U.uNight, night);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
       gl.uniform1i(U.uTree, 0);
       gl.uniform1f(U.uTreeOn, treeReady ? 1 : 0);
-      const tree = treePlace();
-      gl.uniform1f(U.uTreeX, tree.x);
-      gl.uniform1f(U.uTreeS, tree.size);
+      gl.uniform1f(U.uTreeX, place.tx * scale);
+      gl.uniform1f(U.uTreeS, place.ts);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
@@ -720,12 +722,6 @@
     new MutationObserver(wake).observe(screen, {attributes:true, attributeFilter:['hidden']});
     new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
     if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake);
-    if(window.matchMedia('(pointer: fine)').matches){
-      screen.addEventListener('pointermove', (ev) => {
-        tx = 0.5 - ev.clientX / window.innerWidth;
-        ty = ev.clientY / window.innerHeight - 0.5;
-      });
-    }
     canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; canvas.classList.remove('is-on'); });
     wake();
     return true;

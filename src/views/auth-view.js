@@ -42,6 +42,7 @@
       this.switchLink = $('authSwitchLink');
       this.guest = $('authGuest');
       this.guestBtn = $('authGuestBtn');
+      this.alt = $('authAlt');
       this.guestForm = $('authGuestForm');
       this.guestName = $('authGuestName');
       this.guestMsg = $('authGuestMsg');
@@ -68,6 +69,8 @@
         b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
       });
 
+      this.buildScene();
+
       /* Ver u ocultar la contraseña mientras se escribe. */
       this.passToggle = $('authPassToggle');
       this.passToggle.addEventListener('click', () => this.setPassVisible(this.pass.type === 'password'));
@@ -82,6 +85,13 @@
         ev.preventDefault();
         this.setMode('reset');
       });
+    }
+
+    /* Paisaje en 3D de detrás del acceso (src/views/auth-scene.js). Si no hay WebGL se queda
+       el degradado de cielo de auth.css. */
+    buildScene(){
+      const canvas = $('authCanvas');
+      if(canvas && Workhub.views.authScene) Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));
     }
 
     /* ---------- Eventos hacia el controlador ---------- */
@@ -172,7 +182,8 @@
       const social = providers.filter((p) => PROVIDERS[p]);
       this.hasPassword = providers.indexOf('password') !== -1;
       this.providersEl.innerHTML = social.map((p) =>
-        '<button type="button" class="auth-provider" data-provider="' + p + '">' + PROVIDERS[p].icon + '<span>' + esc(PROVIDERS[p].label) + '</span></button>'
+        '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
+          PROVIDERS[p].icon + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
       ).join('');
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
@@ -281,7 +292,9 @@
       this.pass.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
       this.forgot.hidden = mode !== 'signin';
       this.providersEl.hidden = mode === 'reset' || !this.providersEl.children.length;
-      this.divider.hidden = mode === 'reset' || !this.providersEl.children.length || !this.hasPassword;
+      /* Bajo el formulario: «o continúa con» y la fila de accesos (proveedores e invitado). */
+      this.divider.hidden = mode === 'reset' || !this.hasPassword;
+      this.alt.hidden = mode === 'reset';
       this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
       this.guest.hidden = mode === 'reset';
       this.clearMessage();

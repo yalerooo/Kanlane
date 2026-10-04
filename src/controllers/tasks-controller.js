@@ -116,7 +116,7 @@
     }
 
     postComment(id, text){
-      if(!Workhub.views.team.enabled() || !Workhub.views.team.canEdit()) return;
+      if(!Workhub.views.team.canEdit()) return;
       this.detail.setCommentBusy(true);
       this.tasks.addNote(id, text, '').then(() => this.detail.commentSaved(),
         () => this.detail.commentFailed()).finally(() => this.detail.setCommentBusy(false));

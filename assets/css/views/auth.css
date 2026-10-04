@@ -1,7 +1,7 @@
 /* ---------- Pantalla de acceso ----------
-   Estilo «cristal limpio»: una sola hoja de cristal sobre el fondo con el velo del
-   acento. Dentro no hay más cristal: el formulario va directo sobre la hoja y el
-   panel de presentación, sobre relleno suave (--surface-2). */
+   Sobre un paisaje animado (al final de este archivo) va una tarjeta de dos mitades: a la
+   izquierda el formulario, sobre superficie sólida; a la derecha, un panel de cristal de
+   verdad que deja ver el paisaje, con la presentación encima en blanco. */
 .auth-screen{
   position:fixed;
   inset:0;
@@ -16,41 +16,43 @@ body.is-authing .app{display:none;}
 /* Mientras se comprueba la sesión (clase puesta en el <head>): nunca se ve la
    app, y la pantalla de acceso se muestra desde el primer fotograma. */
 html.auth-gate .app{display:none !important;}
-.auth-screen::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background:
-    radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--hue-a) calc(var(--wash) * 100%), transparent) 0, transparent 70%),
-    radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--hue-b) calc(var(--wash) * 70%), transparent) 0, transparent 70%);
-}
 
-/* Barra de arriba: marca (vuelve a la portada), idioma y tema. */
+/* Barra de arriba: solo el idioma y el tema, a la derecha, en una pastilla de cristal. */
 .auth-top{
   flex:none;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   gap:12px;
   padding:14px 20px;
 }
+/* La marca va dentro de la tarjeta, arriba (vuelve a la portada). */
 .auth-brand{
+  align-self:flex-start;
   display:inline-flex;
   align-items:center;
-  gap:9px;
-  padding:4px 8px 4px 4px;
-  margin-left:-4px;
+  gap:10px;
+  padding:4px 10px 4px 4px;
+  margin:-4px 0 0 -4px;
   color:var(--ink);
   text-decoration:none;
   border-radius:var(--r-md);
 }
 .auth-brand:hover{background:var(--hover);}
 .auth-brand:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
-.auth-logo{display:block;width:28px;height:28px;border-radius:8px;}
-.auth-brand-name{font-size:15px;font-weight:600;letter-spacing:-0.02em;}
-.auth-tools{display:flex;align-items:center;gap:8px;}
+.auth-logo{display:block;width:30px;height:30px;border-radius:8px;}
+.auth-brand-name{font-size:16px;font-weight:600;letter-spacing:-0.02em;}
+.auth-tools{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px;
+  background:color-mix(in srgb, var(--surface-solid) 46%, transparent);
+  border:1px solid var(--glass-line);
+  border-radius:calc(var(--r-md) + 4px);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  backdrop-filter:blur(14px) saturate(1.4);
+}
 .auth-lang button{min-width:36px;height:26px;padding:0 9px;font-size:12px;font-weight:550;letter-spacing:.02em;}
 .auth-theme{width:30px;height:30px;}
 /* Sol en oscuro, luna en claro (como el botón del pie de la barra lateral). */
@@ -69,65 +71,81 @@ html.auth-gate .app{display:none !important;}
   margin:auto;
   width:min(900px, 100%);
   display:grid;
-  grid-template-columns:minmax(0, 404px) minmax(0, 1fr);
-  background:var(--sheet);
-  border:1px solid var(--glass-line);
-  border-radius:calc(var(--r-sheet) + 4px);
-  -webkit-backdrop-filter:var(--sheet-blur);
-  backdrop-filter:var(--sheet-blur);
-  box-shadow:var(--glass-shadow);
-  animation:auth-in .32s cubic-bezier(.2,.7,.2,1) both;
+  grid-template-columns:minmax(0, 412px) minmax(0, 1fr);
+  min-height:min(560px, calc(100dvh - 190px));
+  border-radius:calc(var(--r-sheet) + 6px);
+  overflow:hidden;
+  box-shadow:0 0 0 1px var(--glass-line), 0 40px 90px -30px rgba(10, 8, 24, 0.55);
+  animation:auth-in .5s cubic-bezier(.2,.7,.2,1) both;
 }
-@keyframes auth-in{from{opacity:0;transform:translateY(8px);}}
+@keyframes auth-in{from{opacity:0;transform:translateY(14px) scale(.985);}}
 @media (prefers-reduced-motion: reduce){.auth-shell{animation:none;}}
 
 /* ---------- Formulario ---------- */
-.auth-card{min-width:0;padding:36px 36px 30px;display:flex;flex-direction:column;justify-content:center;}
-.auth-card h1{font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;margin:0 0 6px;}
+.auth-card{min-width:0;padding:34px 38px 30px;display:flex;flex-direction:column;gap:28px;background:var(--surface-solid);}
+.auth-card > #authPanel,.auth-card > .auth-loading{margin-top:auto;}
+.auth-card h1{font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;margin:0 0 6px;}
 .auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
-.auth-providers{display:flex;flex-direction:column;gap:8px;}
+.auth-alt{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0, 1fr);gap:8px;}
+.auth-alt[hidden]{display:none;}
+.auth-providers{display:contents;}
 .auth-provider{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:10px;
-  width:100%;
-  height:38px;
+  gap:8px;
+  min-width:0;
+  height:40px;
+  padding:0 8px;
   font-family:inherit;
   font-size:13px;
   font-weight:500;
   color:var(--ink);
-  background:var(--surface);
-  border:1px solid var(--line-strong);
-  border-radius:var(--r-md);
+  background:var(--surface-2);
+  border:1px solid transparent;
+  border-radius:calc(var(--r-md) + 2px);
   cursor:pointer;
   transition:background .12s ease, border-color .12s ease;
 }
-.auth-provider:hover:not(:disabled){background:var(--hover);border-color:var(--ink-faint);}
+.auth-provider:hover:not(:disabled){background:var(--surface-3);}
 .auth-provider:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .auth-provider:disabled{opacity:.55;cursor:progress;}
 .auth-provider svg{width:17px;height:17px;flex:none;}
+.auth-provider span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .auth-divider{
   display:flex;
   align-items:center;
   gap:10px;
-  margin:18px 0 14px;
+  margin:20px 0 14px;
   font-size:12px;
   color:var(--ink-faint);
 }
 .auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line);}
-.auth-form input{width:100%;min-height:36px;}
+.auth-form .field{margin-bottom:10px;}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]){
+  width:100%;
+  min-height:44px;
+  padding:0 14px;
+  font-size:13.5px;
+  background:var(--surface-2);
+  border-color:transparent;
+  border-radius:calc(var(--r-md) + 2px);
+}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover{border-color:var(--line-strong);}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus{background:var(--surface-solid);border-color:var(--accent-solid);}
+.auth-forgot{align-self:flex-end;margin-top:2px;font-size:12.5px;color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
+.auth-forgot:hover{color:var(--ink);text-decoration-color:currentColor;}
 .auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .auth-label-row label{font-size:12.5px;font-weight:500;color:var(--ink-soft);}
 .auth-label-row a,.auth-switch a{font-size:12.5px;color:var(--ink);font-weight:500;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
 .auth-label-row a:hover,.auth-switch a:hover{text-decoration-color:currentColor;}
 /* Contraseña con el botón de ver/ocultar dentro del campo. */
 .auth-pass{position:relative;}
-.auth-pass input{padding-right:40px;}
+.auth-form .auth-pass input{padding-right:44px;}
 .auth-pass-toggle{
   position:absolute;
   top:50%;
-  right:4px;
+  right:8px;
   transform:translateY(-50%);
   display:grid;
   place-items:center;
@@ -145,10 +163,10 @@ html.auth-gate .app{display:none !important;}
 .auth-pass-toggle .ic-eye-off{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye-off{display:block;}
-.auth-submit{width:100%;height:38px;margin-top:4px;font-size:13.5px;}
+.auth-submit{width:100%;height:44px;margin-top:6px;font-size:14px;border-radius:calc(var(--r-md) + 2px);}
 .auth-msg{font-size:12.5px;line-height:1.45;color:var(--danger);margin:0 0 10px;}
 .auth-msg.is-info{color:var(--st-done);}
-.auth-switch{margin:16px 0 0;text-align:center;font-size:12.5px;color:var(--ink-soft);}
+.auth-switch{margin:18px 0 0;text-align:center;font-size:12.5px;color:var(--ink-faint);}
 
 /* Aviso «esta cuenta ya existe»: neutro, con la explicación y los dos pasos. */
 .auth-notice{
@@ -204,93 +222,34 @@ html.auth-gate .app{display:none !important;}
 }
 
 /* ---------- Invitado ---------- */
-.auth-guest{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
-.auth-guest-row{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  width:100%;
-  padding:9px 10px;
-  font-family:inherit;
-  text-align:left;
-  color:var(--ink);
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--r-lg);
-  cursor:pointer;
-  transition:background .12s ease, border-color .12s ease;
-}
-.auth-guest-row:hover{background:var(--hover);border-color:var(--line);}
-.auth-guest-row:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
-.auth-guest-ic{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:var(--r-md);color:var(--ink-soft);background:var(--surface-2);}
-.auth-guest-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.35;}
-.auth-guest-title{font-size:13px;font-weight:550;}
-.auth-guest-sub{font-size:12px;color:var(--ink-soft);}
-.auth-guest-go{flex:none;color:var(--ink-faint);transition:transform .12s ease;}
-.auth-guest-row:hover .auth-guest-go{transform:translateX(2px);color:var(--ink);}
 .auth-guest-note{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
-.auth-guest-back{width:100%;height:36px;margin-top:8px;}
+.auth-guest-back{width:100%;height:40px;margin-top:8px;border-radius:calc(var(--r-md) + 2px);}
 /* Paso «invitado»: solo el nombre y sus botones, sin el resto del acceso. */
 #authPanel.is-guest #authNotice,
 #authPanel.is-guest #authProviders,
 #authPanel.is-guest #authDivider,
 #authPanel.is-guest #authEmailForm,
 #authPanel.is-guest #authSwitch,
-#authPanel.is-guest #authGuestBtn{display:none;}
-#authPanel.is-guest .auth-guest{margin-top:0;padding-top:0;border-top:none;}
+#authPanel.is-guest #authAlt{display:none;}
 
 /* ---------- Panel de presentación (solo en pantallas anchas) ---------- */
+/* Ventana de cristal al paisaje: sin contenido, con un tinte mínimo y un desenfoque muy
+   leve, para que el ordenador de la colina se vea nítido a través de ella. */
 .auth-aside{
   min-width:0;
-  margin:8px 8px 8px 0;
-  padding:30px 28px 26px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:22px;
-  background:var(--surface-2);
-  border-radius:var(--r-sheet);
+  background:rgba(255, 255, 255, 0.05);
+  border-left:1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:inset 0 0 0 1px rgba(255, 255, 255, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter:blur(1.5px) saturate(1.15);
+  backdrop-filter:blur(1.5px) saturate(1.15);
 }
-.auth-aside-title{margin:0;font-size:19px;font-weight:600;letter-spacing:-0.025em;line-height:1.25;color:var(--ink);text-wrap:balance;}
-/* Tablero de muestra: sin texto, solo la forma de las columnas y las tarjetas. */
-.auth-preview{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:8px;
-  padding:10px;
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:var(--r-lg);
-}
-.auth-pcol{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.auth-phead{display:flex;align-items:center;gap:6px;height:18px;padding:0 2px;}
-.auth-pring{width:9px;height:9px;flex:none;border:2px solid var(--c);border-radius:50%;}
-.auth-pring.is-done{background:var(--c);}
-.auth-pbar{display:block;height:5px;border-radius:3px;background:var(--surface-3);}
-.auth-pbar.is-soft{background:var(--surface-2);}
-.auth-pcard{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  padding:9px 9px 10px;
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:var(--r-md);
-  box-shadow:var(--shadow-sm);
-}
-.auth-pcard.is-done{opacity:.6;}
-.auth-ptag{width:7px;height:7px;border-radius:2px;background:hsl(var(--h) var(--chip-s) var(--chip-dot-l));}
-.auth-points{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
-.auth-points li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.45;color:var(--ink-soft);}
-.auth-point-ic{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-top:-2px;border-radius:7px;color:var(--ink);background:var(--surface);border:1px solid var(--line);}
 
 /* ---------- Pie ---------- */
 .auth-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 20px 18px;}
-.auth-foot{margin:0;font-size:12px;line-height:1.5;color:var(--ink-faint);text-align:center;max-width:440px;}
-.auth-foot a{color:var(--ink-soft);text-decoration-color:var(--line-strong);text-underline-offset:3px;}
-.auth-foot a:hover{color:var(--ink);}
-/* El cifrado ya se cuenta en el panel de presentación; el pie lo dice cuando el panel no se ve. */
-.auth-foot-crypto{display:none;}
+/* El pie queda sobre la colina oscura del primer plano: texto claro en los dos temas. */
+.auth-foot{margin:0;font-size:12px;line-height:1.5;color:rgba(255, 255, 255, 0.78);text-align:center;max-width:440px;text-shadow:0 1px 8px rgba(10, 8, 24, 0.6);}
+.auth-foot a{color:#fff;text-decoration-color:rgba(255, 255, 255, 0.45);text-underline-offset:3px;}
+.auth-foot a:hover{text-decoration-color:#fff;}
 
 /* ---------- Estados: carga, error y correo sin verificar ---------- */
 .auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}
@@ -304,10 +263,9 @@ html.auth-gate .app{display:none !important;}
 
 /* ---------- Tablet y móvil: solo el formulario ---------- */
 @media (max-width: 860px){
-  .auth-shell{width:min(420px, 100%);grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
+  .auth-shell{width:min(420px, 100%);min-height:0;grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
   .auth-aside{display:none;}
   .auth-card{padding:30px 28px 24px;}
-  .auth-foot-crypto{display:block;}
 }
 @media (max-width: 480px){
   .auth-top{padding:10px 14px;}
@@ -321,6 +279,20 @@ html.auth-gate .app{display:none !important;}
   .auth-pass-toggle{width:32px;height:32px;}
 }
 
+
+/* ---------- Paisaje de fondo ----------
+   Detrás del acceso hay una escena en 3D pintada con WebGL (src/views/auth-scene.js): una
+   colina, un árbol y un ordenador antiguo con un tablero en la pantalla; atardecer en claro
+   y noche en oscuro. Aquí solo va el lienzo y, debajo, un degradado de cielo por si el
+   navegador no tiene WebGL. El panel derecho de la tarjeta es una ventana de cristal. */
+.auth-screen{--sc-sky:linear-gradient(180deg, #33495F 0%, #6E4A60 34%, #D2553F 66%, #F0863F 84%, #3A2A1C 100%);}
+:root[data-theme="dark"] .auth-screen{--sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .auth-screen{--sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);}
+}
+.auth-scene{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--sc-sky);}
+.auth-scene canvas{display:block;width:100%;height:100%;opacity:0;transition:opacity .6s ease;}
+.auth-scene canvas.is-on{opacity:1;}
 
 /* Cuenta en la barra lateral */
 .account{display:flex;align-items:center;gap:9px;padding:6px 2px 6px 8px;margin:0 0 4px;border-radius:var(--r-md);}

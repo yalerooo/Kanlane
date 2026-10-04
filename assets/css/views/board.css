@@ -126,7 +126,8 @@
   z-index:2;
 }
 /* La copia que va bajo el cursor mientras se arrastra (Workhub.utils.ui, opción ghost):
-   opaca, con sombra, por encima de todo y sin recibir el ratón. */
+   de cristal (deja ver, desenfocado, lo que tiene detrás), con sombra, por encima de todo y
+   sin recibir el ratón. Va en <body>, fuera de cualquier otro cristal, así que no se anida. */
 .card.drag-ghost{
   position:fixed;
   left:0;
@@ -135,13 +136,20 @@
   margin:0;
   pointer-events:none;
   background:var(--surface-solid);
-  border-color:var(--line-strong);
-  box-shadow:var(--shadow-drag);
+  background:color-mix(in srgb, var(--surface-solid) 46%, transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.6);
+  backdrop-filter:blur(14px) saturate(1.6);
+  border-color:var(--glass-line);
+  box-shadow:var(--shadow-drag), inset 0 0 0 1px var(--line);
   opacity:1;
   transition:none;
   animation:none;
   transform-origin:50% 30%;
   will-change:transform;
+}
+/* Sin desenfoque de fondo (navegadores antiguos) la copia vuelve a ser opaca, para que se lea. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .card.drag-ghost{background:var(--surface-solid);}
 }
 /* Mientras se arrastra con el ratón (Workhub.utils.ui, bindPointerDrag): mano cerrada en toda
    la página, sin seleccionar texto y sin que las demás tarjetas reaccionen al pasar. */

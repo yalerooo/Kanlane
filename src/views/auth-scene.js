@@ -117,35 +117,38 @@
     '  float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.);',
     '  return length(pa - ba * h) - mix(ra, rb, h);',
     '}',
-    /* Madera. Devuelve (distancia al tronco o a una rama, distancia a las ramas finas): donde hay */
-    /* ramas finas es donde salen las flores. */
-    'vec2 treeWood(vec2 p){',
+    /* Madera: tronco que se abre en ramas cada vez más finas, hacia fuera y hacia arriba, como */
+    /* un paraguas. Las puntas coinciden con los racimos de sakura(). */
+    'float treeWood(vec2 p){',
     /* Un poco de vaivén para que las ramas no sean rectas. */
-    '  p.x += .07 * sin(p.y * 2.1 + .6) + .03 * sin(p.y * 5.3);',
-    '  p.y += .05 * sin(p.x * 2.6);',
-    '  float w = seg(p, vec2(-.05, -.5), vec2(.20, 1.15), .36, .27);',
-    '  w = min(w, seg(p, vec2(.20, 1.15), vec2(-.05, 2.15), .27, .20));',
-    '  float t = seg(p, vec2(-.05, 2.15), vec2(-1.15, 3.15), .17, .10);',
-    '  t = min(t, seg(p, vec2(-1.15, 3.15), vec2(-2.35, 3.60), .10, .05));',
-    '  t = min(t, seg(p, vec2(-2.35, 3.60), vec2(-3.30, 3.35), .05, .015));',
-    '  t = min(t, seg(p, vec2(-1.15, 3.15), vec2(-1.55, 4.45), .09, .03));',
-    '  t = min(t, seg(p, vec2(-1.80, 3.40), vec2(-2.60, 4.35), .05, .015));',
-    '  t = min(t, seg(p, vec2(-.05, 2.15), vec2(.22, 3.45), .17, .11));',
-    '  t = min(t, seg(p, vec2(.22, 3.45), vec2(-.45, 4.75), .10, .03));',
-    '  t = min(t, seg(p, vec2(.22, 3.45), vec2(.95, 4.95), .09, .03));',
-    '  t = min(t, seg(p, vec2(.05, 4.05), vec2(.15, 5.35), .05, .015));',
-    '  t = min(t, seg(p, vec2(.15, 1.45), vec2(1.45, 2.70), .16, .10));',
-    '  t = min(t, seg(p, vec2(1.45, 2.70), vec2(2.70, 3.15), .10, .05));',
-    '  t = min(t, seg(p, vec2(2.70, 3.15), vec2(3.55, 2.75), .05, .015));',
-    '  t = min(t, seg(p, vec2(1.45, 2.70), vec2(1.95, 4.05), .08, .03));',
-    '  t = min(t, seg(p, vec2(2.20, 2.95), vec2(3.00, 3.95), .05, .015));',
-    '  t = min(t, seg(p, vec2(.10, .95), vec2(-1.30, 1.90), .11, .06));',
-    '  t = min(t, seg(p, vec2(-1.30, 1.90), vec2(-2.45, 1.80), .06, .015));',
-    '  t = min(t, seg(p, vec2(-.75, 1.55), vec2(-1.60, 2.55), .045, .015));',
-    '  return vec2(min(w, t), t);',
+    '  p.x += .06 * sin(p.y * 2.1 + .6) + .025 * sin(p.y * 5.3);',
+    '  p.y += .04 * sin(p.x * 2.6);',
+    '  float w = seg(p, vec2(-.10, -.6), vec2(.12, 1.10), .30, .21);',
+    '  w = min(w, seg(p, vec2(.12, 1.10), vec2(-.05, 2.00), .21, .16));',
+    /* Rama izquierda. */
+    '  w = min(w, seg(p, vec2(-.05, 2.00), vec2(-1.10, 3.00), .135, .085));',
+    '  w = min(w, seg(p, vec2(-1.10, 3.00), vec2(-2.20, 3.55), .085, .045));',
+    '  w = min(w, seg(p, vec2(-2.20, 3.55), vec2(-3.05, 3.45), .045, .012));',
+    '  w = min(w, seg(p, vec2(-1.10, 3.00), vec2(-1.75, 4.25), .060, .015));',
+    '  w = min(w, seg(p, vec2(-1.75, 3.30), vec2(-2.75, 4.05), .035, .010));',
+    /* Rama central. */
+    '  w = min(w, seg(p, vec2(-.05, 2.00), vec2(.15, 3.35), .135, .080));',
+    '  w = min(w, seg(p, vec2(.15, 3.35), vec2(-.50, 4.55), .070, .015));',
+    '  w = min(w, seg(p, vec2(.15, 3.35), vec2(.80, 4.75), .065, .015));',
+    '  w = min(w, seg(p, vec2(.02, 2.70), vec2(-.65, 3.55), .040, .010));',
+    /* Rama derecha. */
+    '  w = min(w, seg(p, vec2(.08, 1.40), vec2(1.35, 2.60), .125, .080));',
+    '  w = min(w, seg(p, vec2(1.35, 2.60), vec2(2.45, 3.25), .080, .040));',
+    '  w = min(w, seg(p, vec2(2.45, 3.25), vec2(3.30, 3.00), .040, .012));',
+    '  w = min(w, seg(p, vec2(1.35, 2.60), vec2(1.80, 4.05), .055, .015));',
+    '  w = min(w, seg(p, vec2(2.00, 2.98), vec2(2.75, 4.00), .035, .010));',
+    /* Rama baja, a la izquierda. */
+    '  w = min(w, seg(p, vec2(.04, .95), vec2(-1.20, 1.85), .085, .045));',
+    '  w = min(w, seg(p, vec2(-1.20, 1.85), vec2(-2.25, 2.00), .045, .012));',
+    '  return w;',
     '}',
-    /* Una capa de flores: cada celda puede tener una flor de cinco pétalos, con su tono de rosa. */
-    /* u: posición en el árbol; sc: flores por unidad; dens: cuántas celdas florecen (0..1). */
+    /* Flores pequeñas, de cinco pétalos, una por celda (para la textura de los racimos y para */
+    /* las que quedan sueltas en sus bordes). */
     'vec4 bloom(vec2 u, float sc, float seed, float dens){',
     '  vec2 g = u * sc;',
     '  vec2 id0 = floor(g - .5);',
@@ -156,57 +159,97 @@
     '      vec2 id = id0 + vec2(float(i), float(j));',
     '      vec2 r = hash2(id + seed);',
     '      float on = step(hash(id * 1.31 + seed + 5.), dens);',
-    /* Cada flor se mece un poco con el viento. */
-    '      vec2 ctr = id + .5 + (r - .5) * .8 + .06 * vec2(sin(uTime * 1.2 + r.x * 20.), cos(uTime * .9 + r.y * 20.));',
+    '      vec2 ctr = id + .5 + (r - .5) * .8;',
     '      vec2 d = g - ctr;',
     '      float len = length(d);',
-    '      float rad = (.36 + .15 * r.x) * (.80 + .20 * cos(5. * atan(d.y, d.x) + r.y * 6.283));',
-    '      float m = (1. - smoothstep(rad - .10, rad, len)) * on;',
-    '      vec3 tone = mix(vec3(.97, .58, .73), vec3(1., .91, .95), r.y);',
-    '      tone = mix(tone, vec3(.90, .36, .52), 1. - smoothstep(0., .17, len));',
-    '      tone *= .88 + .12 * smoothstep(rad, 0., len);',
+    '      float rad = (.34 + .14 * r.x) * (.80 + .20 * cos(5. * atan(d.y, d.x) + r.y * 6.283));',
+    '      float m = (1. - smoothstep(rad - .12, rad, len)) * on;',
+    '      vec3 tone = mix(vec3(1., .80, .87), vec3(1., .97, .98), r.y);',
+    '      tone = mix(tone, vec3(.93, .45, .60), 1. - smoothstep(0., .16, len));',
     '      c = mix(c, tone, m);',
     '      a = max(a, m);',
     '    }',
     '  }',
     '  return vec4(c, a);',
     '}',
-    /* El árbol entero en un punto u (el suelo está en y = 0). Devuelve color y opacidad. */
-    /* part: 0 fondo de la copa, 1 madera y flores medias, 2 flores de delante. */
+    /* Un racimo: una nube de flores con volumen. Tiene el borde irregular, la luz le da por */
+    /* arriba y por la derecha (donde está el sol) y por debajo queda en sombra; encima lleva las */
+    /* flores, pequeñas, que le dan textura. acc: lo pintado hasta ahora (se pinta encima). */
+    'vec4 puff(vec4 acc, vec2 u, vec2 c, float r, float seed, float shade){',
+    '  vec2 d = (u - c) / r;',
+    /* Se mece con el viento, cada racimo a su ritmo. */
+    '  d.x -= .03 * sin(uTime * .8 + seed * 3.7) / r;',
+    '  float len = length(d);',
+    '  if(len > 1.45) return acc;',
+    '  float edge = fbm3(u * 2.6 + seed) * .55 + noise(u * 9. + seed * 2.) * .16;',
+    '  float body = 1. - smoothstep(.70, .92, len + edge - .30);',
+    /* Forma de esfera: de ahí salen la luz y la sombra. */
+    '  float z = sqrt(max(1. - min(len * len, 1.), 0.));',
+    '  float light = dot(normalize(vec3(d * .9, z + .25)), normalize(vec3(.50, .62, .60)));',
+    '  light = light * .5 + .5;',
+    /* Bultos más pequeños dentro del racimo, cada uno con su luz. */
+    '  light += (fbm3(u * 4.2 + seed * 1.7 + vec2(-.25, -.30)) - fbm3(u * 4.2 + seed * 1.7)) * 1.7;',
+    '  vec3 col = mix(vec3(.50, .16, .34), vec3(.90, .42, .64), smoothstep(.22, .60, light));',
+    '  col = mix(col, vec3(1., .70, .82), smoothstep(.58, .86, light));',
+    '  col = mix(col, vec3(1., .93, .95), smoothstep(.88, 1.08, light));',
+    /* Las flores: claras donde da la luz, más densas hacia la parte iluminada. */
+    '  vec4 fl = bloom(u + seed, 15., seed, .55 + .35 * light);',
+    '  col = mix(col, fl.rgb * (.70 + .34 * light), fl.a * (.22 + .50 * light));',
+    '  vec4 fs = bloom(u + seed * 2.3, 27., seed + 9., .40);',
+    '  col = mix(col, fs.rgb * (.82 + .26 * light), fs.a * .40);',
+    /* Huecos oscuros entre flores, sobre todo abajo. */
+    '  col *= 1. - .22 * smoothstep(.62, .30, noise(u * 21. + seed)) * (1.15 - light);',
+    /* Los de detrás quedan en sombra, pero rosada, no gris. */
+    '  col *= shade < .9 ? vec3(.80, .60, .76) * (shade + .12) : vec3(shade);',
+    '  acc.rgb = mix(acc.rgb, col, body);',
+    '  acc.a = max(acc.a, body);',
+    /* Flores sueltas justo fuera del borde. */
+    '  float ring = smoothstep(.62, .92, len + edge - .30) * (1. - smoothstep(1.02, 1.36, len + edge * .5));',
+    '  vec4 lo = bloom(u + seed * 5.1, 13., seed + 21., .30 * ring);',
+    '  acc.rgb = mix(acc.rgb, lo.rgb * shade * (.86 + .2 * light), lo.a);',
+    '  acc.a = max(acc.a, lo.a);',
+    '  return acc;',
+    '}',
+    /* El árbol en un punto u (el suelo está en y = 0). Devuelve color y opacidad. */
+    /* part: 0 racimos de detrás, 1 madera, 2 racimos de delante. */
     'vec4 sakura(vec2 u, float part){',
-    '  if(abs(u.x) > 4.7 || u.y < -.6 || u.y > 6.6) return vec4(0.);',
-    '  vec2 wd = treeWood(u);',
-    /* Las flores abrazan las ramas finas y dejan claros entre racimos. */
-    '  float gaps = smoothstep(.22, .62, fbm3(u * 1.25 + 3.));',
-    '  float dens = (1. - smoothstep(.30, 1.20, wd.y)) * mix(.30, 1., gaps);',
-    /* Luz: más clara hacia el sol (a la derecha y arriba), más honda abajo y por dentro. */
-    '  float lit = clamp(.78 + .11 * u.x + .05 * (u.y - 3.), .55, 1.25);',
-    '  vec3 col = vec3(0.);',
-    '  float alpha = 0.;',
+    '  if(abs(u.x) > 4.9 || u.y < -.7 || u.y > 6.9) return vec4(0.);',
+    '  vec4 acc = vec4(0.);',
     '  if(part < .5){',
-    /* Detrás: masas grandes, en sombra, que dan cuerpo a la copa. */
-    '    vec4 b = bloom(u, 3.6, 17., dens * .95);',
-    '    col = b.rgb * vec3(.80, .60, .70) * lit;',
-    '    alpha = b.a * .90;',
+    /* Detrás: racimos grandes, algo en sombra, que dan cuerpo a la copa. */
+    '    acc = puff(acc, u, vec2(-2.95, 3.35), .95, 1., .74);',
+    '    acc = puff(acc, u, vec2(3.10, 3.15), .95, 2., .74);',
+    '    acc = puff(acc, u, vec2(-1.95, 4.35), 1.20, 3., .78);',
+    '    acc = puff(acc, u, vec2(2.05, 4.30), 1.20, 4., .78);',
+    '    acc = puff(acc, u, vec2(-.95, 5.20), 1.05, 5., .80);',
+    '    acc = puff(acc, u, vec2(1.10, 5.30), 1.05, 6., .80);',
+    '    acc = puff(acc, u, vec2(.05, 4.75), 1.35, 7., .82);',
     '  }else if(part < 1.5){',
-    '    float wood = 1. - smoothstep(0., .03, wd.x);',
-    '    vec3 bark = mix(vec3(.10, .065, .06), vec3(.24, .16, .14), noise(vec2(u.x * 26., u.y * 4.)));',
-    '    bark *= .75 + .5 * smoothstep(-.10, .12, wd.x + .08 * lit);',
-    '    col = bark;',
-    '    alpha = wood;',
-    '    vec4 b = bloom(u + 7.3, 4.6, 31., dens * .90);',
-    '    col = mix(col, b.rgb * mix(vec3(.90, .80, .86), vec3(1.), lit - .25) * (lit + .08), b.a);',
-    '    alpha = max(alpha, b.a);',
+    '    float w = treeWood(u);',
+    '    float wood = 1. - smoothstep(0., .022, w);',
+    /* Corteza: vetas a lo largo y el lado del sol más claro. */
+    '    float side = treeWood(u + vec2(.035, .02)) - treeWood(u - vec2(.035, .02));',
+    '    vec3 bark = mix(vec3(.085, .055, .055), vec3(.21, .14, .13), noise(vec2(u.x * 30., u.y * 3.5)));',
+    '    bark *= .70 + .65 * smoothstep(-.03, .06, -side);',
+    '    bark += vec3(.30, .14, .10) * smoothstep(.0, .05, -side) * .25;',
+    '    acc = vec4(bark, wood);',
     '  }else{',
-    /* Delante: flores pequeñas y claras, y otras diminutas que rematan los bordes. */
-    '    vec4 b = bloom(u + 3.1, 8.2, 53., dens * .80);',
-    '    col = b.rgb * (lit + .20);',
-    '    alpha = b.a;',
-    '    vec4 t = bloom(u + 11.9, 14.5, 71., dens * .55 + .025 * (1. - smoothstep(1.0, 2.0, wd.y)));',
-    '    col = mix(col, t.rgb * (lit + .30), t.a);',
-    '    alpha = max(alpha, t.a);',
+    /* Delante: racimos más pequeños en las puntas de las ramas. */
+    '    acc = puff(acc, u, vec2(-3.45, 3.00), .55, 11., .96);',
+    '    acc = puff(acc, u, vec2(-2.30, 2.10), .58, 12., .94);',
+    '    acc = puff(acc, u, vec2(-2.75, 3.85), .72, 13., 1.);',
+    '    acc = puff(acc, u, vec2(-1.30, 3.55), .62, 14., .96);',
+    '    acc = puff(acc, u, vec2(-1.75, 4.60), .80, 15., 1.02);',
+    '    acc = puff(acc, u, vec2(-.60, 3.75), .55, 16., .96);',
+    '    acc = puff(acc, u, vec2(-.45, 4.85), .85, 17., 1.03);',
+    '    acc = puff(acc, u, vec2(.45, 5.65), .72, 18., 1.05);',
+    '    acc = puff(acc, u, vec2(.90, 4.60), .80, 19., 1.03);',
+    '    acc = puff(acc, u, vec2(1.60, 3.40), .55, 20., .98);',
+    '    acc = puff(acc, u, vec2(1.90, 4.85), .78, 21., 1.05);',
+    '    acc = puff(acc, u, vec2(2.65, 3.75), .78, 22., 1.04);',
+    '    acc = puff(acc, u, vec2(3.45, 2.90), .56, 23., 1.02);',
     '  }',
-    '  return vec4(col, alpha);',
+    '  return acc;',
     '}',
 
     'float sph(vec3 ro, vec3 rd, vec3 c, float r){ vec3 o = ro - c; float b = dot(o, rd), h = b * b - dot(o, o) + r * r; return h < 0. ? -1. : max(-b - sqrt(h), 0.); }',
@@ -346,7 +389,7 @@
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
 
     /* El cerezo, a la izquierda (se pinta más abajo, por planos). */
-    '  vec3 treeB = vec3(-9.6, 0., 3.4);',
+    '  vec3 treeB = vec3(-9.5, 0., 3.4);',
     '  treeB.y = terrain(treeB.xz);',
 
     /* El ordenador (solo si el rayo pasa cerca). */
@@ -528,7 +571,7 @@
     '      float tp = dot(pc - ro, pn) / dot(rd, pn);',
     '      if(tp <= 0. || (tGround > 0. && tGround < tp)) continue;',
     '      vec3 hp = ro + rd * tp - pc;',
-    '      vec2 u = vec2(dot(hp, pr), hp.y) / 1.5;',
+    '      vec2 u = vec2(dot(hp, pr), hp.y) / 1.28;',
     /* Vaivén de la copa: más cuanto más arriba. */
     '      u.x += .035 * sin(uTime * .7 + u.y * .9) * smoothstep(1.5, 6., u.y);',
     '      vec4 tr = sakura(u, fi);',

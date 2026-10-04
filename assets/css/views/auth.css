@@ -40,7 +40,7 @@ html.auth-gate .app{display:none !important;}
 }
 .auth-brand:hover{background:var(--hover);}
 .auth-brand:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
-.auth-logo{display:block;width:30px;height:30px;border-radius:8px;}
+.auth-logo{width:30px;height:30px;border-radius:8px;}
 .auth-brand-name{font-size:16px;font-weight:600;letter-spacing:-0.02em;}
 .auth-tools{
   display:flex;

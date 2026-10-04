@@ -302,7 +302,8 @@ html.auth-gate .app{display:none !important;}
 
 /* ---------- Estados: carga, error y correo sin verificar ---------- */
 .auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}
-.auth-loading.is-error{color:var(--danger);align-items:flex-start;flex-direction:column;}
+.auth-loading.is-error{align-items:stretch;flex-direction:column;gap:0;color:var(--ink-soft);}
+.auth-loading.is-error .auth-sent-text{margin-bottom:18px;}
 .auth-loading.is-verify{flex-direction:column;align-items:stretch;gap:0;color:var(--ink-soft);}
 .auth-verify-title{margin:0 0 8px;color:var(--ink);font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;}
 .auth-verify-msg{margin:0 0 12px;}

@@ -1029,6 +1029,7 @@
     'Continuar con Apple':'Continue with Apple',
     'No se pudo conectar con el servicio de acceso. Comprueba tu conexión.':'Couldn\'t connect to the sign-in service. Check your connection.',
     'Reintentar':'Retry',
+    'Sin conexión con el acceso':'Sign-in is unreachable',
     'Verifica tu correo':'Verify your email',
     'Ya lo he verificado':'I\'ve verified it',
     'Reenviar correo':'Resend email',

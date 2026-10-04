@@ -16,6 +16,8 @@
       this.view = view;
 
       this.selectedId = null;
+      /* Qué clientes se enseñan en la lista: 'all', 'open' (con tareas abiertas) o 'late' (con vencidas). */
+      this.filter = 'all';
       this.editing = false;
       this.pendingDelete = false;
       this.colorOpen = false;
@@ -36,6 +38,7 @@
         else this.view.restoreNewName(name);
       });
       this.view.bindSearch(() => this.render());
+      this.view.bindFilter((filter) => { this.filter = filter; this.render(); });
       this.view.bindNewContact(() => this.app.controllers.contacts.openNew(this.selectedClientName()));
       this.view.bindSelect((id, openPane) => this.select(id, openPane));
 
@@ -56,6 +59,18 @@
         viewTasks: () => this.app.controllers.command.showClientTasks(this.selectedClientName()),
         viewVault: () => this.viewVault(this.selectedClientName()),
         openTask: (id) => this.app.controllers.tasks.openDetail(id),
+        /* Tarea o reunión nuevas, ya con este cliente puesto. */
+        newTask: () => {
+          const name = this.selectedClientName();
+          const tasks = this.app.controllers.tasks;
+          tasks.openNew();
+          if(name) tasks.dialog.setCliente(this.app.clientNames(), name);
+        },
+        newMeeting: () => {
+          const cal = this.app.controllers.calendar;
+          cal.view.openNewMeeting(this.app.clientNames(), this.selectedClientName() || '', Workhub.utils.dates.todayYmd());
+        },
+        openMeeting: (id) => this.app.controllers.calendar.openMeetingDetail(id),
         back: () => { this.view.showDetailPane(false); this.view.focusSelected(); }
       });
     }
@@ -80,9 +95,9 @@
           contacts: contacts,
           stats: this.tasks.statsByClient(client.nombre),
           vaultCount: this.vault.items.filter((v) => v.cliente === client.nombre).length,
-          /* Para la ficha: tareas sin terminar (por fecha) y la próxima reunión, de lo que ya hay cargado. */
+          /* Para la ficha: tareas sin terminar (por fecha) y las próximas reuniones, de lo que ya hay cargado. */
           openTasks: this.openTasks(client.nombre),
-          nextMeeting: this.nextMeeting(client.nombre)
+          meetings: this.upcomingMeetings(client.nombre)
         };
       });
       const orphans = Object.keys(byClient).reduce((all, k) => all.concat(byClient[k]), []).sort(byName);
@@ -104,12 +119,12 @@
         .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999') || TaskModel.byOrder(a, b));
     }
 
-    /* Primera reunión del cliente de hoy en adelante (null si no hay). */
-    nextMeeting(name){
+    /* Reuniones del cliente de hoy en adelante, la más próxima primero (como mucho cuatro). */
+    upcomingMeetings(name){
       const today = Workhub.utils.dates.todayYmd();
       const MeetingModel = Workhub.models.MeetingModel;
       return this.meetings.items.filter((m) => m.cliente === name && m.date && m.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date) || MeetingModel.byStart(a, b))[0] || null;
+        .sort((a, b) => a.date.localeCompare(b.date) || MeetingModel.byStart(a, b)).slice(0, 4);
     }
 
     selectedClientName(){
@@ -119,9 +134,10 @@
 
     render(){
       const entries = this.entries();
-      /* Si el elegido ya no está (borrado, o fuera de la búsqueda), el primero. */
-      if(!entries.some((e) => e.id === this.selectedId)){
-        this.selectedId = entries.length ? entries[0].id : null;
+      /* Si el elegido ya no está (borrado, o fuera de la búsqueda o del filtro), el primero. */
+      const visible = this.view.visible(entries, this.filter);
+      if(!visible.some((e) => e.id === this.selectedId)){
+        this.selectedId = visible.length ? visible[0].id : null;
         this.editing = false;
         this.pendingDelete = false;
         this.colorOpen = false;
@@ -129,6 +145,7 @@
       this.view.render(entries, {
         selectedId: this.selectedId,
         query: this.view.query(),
+        filter: this.filter,
         editing: this.editing,
         pendingDelete: this.pendingDelete,
         colorOpen: this.colorOpen,

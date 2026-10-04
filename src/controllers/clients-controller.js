@@ -1,8 +1,8 @@
-/* Clientes y contactos: lista de clientes, ficha de cada uno con sus personas
-   de contacto y búsqueda conjunta (cliente, nombre, email, teléfono, notas). */
+/* Clientes y contactos: la portada con una tarjeta por cliente, el perfil de cada uno (a página
+   completa, con pestañas) y la búsqueda conjunta (cliente, nombre, email, teléfono, notas). */
 (function(){
   const toast = Workhub.views.toast;
-  /* Entrada de la lista para los contactos cuyo cliente ya no existe. */
+  /* Entrada de la portada para los contactos cuyo cliente ya no existe. */
   const ORPHANS_ID = '__sin_cliente__';
 
   class ClientsController {
@@ -15,47 +15,33 @@
       this.vault = app.models.vault;
       this.view = view;
 
-      this.selectedId = null;
-      /* Qué clientes se enseñan en la lista: 'all', 'open' (con tareas abiertas) o 'late' (con vencidas). */
+      /* Cliente cuyo perfil está abierto (null: la portada) y la pestaña que se ve. */
+      this.openId = null;
+      this.tab = 'overview';
+      /* Qué clientes se enseñan en la portada: 'all', 'open' (con tareas abiertas) o 'late' (con vencidas). */
       this.filter = 'all';
-      this.editing = false;
-      this.pendingDelete = false;
-      this.colorOpen = false;
-      /* Texto del botón mientras se renombra o se elimina (con el avance si hay muchos documentos). */
-      this.busy = '';
+      /* Cliente que se está editando en el diálogo (null si el diálogo es de «nuevo»). */
+      this.editingId = null;
+      this.busy = false;
 
       [this.clients, this.tasks, this.contacts, this.vault, this.meetings].forEach((m) => m.on('change', () => this.render()));
 
-      this.view.bindCreate((name) => {
-        const p = this.app.createClient(name);
-        if(p) p.then((ref) => {
-          toast.success('Cliente «' + name + '» añadido');
-          if(ref && ref.id) this.select(ref.id, true);
-        }).catch(() => {
-          toast.error('No se pudo añadir el cliente');
-          this.view.restoreNewName(name);
-        });
-        else this.view.restoreNewName(name);
-      });
       this.view.bindSearch(() => this.render());
       this.view.bindFilter((filter) => { this.filter = filter; this.render(); });
       this.view.bindNewContact(() => this.app.controllers.contacts.openNew(this.selectedClientName()));
-      this.view.bindSelect((id, openPane) => this.select(id, openPane));
+      this.view.bindNewClient(() => this.openNew());
+      this.view.bindOpen((id) => this.select(id, true), () => this.openNew());
+      this.view.bindDialog({
+        save: (name, hue) => this.saveDialog(name, hue),
+        remove: () => this.remove()
+      });
 
       this.view.bindActions({
-        edit: () => { this.editing = true; this.colorOpen = false; this.pendingDelete = false; this.render(); },
-        cancel: () => { this.editing = false; this.render(); },
-        save: (name) => this.rename(name),
-        remove: () => { this.pendingDelete = true; this.colorOpen = false; this.render(); },
-        cancelRemove: () => { this.pendingDelete = false; this.render(); },
-        confirmRemove: (btn) => this.remove(btn),
-        toggleColor: () => { this.colorOpen = !this.colorOpen; this.pendingDelete = false; this.render(); },
-        color: (hue) => {
-          const id = this.selectedId;
-          if(this.clients.isReady() && this.clients.find(id)) this.clients.setColor(id, hue).catch(() => {});
-        },
+        back: () => { this.openId = null; this.render(); },
+        tab: (id) => { this.tab = id; this.render(); },
+        edit: () => this.openEdit(),
         addContact: () => this.app.controllers.contacts.openNew(this.selectedClientName()),
-        openContact: (id) => this.app.controllers.contacts.openEdit(id),
+        openContact: (id) => this.app.controllers.contacts.openDetail(id),
         viewTasks: () => this.app.controllers.command.showClientTasks(this.selectedClientName()),
         viewVault: () => this.viewVault(this.selectedClientName()),
         openTask: (id) => this.app.controllers.tasks.openDetail(id),
@@ -70,16 +56,14 @@
           const cal = this.app.controllers.calendar;
           cal.view.openNewMeeting(this.app.clientNames(), this.selectedClientName() || '', Workhub.utils.dates.todayYmd());
         },
-        openMeeting: (id) => this.app.controllers.calendar.openMeetingDetail(id),
-        back: () => { this.view.showDetailPane(false); this.view.focusSelected(); }
+        openMeeting: (id) => this.app.controllers.calendar.openMeetingDetail(id)
       });
     }
 
     /* ---------- Datos ---------- */
 
-    /* Clientes (y, si los hay, contactos sin cliente) que encajan con la búsqueda. */
-    entries(){
-      const q = this.view.query();
+    /* Clientes (y, si los hay, contactos sin cliente). Con q, solo los que encajan con la búsqueda. */
+    entries(q){
       const has = (c) => ['nombre', 'email', 'telefono', 'notas'].some((f) => String(c[f] || '').toLowerCase().indexOf(q) !== -1);
       const byName = (a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es');
       const byClient = {};
@@ -88,6 +72,7 @@
       const list = this.clients.sortedByName().map((client) => {
         const contacts = (byClient[client.nombre] || []).slice().sort(byName);
         delete byClient[client.nombre];
+        const meetings = this.meetingsOf(client.nombre);
         return {
           id: client.id,
           nombre: client.nombre,
@@ -95,14 +80,15 @@
           contacts: contacts,
           stats: this.tasks.statsByClient(client.nombre),
           vaultCount: this.vault.items.filter((v) => v.cliente === client.nombre).length,
-          /* Para la ficha: tareas sin terminar (por fecha) y las próximas reuniones, de lo que ya hay cargado. */
+          /* Tareas sin terminar (por fecha) y reuniones (próximas y anteriores), de lo que ya hay cargado. */
           openTasks: this.openTasks(client.nombre),
-          meetings: this.upcomingMeetings(client.nombre)
+          meetings: meetings.upcoming,
+          past: meetings.past
         };
       });
       const orphans = Object.keys(byClient).reduce((all, k) => all.concat(byClient[k]), []).sort(byName);
       if(orphans.length){
-        list.push({id:ORPHANS_ID, nombre:'Sin cliente', client:null, contacts:orphans, stats:{total:0, open:0}, vaultCount:0});
+        list.push({id:ORPHANS_ID, nombre:'Sin cliente', client:null, contacts:orphans, stats:{total:0, open:0}, vaultCount:0, openTasks:[], meetings:[], past:[]});
       }
       if(!q) return list;
       return list.map((e) => {
@@ -119,62 +105,66 @@
         .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999') || TaskModel.byOrder(a, b));
     }
 
-    /* Reuniones del cliente de hoy en adelante, la más próxima primero (como mucho cuatro). */
-    upcomingMeetings(name){
+    /* Reuniones del cliente: las de hoy en adelante (la más próxima primero) y las ocho últimas
+       ya pasadas (la más reciente primero). */
+    meetingsOf(name){
       const today = Workhub.utils.dates.todayYmd();
       const MeetingModel = Workhub.models.MeetingModel;
-      return this.meetings.items.filter((m) => m.cliente === name && m.date && m.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date) || MeetingModel.byStart(a, b)).slice(0, 4);
+      const mine = this.meetings.items.filter((m) => m.cliente === name && m.date);
+      const asc = (a, b) => a.date.localeCompare(b.date) || MeetingModel.byStart(a, b);
+      return {
+        upcoming: mine.filter((m) => m.date >= today).sort(asc),
+        past: mine.filter((m) => m.date < today).sort((a, b) => asc(b, a)).slice(0, 8)
+      };
     }
 
     selectedClientName(){
-      const c = this.clients.find(this.selectedId);
+      const c = this.clients.find(this.openId);
       return c ? c.nombre : undefined;
     }
 
     render(){
-      const entries = this.entries();
-      /* Si el elegido ya no está (borrado, o fuera de la búsqueda o del filtro), el primero. */
-      const visible = this.view.visible(entries, this.filter);
-      if(!visible.some((e) => e.id === this.selectedId)){
-        this.selectedId = visible.length ? visible[0].id : null;
-        this.editing = false;
-        this.pendingDelete = false;
-        this.colorOpen = false;
+      const q = this.view.query();
+      const all = this.entries('');
+      /* Un cliente recién creado se abre en cuanto aparece en la lista (el aviso de que se ha
+         guardado puede llegar antes que el propio cliente). */
+      if(this.pendingOpen && all.some((e) => e.id === this.pendingOpen)){
+        this.openId = this.pendingOpen;
+        this.tab = 'overview';
+        this.pendingOpen = null;
       }
-      this.view.render(entries, {
-        selectedId: this.selectedId,
-        query: this.view.query(),
+      /* El perfil abierto no depende de la búsqueda: solo se cierra si el cliente ya no existe. */
+      const open = this.openId ? (all.find((e) => e.id === this.openId) || null) : null;
+      if(this.openId && !open) this.openId = null;
+      this.view.render(q ? this.entries(q) : all, {
+        query: q,
         filter: this.filter,
-        editing: this.editing,
-        pendingDelete: this.pendingDelete,
-        colorOpen: this.colorOpen,
-        busy: this.busy,
-        colors: Workhub.models.ClientModel.COLORS,
+        open: open,
+        tab: this.tab,
         hasAny: this.clients.items.length > 0 || this.contacts.items.length > 0
       });
     }
 
-    select(id, openPane){
-      if(id !== this.selectedId){
-        this.selectedId = id;
-        this.editing = false;
-        this.pendingDelete = false;
-        this.colorOpen = false;
-        this.render();
+    /* Abre el perfil de un cliente (también desde la paleta de comandos). */
+    select(id){
+      if(id !== this.openId){
+        this.openId = id;
+        this.tab = 'overview';
       }
-      if(openPane) this.view.showDetailPane(true);
+      this.render();
     }
 
-    /* Abre la ficha del cliente de ese contacto y su diálogo de edición
+    /* Abre el perfil del cliente de ese contacto, en su pestaña de contactos, y su ficha
        (desde la paleta de comandos o los vínculos de una tarea). */
     showContact(contactId){
       const c = this.contacts.find(contactId);
       this.app.navigate('clients');
       if(!c) return;
       const client = this.clients.items.find((x) => x.nombre === c.cliente);
-      this.select(client ? client.id : ORPHANS_ID, true);
-      this.app.controllers.contacts.openEdit(contactId);
+      this.openId = client ? client.id : ORPHANS_ID;
+      this.tab = 'contacts';
+      this.render();
+      this.app.controllers.contacts.openDetail(contactId);
     }
 
     viewVault(name){
@@ -185,39 +175,86 @@
       select.dispatchEvent(new Event('change', {bubbles:true}));
     }
 
-    /* ---------- Acciones ---------- */
+    /* ---------- Diálogo de cliente ---------- */
 
-    rename(rawName){
-      const newName = (rawName || '').trim();
-      const client = this.clients.find(this.selectedId);
-      if(!client || !this.clients.isReady() || this.busy) return;
-      if(!newName || newName === client.nombre){
-        this.editing = false;
-        this.render();
+    openNew(){
+      this.editingId = null;
+      this.view.openDialog({mode:'new', name:'', hue:null, colors:Workhub.models.ClientModel.COLORS});
+    }
+
+    openEdit(){
+      const client = this.clients.find(this.openId);
+      if(!client) return;
+      this.editingId = client.id;
+      this.view.openDialog({
+        mode: 'edit',
+        name: client.nombre,
+        hue: typeof client.color === 'number' ? client.color : null,
+        colors: Workhub.models.ClientModel.COLORS,
+        tasks: this.tasks.statsByClient(client.nombre).total
+      });
+    }
+
+    saveDialog(name, hue){
+      if(this.busy || !this.clients.isReady()) return;
+      if(this.editingId) this.saveEdit(name, hue);
+      else this.create(name, hue);
+    }
+
+    create(name, hue){
+      if(this.clients.items.some((c) => c.nombre === name)){
+        toast.error('Ya hay un cliente llamado «' + name + '»');
         return;
       }
-      if(this.clients.items.some((c) => c.id !== client.id && c.nombre === newName)){
+      const p = this.app.createClient(name);
+      if(!p) return;
+      this.setBusy('Creando…');
+      p.then((ref) => {
+        const id = ref && ref.id;
+        const colored = id && hue !== null ? this.clients.setColor(id, hue).catch(() => {}) : Promise.resolve();
+        return colored.then(() => {
+          toast.success('Cliente «' + name + '» añadido');
+          this.view.closeDialog();
+          if(id){ this.pendingOpen = id; this.render(); }
+        });
+      }).catch(() => {
+        toast.error('No se pudo añadir el cliente');
+      }).finally(() => this.setBusy(''));
+    }
+
+    /* Guarda el color y, si ha cambiado, el nombre (que hay que cambiar también en sus tareas,
+       reuniones, contactos y contraseñas). */
+    saveEdit(newName, hue){
+      const client = this.clients.find(this.editingId);
+      if(!client) return;
+      if(newName !== client.nombre && this.clients.items.some((c) => c.id !== client.id && c.nombre === newName)){
         toast.error('Ya hay un cliente llamado «' + newName + '»');
+        return;
+      }
+      const current = typeof client.color === 'number' ? client.color : null;
+      const colored = hue !== current ? this.clients.setColor(client.id, hue).catch(() => {}) : Promise.resolve();
+      if(newName === client.nombre){
+        colored.then(() => this.view.closeDialog());
         return;
       }
       this.setBusy('Guardando…');
       const progress = this.progress('Renombrando… {n} de {total}');
-      this.clients.rename(client.id, newName, [this.tasks, this.meetings, this.contacts, this.vault], progress).then(() => {
+      colored.then(() => this.clients.rename(client.id, newName, [this.tasks, this.meetings, this.contacts, this.vault], progress)).then(() => {
         toast.success('Cliente renombrado');
       }).catch((err) => {
         toast.error(this.isPartial(err)
           ? Workhub.t('No se pudo cambiar el nombre en todas las tareas: {n} pendientes. Vuelve a renombrarlo para terminar.', {n:err.pending})
           : 'No se pudo renombrar el cliente. Inténtalo de nuevo.');
       }).finally(() => {
-        this.editing = false;
-        this.busy = '';
+        this.setBusy('');
+        this.view.closeDialog();
         this.render();
       });
     }
 
     setBusy(text){
-      this.busy = text;
-      this.render();
+      this.busy = !!text;
+      this.view.setDialogBusy(text ? Workhub.t(text) : '');
     }
 
     /* En un proyecto con cifrado total cada documento se vuelve a cifrar de uno en uno: con más de
@@ -225,8 +262,7 @@
     progress(template){
       return (done, total) => {
         if(total <= 50) return;
-        this.busy = Workhub.t(template, {n:done, total:total});
-        this.view.setBusyText(this.busy);
+        this.view.setDialogBusy(Workhub.t(template, {n:done, total:total}));
       };
     }
 
@@ -234,8 +270,8 @@
       return Workhub.models.ProjectCipher.isError(err, 'partial');
     }
 
-    remove(btn){
-      const client = this.clients.find(this.selectedId);
+    remove(){
+      const client = this.clients.find(this.editingId);
       if(!client || !this.clients.isReady() || !this.tasks.isReady() || this.busy) return;
       this.setBusy('Eliminando…');
       const name = client.nombre;
@@ -243,6 +279,8 @@
       const clientSnap = this.clients.snapshot(client.id);
       this.clients.removeWithTasks(client.id, this.tasks, this.progress('Eliminando… {n} de {total}')).then(() => {
         toast.undoable('Cliente «' + name + '» eliminado', () => this.clients.restore(clientSnap).then(() => this.tasks.restore(taskSnap)), 'Cliente «' + name + '» restaurado');
+        /* Vuelve a la portada: ese perfil ya no existe. */
+        this.openId = null;
       }).catch((err) => {
         if(this.isPartial(err)){
           /* Parte de las tareas ya se borró: se pueden recuperar. El cliente sigue ahí. */
@@ -252,8 +290,8 @@
         }
         toast.error('No se pudo eliminar el cliente. Inténtalo de nuevo.');
       }).finally(() => {
-        this.pendingDelete = false;
-        this.busy = '';
+        this.setBusy('');
+        this.view.closeDialog();
         this.render();
       });
     }

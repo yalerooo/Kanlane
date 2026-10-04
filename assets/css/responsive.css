@@ -294,8 +294,10 @@
   .bar-tools input.bar-search,.dd-trigger{min-height:38px;}
   .btn{min-height:36px;}
   input,select,textarea{font-size:16px;}
-  #btnNewContact,#btnNew,#calNewMeeting,#btnNewVault{font-size:0;gap:0;width:38px;padding:0;justify-content:center;flex:none;}
-  #btnNewContact svg,#btnNew svg,#calNewMeeting svg,#btnNewVault svg{width:18px;height:18px;}
+  #btnNewClient,#btnNew,#calNewMeeting,#btnNewVault{font-size:0;gap:0;width:38px;padding:0;justify-content:center;flex:none;}
+  #btnNewClient svg,#btnNew svg,#calNewMeeting svg,#btnNewVault svg{width:18px;height:18px;}
+  /* En móvil, «Nuevo contacto» se añade desde el perfil de su cliente. */
+  #btnNewContact{display:none;}
   /* ---- Barra de la vista en móvil ----
      Deja de ser una tarjeta de cristal: título grande y acción principal en la primera línea,
      y las herramientas de la sección, a todo el ancho, en la segunda. Las herramientas pasan
@@ -328,7 +330,7 @@
   #taskMode{order:1;}
   #taskMode button{width:36px;padding:0;font-size:0;gap:0;}
   #taskMode button svg{width:16px;height:16px;}
-  #btnNew,#calNewMeeting,#btnNewVault,#btnNewContact{order:2;}
+  #btnNew,#calNewMeeting,#btnNewVault,#btnNewClient{order:2;}
   /* Línea 2. Tareas: buscador y filtro. */
   .bar-tools[data-bar="tasks"] .bar-search{order:4;flex:1 1 0;}
   .bar-tools[data-bar="tasks"] .bar-filter{order:4;}

@@ -198,8 +198,8 @@
     /* ---------- Hierba ---------- */
     /* Cada brizna es un tallo fino que sale de una celda del suelo, se curva hacia un lado y */
     /* se mece con el viento. Devuelve (distancia, altura relativa 0..1, azar de la brizna, flor). */
-    'const float GRASS_H = .20;',
-    'const float GRASS_N = 15.;',
+    'const float GRASS_H = .22;',
+    'const float GRASS_N = 18.;',
     'vec2 wind(vec2 r){',
     '  float gust = sin(uTime * .9 + r.x * .55 + r.y * .35) * .5 + sin(uTime * .47 + r.x * .21 - r.y * .3) * .5;',
     '  return vec2(1., .45) * (.030 * gust + .022 * (noise(r * .35 + uTime * .12) - .5));',
@@ -212,19 +212,35 @@
     '    for(int j = 0; j < 2; j++){',
     '      vec2 id = id0 + vec2(float(i), float(j));',
     '      vec2 r = hash2(id);',
-    '      float hb = GRASS_H * (.42 + .58 * r.x) * (.72 + .56 * noise(id * .11));',
+    /* Altura por zonas (matas) y, de vez en cuando, una brizna que sobresale. */
+    '      float tall = step(.90, fract(r.y * 7.31));',
+    '      float hb = GRASS_H * (.34 + .44 * r.x + .22 * tall) * (.70 + .50 * noise(id * .09));',
     '      vec2 root = (id + .5 + (r - .5) * .7) / GRASS_N;',
     '      float k = y / hb;',
     '      float kk = clamp(k, 0., 1.);',
     '      float a = r.y * 6.283;',
-    '      vec2 lean = (vec2(cos(a), sin(a)) * (.018 + .034 * r.x) + wind(root) * .8) * kk * kk;',
+    '      vec2 lean = (vec2(cos(a), sin(a)) * (.014 + .026 * r.x) + wind(root) * .8) * kk * kk;',
     '      float flower = 0.;',
-    '      float w = (.0075 + wide) * (1. - kk * .85);',
+    '      float w = (.0062 + wide) * (1. - kk * .88);',
     '      float d = max(length(xz - root - lean) - w, y - hb);',
     '      if(d < best.x) best = vec4(d, kk, r.x, flower);',
     '    }',
     '  }',
     '  return best;',
+    '}',
+
+    /* ---------- Luciérnagas ---------- */
+    /* Vuelan sobre la hierba, cada una por su camino, y se encienden y se apagan despacio. */
+    'const int FF_N = 24;',
+    'vec4 firefly(float fi){',
+    '  vec2 h = hash2(vec2(fi, 3.7));',
+    '  vec2 xz = vec2(mix(-9.5, 9., h.x), mix(-8.5, 5., h.y));',
+    '  xz += vec2(sin(uTime * .19 + fi * 2.1) + .5 * sin(uTime * .47 + fi), cos(uTime * .15 + fi * 1.3) + .5 * cos(uTime * .41 + fi * 2.7)) * 1.1;',
+    '  float y = terrain(xz) + .30 + .85 * hash(vec2(fi, 8.1)) + .16 * sin(uTime * .55 + fi * 4.);',
+    /* Destello: sube rápido, se apaga despacio y pasa un rato a oscuras. */
+    '  float ph = fract(uTime * (.11 + .09 * hash(vec2(fi, 5.3))) + h.x * 7.);',
+    '  float bl = smoothstep(0., .08, ph) * (1. - smoothstep(.14, .80, ph));',
+    '  return vec4(xz.x, y, xz.y, .22 + .78 * bl);',
     '}',
 
     /* El cerezo: a qué distancia va y cuánto mide (unidades de escena por unidad del modelo). */
@@ -244,7 +260,7 @@
     '  float treeSc = TREE_SC * uTreeS;',
     '  float base = terrain(vec2(0.));',
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
-    '  vec3 ro = vec3(2.2 + uMouse.x * .9, base + .62 + uMouse.y * .3 + .03 * sin(uTime * .25), -11.5);',
+    '  vec3 ro = vec3(2.2 + uMouse.x * .45, base + .62 + uMouse.y * .10, -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
     '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
@@ -288,7 +304,26 @@
     '  }',
 
     '  vec3 col = sky(rd, L);',
-    '  vec3 fogCol = mix(vec3(.62, .22, .16), vec3(.09, .09, .22), uNight);',
+    '  vec3 fogCol = mix(vec3(.66, .26, .17), vec3(.09, .09, .22), uNight);',
+    /* Hacia el sol, la bruma se enciende. */
+    '  fogCol += mix(vec3(.30, .16, .05), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    /* Sierras lejanas: dos siluetas, una tras otra, cada vez más diluidas en la bruma. */
+    '  if(tHit < 0.){',
+    '    float az = atan(rd.x, rd.z);',
+    '    float m1 = .030 + .075 * fbm3(vec2(az * 5. + 2., 1.3)) + .018 * noise(vec2(az * 31., 4.));',
+    '    float m2 = .014 + .050 * fbm3(vec2(az * 9. + 7., 6.1)) + .010 * noise(vec2(az * 47., 9.));',
+    '    vec3 hz = sky(normalize(vec3(rd.x, .02, rd.z)), L);',
+    '    vec3 c1 = mix(hz, mix(vec3(.50, .20, .24), vec3(.07, .07, .19), uNight), .42);',
+    '    vec3 c2 = mix(hz, mix(vec3(.33, .13, .17), vec3(.045, .05, .14), uNight), .66);',
+    '    col = mix(col, c1, 1. - smoothstep(m1 - .004, m1 + .004, rd.y));',
+    '    col = mix(col, mix(c2, c1, smoothstep(0., m2, rd.y) * .35), 1. - smoothstep(m2 - .003, m2 + .003, rd.y));',
+    '  }',
+    /* Las luciérnagas, de noche (se calculan una vez por punto). */
+    '  vec4 ff[24];',
+    '  if(uNight > .01){',
+    '    for(int i = 0; i < FF_N; i++) ff[i] = firefly(float(i));',
+    '  }',
+    '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
 
     /* ---------- Hierba y suelo ---------- */
@@ -325,6 +360,10 @@
     '    vec3 tip = mix(vec3(.20, .40, .09), vec3(.42, .58, .15), patch);',
     '    tip = mix(tip, vec3(.56, .50, .20), smoothstep(.72, .98, b.z) * .8);',
     '    vec3 alb = mix(root, tip, kk * kk * .25 + kk * .75);',
+    /* Cada brizna, con su tono: unas más claras, otras más azuladas o más amarillas. */
+    '    float tone = fract(b.z * 9.7);',
+    '    alb *= mix(1., .72 + .56 * tone, near);',
+    '    alb = mix(alb, alb * vec3(.80, 1.02, 1.10), smoothstep(.6, 1., fract(b.z * 23.3)) * .5 * near);',
     '    alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(p.xz * .23 + 8.)) * .22 * (1. - uNight));',
     /* Flores: la punta de algunas briznas. */
     /* De lejos: la misma hierba como textura, con vetas que siguen al viento. */
@@ -372,6 +411,15 @@
     '    float dl = length(tl);',
     '    float spill = max(dot(normalize(tl), normalize(n + vec3(0., .6, 0.))), 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
     '    gcol += alb * screenGlow * spill * mix(1.6, 9., uNight) * (.35 + .65 * kk);',
+    /* Cada luciérnaga alumbra un corro de hierba debajo. */
+    '    if(uNight > .01){',
+    '      vec3 fl = vec3(0.);',
+    '      for(int i = 0; i < FF_N; i++){',
+    '        vec3 d = ff[i].xyz - p;',
+    '        fl += ffCol * max(ff[i].w - .18, 0.) * exp(-dot(d, d) * 2.2);',
+    '      }',
+    '      gcol += alb * fl * 2.4 * (.35 + .65 * kk) * uNight;',
+    '    }',
     '    col = gcol;',
     '    tFin = tGround;',
     '  }',
@@ -451,21 +499,23 @@
     /* A lo lejos el suelo se funde con la bruma del horizonte. */
     '    fog = max(fog, smoothstep(30., 110., tFin) * .92);',
     '    col = mix(col, mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
+    /* Bruma baja: se posa en las hondonadas y deja las crestas fuera. */
+    '    float py = ro.y + rd.y * tFin;',
+    '    float mist = exp(-max(py - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., tFin) * (1. - smoothstep(70., 150., tFin));',
+    '    col = mix(col, mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight), mist * .42);',
     '  }',
     /* ---------- El cerezo ---------- */
     /* Es un modelo 3D renderizado aparte a una imagen con transparencia (assets/img/sakura.webp), */
-    /* puesta sobre un plano que mira a la cámara. El viento mece la copa: más cuanto más arriba. */
+    /* puesta sobre un plano fijo, de cara a la cámara en reposo. No se mueve ni se deforma: lo */
+    /* que da vida al árbol son los pétalos que caen. */
     '  if(uTreeOn > .5){',
-    '    vec3 pn = normalize(vec3(fw.x, 0., fw.z));',
+    '    vec3 pn = normalize(vec3(-2.2, 0., 11.5));',
     '    vec3 pr = vec3(pn.z, 0., -pn.x);',
     '    float tp = dot(treeB - ro, pn) / dot(rd, pn);',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      vec3 hp = ro + rd * tp - treeB;',
     /* En unidades del modelo (la imagen abarca 9,2 de lado, con el suelo a 0,9 del borde de abajo). */
     '      vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
-    '      float up = smoothstep(.8, 7., u.y);',
-    '      u.x += (.060 * sin(uTime * .65 + u.y * .55) + .018 * sin(uTime * 1.7 + u.x * 2.6 + u.y * 1.9)) * up;',
-    '      u.y += .012 * sin(uTime * 1.3 + u.x * 2.2) * up;',
     '      vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     '        vec4 tr = texture2D(uTree, tuv);',
@@ -500,18 +550,24 @@
     '    float fade = smoothstep(0., .08, ph) * smoothstep(1., .85, ph);',
     '    col = mix(col, mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6), petal * fade * .9);',
     '  }',
-    /* Luciérnagas, de noche. */
-    '  vec2 ns = gl_FragCoord.xy / uRes.y;',
-    '  for(int i = 0; i < 12; i++){',
-    '    float fi = float(i);',
-    '    vec2 fp = vec2(hash(vec2(fi, 1.3)) * uRes.x / uRes.y, .08 + hash(vec2(fi, 7.7)) * .42);',
-    '    fp += .035 * vec2(sin(uTime * .31 + fi * 2.1), cos(uTime * .23 + fi * 1.3));',
-    '    float bl = .5 + .5 * sin(uTime * (.7 + hash(vec2(fi, 3.)) * .9) + fi * 5.);',
-    '    col += vec3(1., .85, .42) * (.000035 / (dot(ns - fp, ns - fp) + .00003)) * bl * bl * uNight;',
+    /* Luciérnagas, de noche: un punto vivo, un halo y un resplandor amplio. Las tapa lo que */
+    /* tengan delante (una loma, el ordenador). */
+    '  if(uNight > .01){',
+    '    for(int i = 0; i < FF_N; i++){',
+    '      vec3 v = ff[i].xyz - ro;',
+    '      float tc = dot(v, rd);',
+    '      if(tc > 0. && (tFin < 0. || tc < tFin)){',
+    '        float d2 = max(dot(v, v) - tc * tc, 0.);',
+    '        float g = 1.3 * exp(-d2 / .0011) + .42 * exp(-d2 / .018) + .11 * exp(-d2 / .22);',
+    '        col += ffCol * g * ff[i].w * uNight;',
+    '      }',
+    '    }',
     '  }',
     /* Viñeta y grano. */
     '  vec2 vq = gl_FragCoord.xy / uRes - .5;',
     '  col *= 1. - .34 * dot(vq, vq) * 2.2;',
+    /* Lo que se pasa de blanco (el centro de una luciérnaga) se recorta antes del contraste. */
+    '  col = clamp(col, 0., 1.);',
     /* Contraste suave y sombras algo frías, como en una foto al atardecer. */
     '  col = mix(col, col * col * (3. - 2. * col), .35);',
     '  col += (hash(gl_FragCoord.xy + fract(uTime) * 91.7) - .5) * .045;',
@@ -520,7 +576,7 @@
   ].join('\n');
 
   /* Lado mayor del lienzo, en píxeles: por encima de esto se estira (la escena es suave y lo admite). */
-  const MAX_SIDE = 1400;
+  const MAX_SIDE = 1600;
   const FRAME_MS = 1000 / 30;
   /* Desde /app/. La imagen es cuadrada (1024 px), con el árbol centrado y el suelo abajo. */
   const TREE_URL = '../assets/img/sakura.webp';

@@ -1000,6 +1000,7 @@
     'Inicia sesión':'Sign in',
     'Accede a tu espacio de trabajo.':'Access your workspace.',
     'o con tu correo':'or with your email',
+    'o continúa con':'or continue with',
     'Correo electrónico':'Email',
     '¿La has olvidado?':'Forgot it?',
     'Iniciar sesión':'Sign in',

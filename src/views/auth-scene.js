@@ -31,6 +31,16 @@
     '}',
     'float fbm(vec2 p){ float a = .5, s = 0.; for(int i = 0; i < 5; i++){ s += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return s; }',
     'float fbm3(vec2 p){ float a = .5, s = 0.; for(int i = 0; i < 3; i++){ s += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return s; }',
+    /* Ruido en 3D (para la copa del cerezo, que no puede tener vetas). */
+    'float hash3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }',
+    'float noise3(vec3 p){',
+    '  vec3 i = floor(p), f = fract(p);',
+    '  f = f * f * (3. - 2. * f);',
+    '  float a = mix(mix(hash3(i), hash3(i + vec3(1., 0., 0.)), f.x), mix(hash3(i + vec3(0., 1., 0.)), hash3(i + vec3(1., 1., 0.)), f.x), f.y);',
+    '  float b = mix(mix(hash3(i + vec3(0., 0., 1.)), hash3(i + vec3(1., 0., 1.)), f.x), mix(hash3(i + vec3(0., 1., 1.)), hash3(i + vec3(1., 1., 1.)), f.x), f.y);',
+    '  return mix(a, b, f.z);',
+    '}',
+    'float fbm3d(vec3 p){ return .5 * noise3(p) + .25 * noise3(p * 2.03 + 3.1) + .125 * noise3(p * 4.1 + 7.3); }',
     'mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }',
     'float smin(float a, float b, float k){ float h = clamp(.5 + .5 * (b - a) / k, 0., 1.); return mix(b, a, h) - k * h * (1. - h); }',
 
@@ -60,6 +70,7 @@
 
     'float sdBox(vec3 p, vec3 b){ vec3 q = abs(p) - b; return length(max(q, 0.)) + min(max(q.x, max(q.y, q.z)), 0.); }',
     'float sdBox2(vec2 p, vec2 b){ vec2 q = abs(p) - b; return length(max(q, 0.)) + min(max(q.x, q.y), 0.); }',
+    'float sdCapsule(vec3 p, vec3 a, vec3 b, float r){ vec3 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0., 1.); return length(pa - ba * h) - r; }',
 
     /* ---------- El ordenador ---------- */
     /* Monitor de tubo: frontal ancho con el marco de la pantalla hundido, parte de atrás más */
@@ -77,11 +88,19 @@
     '  float recess = sdBox(q - vec3(0., 1.16, -.76), vec3(.63, .47, .17)) - .035;',
     '  body = max(body, -recess);',
     '  body = min(body, glassD(q));',
-    '  float slot = sdBox(q - vec3(.36, .50, -.72), vec3(.21, .017, .05));',
+    '  float slot = sdBox(q - vec3(.02, .50, -.72), vec3(.21, .017, .05));',
     '  body = max(body, -slot);',
+    /* Línea de unión entre el frontal y el resto de la carcasa. */
+    '  body = max(body, -(sdBox(q - vec3(0., 1.06, .19), vec3(1.1, 1.1, .012))));',
+    /* Dos mandos redondos bajo la pantalla. */
+    '  vec3 k1 = q - vec3(.56, .50, -.74), k2 = q - vec3(.72, .50, -.74);',
+    '  float knobs = min(max(length(k1.xy) - .046, abs(k1.z) - .05), max(length(k2.xy) - .046, abs(k2.z) - .05)) - .008;',
+    '  body = min(body, knobs);',
     '  float neck = sdBox(q - vec3(0., .25, .04), vec3(.36, .11, .30)) - .03;',
     '  float foot = sdBox(q - vec3(0., .085, .04), vec3(.60, .055, .46)) - .04;',
-    '  return min(body, smin(neck, foot, .05));',
+    /* El cable sale por detrás y se pierde en la hierba. */
+    '  float cable = min(sdCapsule(q, vec3(.22, .62, .90), vec3(.30, .30, 1.20), .028), sdCapsule(q, vec3(.30, .30, 1.20), vec3(.70, -.05, 1.75), .028));',
+    '  return min(min(body, cable), smin(neck, foot, .05));',
     '}',
     'vec3 computerNormal(vec3 q){',
     '  vec2 e = vec2(.003, 0.);',
@@ -99,6 +118,55 @@
     '  return clamp(res, 0., 1.);',
     '}',
 
+
+    /* Racimos: bolas pequeñas repartidas por el espacio (las ocho celdas más cercanas). */
+    'float puffs(vec3 p){',
+    '  vec3 g = p / .58;',
+    '  vec3 id0 = floor(g - .5);',
+    '  float d = 1e3;',
+    '  for(int i = 0; i < 2; i++){',
+    '    for(int j = 0; j < 2; j++){',
+    '      for(int k = 0; k < 2; k++){',
+    '        vec3 id = id0 + vec3(float(i), float(j), float(k));',
+    '        vec3 r = vec3(hash3(id), hash3(id + 7.1), hash3(id + 13.7));',
+    '        vec3 c = (id + .5 + (r - .5) * .8) * .58;',
+    '        d = min(d, length(p - c) - (.26 + .22 * hash3(id + 3.3)));',
+    '      }',
+    '    }',
+    '  }',
+    '  return d;',
+    '}',
+
+    /* ---------- El cerezo en flor ---------- */
+    /* Tronco y ramas de cápsulas, y una copa de esferas esponjadas con ruido. Devuelve */
+    /* (distancia, material: 0 madera, 1 flor). */
+    'vec2 sakura(vec3 p){',
+    '  float w = sdCapsule(p, vec3(0., -.4, 0.), vec3(.28, 1.5, .05), .24);',
+    '  w = smin(w, sdCapsule(p, vec3(.28, 1.5, .05), vec3(-.12, 2.7, 0.), .17), .14);',
+    '  w = smin(w, sdCapsule(p, vec3(.22, 1.7, .05), vec3(1.55, 2.9, .3), .10), .08);',
+    '  w = smin(w, sdCapsule(p, vec3(-.06, 2.3, 0.), vec3(-1.45, 3.3, -.2), .09), .08);',
+    '  w = min(w, sdCapsule(p, vec3(-.12, 2.7, 0.), vec3(.35, 4.1, .2), .08));',
+    '  w = min(w, sdCapsule(p, vec3(1.55, 2.9, .3), vec3(2.5, 3.5, .1), .06));',
+    '  w = min(w, sdCapsule(p, vec3(-1.45, 3.3, -.2), vec3(-2.5, 3.8, 0.), .06));',
+    '  w = min(w, sdCapsule(p, vec3(.9, 2.35, .2), vec3(1.0, 3.9, -.2), .06));',
+    '  w -= .025 * noise(p.xy * 9. + p.z * 7.);',
+    '  float c = length(p - vec3(0., 3.9, 0.)) - 1.45;',
+    '  c = smin(c, length(p - vec3(1.7, 3.2, .3)) - 1.05, .55);',
+    '  c = smin(c, length(p - vec3(-1.7, 3.5, -.2)) - 1.10, .55);',
+    '  c = smin(c, length(p - vec3(.7, 4.7, .2)) - .95, .55);',
+    '  c = smin(c, length(p - vec3(-.85, 4.6, 0.)) - .92, .55);',
+    '  c = smin(c, length(p - vec3(.9, 2.6, -.3)) - .62, .4);',
+    /* Copa ancha y esponjosa: grandes masas, racimos y el bulto de cada grupo de flores. */
+    '  c = smin(c, length((p - vec3(2.5, 3.6, .1)) * vec3(1., 1.3, 1.)) - .80, .5);',
+    '  c = smin(c, length((p - vec3(-2.5, 3.9, 0.)) * vec3(1., 1.3, 1.)) - .80, .5);',
+    /* La copa es su silueta general llena de racimos redondos, con huecos entre ellos. */
+    '  c -= .45 * fbm3d(p * .9 + 2.) - .10;',
+    '  c = max(c, puffs(p)) - .035 * noise3(p * 11.);',
+    '  return w < c ? vec2(w, 0.) : vec2(c, 1.);',
+    '}',
+    /* El cerezo, a su tamaño en la escena. */
+    'const float TREE = 1.45;',
+    'vec2 sakuraW(vec3 q){ vec2 d = sakura(q / TREE); return vec2(d.x * TREE, d.y); }',
 
     'float sph(vec3 ro, vec3 rd, vec3 c, float r){ vec3 o = ro - c; float b = dot(o, rd), h = b * b - dot(o, o) + r * r; return h < 0. ? -1. : max(-b - sqrt(h), 0.); }',
 
@@ -190,7 +258,7 @@
     '    for(int j = 0; j < 2; j++){',
     '      vec2 id = id0 + vec2(float(i), float(j));',
     '      vec2 r = hash2(id);',
-    '      float hb = GRASS_H * (.50 + .50 * r.x);',
+    '      float hb = GRASS_H * (.42 + .58 * r.x) * (.72 + .56 * noise(id * .11));',
     '      vec2 root = (id + .5 + (r - .5) * .7) / GRASS_N;',
     '      float k = y / hb;',
     '      float kk = clamp(k, 0., 1.);',
@@ -211,7 +279,7 @@
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
     '  vec3 ro = vec3(2.2 + uMouse.x * .9, base + .62 + uMouse.y * .3 + .03 * sin(uTime * .25), -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
-    '  vec3 rd = normalize(fw * 1.85 + uv.x * rt + uv.y * up);',
+    '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
     '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
     '  vec3 Ll = L; Ll.xz = rot(YAW) * Ll.xz;',
     '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
@@ -235,6 +303,21 @@
     '  }',
     /* Por debajo del horizonte siempre hay suelo. */
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
+
+    /* El cerezo, a la izquierda. */
+    '  vec3 treeB = vec3(-9.6, 0., 3.4);',
+    '  treeB.y = terrain(treeB.xz);',
+    '  float tTree = -1., treeMat = 0.;',
+    '  float t1 = sph(ro, rd, treeB + vec3(0., 3.1, 0.) * TREE, 3.9 * TREE);',
+    '  if(t1 >= 0.){',
+    '    float tt = t1;',
+    '    for(int i = 0; i < 90; i++){',
+    '      vec2 d = sakuraW(ro + rd * tt - treeB);',
+    '      if(d.x < .010){ tTree = tt; treeMat = d.y; break; }',
+    '      tt += d.x * .5;',
+    '      if(tt > t1 + 8.5 * TREE) break;',
+    '    }',
+    '  }',
 
     /* El ordenador (solo si el rayo pasa cerca). */
     '  float tObj = -1.;',
@@ -311,9 +394,13 @@
     /* Manchas de sombra de las nubes, que barren las lomas despacio. */
     '    float cloudSh = smoothstep(.34, .66, fbm3(p.xz * .075 + vec2(uTime * .035, uTime * .014)));',
     '    sh *= mix(.40, 1., cloudSh);',
+    '    vec2 tsh = p.xz - treeB.xz + L.xz * 5.5;',
+    '    sh *= 1. - .55 * smoothstep(6.2, 1.8, length(tsh * vec2(1., 1.3)));',
     '    sh = mix(sh, 1., uNight * .5);',
     '    gcol = alb * (ambient * 1.1 * ao + skyLight * 1.4 * ao + sunCol * dif * 2.3 * ao * sh);',
     '    gcol += sunCol * vec3(.70, .50, .16) * through * .85 * sh * (.4 + .6 * streak);',
+    '    float gustWave = smoothstep(.55, 1., sin(p.x * .55 + p.z * .33 - uTime * .9) * .5 + .5) * (.5 + .5 * noise(p.xz * .7 + uTime * .1));',
+    '    gcol += alb * sunCol * gustWave * kk * .55 * sh * (1. - uNight * .7);',
     /* La pantalla ilumina la hierba que tiene delante. */
     '    vec3 tl = sc - p;',
     '    float dl = length(tl);',
@@ -321,6 +408,37 @@
     '    gcol += alb * screenGlow * spill * mix(1.6, 9., uNight) * (.35 + .65 * kk);',
     '    col = gcol;',
     '    tFin = tGround;',
+    '  }',
+
+    /* ---------- El cerezo ---------- */
+    '  if(tTree > 0. && (tGround < 0. || tTree < tGround) && (tObj < 0. || tTree < tObj)){',
+    '    tFin = tTree;',
+    '    tObj = -1.;',
+    '    vec3 p = ro + rd * tTree;',
+    '    vec3 qw = p - treeB;',
+    '    vec3 q = qw / TREE;',
+    '    vec2 e = vec2(.04, 0.);',
+    '    vec3 n = normalize(vec3(sakuraW(qw + e.xyy).x - sakuraW(qw - e.xyy).x, sakuraW(qw + e.yxy).x - sakuraW(qw - e.yxy).x, sakuraW(qw + e.yyx).x - sakuraW(qw - e.yyx).x));',
+    '    float dif = clamp((dot(n, L) + .35) / 1.35, 0., 1.);',
+    '    if(treeMat > .5){',
+    /* Flores: racimos rosas, más claros donde les da la luz, con el sol colándose entre ellas. */
+    '      float clump = fbm3d(q * 3.2);',
+    '      float speck = noise3(q * 24.);',
+    '      vec3 pink = mix(vec3(.96, .58, .72), vec3(1., .86, .91), clump);',
+    '      pink = mix(pink, vec3(1., .96, .98), smoothstep(.62, .90, speck) * .75);',
+    '      pink = mix(pink, vec3(.86, .40, .58), smoothstep(.34, .14, speck) * .5);',
+    '      pink = mix(pink, vec3(.70, .32, .48), smoothstep(.40, .20, clump) * .35);',
+    '      float depth = clamp(sakuraW(qw + n * .6).x / .6, 0., 1.);',
+    '      float thru = pow(max(dot(rd, L), 0.), 2.) * .9;',
+    '      vec3 treeSun = mix(vec3(1.15, .86, .78), sunCol, uNight);',
+    '      col = pink * (ambient * 1.3 + skyLight * 1.9 + vec3(.16, .13, .14) * (1. - uNight)) * (.40 + .60 * depth);',
+    '      col += pink * treeSun * dif * 1.35 * (.35 + .65 * depth);',
+    '      col += vec3(1., .62, .70) * thru * .30 * (1. - uNight);',
+    '      col = mix(col, col * vec3(.62, .60, .92) + vec3(.05, .03, .07), uNight * .6);',
+    '    }else{',
+    '      vec3 bark = mix(vec3(.11, .07, .06), vec3(.22, .15, .12), noise(vec2(q.x * 30., q.y * 5.)));',
+    '      col = bark * (ambient * 1.4 + skyLight * 1.2 + sunCol * dif * 1.2);',
+    '    }',
     '  }',
 
     /* ---------- El ordenador ---------- */
@@ -355,7 +473,14 @@
     /* Hueco del marco y de la ranura: más oscuros. */
     '        float inRecess = step(abs(q.x), .68) * step(abs(q.y - 1.16), .52) * smoothstep(-.70, -.62, q.z) * step(q.z, -.50);',
     '        alb = mix(alb, vec3(.10, .13, .18), inRecess);',
-    '        alb = mix(alb, vec3(.03, .03, .04), step(abs(q.x - .36), .215) * step(abs(q.y - .50), .019) * step(q.z, -.60));',
+    '        alb = mix(alb, vec3(.03, .03, .04), step(abs(q.x - .02), .215) * step(abs(q.y - .50), .019) * step(q.z, -.60));',
+    /* Embellecedor claro alrededor de la pantalla. */
+    '        float trim = step(q.z, -.66) * step(abs(q.x), .73) * step(abs(q.y - 1.16), .57) * (1. - step(abs(q.x), .665) * step(abs(q.y - 1.16), .505));',
+    '        alb = mix(alb, vec3(.72, .78, .86), trim * .75);',
+    /* Mandos y cable, oscuros. */
+    '        float onKnob = step(length(q.xy - vec2(.56, .50)), .058) + step(length(q.xy - vec2(.72, .50)), .058);',
+    '        alb = mix(alb, vec3(.09, .10, .13), clamp(onKnob, 0., 1.) * step(q.z, -.70));',
+    '        alb = mix(alb, vec3(.04, .04, .05), step(.88, q.z) * step(q.y, .70));',
     /* Rejillas de ventilación: en los costados y arriba, por detrás. */
     '        float sideVent = step(.5, abs(nl.x)) * step(abs(q.z - .45), .26) * step(abs(q.y - 1.20), .26) * step(.5, fract(q.y * 15.));',
     '        float topVent = step(.5, nl.y) * step(abs(q.z - .50), .22) * step(abs(q.x), .40) * step(.5, fract(q.x * 13.));',
@@ -380,7 +505,7 @@
     /* La pantalla ilumina el hueco de su marco. */
     '        col += screenGlow * inRecess * .34 * mix(.7, 1.2, uNight);',
     /* Piloto verde. */
-    '        float led = 1. - smoothstep(.016, .028, length(q.xy - vec2(.68, .50)));',
+    '        float led = 1. - smoothstep(.016, .028, length(q.xy - vec2(.38, .50)));',
     '        col = mix(col, vec3(.35, 1., .55) * (.85 + .15 * sin(uTime * 2.)), led * step(q.z, -.55));',
     '      }',
     '    }',
@@ -397,6 +522,20 @@
     '  float bq = dot(oc, rd);',
     '  float dq = length(oc + rd * max(-bq, 0.));',
     '  col += screenGlow * .06 * exp(-dq * dq * 1.5) * mix(.5, 1.5, uNight) * step(0., -bq);',
+    /* Pétalos del cerezo: caen despacio y el viento los lleva hacia la derecha. */
+    '  vec2 pa = gl_FragCoord.xy / uRes.y;',
+    '  float asp = uRes.x / uRes.y;',
+    '  for(int i = 0; i < 22; i++){',
+    '    float fi = float(i);',
+    '    float sp = .028 + hash(vec2(fi, 2.2)) * .030;',
+    '    float ph = fract(hash(vec2(fi, 9.1)) + uTime * sp);',
+    '    vec2 pp = vec2(-.05 + hash(vec2(fi, 4.7)) * .30 * asp + ph * (.55 + hash(vec2(fi, 6.3)) * .5) * asp, .95 - ph * 1.05);',
+    '    pp += .020 * vec2(sin(uTime * .9 + fi * 3.1), cos(uTime * 1.3 + fi * 1.7));',
+    '    vec2 dp = rot(uTime * (.6 + hash(vec2(fi, 5.5))) + fi) * (pa - pp);',
+    '    float petal = 1. - smoothstep(.0020, .0042, length(dp * vec2(1., 1.9)));',
+    '    float fade = smoothstep(0., .08, ph) * smoothstep(1., .85, ph);',
+    '    col = mix(col, mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6), petal * fade * .9);',
+    '  }',
     /* Luciérnagas, de noche. */
     '  vec2 ns = gl_FragCoord.xy / uRes.y;',
     '  for(int i = 0; i < 12; i++){',

@@ -17,34 +17,31 @@ body.is-authing .app{display:none;}
    app, y la pantalla de acceso se muestra desde el primer fotograma. */
 html.auth-gate .app{display:none !important;}
 
-/* Barra de arriba: marca (vuelve a la portada), idioma y tema. */
+/* Barra de arriba: solo el idioma y el tema, a la derecha, en una pastilla de cristal. */
 .auth-top{
   flex:none;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-end;
   gap:12px;
   padding:14px 20px;
 }
-/* La marca y las herramientas van en pastillas de cristal, para leerse sobre el cielo. */
+/* La marca va dentro de la tarjeta, arriba (vuelve a la portada). */
 .auth-brand{
+  align-self:flex-start;
   display:inline-flex;
   align-items:center;
-  gap:9px;
-  padding:5px 12px 5px 5px;
-  margin-left:-4px;
+  gap:10px;
+  padding:4px 10px 4px 4px;
+  margin:-4px 0 0 -4px;
   color:var(--ink);
   text-decoration:none;
-  background:color-mix(in srgb, var(--surface-solid) 46%, transparent);
-  border:1px solid var(--glass-line);
-  border-radius:calc(var(--r-md) + 4px);
-  -webkit-backdrop-filter:blur(14px) saturate(1.4);
-  backdrop-filter:blur(14px) saturate(1.4);
+  border-radius:var(--r-md);
 }
-.auth-brand:hover{background:color-mix(in srgb, var(--surface-solid) 64%, transparent);}
+.auth-brand:hover{background:var(--hover);}
 .auth-brand:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
-.auth-logo{display:block;width:28px;height:28px;border-radius:8px;}
-.auth-brand-name{font-size:15px;font-weight:600;letter-spacing:-0.02em;}
+.auth-logo{display:block;width:30px;height:30px;border-radius:8px;}
+.auth-brand-name{font-size:16px;font-weight:600;letter-spacing:-0.02em;}
 .auth-tools{
   display:flex;
   align-items:center;
@@ -85,52 +82,70 @@ html.auth-gate .app{display:none !important;}
 @media (prefers-reduced-motion: reduce){.auth-shell{animation:none;}}
 
 /* ---------- Formulario ---------- */
-.auth-card{min-width:0;padding:38px 38px 32px;display:flex;flex-direction:column;justify-content:center;background:var(--surface-solid);}
-.auth-card h1{font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;margin:0 0 6px;}
+.auth-card{min-width:0;padding:34px 38px 30px;display:flex;flex-direction:column;gap:28px;background:var(--surface-solid);}
+.auth-card > #authPanel,.auth-card > .auth-loading{margin-top:auto;}
+.auth-card h1{font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;margin:0 0 6px;}
 .auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
-.auth-providers{display:flex;flex-direction:column;gap:8px;}
+.auth-alt{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0, 1fr);gap:8px;}
+.auth-alt[hidden]{display:none;}
+.auth-providers{display:contents;}
 .auth-provider{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:10px;
-  width:100%;
-  height:38px;
+  gap:8px;
+  min-width:0;
+  height:40px;
+  padding:0 8px;
   font-family:inherit;
   font-size:13px;
   font-weight:500;
   color:var(--ink);
-  background:var(--surface);
-  border:1px solid var(--line-strong);
-  border-radius:var(--r-md);
+  background:var(--surface-2);
+  border:1px solid transparent;
+  border-radius:calc(var(--r-md) + 2px);
   cursor:pointer;
   transition:background .12s ease, border-color .12s ease;
 }
-.auth-provider:hover:not(:disabled){background:var(--hover);border-color:var(--ink-faint);}
+.auth-provider:hover:not(:disabled){background:var(--surface-3);}
 .auth-provider:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .auth-provider:disabled{opacity:.55;cursor:progress;}
 .auth-provider svg{width:17px;height:17px;flex:none;}
+.auth-provider span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .auth-divider{
   display:flex;
   align-items:center;
   gap:10px;
-  margin:18px 0 14px;
+  margin:20px 0 14px;
   font-size:12px;
   color:var(--ink-faint);
 }
 .auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--line);}
-.auth-form input{width:100%;min-height:36px;}
+.auth-form .field{margin-bottom:10px;}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]){
+  width:100%;
+  min-height:44px;
+  padding:0 14px;
+  font-size:13.5px;
+  background:var(--surface-2);
+  border-color:transparent;
+  border-radius:calc(var(--r-md) + 2px);
+}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover{border-color:var(--line-strong);}
+.auth-form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus{background:var(--surface-solid);border-color:var(--accent-solid);}
+.auth-forgot{align-self:flex-end;margin-top:2px;font-size:12.5px;color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
+.auth-forgot:hover{color:var(--ink);text-decoration-color:currentColor;}
 .auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .auth-label-row label{font-size:12.5px;font-weight:500;color:var(--ink-soft);}
 .auth-label-row a,.auth-switch a{font-size:12.5px;color:var(--ink);font-weight:500;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
 .auth-label-row a:hover,.auth-switch a:hover{text-decoration-color:currentColor;}
 /* Contraseña con el botón de ver/ocultar dentro del campo. */
 .auth-pass{position:relative;}
-.auth-pass input{padding-right:40px;}
+.auth-form .auth-pass input{padding-right:44px;}
 .auth-pass-toggle{
   position:absolute;
   top:50%;
-  right:4px;
+  right:8px;
   transform:translateY(-50%);
   display:grid;
   place-items:center;
@@ -148,10 +163,10 @@ html.auth-gate .app{display:none !important;}
 .auth-pass-toggle .ic-eye-off{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye{display:none;}
 .auth-pass-toggle[aria-pressed="true"] .ic-eye-off{display:block;}
-.auth-submit{width:100%;height:38px;margin-top:4px;font-size:13.5px;}
+.auth-submit{width:100%;height:44px;margin-top:6px;font-size:14px;border-radius:calc(var(--r-md) + 2px);}
 .auth-msg{font-size:12.5px;line-height:1.45;color:var(--danger);margin:0 0 10px;}
 .auth-msg.is-info{color:var(--st-done);}
-.auth-switch{margin:16px 0 0;text-align:center;font-size:12.5px;color:var(--ink-soft);}
+.auth-switch{margin:18px 0 0;text-align:center;font-size:12.5px;color:var(--ink-faint);}
 
 /* Aviso «esta cuenta ya existe»: neutro, con la explicación y los dos pasos. */
 .auth-notice{
@@ -207,40 +222,15 @@ html.auth-gate .app{display:none !important;}
 }
 
 /* ---------- Invitado ---------- */
-.auth-guest{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
-.auth-guest-row{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  width:100%;
-  padding:9px 10px;
-  font-family:inherit;
-  text-align:left;
-  color:var(--ink);
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--r-lg);
-  cursor:pointer;
-  transition:background .12s ease, border-color .12s ease;
-}
-.auth-guest-row:hover{background:var(--hover);border-color:var(--line);}
-.auth-guest-row:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
-.auth-guest-ic{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:var(--r-md);color:var(--ink-soft);background:var(--surface-2);}
-.auth-guest-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;line-height:1.35;}
-.auth-guest-title{font-size:13px;font-weight:550;}
-.auth-guest-sub{font-size:12px;color:var(--ink-soft);}
-.auth-guest-go{flex:none;color:var(--ink-faint);transition:transform .12s ease;}
-.auth-guest-row:hover .auth-guest-go{transform:translateX(2px);color:var(--ink);}
 .auth-guest-note{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
-.auth-guest-back{width:100%;height:36px;margin-top:8px;}
+.auth-guest-back{width:100%;height:40px;margin-top:8px;border-radius:calc(var(--r-md) + 2px);}
 /* Paso «invitado»: solo el nombre y sus botones, sin el resto del acceso. */
 #authPanel.is-guest #authNotice,
 #authPanel.is-guest #authProviders,
 #authPanel.is-guest #authDivider,
 #authPanel.is-guest #authEmailForm,
 #authPanel.is-guest #authSwitch,
-#authPanel.is-guest #authGuestBtn{display:none;}
-#authPanel.is-guest .auth-guest{margin-top:0;padding-top:0;border-top:none;}
+#authPanel.is-guest #authAlt{display:none;}
 
 /* ---------- Panel de presentación (solo en pantallas anchas) ---------- */
 /* Ventana de cristal al paisaje: sin contenido, con un tinte mínimo y un desenfoque muy

@@ -95,6 +95,14 @@
       });
 
       this.buildScene();
+      /* La pantalla del ordenador de la escena acompaña al formulario: mientras se escribe
+         enseña un cuadro de acceso con un punto por carácter. Solo se le pasa cuántos hay. */
+      const fields = [this.name, this.email, this.pass, this.guestName];
+      const typing = (ev) => {
+        const el = ev.target;
+        if(el && el.tagName === 'INPUT') this.scene({chars:el.value.length, active:fields.some((f) => !!f.value)});
+      };
+      ['input', 'focusin'].forEach((type) => this.panel.addEventListener(type, typing));
 
       /* Ver u ocultar la contraseña mientras se escribe. */
       this.passToggle = $('authPassToggle');
@@ -129,6 +137,24 @@
     buildScene(){
       const canvas = $('authCanvas');
       if(canvas && Workhub.views.authScene) Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));
+    }
+
+    scene(o){
+      const s = Workhub.views.authScene;
+      if(s) s.signal(o);
+    }
+
+    /* Acceso correcto: la pantalla del ordenador lo celebra un instante antes de pasar a la app.
+       Devuelve una promesa que se cumple al acabar, o null si no hay nada que enseñar (escena
+       parada, sin WebGL o con movimiento reducido): entonces no se espera. */
+    celebrate(){
+      const s = Workhub.views.authScene;
+      const st = s && s.state();
+      const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
+      if(!st || st.frozen || calm || this.screen.hidden) return null;
+      this.setBusy(true);
+      s.signal({ok:true});
+      return new Promise((resolve) => setTimeout(resolve, 850));
     }
 
     /* ---------- Eventos hacia el controlador ---------- */
@@ -320,6 +346,7 @@
       this.screen.hidden = true;
       this.verifyRun = null;
       this.stopTimers();
+      this.scene({reset:true});
     }
 
     /* Paso «invitado»: solo el nombre; sustituye al resto del formulario de acceso. */
@@ -360,6 +387,7 @@
       this.submitLabel.textContent = t.submit;
       /* La contraseña no pasa de un modo a otro; el correo, sí. */
       if(changed) this.pass.value = '';
+      this.scene({chars:0, active:!!(this.email.value || this.name.value)});
       this.email.autocomplete = mode === 'signup' ? 'email' : 'username';
       this.caps.hidden = true;
       this.switchText.textContent = t.switchText;
@@ -405,12 +433,14 @@
         b.classList.toggle('is-busy', busy && !!who && b.getAttribute('data-provider') === who);
       });
       [this.name, this.email, this.pass].forEach((el) => { el.readOnly = busy; });
+      this.scene({busy:busy});
     }
 
     showMessage(text, isInfo){
       this.msg.textContent = text;
       this.msg.classList.toggle('is-info', !!isInfo);
       this.msg.hidden = false;
+      if(!isInfo) this.scene({error:true});
     }
 
     /* Aviso pegado al campo que hay que corregir ('email' | 'password'), con el cursor en él. */
@@ -421,6 +451,7 @@
       box.hidden = false;
       input.setAttribute('aria-invalid', 'true');
       this.msg.hidden = true;
+      this.scene({error:true});
       input.focus();
       if(field === 'password') input.select();
     }

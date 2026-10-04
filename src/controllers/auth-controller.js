@@ -153,8 +153,13 @@
     /* Sesión válida: caché local, datos del usuario y arranque de la app. */
     enter(user){
       try{ localStorage.setItem(SESSION_KEY, '1'); }catch(e){}
-      this.view.showAppSkeleton();
-      firebase.startSession().then(() => {
+      /* Si se entra desde el formulario, la pantalla de acceso se queda un instante con la
+         señal de «hecho» mientras se preparan los datos (no añade espera si tardan más que ella).
+         Si ya había sesión al abrir la página, va directo al esqueleto de la app. */
+      const beat = this.view.celebrate();
+      if(!beat) this.view.showAppSkeleton();
+      Promise.all([firebase.startSession(), beat]).then(() => {
+        if(beat) this.view.showAppSkeleton();
         firebase.install(user);
         this.view.hide();
         this.view.showAccount(user);

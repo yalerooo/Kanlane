@@ -290,7 +290,7 @@ html.auth-gate .app{display:none !important;}
 /* ---------- Pie ---------- */
 .auth-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 20px 18px;}
 /* El pie queda sobre la colina oscura del primer plano: texto claro en los dos temas. */
-.auth-foot{margin:0;font-size:12px;line-height:1.5;color:rgba(255, 255, 255, 0.78);text-align:center;max-width:440px;text-shadow:0 1px 8px rgba(10, 8, 24, 0.6);}
+.auth-foot{margin:0;font-size:12px;line-height:1.5;color:rgba(255, 255, 255, 0.88);text-align:center;max-width:440px;text-shadow:0 1px 2px rgba(10, 8, 24, 0.6), 0 1px 10px rgba(10, 8, 24, 0.75);}
 .auth-foot a{color:#fff;text-decoration-color:rgba(255, 255, 255, 0.45);text-underline-offset:3px;}
 .auth-foot a:hover{text-decoration-color:#fff;}
 

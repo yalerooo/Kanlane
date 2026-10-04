@@ -31,6 +31,15 @@
     'uniform float uNight;',
     'uniform float uTreeX;',
     'uniform float uTreeS;',
+    /* La hora, con el tema claro: 0 hora dorada (amanecer o atardecer), 1 pleno día. */
+    'uniform float uDay;',
+    /* 1 si la hora dorada es la de la mañana: algo más fría y rosada que la de la tarde. */
+    'uniform float uDawn;',
+    /* El cursor sobre la escena: posición en píxeles del lienzo y fuerza (0 si no está). */
+    'uniform vec3 uMouse;',
+    /* El formulario, para la pantalla del ordenador: caracteres escritos, cuánto se ve el */
+    /* cuadro de acceso, «entrando…» y el resultado (hacia 1, acceso correcto; hacia -1, error). */
+    'uniform vec4 uUI;',
     /* Luciérnagas: posición y brillo de cada una (las mueve el JS). */
     'const int FF_N = 40;',
     'uniform vec4 uFF[40];',
@@ -45,6 +54,20 @@
     'float fbm(vec2 p){ float a = .5, s = 0.; for(int i = 0; i < 5; i++){ s += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return s; }',
     'float fbm3(vec2 p){ float a = .5, s = 0.; for(int i = 0; i < 3; i++){ s += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return s; }',
     'mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }',
+    /* Un color según el momento: hora dorada, pleno día o noche. */
+    'vec3 pal(vec3 gold, vec3 noon, vec3 night){',
+    '  gold = mix(gold, gold * vec3(.94, .93, 1.17), uDawn);',
+    '  return mix(mix(gold, noon, uDay), night, uNight);',
+    '}',
+    'vec3 sunColor(){ return pal(vec3(1.30, .58, .30), vec3(.76, .73, .62), vec3(.30, .36, .62)); }',
+    'vec3 ambientColor(){ return pal(vec3(.20, .11, .11), vec3(.15, .19, .25), vec3(.045, .055, .12)); }',
+    'vec3 skyLightColor(){ return pal(vec3(.12, .13, .17), vec3(.17, .22, .31), vec3(.05, .07, .16)); }',
+    'vec3 mistColor(){ return pal(vec3(1., .60, .36), vec3(.90, .94, 1.), vec3(.20, .23, .42)); }',
+    /* La bruma: su color y, hacia el sol, lo que se enciende. */
+    'vec3 fogColor(vec3 rd, vec3 L){',
+    '  vec3 c = pal(vec3(.66, .30, .20), vec3(.62, .73, .88), vec3(.09, .09, .22));',
+    '  return c + pal(vec3(.24, .15, .04), vec3(.10, .09, .05), vec3(.03, .04, .09)) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '}',
     'float smin(float a, float b, float k){ float h = clamp(.5 + .5 * (b - a) / k, 0., 1.); return mix(b, a, h) - k * h * (1. - h); }',
 
     /* Dónde está plantado el cerezo (lo fija main antes de nada): el terreno le hace una loma. */
@@ -96,8 +119,10 @@
     /* Monitor de tubo: frontal ancho con el marco de la pantalla hundido, parte de atrás más */
     /* estrecha, cristal abombado, ranura de disquete, cuello y peana. */
     'const float YAW = -.46;',
-    'const vec3 SCR = vec3(0., 1.16, 0.);',
-    'vec3 toLocal(vec3 p, float base){ p.y -= base; p.xz = rot(YAW) * p.xz; return p; }',
+    /* Tamaño del ordenador. Todo él está descrito en sus propias medidas (toLocal divide por */
+    /* CS), así que las distancias que devuelve computer() hay que multiplicarlas por CS. */
+    'const float CS = 1.22;',
+    'vec3 toLocal(vec3 p, float base){ p.y -= base; p.xz = rot(YAW) * p.xz; return p / CS; }',
     'float glassD(vec3 q){',
     '  return max(sdBox(q - vec3(0., 1.16, -.57), vec3(.62, .46, .07)) - .01, length(q - vec3(0., 1.16, 5.37)) - 6.);',
     '}',
@@ -143,6 +168,15 @@
 
     /* ---------- El tablero de la pantalla ---------- */
     'float rr(vec2 p, vec2 b, float r){ return sdBox2(p, b - r) - r; }',
+    'float sdSeg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }',
+    /* La luz que da la pantalla: cálida; se atenúa con el cuadro de acceso delante, se pone */
+    /* verde al entrar y rojiza si el acceso falla. */
+    'vec3 screenLight(){',
+    '  vec3 c = mix(vec3(1., .91, .70), vec3(.74, .70, .62), uUI.y * .45);',
+    '  c = mix(c, vec3(.62, 1.25, .70), max(uUI.w, 0.));',
+    '  c = mix(c, vec3(1.10, .42, .34), max(-uUI.w, 0.) * .7);',
+    '  return c * (1. + .10 * uUI.z * sin(uTime * 6.));',
+    '}',
     'vec3 card(vec3 col, vec2 u, vec2 c, vec3 tag, float aa){',
     '  float d = rr(u - c, vec2(.24, .125), .05);',
     '  col = mix(col, vec3(.78, .74, .66), (1. - smoothstep(0., .05, d)) * .35);',
@@ -167,29 +201,77 @@
     '    col = mix(col, ring, 1. - smoothstep(0., aa, dr));',
     '    col = mix(col, vec3(.36, .35, .34), 1. - smoothstep(0., aa, rr(u - vec2(cx + .02, .55), vec2(.12, .025), .02)));',
     '    for(int j = 0; j < 3; j++){',
-    '      if(i == 1 && j == 2) continue;',
-    '      if(i == 0 && j == 2) continue;',
+    /* La tercera fila queda libre: por ahí pasa la tarjeta que viaja. */
+    '      if(j == 2) continue;',
     '      float fj = float(j);',
     '      vec3 tag = mix(.5 + .5 * cos(6.283 * (hash(vec2(fi, fj)) + vec3(0., .33, .67))), vec3(.5), .2);',
     '      col = card(col, u, vec2(cx, .30 - fj * .31), tag, aa);',
     '    }',
     '  }',
-    /* Una tarjeta viaja de la primera columna a la segunda y vuelve. */
-    '  float ph = mod(uTime * .11, 2.);',
-    '  float k = smoothstep(.12, .42, ph) - smoothstep(1.12, 1.42, ph);',
-    '  vec2 c = mix(vec2(-.62, -.32), vec2(0., -.32), k) + vec2(0., .13 * sin(k * 3.1416));',
-    '  col = card(col, u, c, vec3(.96, .55, .20), aa);',
-    /* El cursor acompaña a la tarjeta. */
-    '  vec2 m = c + vec2(.10, -.10);',
+    /* Una tarea recorre el tablero: aparece en la primera columna, pasa a la segunda y acaba */
+    /* en la tercera, ya en verde; se desvanece y vuelve a empezar. */
+    '  float ph = mod(uTime, 15.);',
+    '  float k1 = smoothstep(2.4, 3.3, ph), k2 = smoothstep(6.8, 7.7, ph);',
+    '  float vis = smoothstep(0., .5, ph) * (1. - smoothstep(13.3, 14., ph));',
+    '  vec2 c = vec2(-.62 + .62 * (k1 + k2), -.32) + vec2(0., .13 * (sin(k1 * 3.1416) + sin(k2 * 3.1416)));',
+    '  col = mix(col, card(col, u, c, mix(vec3(.96, .55, .20), vec3(.13, .77, .37), k2), aa), vis);',
+    /* El cursor la lleva mientras se mueve y, entre tanto, se queda cerca, sin estarse quieto. */
+    '  float carry = clamp(4. * (k1 * (1. - k1) + k2 * (1. - k2)), 0., 1.);',
+    '  vec2 m = c + vec2(.10, -.10) + (1. - carry) * vec2(.11 + .05 * sin(uTime * .7), -.10 + .04 * cos(uTime * .9));',
     '  float cur = max(sdBox2(rot(.6) * (u - m), vec2(.035, .06)), -(u.y - m.y - .05));',
-    '  col = mix(col, vec3(.08), 1. - smoothstep(0., aa, cur));',
+    '  col = mix(col, vec3(.08), (1. - smoothstep(0., aa, cur)) * (1. - uUI.y));',
+
+    /* El cuadro de acceso: aparece sobre el tablero mientras se escribe en el formulario. Un */
+    /* punto por carácter (solo cuántos hay, nunca cuáles), el cursor de texto y el botón, que */
+    /* enseña una barra que va y viene mientras se espera la respuesta. */
+    '  float show = uUI.y;',
+    '  vec2 e = vec2(1., .733);',
+    '  if(show > .002){',
+    '    float bad = max(-uUI.w, 0.);',
+    '    col = mix(col, col * .50 + vec3(.11, .10, .09), show * .85);',
+    '    vec2 dc = u - vec2(.045 * sin(uTime * 40.) * bad, -.03 - .10 * (1. - show));',
+    '    float dd = rr(dc, vec2(.60, .40), .08);',
+    '    col = mix(col, vec3(.16, .14, .13), (1. - smoothstep(0., .10, dd)) * .40 * show);',
+    '    vec3 dlg = vec3(.99, .975, .94);',
+    '    dlg = mix(dlg, vec3(.20, .20, .23), 1. - smoothstep(0., aa, rr(dc - vec2(-.24, .25), vec2(.24, .034), .03)));',
+    '    float fd = rr(dc - vec2(0., .04), vec2(.50, .095), .06);',
+    '    dlg = mix(dlg, mix(vec3(.90, .88, .83), vec3(.98, .72, .68), bad), 1. - smoothstep(0., aa, fd));',
+    '    float dots = 1e3;',
+    '    for(int i = 0; i < 9; i++){',
+    '      float fi = float(i);',
+    '      float on = clamp(uUI.x - fi, 0., 1.);',
+    '      dots = min(dots, length((dc - vec2(-.40 + fi * .092, .04)) * e) - .030 * on + (1. - on));',
+    '    }',
+    '    dlg = mix(dlg, vec3(.16, .16, .19), 1. - smoothstep(0., aa, dots));',
+    '    float caret = rr(dc - vec2(-.445 + min(uUI.x, 9.) * .092, .04), vec2(.011, .058), .005);',
+    '    dlg = mix(dlg, vec3(.16, .16, .19), (1. - smoothstep(0., aa, caret)) * step(.5, fract(uTime * 1.1)) * (1. - uUI.z));',
+    '    float bd = rr(dc - vec2(0., -.21), vec2(.50, .080), .06);',
+    '    vec3 btn = vec3(.11, .11, .13);',
+    '    float sweep = abs(dc.x - .42 * sin(uTime * 2.6));',
+    '    btn = mix(btn, vec3(.62, .66, .78), uUI.z * (1. - smoothstep(.02, .20, sweep)));',
+    '    btn = mix(btn, vec3(.80, .80, .84), (1. - uUI.z) * (1. - smoothstep(0., aa, rr(dc - vec2(0., -.21), vec2(.17, .020), .02))));',
+    '    dlg = mix(dlg, btn, 1. - smoothstep(0., aa, bd));',
+    '    col = mix(col, dlg, (1. - smoothstep(0., aa, dd)) * show);',
+    '  }',
+    /* Acceso correcto: la pantalla se aclara y sale la marca de «hecho». */
+    '  float ok = max(uUI.w, 0.);',
+    '  if(ok > .002){',
+    '    col = mix(col, vec3(.92, .99, .93), ok * .92);',
+    '    vec2 v = u * e;',
+    '    float pop = min(ok * 1.5, 1.);',
+    '    pop = 1. - (1. - pop) * (1. - pop);',
+    '    col = mix(col, vec3(.13, .70, .36), (1. - smoothstep(0., aa, length(v) - .36 * pop)) * ok);',
+    '    float tick = min(sdSeg(v, vec2(-.16, -.01), vec2(-.05, -.12)), sdSeg(v, vec2(-.05, -.12), vec2(.17, .12)));',
+    '    col = mix(col, vec3(1.), (1. - smoothstep(.034, .034 + aa, tick)) * smoothstep(.45, .85, ok));',
+    '  }',
     '  return col;',
     '}',
 
     /* ---------- Cielo ---------- */
     /* De dónde viene la luz: del sol (o de la luna), bajo, al fondo y algo a la derecha. No se */
     /* ve: queda tras las sierras y solo asoma su resplandor. */
-    'vec3 sunDir(){ return normalize(mix(vec3(.21, .108, .97), vec3(.17, .235, .955), uNight)); }',
+    /* A pleno día el sol está alto, pero sigue al fondo: la hierba se ve siempre a contraluz. */
+    'vec3 sunDir(){ return normalize(mix(mix(vec3(.21, .108, .97), vec3(.26, .50, .83), uDay), vec3(.17, .235, .955), uNight)); }',
     /* Nivel del agua del lago. */
     'const float WATER_Y = .62;',
     /* El cielo sin nubes ni estrellas: el degradado y el resplandor del sol. Es barato: lo usan */
@@ -205,11 +287,15 @@
     '  day = mix(day, vec3(.15, .18, .40), smoothstep(.28, .85, y));',
     '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
     '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
-    '  vec3 col = mix(day, night, uNight);',
-    /* El resplandor del sol ya puesto: ancho y pegado al horizonte, sin disco. */
+    /* Pleno día: azul hondo arriba y claro, casi blanco, en el horizonte del lado del sol. */
+    '  vec3 noon = mix(vec3(.60, .76, .94), vec3(.86, .90, .95), sunny);',
+    '  noon = mix(noon, vec3(.30, .52, .88), smoothstep(0., .34, y));',
+    '  noon = mix(noon, vec3(.11, .27, .66), smoothstep(.28, .9, y));',
+    '  vec3 col = pal(day, noon, night);',
+    /* El resplandor del sol: ancho y pegado al horizonte, sin disco. */
     '  float s = max(dot(rd, normalize(vec3(L.x, .02, L.z))), 0.);',
-    '  vec3 glow = mix(vec3(1., .60, .24), vec3(.42, .50, .90), uNight);',
-    '  col += glow * (pow(s, 5.) * .26 + pow(s, 24.) * .34 * exp(-y * 5.)) * mix(1., .34, uNight);',
+    '  vec3 glow = pal(vec3(1., .60, .24), vec3(1., .97, .88), vec3(.42, .50, .90));',
+    '  col += glow * (pow(s, 5.) * .26 + pow(s, 24.) * .34 * exp(-y * 5.)) * mix(mix(1., .50, uDay), .34, uNight);',
     '  return col;',
     '}',
     /* El cielo entero: estrellas, vía láctea, alguna estrella fugaz y dos capas de nubes. */
@@ -217,15 +303,15 @@
     '  vec3 col = skyBase(rd, L);',
     '  float s = max(dot(rd, normalize(vec3(L.x, .02, L.z))), 0.);',
     /* Estrellas: muchas pequeñas, unas pocas grandes, y la vía láctea cruzando. */
-    '  float starry = uNight * smoothstep(.02, .25, rd.y);',
+    '  float starry = smoothstep(.45, 1., uNight) * smoothstep(.02, .25, rd.y);',
     '  vec2 sp = rd.xy / (1. + abs(rd.z)) * 420.;',
     '  vec2 si = floor(sp);',
     '  float st = step(.986, hash(si)) * smoothstep(.42, .05, length(fract(sp) - .5));',
-    '  st *= .6 + .4 * sin(uTime * 1.7 + hash(si + 7.) * 40.);',
+    '  st *= .42 + .58 * (.5 + .5 * sin(uTime * (1.4 + 2.6 * hash(si + 3.)) + hash(si + 7.) * 40.));',
     '  vec2 sp2 = rd.xy / (1. + abs(rd.z)) * 90.;',
     '  vec2 si2 = floor(sp2);',
     '  float big = step(.972, hash(si2 + 31.)) * smoothstep(.16, .0, length(fract(sp2) - .5 - (hash2(si2) - .5) * .5));',
-    '  big *= .65 + .35 * sin(uTime * 1.1 + hash(si2 + 3.) * 30.);',
+    '  big *= .58 + .42 * sin(uTime * (.9 + 1.5 * hash(si2 + 5.)) + hash(si2 + 3.) * 30.) * sin(uTime * .37 + hash(si2) * 9.);',
     '  float band = exp(-pow(dot(rd, normalize(vec3(.62, .42, -.66))) * 3.2, 2.));',
     '  float dust = fbm(rd.xy * 5. + 11.);',
     '  vec3 stars = vec3(.9, .92, 1.) * st + mix(vec3(1., .88, .74), vec3(.78, .86, 1.), hash(si2)) * big * 1.4;',
@@ -246,17 +332,19 @@
     /* Nubes altas: jirones finos y alargados, encendidos por debajo. */
     '  float sunny = pow(max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.), 2.);',
     '  vec2 c1 = rd.xz / (rd.y + .10);',
-    '  float hi = fbm(vec2(c1.x * .34 + uTime * .004, c1.y * 1.25 + 4.));',
+    '  float hi = fbm(vec2(c1.x * .34 + uTime * .013, c1.y * 1.25 + 4. + uTime * .003));',
     '  float cirrus = smoothstep(.50, .78, hi) * smoothstep(.03, .22, rd.y) * .62;',
-    '  vec3 hiCol = mix(mix(vec3(.66, .28, .36), vec3(1., .68, .40), sunny * .7 + hi * .3), mix(vec3(.07, .08, .18), vec3(.20, .23, .42), hi), uNight);',
+    '  vec3 hiCol = pal(mix(vec3(.66, .28, .36), vec3(1., .68, .40), sunny * .7 + hi * .3), mix(vec3(.80, .86, .95), vec3(1.), hi), mix(vec3(.07, .08, .18), vec3(.20, .23, .42), hi));',
     /* Nubes bajas: bancos con volumen; el borde que mira al sol se enciende. */
-    '  vec2 c2 = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .012, 0.);',
+    '  vec2 c2 = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .032, 0.);',
+    /* Los bancos no solo pasan: se deshacen y se rehacen despacio. */
+    '  c2 += .30 * (vec2(noise(c2 * .55 + vec2(0., uTime * .021)), noise(c2 * .55 + vec2(5.2, -uTime * .017))) - .5);',
     '  float dn = fbm(c2);',
     '  float cl = smoothstep(.44, .74, dn) * smoothstep(0., .11, rd.y);',
     '  float edge = clamp((dn - fbm(c2 + normalize(L.xz) * .32)) * 3. + .45, 0., 1.);',
-    '  vec3 loCol = mix(mix(vec3(.25, .12, .22), vec3(1.05, .60, .34), edge), mix(vec3(.04, .05, .12), vec3(.22, .25, .45), edge), uNight);',
+    '  vec3 loCol = pal(mix(vec3(.25, .12, .22), vec3(1.05, .60, .34), edge), mix(vec3(.56, .63, .78), vec3(1.02, 1.01, .98), edge), mix(vec3(.04, .05, .12), vec3(.22, .25, .45), edge));',
     /* Cerca del sol, el filo de la nube se pone de oro. */
-    '  loCol += vec3(1., .72, .36) * pow(s, 10.) * (1. - smoothstep(.55, .9, dn)) * .9 * (1. - uNight);',
+    '  loCol += vec3(1., .72, .36) * pow(s, 10.) * (1. - smoothstep(.55, .9, dn)) * .9 * (1. - uNight) * (1. - .8 * uDay);',
     '  float cover = max(cirrus, cl);',
     '  col += stars * starry * (1. - cover);',
     '  col = mix(col, hiCol, cirrus);',
@@ -302,6 +390,16 @@
     'uniform float uTreeOn;',
     'out vec4 fragColor;',
 
+    /* El cerezo en un punto de su imagen: la madera, quieta, y encima las flores, desplazadas */
+    /* por el viento. textureLod: sin niveles de detalle, se puede leer desde cualquier sitio. */
+    'vec4 treeAt(vec2 tuv, vec2 dsp){',
+    '  vec2 fuv = tuv - dsp;',
+    '  vec4 wood = textureLod(uTree, vec2(clamp(tuv.x, .002, .998) * .5, clamp(tuv.y, 0., 1.)), 0.);',
+    '  vec4 bloom = textureLod(uTree, vec2(clamp(fuv.x, .002, .998) * .5 + .5, clamp(fuv.y, 0., 1.)), 0.);',
+    '  bloom *= step(0., fuv.x) * step(fuv.x, 1.) * step(0., fuv.y) * step(fuv.y, 1.);',
+    '  return wood * (1. - bloom.a) + bloom;',
+    '}',
+
     'void main(){',
     '  vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
     '  setupTree();',
@@ -313,13 +411,13 @@
     '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
     '  vec3 L = sunDir();',
     '  vec3 Ll = L; Ll.xz = rot(YAW) * Ll.xz;',
-    '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
-    '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
-    '  vec3 skyLight = mix(vec3(.12, .13, .17), vec3(.05, .07, .16), uNight);',
-    '  vec3 screenGlow = vec3(1., .91, .70);',
+    '  vec3 sunCol = sunColor();',
+    '  vec3 ambient = ambientColor();',
+    '  vec3 skyLight = skyLightColor();',
+    '  vec3 screenGlow = screenLight();',
     /* La pantalla, vista desde el mundo: dónde está y hacia dónde mira. */
     '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
-    '  vec3 sc = vec3(0., 1.16, -.66); sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
 
     /* Terreno: el suelo. La hierba se pinta después, encima, como geometría. */
     '  float t = .4, tHit = -1.;',
@@ -340,28 +438,26 @@
 
     /* El ordenador (solo si el rayo pasa cerca). */
     '  float tObj = -1.;',
-    '  float t0 = sph(ro, rd, ta, 1.95);',
+    '  float t0 = sph(ro, rd, vec3(0., base + 1.02 * CS, 0.), 1.95 * CS);',
     '  if(t0 >= 0.){',
     '    float tt = t0;',
     '    for(int i = 0; i < 64; i++){',
     '      float d = computer(toLocal(ro + rd * tt, base));',
     '      if(d < .0015){ tObj = tt; break; }',
-    '      tt += d;',
-    '      if(tt > t0 + 5.) break;',
+    '      tt += d * CS;',
+    '      if(tt > t0 + 5. * CS) break;',
     '    }',
     '  }',
 
     '  vec3 col = sky(rd, L);',
-    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
-    /* Hacia el sol, la bruma se enciende. */
-    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  vec3 fogCol = fogColor(rd, L);',
     /* Sierras lejanas: tres cordilleras, una tras otra. Cuanto más lejos, más pálidas; al pie */
     /* de cada una se posa la bruma y el filo que mira al sol se enciende. */
     '  if(tHit < 0.){',
     '    float az = atan(rd.x, rd.z);',
     '    vec3 hz = skyBase(normalize(vec3(rd.x, .02, rd.z)), L);',
     '    float toSun = pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 6.);',
-    '    vec3 rimCol = mix(vec3(1.25, .80, .40), vec3(.40, .46, .80), uNight);',
+    '    vec3 rimCol = pal(vec3(1.25, .80, .40), vec3(.50, .52, .50), vec3(.40, .46, .80));',
     '    for(int i = 0; i < 3; i++){',
     '      float fi = float(i);',
     '      float fr = 3.6 + fi * 3.4;',
@@ -372,13 +468,15 @@
     '      float mh = (.050 - fi * .016) + (.120 - fi * .030) * (n1 * .66 + n2 * .22 + n3 * .12) - .030;',
     '      float inside = 1. - smoothstep(mh - .0025, mh + .0025, rd.y);',
     '      float deep = (.34 + fi * .20);',
-    '      vec3 mc = mix(hz, mix(vec3(.36, .15, .22), vec3(.05, .055, .16), uNight), deep);',
+    '      vec3 mc = mix(hz, pal(vec3(.36, .15, .22), vec3(.20, .31, .47), vec3(.05, .055, .16)), deep);',
     /* Bruma al pie y filo de luz arriba. */
     /* Pliegues de la ladera y, en la cordillera del fondo, la última luz en las cumbres. */
     '      float fold = noise(vec2(az * fr * 5. + rd.y * 46., rd.y * 30. + fi * 9.));',
     '      mc *= .86 + .28 * fold;',
-    '      mc = mix(mc, mix(vec3(.96, .50, .40), vec3(.20, .22, .40), uNight), smoothstep(mh - .034, mh, rd.y) * (.42 + .3 * fold) * (1. - min(fi, 1.)) * mix(1., .35, uNight));',
-    '      mc = mix(mc, hz, smoothstep(mh, mh - .07, rd.y) * .55);',
+    '      mc = mix(mc, pal(vec3(.96, .50, .40), vec3(.84, .88, .93), vec3(.20, .22, .40)), smoothstep(mh - .034, mh, rd.y) * (.42 + .3 * fold) * (1. - min(fi, 1.)) * mix(1., .35, uNight));',
+    /* La bruma del pie no está quieta: bancos que se deslizan entre una sierra y la siguiente. */
+    '      float drift = fbm3(vec2(az * (5. + fi * 2.) + uTime * (.020 + .012 * fi), fi * 4.7 + uTime * .006));',
+    '      mc = mix(mc, hz, clamp(smoothstep(mh, mh - .07, rd.y) * (.30 + .62 * drift), 0., .9));',
     '      mc += rimCol * toSun * smoothstep(mh - .006, mh, rd.y) * (.24 - fi * .05) * mix(1., .22, uNight);',
     '      col = mix(col, mc, inside);',
     '    }',
@@ -426,6 +524,9 @@
     '    far = mix(far, mix(vec3(.030, .075, .034), vec3(.060, .11, .045), fine), woods * .85);',
     '    float kFar = (.35 + .65 * fine) * (1. - .45 * woods);',
     '    alb = mix(far, alb, near);',
+    /* De noche el ojo casi no ve el color: la hierba se apaga y se enfría (si no, queda de un */
+    /* verde encendido que no es de noche). */
+    '    alb = mix(alb, vec3(dot(alb, vec3(.30, .59, .11))) * vec3(.70, .90, 1.02), uNight * .50);',
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
     /* dejan pasar la luz cuando se miran a contraluz. */
@@ -461,15 +562,15 @@
     '    vec3 tl = sc - p;',
     '    float dl = length(tl);',
     '    float spill = max(dot(normalize(tl), normalize(n + vec3(0., .6, 0.))), 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
-    '    gcol += alb * screenGlow * spill * mix(1.6, 9., uNight) * (.35 + .65 * kk);',
+    '    gcol += mix(alb, vec3(dot(alb, vec3(.33))), .35 * uNight) * screenGlow * spill * mix(mix(1.6, .9, uDay), 7.0, uNight) * (.35 + .65 * kk);',
     /* Cada luciérnaga alumbra un corro de hierba debajo. */
     '    if(uNight > .01){',
     '      vec3 fl = vec3(0.);',
     '      for(int i = 0; i < FF_N; i++){',
     '        vec3 d = uFF[i].xyz - p;',
-    '        fl += ffCol * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 2.2);',
+    '        fl += ffCol * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
     '      }',
-    '      gcol += alb * fl * 2.4 * (.35 + .65 * kk) * uNight;',
+    '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
     '    col = gcol;',
     '    tFin = tGround;',
@@ -486,11 +587,11 @@
     '      vec3 wc = sky(wr, L) * mix(.80, .92, uNight);',
     /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
     '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
-    '      wc += mix(vec3(1.2, .78, .40), vec3(.40, .46, .70), uNight) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
+    '      wc += pal(vec3(1.2, .78, .40), vec3(.90, .90, .84), vec3(.40, .46, .70)) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
     '      float shore = smoothstep(0., .10, depth);',
     '      col = mix(col, wc, shore * .94);',
     /* Un filo claro en la orilla. */
-    '      col += mix(vec3(.50, .32, .20), vec3(.10, .12, .20), uNight) * smoothstep(.06, .0, abs(depth - .03)) * .5;',
+    '      col += pal(vec3(.50, .32, .20), vec3(.50, .56, .60), vec3(.10, .12, .20)) * smoothstep(.06, .0, abs(depth - .03)) * .5;',
     '      tFin = mix(tGround, tW, shore);',
     '    }',
     '  }',
@@ -513,7 +614,7 @@
     '        b *= .93 + .07 * sin(su.y * 170.);',
     '        b *= 1. - .20 * dot(su * .85, su * .85);',
     '        b *= 1. + .03 * sin(uTime * 7.);',
-    '        col = b * mix(1.02, 1.14, uNight) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '        col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
     '        col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '        col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '      }else{',
@@ -560,7 +661,9 @@
     '        col += screenGlow * inRecess * .34 * mix(.7, 1.2, uNight);',
     /* Piloto verde. */
     '        float led = 1. - smoothstep(.016, .028, length(q.xy - vec2(.38, .50)));',
-    '        col = mix(col, vec3(.35, 1., .55) * (.85 + .15 * sin(uTime * 2.)), led * step(q.z, -.55));',
+    /* Parpadea deprisa mientras se espera la respuesta. */
+    '        float blink = mix(.85 + .15 * sin(uTime * 2.), .25 + .75 * step(.5, fract(uTime * 5.)), uUI.z);',
+    '        col = mix(col, mix(vec3(.35, 1., .55), vec3(1., .30, .24), max(-uUI.w, 0.)) * blink, led * step(q.z, -.55));',
     '      }',
     '    }',
     '  }',
@@ -574,8 +677,8 @@
     '    float py = ro.y + rd.y * tFin;',
     '    float mist = exp(-max(py - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., tFin) * (1. - smoothstep(70., 150., tFin));',
     '    vec2 mp = (ro + rd * tFin).xz;',
-    '    mist *= .55 + .9 * fbm3(mp * .045 + vec2(uTime * .012, uTime * .005));',
-    '    col = mix(col, mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight), mist * .42);',
+    '    mist *= .50 + 1.0 * fbm3(mp * .045 + vec2(uTime * .034, uTime * .012));',
+    '    col = mix(col, mistColor(), mist * mix(.42, .56, uDawn * (1. - uDay)) * (1. - .45 * uDay));',
     '  }',
     '  float zTree = -1.;',
     /* ---------- El cerezo ---------- */
@@ -601,20 +704,23 @@
     '    vec2 dsp = vec2(1., .18) * (sin(uTime * 1.05 + ph) * .6 + sin(uTime * .61 + ph * 1.7) * .4) * (.030 + .085 * gust);',
     '    dsp += (vec2(noise(u * 2.1 + vec2(uTime * .85, 0.)), noise(u * 2.1 + vec2(7., uTime * .75))) - .5) * (.035 + .060 * gust);',
     '    dsp *= smoothstep(.6, 5.5, u.y);',
-    '    vec2 fuv = tuv - dsp / 9.2;',
-    /* Se leen siempre, fuera de cualquier condición: dentro, el nivel de detalle de la textura */
-    /* queda indefinido y hay equipos que la pintan a saltos. */
-    '    vec4 wood = texture(uTree, vec2(clamp(tuv.x, .002, .998) * .5, clamp(tuv.y, 0., 1.)));',
-    '    vec4 bloom = texture(uTree, vec2(clamp(fuv.x, .002, .998) * .5 + .5, clamp(fuv.y, 0., 1.)));',
-    '    bloom *= step(0., fuv.x) * step(fuv.x, 1.) * step(0., fuv.y) * step(fuv.y, 1.);',
-    '    vec4 tr = wood * (1. - bloom.a) + bloom;',
+    '    vec2 dq = dsp / 9.2;',
+    '    vec4 tr = treeAt(tuv, dq);',
+    /* La imagen es de 1024 px por capa y se ve más o menos a su tamaño: queda blanda. Se le */
+    /* devuelve el filo comparándola con sus vecinos (máscara de enfoque). */
+    '    vec2 px = vec2(1.15 / 1024.);',
+    '    if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
+    '      vec4 soft = (treeAt(tuv + vec2(px.x, 0.), dq) + treeAt(tuv - vec2(px.x, 0.), dq) + treeAt(tuv + vec2(0., px.y), dq) + treeAt(tuv - vec2(0., px.y), dq)) * .25;',
+    '      tr = clamp(tr + (tr - soft) * .9, 0., 1.);',
+    '      tr.rgb = min(tr.rgb, vec3(tr.a));',
+    '    }',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
-    '        vec3 tint = mix(vec3(1.12, .90, .86), vec3(.50, .47, .74), uNight) * mix(.86, 1.06, smoothstep(.5, 6.5, u.y));',
+    '        vec3 tint = pal(vec3(1.12, .90, .86), vec3(1.05, 1.0, 1.02), vec3(.50, .47, .74)) * mix(.86, 1.06, smoothstep(.5, 6.5, u.y));',
     '        vec3 tc = tr.rgb * tint;',
     /* A contraluz las flores se encienden un poco. */
-    '        tc += tr.rgb * vec3(1., .55, .45) * pow(max(dot(rd, L), 0.), 3.) * .18 * (1. - uNight);',
+    '        tc += tr.rgb * vec3(1., .55, .45) * pow(max(dot(rd, L), 0.), 3.) * .18 * (1. - uNight) * (1. - .7 * uDay);',
     /* La pantalla del ordenador no llega hasta aquí, pero la bruma sí. */
     '        float tf = (1. - exp(-tp * mix(.017, .024, uNight))) * .7;',
     '        tc = mix(tc, mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28) * tr.a, tf);',
@@ -670,8 +776,7 @@
     /* Bruma: la misma que el suelo. */
     '  float dist = length(root - ro);',
     '  vec3 rd = normalize(root - ro);',
-    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
-    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  vec3 fogCol = fogColor(rd, L);',
     '  float fog = 1. - exp(-dist * mix(.017, .024, uNight));',
     '  fog = max(fog, smoothstep(30., 110., dist) * .92);',
     '  vFog = vec4(mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
@@ -714,7 +819,8 @@
     '  float edge = smoothstep(.45, 1., crown);',
     '  float sunSide = clamp(.55 + u.x * .5 + (u.y - .5) * .5, 0., 1.);',
     '  vec3 dark = mix(vec3(.030, .070, .034), vec3(.050, .095, .040), vKind.z);',
-    '  vec3 lit = vec3(.46, .44, .14);',
+    '  vec3 lit = mix(vec3(.46, .44, .14), vec3(.34, .50, .15), uDay);',
+    '  dark = mix(dark, dark * 1.7, uDay);',
     '  dark = mix(dark, vec3(.34, .17, .22), pink);',
     '  lit = mix(lit, vec3(1.10, .62, .58), pink);',
     /* De noche todo se apaga y se enfría. */
@@ -782,6 +888,19 @@
     '  float ang = rB * 19.;',
     '  vec2 own = vec2(cos(ang), sin(ang));',
     '  vec2 lean = own * (.14 + .36 * rA) + wdir * blow + vec2(-wdir.y, wdir.x) * flutter;',
+    /* El cursor: las briznas de su alrededor se tumban hacia fuera, como si pasara una mano. */
+    /* Se mide en pantalla (dónde cae la raíz respecto al cursor), llevado a medidas de la */
+    /* escena a esa distancia; en vertical cuenta más, porque el suelo se ve muy de canto. */
+    '  if(uMouse.z > .002){',
+    '    vec3 v0 = root - ro;',
+    '    float z0 = max(dot(v0, fw), .3);',
+    '    vec2 f0 = uFocus + uRes.y * 1.5 * vec2(dot(v0, rt), dot(v0, up)) / z0;',
+    '    vec2 md = (f0 - uMouse.xy) / uRes.y * z0 / 1.5;',
+    '    md.y *= 2.4;',
+    '    float push = exp(-dot(md, md) / .62) * uMouse.z;',
+    '    lean += normalize(rt.xz * md.x + normalize(fw.xz) * md.y + 1e-4) * push * 1.35;',
+    '    h *= 1. - .22 * push;',
+    '  }',
     '  float lm2 = min(dot(lean, lean), 1.);',
 
     /* La curva de la brizna y su tangente. */
@@ -827,30 +946,29 @@
 
     /* Bruma: la misma que el suelo. */
     '  vec3 rd = normalize(root - ro);',
-    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
-    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  vec3 fogCol = fogColor(rd, L);',
     '  float fog = 1. - exp(-dist * mix(.017, .024, uNight));',
     '  vec3 fc = mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28);',
     '  float mist = exp(-max(root.y - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., dist);',
-    '  vec3 mistCol = mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight);',
+    '  vec3 mistCol = mistColor();',
     /* Dos mezclas seguidas (bruma y bruma baja) resumidas en un color y una cantidad. */
     '  float fa = 1. - (1. - fog) * (1. - mist * .42);',
     '  vFog = vec4((fc * fog * (1. - mist * .42) + mistCol * mist * .42) / max(fa, 1e-4), fa);',
 
     /* Luces de cerca: la pantalla del ordenador y, de noche, las luciérnagas. */
     '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
-    '  vec3 sc = vec3(0., 1.16, -.66); sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
     '  vec3 tl = sc - root;',
     '  float dl = length(tl);',
     '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
-    '  vec3 extra = vec3(1., .91, .70) * spill * mix(1.6, 9., uNight);',
+    '  vec3 extra = screenLight() * spill * mix(mix(1.6, .9, uDay), 7.0, uNight);',
     '  if(uNight > .01){',
     '    vec3 fl = vec3(0.);',
     '    for(int i = 0; i < FF_N; i++){',
     '      vec3 d = uFF[i].xyz - root;',
-    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 2.2);',
+    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
     '    }',
-    '    extra += fl * 2.4 * uNight;',
+    '    extra += fl * 1.5 * uNight;',
     '  }',
     '  vExtra = extra;',
 
@@ -877,9 +995,9 @@
     '  float t = vBlade.x, rA = vBlade.y, rB = vBlade.z, clump = vBlade.w;',
     '  float sh = vLight.x, contact = vLight.y, gust = vLight.z;',
     '  vec3 L = sunDir();',
-    '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
-    '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
-    '  vec3 skyLight = mix(vec3(.12, .13, .17), vec3(.05, .07, .16), uNight);',
+    '  vec3 sunCol = sunColor();',
+    '  vec3 ambient = ambientColor();',
+    '  vec3 skyLight = skyLightColor();',
     '  vec3 ro = vec3(2.2, 2.65, -11.5);',
     '  vec3 V = normalize(ro - vPos);',
     '  vec3 N = normalize(vN);',
@@ -897,6 +1015,8 @@
     '  alb = mix(alb, vec3(.50, .43, .17) * (.35 + .65 * t), dry * .75);',
     /* Manchas rojizas de tierra seca, de día. */
     '  alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(vPos.xz * .23 + 8.)) * .20 * (1. - uNight));',
+    /* De noche, apagada y fría, igual que el suelo. */
+    '  alb = mix(alb, vec3(dot(alb, vec3(.30, .59, .11))) * vec3(.70, .90, 1.02), uNight * .50);',
 
     /* Luz. Abajo, entre las demás briznas, casi no llega; arriba recibe el sol, lo deja pasar */
     /* a contraluz y brilla en el filo cuando el viento la tumba. */
@@ -972,14 +1092,14 @@
     '    vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '    vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
     '    float tObj = 1e4;',
-    '    float t0 = sph(ro, rd, ta, 1.95);',
+    '    float t0 = sph(ro, rd, vec3(0., base + 1.02 * CS, 0.), 1.95 * CS);',
     '    if(t0 >= 0.){',
     '      float tt = t0;',
     '      for(int i = 0; i < 48; i++){',
     '        float d = computer(toLocal(ro + rd * tt, base));',
     '        if(d < .003){ tObj = tt; break; }',
-    '        tt += d;',
-    '        if(tt > t0 + 5.) break;',
+    '        tt += d * CS;',
+    '        if(tt > t0 + 5. * CS) break;',
     '      }',
     '    }',
     /* Cada una: un punto vivo, un halo, un resplandor amplio y la estela de por dónde acaba */
@@ -995,23 +1115,23 @@
     '        float d2 = dot(d, d) * k * k;',
     '        float fi = float(i);',
     '        vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(fi, 2.9)));',
-    '        float g = 1.35 * exp(-d2 / .0008) + .42 * exp(-d2 / .014) + .10 * exp(-d2 / .19);',
+    '        float g = 1.5 * exp(-d2 / .00042) + .30 * exp(-d2 / .0055) + .040 * exp(-d2 / .070);',
     /* Estela. */
     '        vec3 vp = uFFp[i].xyz - ro;',
     '        vec2 ab = 1.5 * vec2(dot(vp, rt), dot(vp, up)) / max(dot(vp, fw), .25) - c;',
     '        float h = clamp(dot(d, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
     '        vec2 dt = d - ab * h;',
-    '        g += .50 * exp(-dot(dt, dt) * k * k / .0011) * (1. - h) * (1. - h);',
+    '        g += .34 * exp(-dot(dt, dt) * k * k / .00050) * (1. - h) * (1. - h);',
     /* Desenfoque de las cercanas: un disco suave con el borde algo más marcado. */
-    '        float blur = clamp((3.4 - zv) * .020, 0., .05);',
+    '        float blur = clamp((3.0 - zv) * .007, 0., .011);',
     '        if(blur > 0.){',
     '          float rr = length(d) / blur;',
-    '          g = g * .25 + (1. - smoothstep(.82, 1., rr)) * (.20 + .16 * smoothstep(.55, .95, rr));',
+    '          g = g * .35 + (1. - smoothstep(.55, 1., rr)) * (.13 + .07 * smoothstep(.55, .95, rr));',
     '        }',
     '        glow += tint * g * uFF[i].w;',
     '      }',
     '    }',
-    '    col += min(glow, vec3(1.)) * uNight;',
+    '    col += min(glow, vec3(1.)) * smoothstep(.35, 1., uNight);',
     '  }',
     '  fragColor = vec4(col, alpha);',
     '}'
@@ -1086,7 +1206,7 @@
     const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
     const list = [];
     for(let i = 0; i < FIREFLIES; i++){
-      const kind = i < 30 ? 0 : (i < 36 ? 1 : 2);
+      const kind = i < 32 ? 0 : (i < 38 ? 1 : 2);
       const home = kind === 0 ? [-9.5 + 18.5 * rnd(), -8.5 + 13.5 * rnd()] : (kind === 1 ? [-7 + 23 * rnd(), 8 + 18 * rnd()] : [0.4 + 3.6 * rnd(), -10.1 + 1.5 * rnd()]);
       list.push({
         kind, home,
@@ -1145,7 +1265,7 @@
       gl.linkProgram(prog);
       if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     const scene = program(VERT, HEAD + COMMON + '\n' + FRAG);
@@ -1215,14 +1335,46 @@
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const stillQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const isDark = () => { const a = root.getAttribute('data-theme'); return a ? a === 'dark' : darkQuery.matches; };
-    const isStill = () => stillQuery.matches || root.getAttribute('data-motion') === 'reduced';
+    /* Sin tarjeta gráfica (el navegador pinta WebGL con el procesador) cada fotograma tarda
+       muchísimo y bloquearía el formulario: se pinta una sola imagen, pequeña, y se deja quieta. */
+    const software = (function(){
+      try{
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+        return /swiftshader|llvmpipe|software|basic render/i.test(name);
+      }catch(e){ return false; }
+    })();
+    const saver = !!(navigator.connection && navigator.connection.saveData);
+    /* frozen: el equipo no puede con la animación ni en la calidad más baja; se queda la imagen. */
+    let frozen = software || saver;
+    const isStill = () => frozen || stillQuery.matches || root.getAttribute('data-motion') === 'reduced';
 
-    let scale = 1, night = isDark() ? 1 : 0;
-    let raf = 0, last = 0, t0 = performance.now();
+    /* El tema claro es siempre el atardecer y el oscuro, la noche. El sombreador sabe pintar
+       también el amanecer y el pleno día, pero el dueño prefirió el atardecer como modo claro:
+       esos momentos solo se ven fijando una hora a mano (authScene.hour(13), para probar). */
+    const SUNSET = 20;
+    let hourFixed = null;
+    function hour(){
+      return hourFixed !== null ? hourFixed : SUNSET;
+    }
+    const smooth = (a, b, v) => { const k = Math.min(Math.max((v - a) / (b - a), 0), 1); return k * k * (3 - 2 * k); };
+    const dayAt = (h) => smooth(7.5, 10, h) * (1 - smooth(16.5, 19, h));
+    const dawnAt = (h) => (h >= 4.5 && h < 12 ? 1 : 0);
+
+    let scale = 1, night = isDark() ? 1 : 0, day = dayAt(hour()), dawn = dawnAt(hour());
+    let raf = 0, last = 0, prev = 0, t0 = performance.now();
     /* Calidad: si los fotogramas llegan tarde, se pintan menos briznas (más anchas) y a menos
-       resolución, hasta tres veces. */
-    /* En móviles y tabletas se empieza ya con menos briznas. */
-    let side = MAX_SIDE, level = window.matchMedia('(pointer: coarse)').matches ? 2 : 0, slow = 0, counted = 0;
+       resolución, hasta tres veces; si ni así, la escena se queda quieta. */
+    /* En móviles y tabletas se empieza ya con menos briznas; en equipos con poco procesador o
+       poca memoria, un escalón por debajo del máximo. */
+    const modest = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+    let side = software ? 720 : MAX_SIDE, slow = 0, counted = 0;
+    let level = software ? BLADE_LEVELS.length - 1 : (window.matchMedia('(pointer: coarse)').matches ? 2 : (modest ? 1 : 0));
+
+    /* El cursor sobre la escena (en píxeles de pantalla) y con cuánta fuerza aparta la hierba. */
+    const mouse = {x:0, y:0, tx:0, ty:0, s:0, inside:false, moved:0};
+    /* El formulario, para la pantalla del ordenador (ver signal()). */
+    const ui = {chars:0, show:0, busy:0, res:0, tChars:0, tShow:0, tBusy:0, tRes:0};
 
     function resize(){
       const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
@@ -1251,7 +1403,7 @@
       if(focusEl && focusEl.offsetParent){
         const o = offset(focusEl);
         fx = o.x + focusEl.offsetWidth / 2;
-        fy = o.y + focusEl.offsetHeight * 0.56;
+        fy = o.y + focusEl.offsetHeight * 0.585;
       }
       const card = focusEl && focusEl.parentElement;
       if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
@@ -1271,6 +1423,10 @@
       gl.uniform1f(p.U.uTime, time);
       gl.uniform2f(p.U.uFocus, place.fx * scale, (place.h - place.fy) * scale);
       gl.uniform1f(p.U.uNight, night);
+      gl.uniform1f(p.U.uDay, day);
+      gl.uniform1f(p.U.uDawn, dawn * (1 - day));
+      gl.uniform3f(p.U.uMouse, mouse.x * scale, (place.h - mouse.y) * scale, mouse.s);
+      gl.uniform4f(p.U.uUI, ui.chars, ui.show, ui.busy, ui.res);
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
       if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffNow);
@@ -1279,9 +1435,25 @@
 
     function draw(now){
       const still = isStill();
-      const target = isDark() ? 1 : 0;
-      night += (target - night) * (still ? 1 : 0.06);
-      if(Math.abs(target - night) < 0.002) night = target;
+      /* Todo lo que cambia poco a poco avanza según el tiempo pasado, no por fotograma: dura lo
+         mismo en un equipo rápido que en uno lento. */
+      const dt = prev ? Math.min((now - prev) / 1000, 0.1) : 0;
+      prev = now;
+      const ease = (cur, to, rate) => (still || Math.abs(to - cur) < 0.002 ? to : cur + (to - cur) * (1 - Math.exp(-dt * rate)));
+      /* Cambiar de tema es un atardecer (o un amanecer) de un par de segundos. */
+      night = ease(night, isDark() ? 1 : 0, 1.9);
+      const h = hour();
+      day = ease(day, dayAt(h), 1.5);
+      dawn = ease(dawn, dawnAt(h), 1.5);
+      mouse.x += (mouse.tx - mouse.x) * (1 - Math.exp(-dt * 9));
+      mouse.y += (mouse.ty - mouse.y) * (1 - Math.exp(-dt * 9));
+      mouse.s = still ? 0 : ease(mouse.s, mouse.inside ? (now - mouse.moved < 1500 ? 1 : 0.55) : 0, 4);
+      ui.chars = ease(ui.chars, ui.tChars, 14);
+      ui.show = ease(ui.show, ui.tShow, 6);
+      ui.busy = ease(ui.busy, ui.tBusy, 7);
+      /* El error es un golpe que se apaga solo; el acceso correcto se queda. */
+      if(ui.tRes < 0) ui.tRes = Math.min(ui.tRes + dt * 1.4, 0);
+      ui.res = ease(ui.res, ui.tRes, 9);
       const time = still ? 12 : (now - t0) / 1000;
       /* Las luciérnagas, ahora y hace un instante (para la estela). */
       for(let i = 0; i < FIREFLIES; i++){
@@ -1336,11 +1508,14 @@
       raf = 0;
       if(screen.hidden || document.hidden) return;
       if(now - last >= FRAME_MS - 2){
-        if(last && level < BLADE_LEVELS.length - 1){
+        if(last){
           counted++;
           if(now - last > 70) slow++;
-          if(counted >= 24){
-            if(slow > 12){ level++; side = Math.round(side * 0.8); resize(); }
+          if(counted >= 18){
+            if(slow > 9){
+              if(level < BLADE_LEVELS.length - 1){ level++; side = Math.round(side * 0.8); resize(); }
+              else frozen = true;
+            }
             counted = 0; slow = 0;
           }
         }
@@ -1355,6 +1530,53 @@
       raf = requestAnimationFrame(loop);
     }
 
+    /* Lo que pasa en el formulario, para la pantalla del ordenador. Solo llega cuántos
+       caracteres hay en el campo, nunca cuáles.
+       {chars, active}: caracteres del campo en uso y si el formulario tiene algo escrito.
+       {busy}: se espera la respuesta. {ok:true}: acceso
+       correcto. {error:true}: un golpe de error. {reset:true}: todo a cero. */
+    function signal(o){
+      if(o.reset){ ui.tChars = ui.tShow = ui.tBusy = ui.tRes = 0; }
+      if(typeof o.chars === 'number') ui.tChars = Math.min(o.chars, 9);
+      if('active' in o) ui.active = !!o.active;
+      if('busy' in o) ui.tBusy = o.busy ? 1 : 0;
+      if(o.error){ ui.res = -1; ui.tRes = -1; }
+      if(o.ok){ ui.tRes = 1; ui.tBusy = 0; }
+      ui.tShow = !o.reset && ui.tRes <= 0 && (ui.active || ui.tBusy > 0) ? 1 : 0;
+      last = 0;
+      wake();
+    }
+    /* Para las pruebas y para medir: el estado de la calidad, fijar la hora y cuánto tarda de
+       verdad un fotograma (readPixels obliga a la tarjeta a terminar antes de seguir). */
+    function state(){
+      return {level, side, blades:Math.round(BLADES * BLADE_LEVELS[level]), frozen, software, night, day, dawn, canvas:[canvas.width, canvas.height]};
+    }
+    function bench(frames){
+      const px = new Uint8Array(4);
+      const n = frames || 20;
+      const from = performance.now();
+      for(let i = 0; i < n; i++){
+        draw(performance.now());
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      }
+      return (performance.now() - from) / n;
+    }
+    api.signal = signal;
+    api.state = state;
+    api.bench = bench;
+    api.hour = (h) => { hourFixed = h == null ? null : +h; last = 0; wake(); };
+    api.quality = (l) => { level = Math.max(0, Math.min(BLADE_LEVELS.length - 1, l | 0)); side = Math.round(MAX_SIDE * Math.pow(0.8, level)); frozen = false; resize(); last = 0; wake(); };
+
+    /* El cursor: solo con ratón (en pantallas táctiles no hay cursor que seguir). */
+    if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+      screen.addEventListener('pointermove', (ev) => {
+        if(ev.pointerType && ev.pointerType !== 'mouse') return;
+        mouse.tx = ev.clientX; mouse.ty = ev.clientY; mouse.moved = performance.now();
+        if(!mouse.inside){ mouse.inside = true; mouse.x = mouse.tx; mouse.y = mouse.ty; }
+      }, {passive:true});
+      screen.addEventListener('pointerleave', () => { mouse.inside = false; });
+    }
+
     window.addEventListener('resize', () => { resize(); wake(); });
     document.addEventListener('visibilitychange', wake);
     /* La pantalla de acceso aparece y desaparece con el atributo hidden; el tema, con data-theme. */
@@ -1366,5 +1588,7 @@
     return true;
   }
 
-  Workhub.views.authScene = {start};
+  /* signal() no hace nada hasta que la escena arranca (o si no hay WebGL). */
+  const api = {start, signal(){}, state(){ return null; }, bench(){ return 0; }, hour(){}, quality(){}};
+  Workhub.views.authScene = api;
 })();

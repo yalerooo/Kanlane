@@ -36,12 +36,26 @@
 
     /* Terreno: un montículo bajo el ordenador, lomas suaves y sierras a lo lejos. */
     'float terrain(vec2 p){',
-    '  float h = 1.7 * exp(-dot(p, p) / 26.);',
-    '  h += .55 * sin(p.x * .21 + 1.3) * cos(p.y * .17 + .4);',
-    '  h += .22 * fbm3(p * .45);',
-    '  h += smoothstep(10., 60., p.y) * 3.4 * fbm3(p * .045 + 3.1);',
-    '  h -= smoothstep(2., -9., p.y) * .9;',
+    '  float r2 = dot(p, p);',
+    '  float h = 1.5 * exp(-r2 / 30.);',
+    '  h += .60 * sin(p.x * .23 + 1.3) * cos(p.y * .19 + .4);',
+    /* Bultos y hondonadas: lo que da relieve a la luz rasante (lisos bajo el ordenador). */
+    '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
+    '  h += smoothstep(8., 60., p.y) * 4.2 * fbm3(p * .05 + 3.1);',
+    '  h -= smoothstep(2., -9., p.y) * 1.1;',
     '  return h;',
+    '}',
+    /* Sombra que el propio terreno se hace con el sol bajo. */
+    'float terrainShadow(vec3 p, vec3 l){',
+    '  float res = 1., t = .25;',
+    '  for(int i = 0; i < 14; i++){',
+    '    vec3 q = p + l * t;',
+    '    float d = q.y - terrain(q.xz);',
+    '    res = min(res, 5. * d / t);',
+    '    t += clamp(d, .25, 1.6);',
+    '    if(res < .02) break;',
+    '  }',
+    '  return clamp(res, 0., 1.);',
     '}',
 
     'float sdBox(vec3 p, vec3 b){ vec3 q = abs(p) - b; return length(max(q, 0.)) + min(max(q.x, max(q.y, q.z)), 0.); }',
@@ -162,8 +176,8 @@
     /* ---------- Hierba ---------- */
     /* Cada brizna es un tallo fino que sale de una celda del suelo, se curva hacia un lado y */
     /* se mece con el viento. Devuelve (distancia, altura relativa 0..1, azar de la brizna, flor). */
-    'const float GRASS_H = .34;',
-    'const float GRASS_N = 9.;',
+    'const float GRASS_H = .20;',
+    'const float GRASS_N = 15.;',
     'vec2 wind(vec2 r){',
     '  float gust = sin(uTime * .9 + r.x * .55 + r.y * .35) * .5 + sin(uTime * .47 + r.x * .21 - r.y * .3) * .5;',
     '  return vec2(1., .45) * (.030 * gust + .022 * (noise(r * .35 + uTime * .12) - .5));',
@@ -181,9 +195,9 @@
     '      float k = y / hb;',
     '      float kk = clamp(k, 0., 1.);',
     '      float a = r.y * 6.283;',
-    '      vec2 lean = (vec2(cos(a), sin(a)) * (.025 + .045 * r.x) + wind(root)) * kk * kk;',
-    '      float flower = step(.990, hash(id + 11.3));',
-    '      float w = (.013 + wide) * (1. - kk * .82) + flower * .013 * smoothstep(.80, 1., kk);',
+    '      vec2 lean = (vec2(cos(a), sin(a)) * (.018 + .034 * r.x) + wind(root) * .8) * kk * kk;',
+    '      float flower = 0.;',
+    '      float w = (.0075 + wide) * (1. - kk * .85);',
     '      float d = max(length(xz - root - lean) - w, y - hb);',
     '      if(d < best.x) best = vec4(d, kk, r.x, flower);',
     '    }',
@@ -198,11 +212,11 @@
     '  vec3 ro = vec3(2.2 + uMouse.x * .9, base + .62 + uMouse.y * .3 + .03 * sin(uTime * .25), -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '  vec3 rd = normalize(fw * 1.85 + uv.x * rt + uv.y * up);',
-    '  vec3 L = normalize(mix(vec3(.62, .17, .77), vec3(.50, .40, .77), uNight));',
+    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
     '  vec3 Ll = L; Ll.xz = rot(YAW) * Ll.xz;',
-    '  vec3 sunCol = mix(vec3(1.15, .66, .40), vec3(.30, .36, .62), uNight);',
-    '  vec3 ambient = mix(vec3(.30, .24, .28), vec3(.045, .055, .12), uNight);',
-    '  vec3 skyLight = mix(vec3(.20, .27, .40), vec3(.05, .07, .16), uNight);',
+    '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
+    '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
+    '  vec3 skyLight = mix(vec3(.12, .13, .17), vec3(.05, .07, .16), uNight);',
     '  vec3 screenGlow = vec3(1., .91, .70);',
     /* La pantalla, vista desde el mundo: dónde está y hacia dónde mira. */
     '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
@@ -211,11 +225,11 @@
     /* Terreno: se avanza hasta la altura de las puntas de la hierba. */
     '  float t = .4, tHit = -1.;',
     '  if(rd.y < .2){',
-    '    for(int i = 0; i < 110; i++){',
+    '    for(int i = 0; i < 130; i++){',
     '      vec3 p = ro + rd * t;',
     '      float d = p.y - terrain(p.xz) - GRASS_H;',
     '      if(d < .0025 * t){ tHit = t; break; }',
-    '      t += max(.02, d * .42);',
+    '      t += max(.02 + t * .005, d * .48);',
     '      if(t > 170.) break;',
     '    }',
     '  }',
@@ -236,7 +250,7 @@
     '  }',
 
     '  vec3 col = sky(rd, L);',
-    '  vec3 fogCol = mix(vec3(.56, .25, .22), vec3(.09, .09, .22), uNight);',
+    '  vec3 fogCol = mix(vec3(.62, .22, .16), vec3(.09, .09, .22), uNight);',
     '  float tFin = -1.;',
 
     /* ---------- Hierba y suelo ---------- */
@@ -249,7 +263,7 @@
     '    vec2 grad = vec2(terrain(p0.xz + vec2(e, 0.)) - g0, terrain(p0.xz + vec2(0., e)) - g0) / e;',
     '    vec3 n = normalize(vec3(-grad.x, 1., -grad.y));',
     /* Dentro de la capa de hierba, brizna a brizna (solo cerca: de lejos no se distinguen). */
-    '    float near = 1. - smoothstep(17., 27., tHit);',
+    '    float near = 1. - smoothstep(9., 16., tHit);',
     '    float tt = tHit;',
     '    vec4 b = vec4(1., 1., .5, 0.);',
     '    float hitBlade = 0.;',
@@ -261,7 +275,7 @@
     '        if(y < 0.){ b = vec4(0., 0., .5, 0.); break; }',
     '        b = blade(p.xz, y, wide);',
     '        if(b.x < .0012 * tt){ hitBlade = 1.; break; }',
-    '        tt += clamp(b.x * .85, .010, .045);',
+    '        tt += clamp(b.x * .85, .006, .028);',
     '      }',
     '    }',
     '    tGround = tt;',
@@ -269,32 +283,37 @@
     '    float kk = b.y;',
     /* Color de la brizna: oscura en la raíz, clara en la punta; algunas, secas. */
     '    float patch = fbm3(p.xz * .55);',
-    '    vec3 root = mix(vec3(.030, .060, .020), vec3(.050, .095, .028), patch);',
-    '    vec3 tip = mix(vec3(.20, .34, .09), vec3(.34, .46, .13), patch);',
+    '    vec3 root = mix(vec3(.030, .040, .016), vec3(.055, .070, .026), patch);',
+    '    vec3 tip = mix(vec3(.17, .32, .08), vec3(.33, .46, .13), patch);',
     '    tip = mix(tip, vec3(.56, .50, .20), smoothstep(.72, .98, b.z) * .8);',
     '    vec3 alb = mix(root, tip, kk * kk * .25 + kk * .75);',
     '    alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(p.xz * .23 + 8.)) * .22 * (1. - uNight));',
     /* Flores: la punta de algunas briznas. */
-    '    vec3 petal = hash(floor(p.xz * GRASS_N) + 3.) > .5 ? vec3(1., .86, .40) : vec3(1., .66, .72);',
-    '    alb = mix(alb, petal, b.w * smoothstep(.80, .92, kk));',
     /* De lejos: la misma hierba como textura, con vetas que siguen al viento. */
     '    float sway = .5 + .5 * sin(p.x * 1.3 + p.z * .7 + uTime * .9);',
-    '    float streak = noise(vec2(p.x * 46. + sway * 1.5, p.z * 7.)) * .6 + noise(p.xz * 9.) * .4;',
-    '    vec3 far = mix(mix(vec3(.06, .10, .04), vec3(.19, .27, .09), patch), vec3(.46, .42, .16), smoothstep(.60, .95, streak) * .45);',
-    '    float kFar = .55 + .45 * streak;',
+    '    float fine = noise(vec2(p.x * 150. + sway * 2., p.z * 26.)) * .5 + noise(p.xz * 70.) * .3 + noise(p.xz * 19.) * .2;',
+    '    float streak = fine;',
+    '    vec3 far = mix(vec3(.045, .080, .025), vec3(.20, .31, .09), patch * .6 + fine * .4);',
+    '    far = mix(far, vec3(.44, .36, .15), smoothstep(.62, .92, fine) * .55);',
+    '    far = mix(far, vec3(.30, .14, .09), smoothstep(.55, .85, fbm3(p.xz * .21 + 8.)) * .35 * (1. - uNight));',
+    '    float kFar = .35 + .65 * fine;',
     '    alb = mix(far, alb, near);',
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
     /* dejan pasar la luz cuando se miran a contraluz. */
     '    float ao = mix(.16, 1., smoothstep(0., .85, kk));',
-    '    float dif = clamp(dot(n, L), 0., 1.) * .75 + .25;',
+    '    float dif = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
     '    float through = pow(max(dot(rd, L), 0.), 3.) * kk;',
     '    float sh = 1.;',
     '    vec3 ql = toLocal(p, base);',
     '    if(dot(ql.xz, ql.xz) < 30.) sh = computerShadow(ql, Ll);',
+    '    sh *= terrainShadow(vec3(p.x, g0 + dot(grad, p.xz - p0.xz) + GRASS_H, p.z), L);',
+    /* Manchas de sombra de las nubes, que barren las lomas despacio. */
+    '    float cloudSh = smoothstep(.34, .66, fbm3(p.xz * .075 + vec2(uTime * .035, uTime * .014)));',
+    '    sh *= mix(.40, 1., cloudSh);',
     '    sh = mix(sh, 1., uNight * .5);',
-    '    gcol = alb * (ambient * .55 * ao + skyLight * 1.25 * ao + sunCol * dif * 1.45 * ao * sh);',
-    '    gcol += sunCol * vec3(.62, .55, .16) * through * .55 * sh;',
+    '    gcol = alb * (ambient * 1.1 * ao + skyLight * 1.4 * ao + sunCol * dif * 2.3 * ao * sh);',
+    '    gcol += sunCol * vec3(.70, .50, .16) * through * .85 * sh * (.4 + .6 * streak);',
     /* La pantalla ilumina la hierba que tiene delante. */
     '    vec3 tl = sc - p;',
     '    float dl = length(tl);',
@@ -353,7 +372,7 @@
     '        vec3 hv = normalize(L - rd);',
     '        float spec = pow(max(dot(n, hv), 0.), 48.) * .55 + pow(max(dot(n, hv), 0.), 8.) * .08;',
     '        float skyL = .5 + .5 * n.y;',
-    '        col = alb * (ambient * .75 * ao + skyLight * skyL * 1.7 * ao + sunCol * dif * 1.25 * shd);',
+    '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
     '        col += sunCol * spec * shd;',
     '        col += sky(refl, L) * fres * .22 * ao;',
     /* La hierba le devuelve un poco de verde por debajo. */
@@ -368,7 +387,7 @@
     '  }',
 
     '  if(tFin > 0.){',
-    '    float fog = 1. - exp(-tFin * mix(.013, .024, uNight));',
+    '    float fog = 1. - exp(-tFin * mix(.021, .024, uNight));',
     /* A lo lejos el suelo se funde con la bruma del horizonte. */
     '    fog = max(fog, smoothstep(30., 110., tFin) * .92);',
     '    col = mix(col, mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
@@ -389,8 +408,10 @@
     '  }',
     /* Viñeta y grano. */
     '  vec2 vq = gl_FragCoord.xy / uRes - .5;',
-    '  col *= 1. - .30 * dot(vq, vq) * 1.6;',
-    '  col += (hash(gl_FragCoord.xy + fract(uTime) * 91.7) - .5) * .024;',
+    '  col *= 1. - .34 * dot(vq, vq) * 2.2;',
+    /* Contraste suave y sombras algo frías, como en una foto al atardecer. */
+    '  col = mix(col, col * col * (3. - 2. * col), .35);',
+    '  col += (hash(gl_FragCoord.xy + fract(uTime) * 91.7) - .5) * .045;',
     '  gl_FragColor = vec4(clamp(col, 0., 1.), 1.);',
     '}'
   ].join('\n');

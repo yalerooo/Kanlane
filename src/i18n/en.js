@@ -1029,6 +1029,8 @@
     'Continuar con Apple':'Continue with Apple',
     'No se pudo conectar con el servicio de acceso. Comprueba tu conexión.':'Couldn\'t connect to the sign-in service. Check your connection.',
     'Reintentar':'Retry',
+    '{n} de {total} completadas':'{n} of {total} completed',
+    'de {total}':'of {total}',
     'Verifica tu correo':'Verify your email',
     'Ya lo he verificado':'I\'ve verified it',
     'Reenviar correo':'Resend email',

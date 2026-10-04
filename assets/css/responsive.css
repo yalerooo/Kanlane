@@ -352,12 +352,6 @@
   .summary:not(:has(.is-danger,.is-warn,.stat-link)){display:none;}
   /* La navegación arriba no se aplica en móvil: su ajuste sobra. */
   #navRow{display:none;}
-  /* Ficha del cliente: las acciones en una sola línea. */
-  .crm-head-actions{flex-wrap:nowrap;gap:4px;}
-  .crm-head-actions .btn{flex:1 1 0;min-width:0;padding:0 8px;overflow:hidden;text-overflow:ellipsis;}
-  .crm-head-actions .btn svg{display:none;}
-  .crm-head-actions .icon-only{width:34px;height:36px;}
-  .crm-head-actions .icon-only + .icon-only{margin-left:0;}
 }
 @keyframes sheet-in{from{transform:translateY(24px);opacity:.4;}to{transform:none;opacity:1;}}
 
@@ -368,8 +362,6 @@
 }
 
 @media (max-width:380px){
-  .crm-head-actions{flex-wrap:wrap;}
-  .crm-head-actions .btn{flex:1 1 40%;}
   .main{padding-left:8px;padding-right:8px;}
   .board-tabs{margin:0 -8px 10px;padding:0 10px 2px;}
   .tab{font-size:9.5px;}

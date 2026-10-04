@@ -19,6 +19,9 @@
   const USERS_ICON = svg(15, '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>');
   const ARROW_ICON = svg(14, '<path d="M7 17L17 7M8 7h9v9"/>');
   const LOCK_ICON = svg(15, '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
+  const CHECK_ICON = svg(15, '<path d="M20 6L9 17l-5-5"/>');
+  const CAL_ICON = svg(15, '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>');
+  const CHEVRON_ICON = svg(15, '<path d="M9 6l6 6-6 6"/>');
   const $ = (id) => document.getElementById(id);
 
   /* Texto escapado con las coincidencias de la búsqueda resaltadas. */
@@ -221,13 +224,15 @@
       if(q && e.matches && !e.nameMatch) meta = esc(plural(e.matches, 'contacto coincide', 'contactos coinciden'));
       else meta = '<span>' + (e.contacts.length ? plural(e.contacts.length, 'contacto', 'contactos') : 'Sin contactos') + '</span>' +
         (e.vaultCount ? ' · <span>' + plural(e.vaultCount, 'contraseña', 'contraseñas') + '</span>' : '');
+      const late = !orphan && (e.openTasks || []).some((t) => TaskModel.dueState(t) === 'overdue');
       const badge = !orphan && e.stats.open
-        ? '<span class="crm-badge" title="' + esc(Workhub.t(plural(e.stats.open, 'tarea abierta', 'tareas abiertas'))) + '">' + e.stats.open + '</span>'
+        ? '<span class="crm-badge' + (late ? ' is-late' : '') + '" title="' + esc(Workhub.t(plural(e.stats.open, 'tarea abierta', 'tareas abiertas'))) + '">' + e.stats.open + '</span>'
         : '';
       return '<button type="button" class="crm-item' + (orphan ? ' is-orphan' : '') + '" role="option" aria-selected="' + selected + '" tabindex="' + (selected ? '0' : '-1') + '" data-client="' + esc(e.id) + '"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' +
         '<span class="avatar is-square' + (orphan ? ' is-lock' : '') + '" aria-hidden="true">' + (orphan ? '?' : esc(initials(e.nombre))) + '</span>' +
         '<span class="crm-item-text"><span class="crm-item-name" translate="no">' + (orphan ? esc(e.nombre) : highlight(e.nombre, q)) + '</span>' +
         '<span class="crm-item-meta">' + meta + '</span></span>' + badge +
+        '<span class="crm-item-go" aria-hidden="true">' + CHEVRON_ICON + '</span>' +
         '</button>';
     }
 
@@ -235,11 +240,11 @@
       const q = state.query;
       const orphan = !e.client;
       const hue = orphan ? 0 : clientColors.hueOf(e.nombre);
-      const back = '<button type="button" class="icon-only crm-back" data-action="back" aria-label="Volver a la lista de clientes">' + BACK_ICON + '</button>';
+      const back = '<button type="button" class="crm-back" data-action="back" aria-label="Volver a la lista de clientes">' + BACK_ICON + '<span>Clientes</span></button>';
 
       let head;
       if(state.editing && !orphan){
-        head = '<div class="crm-head">' + back +
+        head = back + '<div class="crm-head">' +
           '<div class="client-edit-row">' +
           '<input type="text" class="client-edit-input" data-edit-input="1" value="' + esc(e.nombre) + '" maxlength="60" aria-label="Nombre del cliente">' +
           (state.busy
@@ -250,20 +255,21 @@
       } else {
         const meta = orphan
           ? 'Contactos cuyo cliente ya no existe. Edítalos para asignarles uno.'
-          : [sinceText(e.client), e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + ' en total' : 'Sin tareas todavía'].filter(Boolean).map((x) => '<span>' + esc(x) + '</span>').join(' · ');
-        head = '<div class="crm-head"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' + back +
+          : [sinceText(e.client), e.stats.total ? plural(e.stats.total, 'tarea', 'tareas') + ' en total' : 'Sin tareas todavía'].filter(Boolean).map((x) => '<span>' + esc(x) + '</span>').join('');
+        head = back + '<div class="crm-head' + (orphan ? ' is-orphan' : '') + '"' + (orphan ? '' : ' style="--h:' + hue + '"') + '>' +
           (orphan
             ? '<span class="avatar is-square is-lock" aria-hidden="true">?</span>'
             : '<button type="button" class="avatar is-square avatar-btn" data-action="toggle-color" aria-label="Cambiar color de ' + esc(e.nombre) + '" aria-expanded="' + !!state.colorOpen + '" title="Cambiar color">' + esc(initials(e.nombre)) + '</button>') +
           '<div class="crm-title"><h2 translate="no">' + esc(e.nombre) + '</h2><p>' + (orphan ? esc(meta) : meta) + '</p></div>' +
           (orphan ? '' :
             '<div class="crm-head-actions">' +
-            '<button type="button" class="btn btn-ghost" data-action="view-tasks">Ver tareas</button>' +
+            '<button type="button" class="btn btn-ghost" data-action="view-tasks">' + BOARD_ICON + 'Ver tareas</button>' +
             (document.body.classList.contains('team-project') ? '' : '<button type="button" class="btn btn-ghost" data-action="view-vault">' + LOCK_ICON + 'Ver contraseñas</button>') +
+            '<span class="crm-head-tools">' +
             '<button type="button" class="icon-only' + (state.colorOpen ? ' is-active' : '') + '" data-action="toggle-color" aria-label="Color" aria-expanded="' + !!state.colorOpen + '" title="Color">' + COLOR_ICON + '</button>' +
             '<button type="button" class="icon-only" data-action="edit-client" aria-label="Renombrar ' + esc(e.nombre) + '" title="Renombrar">' + EDIT_ICON + '</button>' +
             '<button type="button" class="icon-only is-danger" data-action="delete" aria-label="Eliminar ' + esc(e.nombre) + '" title="Eliminar">' + TRASH_ICON + '</button>' +
-            '</div>') +
+            '</span></div>') +
           '</div>';
       }
 
@@ -279,20 +285,27 @@
         : '';
 
       /* Cifras del cliente: solo las que salen de datos que la app ya tiene. */
-      const stat = (label, valueHtml, action, title) => {
-        const inner = '<small>' + esc(Workhub.t(label)) + '</small><b>' + valueHtml + '</b>';
+      const stat = (icon, label, valueHtml, action, title, extra) => {
+        const inner = '<span class="crm-stat-ic" aria-hidden="true">' + icon + '</span><small>' + esc(Workhub.t(label)) + '</small><b>' + valueHtml + '</b>' + (extra || '') +
+          (action ? '<span class="crm-stat-go" aria-hidden="true">' + ARROW_ICON + '</span>' : '');
         return action
           ? '<button type="button" class="crm-stat is-link" data-action="' + action + '" title="' + esc(Workhub.t(title)) + '">' + inner + '</button>'
           : '<div class="crm-stat">' + inner + '</div>';
       };
-      const open = orphan ? [] : (e.openTasks || []);
+      /* Las tareas, por urgencia: vencidas, de hoy, con fecha (la más cercana primero) y sin fecha. */
+      const rank = (t) => { const s = TaskModel.dueState(t); return s === 'overdue' ? 0 : (s === 'today' ? 1 : (t.dueDate ? 2 : 3)); };
+      const open = orphan ? [] : (e.openTasks || []).slice().sort((a, b) => rank(a) - rank(b) || String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
       const overdue = open.filter((t) => TaskModel.dueState(t) === 'overdue').length;
+      const total = e.stats.total || 0, done = Math.max(0, total - (e.stats.open || 0));
+      const progress = total
+        ? '<span class="crm-progress" role="img" aria-label="' + esc(Workhub.t('{n} de {total} completadas', {n:done, total:total})) + '"><i style="width:' + Math.round(done / total * 100) + '%"></i></span>'
+        : '';
       const shortcuts = orphan ? '' :
         '<div class="crm-stats">' +
-        stat('Tareas abiertas', (e.stats.open || 0) + (overdue ? '<span>' + esc(Workhub.t(plural(overdue, 'vencida', 'vencidas'))) + '</span>' : ''), 'view-tasks', 'Ver tareas') +
-        stat('Completadas', String(Math.max(0, (e.stats.total || 0) - (e.stats.open || 0)))) +
-        stat('Próxima reunión', '<em>' + esc(meetingText(e.nextMeeting)) + '</em>') +
-        stat('Contraseñas', String(e.vaultCount || 0), 'view-vault', 'Ver contraseñas') +
+        stat(BOARD_ICON, 'Tareas abiertas', (e.stats.open || 0) + (overdue ? '<span>' + esc(Workhub.t(plural(overdue, 'vencida', 'vencidas'))) + '</span>' : ''), 'view-tasks', 'Ver tareas') +
+        stat(CHECK_ICON, 'Completadas', done + (total ? '<span class="is-soft">' + esc(Workhub.t('de {total}', {total:total})) + '</span>' : ''), '', '', progress) +
+        stat(CAL_ICON, 'Próxima reunión', '<em>' + esc(meetingText(e.nextMeeting)) + '</em>') +
+        stat(LOCK_ICON, 'Contraseñas', String(e.vaultCount || 0), 'view-vault', 'Ver contraseñas') +
         '</div>' +
         '<div class="crm-shortcuts"><div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div></div>';
 
@@ -355,8 +368,8 @@
     return '<div class="person" data-action="open-contact" data-id="' + esc(c.id) + '" tabindex="0" role="button" aria-label="Editar contacto ' + esc(name) + '">' +
       '<span class="avatar" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
       '<div class="person-main" translate="no"><strong>' + highlight(name, q) + '</strong>' + notas + '</div>' +
-      '<div class="person-cell">' + email + '</div><div class="person-cell">' + tel + '</div>' +
       '<span class="person-edit" aria-hidden="true">' + EDIT_ICON + '</span>' +
+      (email || tel ? '<div class="person-lines">' + email + tel + '</div>' : '') +
       '</div>';
   }
 

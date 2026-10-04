@@ -78,6 +78,36 @@
 </div>
 
 <div id="authScreen" class="auth-screen" hidden>
+  <div class="auth-scene" id="authScene" aria-hidden="true">
+    <div class="sc-stars" id="authStars"></div>
+    <div class="sc-sun"></div>
+    <div class="sc-cloud" style="top:16%;animation-duration:150s;animation-delay:-40s"></div>
+    <div class="sc-cloud" style="top:27%;animation-duration:110s;animation-delay:-85s;scale:.7"></div>
+    <div class="sc-cloud" style="top:9%;animation-duration:190s;animation-delay:-130s;scale:1.25"></div>
+    <svg class="sc-hills" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <g style="--d:8"><path fill="var(--sc-h1)" d="M-40 560C160 500 320 470 520 520S860 600 1040 540s280-70 440-20v420H-40z"/></g>
+      <g style="--d:14">
+        <path fill="var(--sc-h2)" d="M-40 650c220-50 400 20 640-10s380-80 580-20 220 60 300 30v290H-40z"/>
+        <g fill="var(--sc-h3)">
+          <path d="M1062 612v-26l26-22 26 22v26z"/>
+          <path d="M1096 570v-14h8v20z"/>
+        </g>
+        <rect class="sc-window" x="1080" y="592" width="12" height="12" rx="1.500"/>
+        <g class="sc-smoke"><circle cx="1100" cy="550" r="6"/><circle cx="1100" cy="550" r="6"/><circle cx="1100" cy="550" r="6"/></g>
+      </g>
+      <g style="--d:22">
+        <path fill="var(--sc-h3)" d="M-40 740c260-52 500 22 760-18s460-34 760 30v188H-40z"/>
+        <g fill="var(--sc-h3)">
+          <path d="M150 726l22-62 22 62zM158 700l14-44 14 44z"/>
+          <path d="M214 734l28-84 28 84zM224 700l18-58 18 58z"/>
+          <path d="M292 730l18-52 18 52z"/>
+          <path d="M1300 742l24-70 24 70zM1309 714l15-48 15 48z"/>
+        </g>
+      </g>
+      <g style="--d:32"><path fill="var(--sc-h4)" d="M-40 800c320-34 640 30 940-8s420-20 580 12v136H-40z"/></g>
+    </svg>
+    <div class="sc-flies" id="authFlies"></div>
+  </div>
   <header class="auth-top">
     <a class="auth-brand" href="/?portada" title="Volver a la portada">
       <img class="auth-logo" src="../assets/img/favicon.svg" width="28" height="28" alt="" aria-hidden="true">
@@ -143,7 +173,6 @@
       </section>
 
       <aside class="auth-aside">
-        <h2 class="auth-aside-title">Todo tu trabajo, en un solo sitio.</h2>
         <div class="auth-preview" aria-hidden="true">
           <div class="auth-pcol">
             <div class="auth-phead"><span class="auth-pring" style="--c:var(--dot-pend)"></span><span class="auth-pbar" style="width:46%"></span></div>
@@ -163,11 +192,14 @@
             <div class="auth-pcard is-done"><span class="auth-ptag" style="--h:268"></span><span class="auth-pbar" style="width:84%"></span></div>
           </div>
         </div>
-        <ul class="auth-points">
+        <div class="auth-aside-text">
+          <h2 class="auth-aside-title">Todo tu trabajo, en un solo sitio.</h2>
+          <ul class="auth-points">
           <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg></span><span>Tareas, calendario y clientes en el mismo sitio.</span></li>
           <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span>Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</span></li>
           <li><span class="auth-point-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17.5h2"/></svg></span><span>Funciona sin conexión y se instala como aplicación.</span></li>
         </ul>
+        </div>
       </aside>
     </div>
   </div>

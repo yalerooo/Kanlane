@@ -1,7 +1,7 @@
 /* ---------- Pantalla de acceso ----------
-   Estilo «cristal limpio»: una sola hoja de cristal sobre el fondo con el velo del
-   acento. Dentro no hay más cristal: el formulario va directo sobre la hoja y el
-   panel de presentación, sobre relleno suave (--surface-2). */
+   Sobre un paisaje animado (al final de este archivo) va una tarjeta de dos mitades: a la
+   izquierda el formulario, sobre superficie sólida; a la derecha, un panel de cristal de
+   verdad que deja ver el paisaje, con la presentación encima en blanco. */
 .auth-screen{
   position:fixed;
   inset:0;
@@ -16,16 +16,6 @@ body.is-authing .app{display:none;}
 /* Mientras se comprueba la sesión (clase puesta en el <head>): nunca se ve la
    app, y la pantalla de acceso se muestra desde el primer fotograma. */
 html.auth-gate .app{display:none !important;}
-.auth-screen::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background:
-    radial-gradient(60% 70% at 0% 0%, color-mix(in srgb, var(--hue-a) calc(var(--wash) * 100%), transparent) 0, transparent 70%),
-    radial-gradient(55% 65% at 100% 100%, color-mix(in srgb, var(--hue-b) calc(var(--wash) * 70%), transparent) 0, transparent 70%);
-}
 
 /* Barra de arriba: marca (vuelve a la portada), idioma y tema. */
 .auth-top{
@@ -36,21 +26,36 @@ html.auth-gate .app{display:none !important;}
   gap:12px;
   padding:14px 20px;
 }
+/* La marca y las herramientas van en pastillas de cristal, para leerse sobre el cielo. */
 .auth-brand{
   display:inline-flex;
   align-items:center;
   gap:9px;
-  padding:4px 8px 4px 4px;
+  padding:5px 12px 5px 5px;
   margin-left:-4px;
   color:var(--ink);
   text-decoration:none;
-  border-radius:var(--r-md);
+  background:color-mix(in srgb, var(--surface-solid) 46%, transparent);
+  border:1px solid var(--glass-line);
+  border-radius:calc(var(--r-md) + 4px);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  backdrop-filter:blur(14px) saturate(1.4);
 }
-.auth-brand:hover{background:var(--hover);}
+.auth-brand:hover{background:color-mix(in srgb, var(--surface-solid) 64%, transparent);}
 .auth-brand:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .auth-logo{display:block;width:28px;height:28px;border-radius:8px;}
 .auth-brand-name{font-size:15px;font-weight:600;letter-spacing:-0.02em;}
-.auth-tools{display:flex;align-items:center;gap:8px;}
+.auth-tools{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px;
+  background:color-mix(in srgb, var(--surface-solid) 46%, transparent);
+  border:1px solid var(--glass-line);
+  border-radius:calc(var(--r-md) + 4px);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  backdrop-filter:blur(14px) saturate(1.4);
+}
 .auth-lang button{min-width:36px;height:26px;padding:0 9px;font-size:12px;font-weight:550;letter-spacing:.02em;}
 .auth-theme{width:30px;height:30px;}
 /* Sol en oscuro, luna en claro (como el botón del pie de la barra lateral). */
@@ -69,20 +74,18 @@ html.auth-gate .app{display:none !important;}
   margin:auto;
   width:min(900px, 100%);
   display:grid;
-  grid-template-columns:minmax(0, 404px) minmax(0, 1fr);
-  background:var(--sheet);
-  border:1px solid var(--glass-line);
-  border-radius:calc(var(--r-sheet) + 4px);
-  -webkit-backdrop-filter:var(--sheet-blur);
-  backdrop-filter:var(--sheet-blur);
-  box-shadow:var(--glass-shadow);
-  animation:auth-in .32s cubic-bezier(.2,.7,.2,1) both;
+  grid-template-columns:minmax(0, 412px) minmax(0, 1fr);
+  min-height:min(560px, calc(100dvh - 190px));
+  border-radius:calc(var(--r-sheet) + 6px);
+  overflow:hidden;
+  box-shadow:0 0 0 1px var(--glass-line), 0 40px 90px -30px rgba(10, 8, 24, 0.55);
+  animation:auth-in .5s cubic-bezier(.2,.7,.2,1) both;
 }
-@keyframes auth-in{from{opacity:0;transform:translateY(8px);}}
+@keyframes auth-in{from{opacity:0;transform:translateY(14px) scale(.985);}}
 @media (prefers-reduced-motion: reduce){.auth-shell{animation:none;}}
 
 /* ---------- Formulario ---------- */
-.auth-card{min-width:0;padding:36px 36px 30px;display:flex;flex-direction:column;justify-content:center;}
+.auth-card{min-width:0;padding:38px 38px 32px;display:flex;flex-direction:column;justify-content:center;background:var(--surface-solid);}
 .auth-card h1{font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;margin:0 0 6px;}
 .auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
 .auth-providers{display:flex;flex-direction:column;gap:8px;}
@@ -240,55 +243,64 @@ html.auth-gate .app{display:none !important;}
 #authPanel.is-guest .auth-guest{margin-top:0;padding-top:0;border-top:none;}
 
 /* ---------- Panel de presentación (solo en pantallas anchas) ---------- */
+/* Cristal de verdad: tinte muy ligero y desenfoque suave, para que el paisaje se siga
+   viendo. El texto va en blanco, con una sombra mínima, en los dos temas. */
 .auth-aside{
   min-width:0;
-  margin:8px 8px 8px 0;
-  padding:30px 28px 26px;
+  padding:32px 30px 28px;
   display:flex;
   flex-direction:column;
-  justify-content:center;
+  justify-content:space-between;
   gap:22px;
-  background:var(--surface-2);
-  border-radius:var(--r-sheet);
+  color:#fff;
+  background:rgba(46, 24, 52, 0.14);
+  border-left:1px solid rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter:blur(9px) saturate(1.3);
+  backdrop-filter:blur(9px) saturate(1.3);
+  text-shadow:0 1px 10px rgba(20, 12, 30, 0.35);
 }
-.auth-aside-title{margin:0;font-size:19px;font-weight:600;letter-spacing:-0.025em;line-height:1.25;color:var(--ink);text-wrap:balance;}
+.auth-aside-title{margin:0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#fff;text-wrap:balance;}
+/* El texto va abajo, sobre las colinas (la parte oscura del paisaje), y el tablero de muestra arriba, sobre el cielo. */
+.auth-aside-text{display:flex;flex-direction:column;gap:14px;}
 /* Tablero de muestra: sin texto, solo la forma de las columnas y las tarjetas. */
 .auth-preview{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:8px;
   padding:10px;
-  background:var(--surface);
-  border:1px solid var(--line);
+  background:rgba(255, 255, 255, 0.1);
+  border:1px solid rgba(255, 255, 255, 0.24);
   border-radius:var(--r-lg);
+  -webkit-backdrop-filter:blur(16px);
+  backdrop-filter:blur(16px);
 }
 .auth-pcol{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .auth-phead{display:flex;align-items:center;gap:6px;height:18px;padding:0 2px;}
 .auth-pring{width:9px;height:9px;flex:none;border:2px solid var(--c);border-radius:50%;}
 .auth-pring.is-done{background:var(--c);}
-.auth-pbar{display:block;height:5px;border-radius:3px;background:var(--surface-3);}
-.auth-pbar.is-soft{background:var(--surface-2);}
+.auth-pbar{display:block;height:5px;border-radius:3px;background:rgba(255, 255, 255, 0.62);}
+.auth-pbar.is-soft{background:rgba(255, 255, 255, 0.32);}
 .auth-pcard{
   display:flex;
   flex-direction:column;
   gap:6px;
   padding:9px 9px 10px;
-  background:var(--surface);
-  border:1px solid var(--line);
+  background:rgba(255, 255, 255, 0.16);
+  border:1px solid rgba(255, 255, 255, 0.2);
   border-radius:var(--r-md);
-  box-shadow:var(--shadow-sm);
 }
 .auth-pcard.is-done{opacity:.6;}
 .auth-ptag{width:7px;height:7px;border-radius:2px;background:hsl(var(--h) var(--chip-s) var(--chip-dot-l));}
 .auth-points{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
-.auth-points li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.45;color:var(--ink-soft);}
-.auth-point-ic{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-top:-2px;border-radius:7px;color:var(--ink);background:var(--surface);border:1px solid var(--line);}
+.auth-points li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.45;color:rgba(255, 255, 255, 0.92);}
+.auth-point-ic{display:grid;place-items:center;width:24px;height:24px;flex:none;margin-top:-2px;border-radius:7px;color:#fff;background:rgba(255, 255, 255, 0.16);border:1px solid rgba(255, 255, 255, 0.24);}
 
 /* ---------- Pie ---------- */
 .auth-bottom{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 20px 18px;}
-.auth-foot{margin:0;font-size:12px;line-height:1.5;color:var(--ink-faint);text-align:center;max-width:440px;}
-.auth-foot a{color:var(--ink-soft);text-decoration-color:var(--line-strong);text-underline-offset:3px;}
-.auth-foot a:hover{color:var(--ink);}
+/* El pie queda sobre la colina oscura del primer plano: texto claro en los dos temas. */
+.auth-foot{margin:0;font-size:12px;line-height:1.5;color:rgba(255, 255, 255, 0.78);text-align:center;max-width:440px;text-shadow:0 1px 8px rgba(10, 8, 24, 0.6);}
+.auth-foot a{color:#fff;text-decoration-color:rgba(255, 255, 255, 0.45);text-underline-offset:3px;}
+.auth-foot a:hover{text-decoration-color:#fff;}
 /* El cifrado ya se cuenta en el panel de presentación; el pie lo dice cuando el panel no se ve. */
 .auth-foot-crypto{display:none;}
 
@@ -304,7 +316,7 @@ html.auth-gate .app{display:none !important;}
 
 /* ---------- Tablet y móvil: solo el formulario ---------- */
 @media (max-width: 860px){
-  .auth-shell{width:min(420px, 100%);grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
+  .auth-shell{width:min(420px, 100%);min-height:0;grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
   .auth-aside{display:none;}
   .auth-card{padding:30px 28px 24px;}
   .auth-foot-crypto{display:block;}
@@ -321,6 +333,86 @@ html.auth-gate .app{display:none !important;}
   .auth-pass-toggle{width:32px;height:32px;}
 }
 
+
+/* ---------- Paisaje de fondo ----------
+   Detrás del acceso hay un paisaje dibujado con CSS y un SVG (sin imágenes ni nada de
+   terceros): un atardecer en claro y una noche en oscuro, con colinas, una casita con la
+   luz encendida, nubes que pasan despacio y motas de luz. Las capas se mueven un poco con
+   el ratón (--mx, --my los pone AuthView). El panel de la derecha es cristal de verdad y
+   lo deja ver. Con movimiento reducido el paisaje se queda quieto. */
+.auth-screen{
+  --sc-sky:linear-gradient(180deg, #FCEEDD 0%, #F8D3AE 36%, #F1A886 60%, #E2826D 80%, #C96A67 100%);
+  --sc-sun:#FFF3D2;
+  --sc-glow:rgba(255, 216, 156, 0.6);
+  --sc-h1:#D8937B;
+  --sc-h2:#AC636B;
+  --sc-h3:#70405D;
+  --sc-h4:#3B2545;
+  --sc-cloud:rgba(255, 255, 255, 0.5);
+  --sc-fly:rgba(255, 246, 220, 0.95);
+  --sc-star:0;
+  --sc-window:#FFD98A;
+}
+:root[data-theme="dark"] .auth-screen{
+  --sc-sky:linear-gradient(180deg, #060918 0%, #121839 42%, #272253 70%, #47305F 100%);
+  --sc-sun:#F6EFDC;
+  --sc-glow:rgba(226, 222, 255, 0.2);
+  --sc-h1:#222452;
+  --sc-h2:#181A3F;
+  --sc-h3:#0F112B;
+  --sc-h4:#070815;
+  --sc-cloud:rgba(170, 178, 235, 0.13);
+  --sc-fly:#FFE08A;
+  --sc-star:1;
+  --sc-window:#FFCF70;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .auth-screen{
+    --sc-sky:linear-gradient(180deg, #060918 0%, #121839 42%, #272253 70%, #47305F 100%);
+    --sc-sun:#F6EFDC;
+    --sc-glow:rgba(226, 222, 255, 0.2);
+    --sc-h1:#222452;
+    --sc-h2:#181A3F;
+    --sc-h3:#0F112B;
+    --sc-h4:#070815;
+    --sc-cloud:rgba(170, 178, 235, 0.13);
+    --sc-fly:#FFE08A;
+    --sc-star:1;
+    --sc-window:#FFCF70;
+  }
+}
+.auth-scene{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--sc-sky);}
+.auth-scene > *,.sc-hills g{translate:calc(var(--mx, 0) * var(--d, 0) * 1px) calc(var(--my, 0) * var(--d, 0) * 0.6px);transition:translate .9s cubic-bezier(.2, .7, .2, 1);}
+/* Sol (o luna): un disco con su halo, que respira despacio. */
+.sc-sun{--d:6;position:absolute;left:64%;top:30%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;background:var(--sc-sun);box-shadow:0 0 90px 50px var(--sc-glow), 0 0 220px 130px var(--sc-glow);animation:sc-breathe 9s ease-in-out infinite;}
+@keyframes sc-breathe{50%{box-shadow:0 0 110px 62px var(--sc-glow), 0 0 260px 160px var(--sc-glow);}}
+/* Estrellas: solo de noche. */
+.sc-stars{--d:3;position:absolute;inset:0 0 40% 0;opacity:var(--sc-star);transition:opacity .4s ease, translate .9s cubic-bezier(.2, .7, .2, 1);}
+.sc-stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:sc-twinkle 4s ease-in-out infinite;}
+@keyframes sc-twinkle{50%{opacity:.25;}}
+/* Nubes: pasan muy despacio de lado a lado. */
+.sc-cloud{--d:10;position:absolute;left:0;width:260px;height:44px;border-radius:999px;background:var(--sc-cloud);animation:sc-drift 120s linear infinite;}
+.sc-cloud::before,.sc-cloud::after{content:"";position:absolute;border-radius:999px;background:inherit;}
+.sc-cloud::before{left:38px;top:-22px;width:120px;height:52px;}
+.sc-cloud::after{left:118px;top:-12px;width:96px;height:40px;}
+@keyframes sc-drift{from{transform:translateX(-30vw);}to{transform:translateX(120vw);}}
+/* Colinas, casita y árboles. */
+.sc-hills{position:absolute;left:-3%;bottom:-2%;width:106%;height:104%;translate:none;}
+.sc-window{fill:var(--sc-window);animation:sc-flicker 5s ease-in-out infinite;}
+@keyframes sc-flicker{0%,100%{opacity:1;}45%{opacity:.82;}55%{opacity:.95;}}
+.sc-smoke circle{fill:var(--sc-cloud);transform-box:fill-box;transform-origin:center;animation:sc-smoke 7s ease-out infinite;opacity:0;}
+.sc-smoke circle:nth-child(2){animation-delay:2.3s;}
+.sc-smoke circle:nth-child(3){animation-delay:4.6s;}
+@keyframes sc-smoke{0%{opacity:0;transform:translate(0, 0) scale(.6);}20%{opacity:.9;}100%{opacity:0;transform:translate(18px, -64px) scale(2.2);}}
+/* Motas de luz (luciérnagas de noche): flotan y se encienden y apagan. */
+.sc-flies{--d:22;position:absolute;inset:45% 0 0 0;}
+.sc-flies i{position:absolute;width:4px;height:4px;border-radius:50%;background:var(--sc-fly);box-shadow:0 0 8px 2px var(--sc-fly);opacity:0;animation:sc-fly 9s ease-in-out infinite;}
+@keyframes sc-fly{0%{opacity:0;transform:translate(0, 0);}25%{opacity:.95;}50%{opacity:.35;transform:translate(22px, -26px);}75%{opacity:.9;}100%{opacity:0;transform:translate(-8px, -52px);}}
+@media (prefers-reduced-motion: reduce){
+  .auth-scene *{animation:none !important;transition:none !important;}
+  .sc-flies i{opacity:.7;}
+}
+:root[data-motion="reduced"] .sc-flies i{opacity:.7;}
 
 /* Cuenta en la barra lateral */
 .account{display:flex;align-items:center;gap:9px;padding:6px 2px 6px 8px;margin:0 0 4px;border-radius:var(--r-md);}

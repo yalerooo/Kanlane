@@ -354,3 +354,13 @@ html.auth-gate .app{display:none !important;}
 .account-name{font-size:13px;font-weight:550;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .account-mail{font-size:11.5px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .account .icon-only{width:26px;height:26px;border-radius:7px;flex:none;}
+
+/* Cambio de tema en la pantalla de acceso: la tarjeta pasa de un color a otro con suavidad
+   mientras el cielo de la escena hace lo mismo (auth-view.js pone la clase un instante). */
+.auth-screen.is-theming .auth-shell,
+.auth-screen.is-theming .auth-shell *,
+.auth-screen.is-theming .auth-tools,
+.auth-screen.is-theming .auth-tools *{transition:background-color .7s ease, color .7s ease, border-color .7s ease, box-shadow .7s ease, fill .7s ease, stroke .7s ease !important;}
+@media (prefers-reduced-motion: reduce){
+  .auth-screen.is-theming .auth-shell,.auth-screen.is-theming .auth-shell *,.auth-screen.is-theming .auth-tools,.auth-screen.is-theming .auth-tools *{transition:none !important;}
+}

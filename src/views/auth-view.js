@@ -198,7 +198,18 @@
       btn.addEventListener('click', () => {
         const attr = document.documentElement.getAttribute('data-theme');
         const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        Workhub.utils.ui.themeSwitch(btn, () => handler(dark ? 'light' : 'dark'));
+        const next = dark ? 'light' : 'dark';
+        /* Con la escena en marcha no se usa el cambio de tema «en círculo» del resto de la app:
+           ese efecto congela la página en una foto mientras dura, y la hierba y las luciérnagas
+           se quedaban paradas. Aquí el cielo pasa solo de atardecer a noche, sin parar nada, y
+           la tarjeta cambia de color con una transición corta. */
+        const s = Workhub.views.authScene;
+        const st = s && s.state();
+        if(!st || st.frozen){ Workhub.utils.ui.themeSwitch(btn, () => handler(next)); return; }
+        this.screen.classList.add('is-theming');
+        clearTimeout(this.themingTimer);
+        this.themingTimer = setTimeout(() => this.screen.classList.remove('is-theming'), 900);
+        handler(next);
       });
     }
 

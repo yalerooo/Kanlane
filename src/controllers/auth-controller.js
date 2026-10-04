@@ -6,6 +6,9 @@
 (function(){
   const firebase = Workhub.services.firebase;
   const MIN_PASSWORD = 8;
+  /* Margen tras volver de la ventana de acceso antes de soltar los botones (ms): da tiempo a que
+     un acceso correcto entre en la app sin que el formulario parpadee. */
+  const POPUP_GRACE = 600;
   /* Datos de la sesión que se guardan en este navegador y se borran al salir. */
   const SESSION_PREFS = ['workhub_project'];
   /* Modo invitado: solo el nombre, en este navegador. Los datos van al almacén local (IndexedDB). */
@@ -197,8 +200,36 @@
 
     signInWith(key){
       this.view.clearMessage();
-      this.view.setBusy(true, key);
-      firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err)).finally(() => this.view.setBusy(false));
+      const turn = this.hold(key);
+      /* Firebase tarda varios segundos en darse cuenta de que se ha cerrado la ventana de acceso.
+         No se espera a eso: en cuanto esta página recupera el foco, los botones vuelven a servir.
+         Si la ventana se cerró porque el acceso salió bien, la app entra igualmente. */
+      let timer = 0;
+      const back = () => { timer = setTimeout(() => this.release(turn), POPUP_GRACE); };
+      window.addEventListener('focus', back, {once:true});
+      firebase.signInWith(key).then((res) => this.linkedNotice(res)).catch((err) => {
+        /* Un intento que ya se dio por abandonado no pinta errores sobre el siguiente. */
+        if(this.busyTurn === turn || !this.busyTurn) this.showError(err);
+      }).finally(() => {
+        window.removeEventListener('focus', back);
+        clearTimeout(timer);
+        this.release(turn);
+      });
+    }
+
+    /* Ocupa el formulario y devuelve el turno; solo ese turno puede liberarlo (un intento anterior
+       que termina tarde no desbloquea el siguiente). */
+    hold(who){
+      this.turns = (this.turns || 0) + 1;
+      this.busyTurn = this.turns;
+      this.view.setBusy(true, who);
+      return this.busyTurn;
+    }
+
+    release(turn){
+      if(this.busyTurn !== turn) return;
+      this.busyTurn = 0;
+      this.view.setBusy(false);
     }
 
     submitEmail(mode, v){
@@ -225,8 +256,8 @@
       } else {
         p = firebase.signInWithEmail(v.email, v.password).then((res) => this.linkedNotice(res)).catch((err) => this.showError(err));
       }
-      this.view.setBusy(true, 'submit');
-      p.finally(() => this.view.setBusy(false));
+      const turn = this.hold('submit');
+      p.finally(() => this.release(turn));
     }
 
     /* Al salir se recarga la página (onUser) y, ya sin sesión, se borra la

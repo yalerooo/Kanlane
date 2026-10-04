@@ -78,10 +78,28 @@
         const value = this.commentText.value.trim();
         if(value && this.taskId) handler(this.taskId, value);
       });
+      /* Intro envía; Mayús + Intro, salto de línea. El campo crece con el texto. */
+      this.commentText.addEventListener('keydown', (ev) => {
+        if(ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) return;
+        ev.preventDefault();
+        if(this.commentForm.requestSubmit) this.commentForm.requestSubmit();
+        else this.commentSend.click();
+      });
+      this.commentText.addEventListener('input', () => this.fitComment());
     }
-    setCommentBusy(busy){ this.commentSend.disabled = busy; this.commentSend.textContent = busy ? 'Publicando…' : 'Publicar comentario'; }
-    commentSaved(){ this.commentText.value = ''; this.commentError.hidden = true; }
-    commentFailed(){ this.commentError.textContent = 'No se pudo publicar el comentario.'; this.commentError.hidden = false; }
+    fitComment(){
+      this.commentText.style.height = 'auto';
+      this.commentText.style.height = Math.min(140, this.commentText.scrollHeight) + 'px';
+    }
+    /* En un equipo es un comentario para los demás; a solas, una nota. */
+    commentLabels(){
+      return Workhub.views.team.enabled()
+        ? {send:Workhub.t('Publicar'), busy:Workhub.t('Publicando…'), hint:Workhub.t('Comparte una actualización con el equipo…'), error:Workhub.t('No se pudo publicar el comentario.')}
+        : {send:Workhub.t('Añadir'), busy:Workhub.t('Guardando…'), hint:Workhub.t('Escribe una nota…'), error:Workhub.t('No se pudo guardar la nota.')};
+    }
+    setCommentBusy(busy){ const l = this.commentLabels(); this.commentSend.disabled = busy; this.commentSend.textContent = busy ? l.busy : l.send; }
+    commentSaved(){ this.commentText.value = ''; this.fitComment(); this.commentError.hidden = true; }
+    commentFailed(){ this.commentError.textContent = this.commentLabels().error; this.commentError.hidden = false; }
 
     /* «Asignarme» / «Quitar mi asignación» en la ficha. */
     bindAssignMe(handler){
@@ -161,11 +179,15 @@
       Workhub.views.extensions.fillSlots(slot.parentNode);
       this.taskId = t.id;
       const team = Workhub.views.team;
-      this.commentForm.hidden = !team.enabled() || !team.canEdit();
+      /* Añadir una nota (o un comentario, en un equipo) desde la propia ficha. */
+      this.commentForm.hidden = !team.canEdit();
+      const say = this.commentLabels();
+      this.commentText.placeholder = say.hint;
+      if(!this.commentSend.disabled) this.commentSend.textContent = say.send;
       this.notesTitle.firstChild.textContent = Workhub.t(team.enabled() ? 'Actividad y comentarios' : 'Notas') + ' ';
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);
-      /* Cabecera: cliente / etiquetas. El estado va en la columna de propiedades. */
+      /* Cabecera: el cliente y, a su lado, las etiquetas (se pintan más abajo). El estado va en las propiedades. */
       const labelNames = Array.isArray(t.labels) ? t.labels : [];
       const crumb = [];
       if(Workhub.clientsEnabled !== false){
@@ -173,9 +195,8 @@
           ? '<span class="tv-crumb-client" translate="no"><i class="client-dot" style="--h:' + clientColors.hueOf(t.cliente) + '"></i><b>' + esc(t.cliente) + '</b></span>'
           : '<span class="tv-muted">Sin cliente</span>');
       }
-      if(labelNames.length) crumb.push('<span class="tv-crumb-tag" translate="no">' + esc(labelNames.join(', ')) + '</span>');
-      if(!crumb.length) crumb.push('<span class="status-pill" style="--st:' + s.dot + '"><span class="dot"></span><span translate="no">' + esc(s.label) + '</span></span>');
-      this.top.innerHTML = crumb.join('<span class="tv-crumb-sep" aria-hidden="true">/</span>');
+      if(!crumb.length && !labelNames.length) crumb.push('<span class="status-pill" style="--st:' + s.dot + '"><span class="dot"></span><span translate="no">' + esc(s.label) + '</span></span>');
+      this.top.innerHTML = crumb.join('');
       /* Ya terminada o sin etapa final: el botón no tiene nada que hacer. */
       this.btnDone.hidden = TaskModel.isDone(t) || !TaskModel.STATUS.some((x) => x.done);
       this.title.textContent = t.title || 'Sin título';
@@ -185,7 +206,6 @@
       this.facts.innerHTML = [
         fact('due', 'Fecha límite', dueHtml(t)),
         assigneesFact(t),
-        Workhub.clientsEnabled !== false && t.cliente ? fact('contact', 'Cliente', '<span class="tv-crumb-client" translate="no"><i class="client-dot" style="--h:' + clientColors.hueOf(t.cliente) + '"></i>' + esc(t.cliente) + '</span>') : '',
         t.contacto ? fact('contact', 'Contacto', '<span translate="no">' + esc(t.contacto) + '</span>') : '',
         fact('repeat', 'Se repite', t.repeat ? esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || '')) : '<span class="tv-muted">' + esc(Workhub.t('No se repite')) + '</span>'),
         ghFact(t)
@@ -246,7 +266,7 @@
       this.notesCount.textContent = docs.length ? docs.length : '';
       this.notes.innerHTML = docs.length
         ? docs.map(noteHtml).join('')
-        : '<p class="tv-empty">Sin notas todavía. Puedes añadirlas desde <strong>Editar tarea</strong>.</p>';
+        : '<p class="tv-empty">Sin notas todavía.</p>';
       platform.hydrateAssetImages(this.notes);
     }
 
@@ -368,7 +388,7 @@
       '<div class="gh-event-time">' + esc(ago(e.createdAt)) + '</div></div></li>';
   }
 
-  /* Propiedad de la columna derecha: etiqueta encima, valor debajo. */
+  /* Propiedad de la ficha: una fila con la etiqueta a la izquierda y el valor a la derecha. */
   function fact(icon, label, valueHtml){
     return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + esc(label) + '</span>' +
       '<div class="tv-prop-value tv-fact-value">' + valueHtml + '</div></div>';

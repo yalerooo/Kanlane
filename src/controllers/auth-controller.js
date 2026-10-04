@@ -153,6 +153,13 @@
     /* Sesión válida: caché local, datos del usuario y arranque de la app. */
     enter(user){
       try{ localStorage.setItem(SESSION_KEY, '1'); }catch(e){}
+      /* El idioma se cambió en la pantalla de acceso sin recargar: dentro de la app hay textos
+         calculados con el anterior. Se recarga una vez (la sesión ya está iniciada y la página
+         vuelve directamente a la app, en el idioma nuevo). */
+      if(Workhub.i18n.stale){
+        Promise.resolve(this.view.celebrate()).then(() => location.reload());
+        return;
+      }
       /* Si se entra desde el formulario, la pantalla de acceso se queda un instante con la
          señal de «hecho» mientras se preparan los datos (no añade espera si tardan más que ella).
          Si ya había sesión al abrir la página, va directo al esqueleto de la app. */

@@ -1029,6 +1029,7 @@
     'Continuar con Apple':'Continue with Apple',
     'No se pudo conectar con el servicio de acceso. Comprueba tu conexión.':'Couldn\'t connect to the sign-in service. Check your connection.',
     'Reintentar':'Retry',
+    'Sin conexión con el acceso':'Sign-in is unreachable',
     'Con tareas abiertas':'With open tasks',
     'Con tareas vencidas':'With overdue tasks',
     'Resumen':'Overview',

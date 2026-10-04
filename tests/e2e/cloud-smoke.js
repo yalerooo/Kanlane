@@ -50,6 +50,16 @@ async function verify(email){
     await page.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
     if(await page.locator('.consent [data-act="reject"]').isVisible()) await page.locator('.consent [data-act="reject"]').click();
     await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+    /* El idioma cambia en vivo, sin recargar la página, y al volver queda como estaba. Después
+       de eso la app se recarga una vez al entrar (lo comprueba el resto de la prueba). */
+    await page.evaluate(() => { window.__samePage = true; });
+    await page.locator('#authLang [data-lang-choice="en"]').click();
+    await page.locator('#authTitle', {hasText:'Sign in'}).waitFor({state:'visible'});
+    assert.equal(await page.locator('#authEmail').getAttribute('placeholder'), 'Email');
+    await page.locator('#authLang [data-lang-choice="es"]').click();
+    await page.locator('#authTitle', {hasText:'Inicia sesión'}).waitFor({state:'visible'});
+    assert.equal(await page.locator('#authEmail').getAttribute('placeholder'), 'Correo electrónico');
+    assert.equal(await page.evaluate(() => window.__samePage), true, 'cambiar de idioma no recarga la página');
     /* Un correo mal escrito se avisa en su campo, sin llegar al servidor. */
     await page.locator('#authEmail').fill('no-es-un-correo');
     await page.locator('#authSubmit').click();

@@ -4,6 +4,8 @@
    escribe los PNG. Uso: node scripts/make-icons.js
 
    - icon-192.png / icon-512.png: el logo con esquinas redondeadas (como favicon.svg).
+   - favicon-32.png: lo mismo, para la pestaña en navegadores sin SVG.
+   - apple-touch-icon.png: a sangre (iOS ya redondea las esquinas).
    - icon-maskable-512.png: a sangre, con el dibujo dentro de la zona segura
      (Android recorta el icono con la forma que elija el móvil). */
 'use strict';
@@ -14,8 +16,8 @@ const zlib = require('zlib');
 const OUT = path.join(__dirname, '..', 'assets', 'img');
 const INK = [0x18, 0x18, 0x1B];
 const BARS = [
-  {x: 16, color: [0x52, 0x52, 0x5B]},
-  {x: 29, color: [0x7F, 0xA3, 0xFF]},
+  {x: 16, color: [0xFF, 0xFF, 0xFF]},
+  {x: 29, color: [0xFF, 0xFF, 0xFF]},
   {x: 42, color: [0xFF, 0xFF, 0xFF]}
 ];
 const HALF = 6.5 / 2;
@@ -89,7 +91,9 @@ function png(size, rounded, scale){
 [
   ['icon-192.png', 192, true, 1],
   ['icon-512.png', 512, true, 1],
-  ['icon-maskable-512.png', 512, false, 0.66]
+  ['icon-maskable-512.png', 512, false, 0.66],
+  ['favicon-32.png', 32, true, 1],
+  ['apple-touch-icon.png', 180, false, 0.82]
 ].forEach(([name, size, rounded, scale]) => {
   fs.writeFileSync(path.join(OUT, name), png(size, rounded, scale));
   console.log(name);

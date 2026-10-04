@@ -88,7 +88,14 @@
       /* Idioma en la pantalla de acceso (antes de entrar no hay cuenta). */
       $('authLang').addEventListener('click', (ev) => {
         const b = ev.target.closest('button[data-lang-choice]');
-        if(b) Workhub.i18n.setLang(b.getAttribute('data-lang-choice'));
+        if(!b) return;
+        const code = b.getAttribute('data-lang-choice');
+        if(code === Workhub.i18n.lang) return;
+        /* Con el formulario a la vista el idioma cambia en vivo, sin recargar (la recarga cortaba
+           la escena y hacía parpadear la página). En los demás estados, como siempre. */
+        if(this.panel.hidden || this.busy){ Workhub.i18n.setLang(code); return; }
+        Workhub.i18n.setLang(code, {live:true});
+        this.relabel();
       });
       $('authLang').querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
@@ -198,7 +205,18 @@
       btn.addEventListener('click', () => {
         const attr = document.documentElement.getAttribute('data-theme');
         const dark = attr ? attr === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        Workhub.utils.ui.themeSwitch(btn, () => handler(dark ? 'light' : 'dark'));
+        const next = dark ? 'light' : 'dark';
+        /* Con la escena en marcha no se usa el cambio de tema «en círculo» del resto de la app:
+           ese efecto congela la página en una foto mientras dura, y la hierba y las luciérnagas
+           se quedaban paradas. Aquí el cielo pasa solo de atardecer a noche, sin parar nada, y
+           la tarjeta cambia de color con una transición corta. */
+        const s = Workhub.views.authScene;
+        const st = s && s.state();
+        if(!st || st.frozen){ Workhub.utils.ui.themeSwitch(btn, () => handler(next)); return; }
+        this.screen.classList.add('is-theming');
+        clearTimeout(this.themingTimer);
+        this.themingTimer = setTimeout(() => this.screen.classList.remove('is-theming'), 900);
+        handler(next);
       });
     }
 
@@ -227,11 +245,15 @@
       this.panel.hidden = true;
       this.loading.hidden = false;
       this.loading.classList.add('is-error');
-      this.loading.innerHTML = '<span>No se pudo conectar con el servicio de acceso. Comprueba tu conexión.</span>';
+      const t = Workhub.t;
+      this.loading.innerHTML =
+        '<span class="auth-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10.5 10.5 0 0 1 14 0"/><path d="M8.5 16a5.5 5.5 0 0 1 7 0"/><path d="M12 20h.01"/><path d="M3 3l18 18"/></svg></span>' +
+        '<strong class="auth-verify-title">' + esc(t('Sin conexión con el acceso')) + '</strong>' +
+        '<span class="auth-sent-text">' + esc(t('No se pudo conectar con el servicio de acceso. Comprueba tu conexión.')) + '</span>';
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'btn btn-ghost';
-      btn.textContent = 'Reintentar';
+      btn.className = 'btn btn-primary auth-submit';
+      btn.textContent = t('Reintentar');
       btn.addEventListener('click', onRetry);
       this.loading.appendChild(btn);
     }
@@ -245,11 +267,9 @@
       this.loading.hidden = true;
       this.panel.hidden = false;
       const social = providers.filter((p) => PROVIDERS[p]);
+      this.social = social;
       this.hasPassword = providers.indexOf('password') !== -1;
-      this.providersEl.innerHTML = social.map((p) =>
-        '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
-          PROVIDERS[p].icon + SPIN + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
-      ).join('');
+      this.paintProviders();
       this.providersEl.hidden = !social.length;
       this.divider.hidden = !social.length || !this.hasPassword;
       this.form.hidden = !this.hasPassword;
@@ -259,6 +279,29 @@
       const wantsSignup = this.registroRequested && this.hasPassword && this.allowSignup;
       this.registroRequested = false;
       this.setMode(wantsSignup ? 'signup' : 'signin', true);
+    }
+
+    paintProviders(){
+      this.providersEl.innerHTML = (this.social || []).map((p) =>
+        '<button type="button" class="auth-provider" data-provider="' + p + '" title="' + esc(Workhub.t(PROVIDERS[p].label)) + '" aria-label="' + esc(Workhub.t(PROVIDERS[p].label)) + '">' +
+          PROVIDERS[p].icon + SPIN + '<span translate="no">' + esc(PROVIDERS[p].label.replace('Continuar con ', '')) + '</span></button>'
+      ).join('');
+    }
+
+    /* Tras cambiar de idioma sin recargar: se vuelve a pintar lo que esta vista escribió con el
+       idioma anterior (lo demás lo traduce o lo devuelve al español el módulo de idiomas). */
+    relabel(){
+      $('authLang').querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
+      });
+      const guest = this.panel.classList.contains('is-guest');
+      const shown = this.pass.type === 'text';
+      this.paintProviders();
+      if(guest) this.setGuestStep(true); else this.setMode(this.mode);
+      this.setPassVisible(shown);
+      this.panel.classList.remove('is-swap');
+      void this.panel.offsetWidth;
+      this.panel.classList.add('is-swap');
     }
 
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,

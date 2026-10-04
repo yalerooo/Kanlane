@@ -688,6 +688,9 @@
     '        float skyL = .5 + .5 * n.y;',
     '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
     '        col += sunCol * spec * shd;',
+    /* De noche, sin esto, la carcasa se queda en una silueta negra: luz de relleno del cielo */
+    /* y un filo frío en los cantos, para que se lea la forma. */
+    '        col += alb * (vec3(.030, .040, .075) + vec3(.10, .13, .24) * pow(1. - max(dot(n, -rd), 0.), 2.5)) * uNight;',
     '        col += skyBase(refl, L) * fres * .22 * ao;',
     /* La hierba le devuelve un poco de verde por debajo. */
     '        col += alb * vec3(.05, .09, .03) * max(-n.y, 0.) * (1. - uNight);',
@@ -719,7 +722,7 @@
     /* Es un modelo 3D renderizado aparte a una imagen con transparencia (assets/img/sakura.webp), */
     /* puesta sobre un plano fijo, de cara a la cámara. El tronco y las ramas no se mueven; las */
     /* flores, sí. */
-    '  if(uTreeOn > .5){',
+    '  if(uTreeOn > .002){',
     '    vec3 pn = normalize(vec3(-2.2, 0., 11.5));',
     '    vec3 pr = vec3(pn.z, 0., -pn.x);',
     '    float tp = dot(treeB - ro, pn) / dot(rd, pn);',
@@ -748,6 +751,8 @@
     '      tr = clamp(tr + (tr - soft) * .9, 0., 1.);',
     '      tr.rgb = min(tr.rgb, vec3(tr.a));',
     '    }',
+    /* Mientras llega la imagen, el árbol entra poco a poco. */
+    '    tr *= uTreeOn;',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
@@ -1346,7 +1351,7 @@
 
     /* El cerezo: un modelo 3D renderizado aparte a una imagen con transparencia. Hasta que
        llega, la escena se pinta sin él. */
-    let treeReady = false;
+    let treeReady = false, treeFade = 0;
     const treeTex = gl.createTexture();
     const treeImg = new Image();
     treeImg.onload = () => {
@@ -1470,7 +1475,9 @@
       let fx = w / 2, fy = h * 0.6, left = w * 0.2;
       if(focusEl && focusEl.offsetParent){
         const o = offset(focusEl);
-        fx = o.x + focusEl.offsetWidth / 2;
+        /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
+           su fondo, y centrado se arrimaba demasiado al formulario. */
+        fx = o.x + focusEl.offsetWidth * 0.575;
         fy = o.y + focusEl.offsetHeight * 0.585;
       }
       const card = focusEl && focusEl.parentElement;
@@ -1543,7 +1550,8 @@
       gl.uniform1i(scene.U.uText, 1);
       gl.uniform1f(scene.U.uTextW, textW);
       gl.activeTexture(gl.TEXTURE0);
-      gl.uniform1f(scene.U.uTreeOn, treeReady ? 1 : 0);
+      treeFade = treeReady ? ease(treeFade, 1, 2.6) : 0;
+      gl.uniform1f(scene.U.uTreeOn, treeFade);
       gl.bindVertexArray(fullVao);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 

@@ -276,7 +276,8 @@
       <span class="bar-meta" id="clientsMeta"></span>
       <span class="bar-push" aria-hidden="true"></span>
       <input type="search" id="searchClients" class="bar-search" placeholder="Buscar cliente, persona, email o teléfono…" aria-label="Buscar clientes y contactos">
-      <button class="btn btn-primary" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
+      <button class="btn btn-ghost" id="btnNewContact" type="button" title="Nuevo contacto"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo contacto</button>
+      <button class="btn btn-primary" id="btnNewClient" type="button" title="Nuevo cliente"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>
     </div>
   </header>
 
@@ -441,17 +442,16 @@
   </section>
 
   <section id="viewClients" hidden>
+    <div class="subbar" id="crmSubbar" hidden>
+      <div class="quick" id="crmFilters" role="group" aria-label="Qué clientes se ven"></div>
+      <div class="summary" id="crmSummary" aria-live="polite"></div>
+    </div>
     <div class="crm" id="crm">
-      <div class="crm-list-pane">
-        <form id="formNewClient" class="crm-new">
-          <input id="newClientName" maxlength="60" placeholder="Nuevo cliente…" aria-label="Nombre del cliente nuevo" autocomplete="off" required>
-          <button type="submit" class="btn btn-ghost btn-sm" aria-label="Añadir cliente"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Añadir</button>
-        </form>
+      <div class="cl-home" id="clientsHome">
         <div class="state-msg" id="stateMsgClients">Cargando clientes…</div>
-        <p class="crm-list-label" id="crmListLabel" hidden><span>Clientes</span><em id="crmCount"></em></p>
-        <div class="crm-list" id="clientsList" role="listbox" aria-label="Clientes" hidden></div>
+        <div class="cl-grid" id="clientsList" role="list" aria-label="Clientes" hidden></div>
       </div>
-      <div class="crm-detail" id="clientDetail" hidden></div>
+      <div class="cl-profile" id="clientDetail" hidden></div>
     </div>
     <p class="hint crm-hint"><strong>No guardes contraseñas en los contactos.</strong> Usa la sección Contraseñas, donde se cifran.</p>
   </section>
@@ -1332,6 +1332,75 @@
 
 <!-- Plugins que se cargan sin mostrarse, solo para leer su manifiesto al instalarlos. -->
 <div id="pluginProbeArea" aria-hidden="true"></div>
+
+<dialog id="dlgClient" aria-labelledby="dlgClientTitle">
+  <form class="dlg-inner" id="formClient" method="dialog" novalidate>
+    <h2 id="dlgClientTitle">Nuevo cliente</h2>
+    <div class="cl-dlg-name">
+      <span class="avatar is-square" id="clPreview" aria-hidden="true">?</span>
+      <div class="field">
+        <label for="clName">Nombre</label>
+        <input id="clName" maxlength="60" placeholder="Nombre del cliente" autocomplete="off">
+      </div>
+    </div>
+    <div class="field">
+      <label id="clColorsLabel">Color</label>
+      <div class="color-picker" id="clColors" role="radiogroup" aria-labelledby="clColorsLabel"></div>
+    </div>
+    <div class="cl-dlg-confirm" id="clConfirm" role="alert" hidden>
+      <p id="clConfirmText"></p>
+      <div class="cl-dlg-confirm-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="btnKeepClient">No eliminar</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btnConfirmDeleteClient">Eliminar cliente</button>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" class="btn btn-danger" id="btnDeleteClient" hidden>Eliminar</button>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCancelClient" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSaveClient">Crear cliente</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgContactView" aria-labelledby="cvName">
+  <div class="dlg-inner">
+    <div class="cat"><span class="cv-client" id="cvCliente" translate="no"></span></div>
+    <div class="cv-head">
+      <span class="avatar" id="cvAvatar" aria-hidden="true"></span>
+      <h2 id="cvName" translate="no"></h2>
+    </div>
+    <div class="cv-actions" id="cvActions">
+      <a class="btn btn-primary" id="cvMail"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Escribir un correo</a>
+      <a class="btn btn-ghost" id="cvCall"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Llamar</a>
+    </div>
+    <div class="cv-data" id="cvData">
+      <div class="cv-item" id="cvEmailRow">
+        <span class="cv-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+        <div class="cv-item-text"><small>Correo</small><span id="cvEmail" translate="no"></span></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="cvCopyEmail">Copiar</button>
+      </div>
+      <div class="cv-item" id="cvPhoneRow">
+        <span class="cv-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+        <div class="cv-item-text"><small>Teléfono</small><span id="cvPhone" translate="no"></span></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="cvCopyPhone">Copiar</button>
+      </div>
+    </div>
+    <p class="cv-none" id="cvNoData" hidden>Este contacto no tiene correo ni teléfono.</p>
+    <div class="field" id="cvNotasWrap" hidden>
+      <label>Notas</label>
+      <div class="view-notas" id="cvNotas" translate="no"></div>
+    </div>
+    <div class="dlg-actions">
+      <div></div>
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnCvClose" data-dismiss>Cerrar</button>
+        <button type="button" class="btn btn-ghost" id="btnCvEdit">Editar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="dlgContact">
   <form class="dlg-inner" id="formContact" method="dialog">

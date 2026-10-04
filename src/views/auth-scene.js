@@ -131,30 +131,37 @@
     '  return max(sdBox(q - vec3(0., 1.16, -.57), vec3(.62, .46, .07)) - .01, length(q - vec3(0., 1.16, 5.37)) - 6.);',
     '}',
     'float computer(vec3 q){',
-    /* Una sola carcasa, de una pieza: una caja de cantos redondos que se va estrechando hacia */
-    /* atrás, como el tubo que lleva dentro. (Dos cajas unidas dejaban entre ellas un escalón */
-    /* en sombra que parecía una separación.) El .68 compensa que el estrechamiento deforma las */
-    /* distancias: así el trazado no se pasa de largo. */
-    '  float taper = mix(1., .70, smoothstep(-.25, .95, q.z));',
-    '  float body = (sdBox(vec3((q.xy - vec2(0., 1.06)) / taper, q.z - .10), vec3(.78, .64, .72)) - .11) * .68;',
-    /* La junta bajo la pantalla va grabada en la superficie (un surco fino), no cortada: un */
-    /* corte de lado a lado dejaba las piezas separadas. */
-    '  body = max(body, -max(max(abs(q.y - .635) - .008, q.z + .62), -body - .012));',
-    '  float recess = sdBox(q - vec3(0., 1.16, -.76), vec3(.63, .47, .17)) - .035;',
+    /* Como un monitor de tubo de verdad (el dueño mandó fotos de referencia): un marco frontal */
+    /* grueso y, detrás, la carcasa, que se estrecha hacia atrás siguiendo al tubo (el techo cae */
+    /* más de lo que sube el suelo). Es una caja deformada, no dos cajas pegadas: dos cajas */
+    /* dejaban entre ellas un escalón en sombra que parecía una separación. El .66 compensa que */
+    /* el estrechamiento deforma las distancias, para que el trazado no se pase de largo. */
+    '  float bezel = sdBox(q - vec3(0., 1.06, -.60), vec3(.80, .66, .13)) - .06;',
+    '  float taper = mix(1., .60, smoothstep(-.40, .92, q.z));',
+    '  float shell = (sdBox(vec3(q.x / taper, (q.y - .78) / taper + .78, q.z - .22) - vec3(0., 1.06, 0.), vec3(.72, .58, .66)) - .12) * .66;',
+    '  float body = smin(bezel, shell, .05);',
+    /* La junta bajo la pantalla va grabada en la superficie (un surco fino), no cortada. */
+    '  body = max(body, -max(max(abs(q.y - .635) - .008, q.z + .70), -body - .012));',
+    '  float recess = sdBox(q - vec3(0., 1.16, -.80), vec3(.63, .47, .21)) - .035;',
     '  body = max(body, -recess);',
     '  body = min(body, glassD(q));',
-    '  float slot = sdBox(q - vec3(-.06, .47, -.74), vec3(.22, .016, .05)) - .004;',
+    '  float slot = sdBox(q - vec3(-.06, .47, -.80), vec3(.22, .016, .05)) - .004;',
     '  body = max(body, -slot);',
     /* Dos mandos redondos bajo la pantalla: cilindros cortos, de canto redondeado. */
-    '  vec3 k1 = q - vec3(.50, .47, -.755), k2 = q - vec3(.68, .47, -.755);',
+    '  vec3 k1 = q - vec3(.50, .47, -.815), k2 = q - vec3(.68, .47, -.815);',
     '  float knobs = min(max(length(k1.xy) - .052, abs(k1.z) - .035), max(length(k2.xy) - .052, abs(k2.z) - .035)) - .010;',
     '  body = min(body, knobs);',
-    /* Cuello y peana: el cuello se funde con la base de la carcasa y con la peana. */
-    '  float neck = sdBox(q - vec3(0., .25, .02), vec3(.34, .12, .28)) - .04;',
-    '  float foot = sdBox(q - vec3(0., .075, .02), vec3(.62, .040, .46)) - .05;',
+    /* El pie, pegado al ordenador de arriba abajo: un faldón bajo la carcasa (se mete en ella), */
+    /* una rótula redonda sobre la que gira y un plato redondo en el suelo. Cada pieza entra en */
+    /* la siguiente y se funden: no queda hueco entre la pantalla y el pie. */
+    '  float skirt = sdBox(q - vec3(0., .34, -.16), vec3(.50, .12, .36)) - .05;',
+    '  float ball = (length((q - vec3(0., .17, -.12)) * vec3(1., 1.55, 1.)) - .36) / 1.55;',
+    '  vec2 dw = vec2(length(q.xz - vec2(0., -.12)) - .58, abs(q.y - .045) - .018);',
+    '  float dish = min(max(dw.x, dw.y), 0.) + length(max(dw, 0.)) - .035;',
+    '  float stand = smin(smin(skirt, ball, .07), dish, .10);',
     /* El cable sale por detrás y se pierde en la hierba. */
     '  float cable = min(sdCapsule(q, vec3(.22, .62, .90), vec3(.30, .30, 1.20), .028), sdCapsule(q, vec3(.30, .30, 1.20), vec3(.70, -.05, 1.75), .028));',
-    '  return min(smin(body, smin(neck, foot, .09), .06), cable);',
+    '  return min(smin(body, stand, .05), cable);',
     '}',
     'vec3 computerNormal(vec3 q){',
     '  vec2 e = vec2(.003, 0.);',
@@ -637,28 +644,34 @@
     '        float ao = clamp(computer(q + nl * .10) / .10, 0., 1.);',
     '        ao *= clamp(computer(q + nl * .30) / .30, 0., 1.) * .5 + .5;',
     '        ao = mix(1., ao, .8);',
-    /* Un solo plástico, que se va haciendo más hondo hacia atrás; cuello y peana, oscuros. */
-    '        vec3 alb = mix(vec3(.43, .59, .77), vec3(.33, .48, .66), smoothstep(-.2, .9, q.z));',
+    /* Dos plásticos, como los monitores de la época: el marco frontal, claro; la carcasa, */
+    /* azul, algo más honda hacia atrás. El pie, del color del marco. */
+    '        vec3 shellCol = mix(vec3(.36, .52, .74), vec3(.28, .43, .64), smoothstep(-.3, .9, q.z));',
+    '        vec3 alb = mix(vec3(.82, .86, .92), shellCol, smoothstep(-.44, -.40, q.z));',
     '        float frame = step(q.z, -.50) * step(.30, q.y);',
     /* El faldón bajo la pantalla, un punto más oscuro que el marco. */
-    '        alb = mix(alb, alb * .90, step(q.y, .635) * step(q.z, -.55));',
-    '        alb = mix(alb, vec3(.17, .23, .33), step(q.y, .30));',
+    '        alb = mix(alb, alb * .93, step(q.y, .635) * step(q.z, -.55));',
+    '        alb = mix(alb, vec3(.66, .71, .79), step(q.y, .335));',
     /* Hueco del marco y de la ranura: más oscuros. */
-    '        float inRecess = step(abs(q.x), .68) * step(abs(q.y - 1.16), .52) * smoothstep(-.70, -.62, q.z) * step(q.z, -.50);',
+    '        float inRecess = step(abs(q.x), .68) * step(abs(q.y - 1.16), .52) * smoothstep(-.77, -.70, q.z) * step(q.z, -.50);',
     '        alb = mix(alb, vec3(.10, .13, .18), inRecess);',
     '        alb = mix(alb, vec3(.03, .03, .04), step(abs(q.x + .06), .225) * step(abs(q.y - .47), .021) * step(q.z, -.60));',
     /* Mandos: claros, con una muesca que dice hacia dónde apuntan. El cable, oscuro. */
     '        vec2 kd1 = q.xy - vec2(.50, .47), kd2 = q.xy - vec2(.68, .47);',
-    '        float onKnob = clamp(step(length(kd1), .064) + step(length(kd2), .064), 0., 1.) * step(q.z, -.715);',
-    '        alb = mix(alb, vec3(.80, .84, .90), onKnob);',
+    '        float onKnob = clamp(step(length(kd1), .064) + step(length(kd2), .064), 0., 1.) * step(q.z, -.80);',
+    '        alb = mix(alb, vec3(.42, .50, .62), onKnob);',
     '        vec2 n1 = rot(.6) * kd1, n2 = rot(-.9) * kd2;',
     '        float notch = step(abs(n1.x), .009) * step(0., n1.y) + step(abs(n2.x), .009) * step(0., n2.y);',
-    '        alb = mix(alb, vec3(.12, .14, .19), clamp(notch, 0., 1.) * onKnob * step(q.z, -.78));',
+    '        alb = mix(alb, vec3(.12, .14, .19), clamp(notch, 0., 1.) * onKnob * step(q.z, -.84));',
     '        alb = mix(alb, vec3(.04, .04, .05), step(.88, q.z) * step(q.y, .70));',
     /* Rejillas de ventilación: en los costados y arriba, por detrás. */
-    '        float sideVent = step(.5, abs(nl.x)) * step(abs(q.z - .50), .22) * step(abs(q.y - 1.18), .24) * step(.5, fract(q.y * 15.));',
+    '        vec2 vg = vec2(q.z, q.y) * 17.;',
+    '        vg.x += .5 * mod(floor(vg.y), 2.);',
+    /* Un abanico de puntos que se abre hacia atrás y hacia abajo. */
+    '        float fan = step(-.12, q.z) * step(q.z, .72) * step(.62, q.y) * step(q.y, .74 + (q.z + .12) * .78);',
+    '        float sideVent = step(.45, abs(nl.x)) * fan * step(length(fract(vg) - .5), .27);',
     '        float topVent = step(.5, nl.y) * step(abs(q.z - .50), .22) * step(abs(q.x), .40) * step(.5, fract(q.x * 13.));',
-    '        alb *= 1. - .55 * max(sideVent, topVent);',
+    '        alb *= 1. - .62 * max(sideVent, topVent);',
     /* Insignia con las tres barras de Kanlane, bajo la pantalla. */
     '        vec2 bd = q.xy - vec2(-.60, .47);',
     '        float badge = (1. - smoothstep(0., .006, rr(bd, vec2(.078, .078), .022))) * step(q.z, -.60);',
@@ -887,7 +900,7 @@
     /* Hasta dónde hay briznas; bajo el ordenador, ninguna. */
     '  float fade = 1. - smoothstep(GRASS_F0, GRASS_F1, dist);',
     '  vec3 ql = toLocal(root, base);',
-    '  fade *= 1. - step(abs(ql.x), .72) * step(abs(ql.z - .02), .58);',
+    '  fade *= 1. - step(length(ql.xz - vec2(0., -.12)), .64);',
 
     /* Matas: la hierba crece a manchas, más alta y más espesa en unas zonas que en otras. */
     '  float clump = noise(r0 * .85 + 3.);',
@@ -959,7 +972,7 @@
     '  float foot = length((r0 - gTree) * vec2(1., 1.6)) / treeSc;',
     '  float contact = smoothstep(.25, 1.9, foot) * .72 + .28;',
     /* Al pie del ordenador la hierba también queda en penumbra. */
-    '  contact *= .45 + .55 * smoothstep(.55, 1.5, length(ql.xz - vec2(0., .04)));',
+    '  contact *= .45 + .55 * smoothstep(.55, 1.5, length(ql.xz - vec2(0., -.12)));',
     '  sh *= contact;',
     '  sh = mix(sh, 1., uNight * .5);',
     '  vLight = vec4(sh, .45 + .55 * contact, gust, wave);',
@@ -1364,7 +1377,7 @@
       if(value === null){ textW = -1; return; }
       const W = textCanvas.width, H = textCanvas.height;
       textCtx.clearRect(0, 0, W, H);
-      textCtx.font = '600 62px ui-monospace, Consolas, "Courier New", monospace';
+      textCtx.font = '600 52px ui-monospace, Consolas, "Courier New", monospace';
       textCtx.textBaseline = 'middle';
       textCtx.fillStyle = '#fff';
       const w = textCtx.measureText(value).width;

@@ -62,6 +62,9 @@
     '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
     '  h += smoothstep(8., 60., p.y) * 4.2 * fbm3(p * .05 + 3.1);',
     '  h -= smoothstep(2., -9., p.y) * 1.1;',
+    /* La hondonada del lago, al fondo a la derecha. */
+    '  vec2 dl = (p - vec2(9., 27.)) * vec2(.75, 1.);',
+    '  h -= 2.6 * exp(-dot(dl, dl) / 110.);',
     /* La loma del cerezo: el terreno sube y se alisa hacia TREE_H al acercarse al árbol. */
     '  vec2 dt = p - gTree;',
     '  float k = exp(-dot(dt, dt) / 14.);',
@@ -179,28 +182,72 @@
     '}',
 
     /* ---------- Cielo ---------- */
-    'vec3 sky(vec3 rd, vec3 L){',
+    /* Hacia dónde está el sol (o la luna): bajo, al fondo y algo a la derecha, a la vista. */
+    'vec3 sunDir(){ return normalize(mix(vec3(.21, .108, .97), vec3(.17, .235, .955), uNight)); }',
+    /* Nivel del agua del lago. */
+    'const float WATER_Y = .62;',
+    /* El cielo sin nubes ni estrellas: el degradado y el resplandor del sol. Es barato: lo usan */
+    /* la bruma, los reflejos y la hierba. */
+    'vec3 skyBase(vec3 rd, vec3 L){',
     '  float y = max(rd.y, 0.);',
-    '  vec3 day = mix(vec3(.99, .52, .26), vec3(.86, .28, .24), smoothstep(0., .22, y));',
-    '  day = mix(day, vec3(.44, .30, .40), smoothstep(.18, .55, y));',
-    '  day = mix(day, vec3(.20, .30, .43), smoothstep(.45, .95, y));',
-    '  vec3 night = mix(vec3(.20, .17, .36), vec3(.07, .08, .22), smoothstep(0., .3, y));',
-    '  night = mix(night, vec3(.015, .02, .07), smoothstep(.25, .9, y));',
+    /* Cuánto se mira hacia el sol, en horizontal: de ese lado el cielo arde; del otro, se enfría. */
+    '  float sunny = max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.);',
+    '  sunny *= sunny;',
+    '  vec3 day = mix(vec3(.84, .40, .34), vec3(1., .70, .30), sunny);',
+    '  day = mix(day, mix(vec3(.72, .27, .32), vec3(.98, .42, .24), sunny), smoothstep(0., .15, y));',
+    '  day = mix(day, mix(vec3(.42, .22, .42), vec3(.62, .26, .36), sunny), smoothstep(.10, .38, y));',
+    '  day = mix(day, vec3(.15, .18, .40), smoothstep(.28, .85, y));',
+    '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
     '  vec3 col = mix(day, night, uNight);',
     '  float s = max(dot(rd, L), 0.);',
-    '  vec3 glow = mix(vec3(1., .62, .28), vec3(.55, .60, .95), uNight);',
-    '  col += glow * (pow(s, 6.) * .35 + pow(s, 40.) * .5) * mix(1., .45, uNight);',
-    '  col += mix(vec3(1., .93, .75), vec3(.97, .96, .90), uNight) * smoothstep(.9990, .9994, s) * mix(1., 1.3, uNight);',
-    '  vec2 cp = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .012, 0.);',
-    '  float cl = smoothstep(.42, .78, fbm(cp)) * smoothstep(0., .12, rd.y);',
-    '  float lit = fbm(cp + L.xz * .5);',
-    '  vec3 ccol = mix(mix(vec3(.30, .16, .24), vec3(1., .60, .42), lit), mix(vec3(.05, .06, .14), vec3(.24, .26, .46), lit), uNight);',
-    '  col = mix(col, ccol, cl * .85);',
+    '  vec3 glow = mix(vec3(1., .62, .26), vec3(.50, .58, .95), uNight);',
+    '  col += glow * (pow(s, 5.) * .22 + pow(s, 30.) * .32 + pow(s, 300.) * .80) * mix(1., .38, uNight);',
+    '  return col;',
+    '}',
+    /* El cielo entero: sol o luna, estrellas, vía láctea y dos capas de nubes. */
+    'vec3 sky(vec3 rd, vec3 L){',
+    '  vec3 col = skyBase(rd, L);',
+    '  float s = max(dot(rd, L), 0.);',
+    /* El sol: un disco que deslumbra. La luna: más pequeña, con sus manchas. */
+    '  float sun = smoothstep(.99972, .99990, s);',
+    '  float moon = smoothstep(.99968, .99978, s);',
+    '  vec2 mq = (rd.xy - L.xy) * 110.;',
+    '  float maria = .78 + .22 * fbm3(mq * 1.6 + 3.);',
+    '  col = mix(col, mix(vec3(1.9, 1.5, .95) * sun, vec3(.98, .97, .90) * maria * moon, uNight), mix(sun, moon, uNight));',
+    /* Estrellas: muchas pequeñas, unas pocas grandes, y la vía láctea cruzando. */
+    '  float starry = uNight * smoothstep(.02, .25, rd.y) * (1. - moon);',
     '  vec2 sp = rd.xy / (1. + abs(rd.z)) * 420.;',
     '  vec2 si = floor(sp);',
-    '  float st = step(.988, hash(si)) * smoothstep(.42, .05, length(fract(sp) - .5));',
+    '  float st = step(.986, hash(si)) * smoothstep(.42, .05, length(fract(sp) - .5));',
     '  st *= .6 + .4 * sin(uTime * 1.7 + hash(si + 7.) * 40.);',
-    '  col += vec3(.9, .92, 1.) * st * uNight * (1. - cl) * smoothstep(.02, .25, rd.y);',
+    '  vec2 sp2 = rd.xy / (1. + abs(rd.z)) * 90.;',
+    '  vec2 si2 = floor(sp2);',
+    '  float big = step(.972, hash(si2 + 31.)) * smoothstep(.16, .0, length(fract(sp2) - .5 - (hash2(si2) - .5) * .5));',
+    '  big *= .65 + .35 * sin(uTime * 1.1 + hash(si2 + 3.) * 30.);',
+    '  float band = exp(-pow(dot(rd, normalize(vec3(.62, .42, -.66))) * 3.2, 2.));',
+    '  float dust = fbm(rd.xy * 5. + 11.);',
+    '  vec3 stars = vec3(.9, .92, 1.) * st + mix(vec3(1., .88, .74), vec3(.78, .86, 1.), hash(si2)) * big * 1.4;',
+    '  stars += vec3(.30, .30, .50) * band * (.25 + .75 * dust) * .50;',
+    '  stars += vec3(.9, .92, 1.) * step(.955, hash(si + 91.)) * smoothstep(.40, .05, length(fract(sp) - .5)) * band * dust * 1.2;',
+    /* Nubes altas: jirones finos y alargados, encendidos por debajo. */
+    '  float sunny = pow(max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.), 2.);',
+    '  vec2 c1 = rd.xz / (rd.y + .10);',
+    '  float hi = fbm(vec2(c1.x * .34 + uTime * .004, c1.y * 1.25 + 4.));',
+    '  float cirrus = smoothstep(.50, .78, hi) * smoothstep(.03, .22, rd.y) * .62;',
+    '  vec3 hiCol = mix(mix(vec3(.66, .28, .36), vec3(1., .68, .40), sunny * .7 + hi * .3), mix(vec3(.07, .08, .18), vec3(.20, .23, .42), hi), uNight);',
+    /* Nubes bajas: bancos con volumen; el borde que mira al sol se enciende. */
+    '  vec2 c2 = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .012, 0.);',
+    '  float dn = fbm(c2);',
+    '  float cl = smoothstep(.44, .74, dn) * smoothstep(0., .11, rd.y);',
+    '  float edge = clamp((dn - fbm(c2 + normalize(L.xz) * .32)) * 3. + .45, 0., 1.);',
+    '  vec3 loCol = mix(mix(vec3(.25, .12, .22), vec3(1.05, .60, .34), edge), mix(vec3(.04, .05, .12), vec3(.22, .25, .45), edge), uNight);',
+    /* Cerca del sol, el filo de la nube se pone de oro. */
+    '  loCol += vec3(1., .72, .36) * pow(s, 10.) * (1. - smoothstep(.55, .9, dn)) * .9 * (1. - uNight);',
+    '  float cover = max(cirrus, cl);',
+    '  col += stars * starry * (1. - cover);',
+    '  col = mix(col, hiCol, cirrus);',
+    '  col = mix(col, loCol, cl * .9);',
     '  return col;',
     '}',
 
@@ -273,7 +320,7 @@
     '  vec3 ro = vec3(2.2, base + .62, -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
-    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
+    '  vec3 L = sunDir();',
     '  vec3 Ll = L; Ll.xz = rot(YAW) * Ll.xz;',
     '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
     '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
@@ -314,19 +361,32 @@
     '  }',
 
     '  vec3 col = sky(rd, L);',
-    '  vec3 fogCol = mix(vec3(.66, .26, .17), vec3(.09, .09, .22), uNight);',
+    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
     /* Hacia el sol, la bruma se enciende. */
-    '  fogCol += mix(vec3(.30, .16, .05), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
-    /* Sierras lejanas: dos siluetas, una tras otra, cada vez más diluidas en la bruma. */
+    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    /* Sierras lejanas: tres cordilleras, una tras otra. Cuanto más lejos, más pálidas; al pie */
+    /* de cada una se posa la bruma y el filo que mira al sol se enciende. */
     '  if(tHit < 0.){',
     '    float az = atan(rd.x, rd.z);',
-    '    float m1 = .030 + .075 * fbm3(vec2(az * 5. + 2., 1.3)) + .018 * noise(vec2(az * 31., 4.));',
-    '    float m2 = .014 + .050 * fbm3(vec2(az * 9. + 7., 6.1)) + .010 * noise(vec2(az * 47., 9.));',
-    '    vec3 hz = sky(normalize(vec3(rd.x, .02, rd.z)), L);',
-    '    vec3 c1 = mix(hz, mix(vec3(.50, .20, .24), vec3(.07, .07, .19), uNight), .42);',
-    '    vec3 c2 = mix(hz, mix(vec3(.33, .13, .17), vec3(.045, .05, .14), uNight), .66);',
-    '    col = mix(col, c1, 1. - smoothstep(m1 - .004, m1 + .004, rd.y));',
-    '    col = mix(col, mix(c2, c1, smoothstep(0., m2, rd.y) * .35), 1. - smoothstep(m2 - .003, m2 + .003, rd.y));',
+    '    vec3 hz = skyBase(normalize(vec3(rd.x, .02, rd.z)), L);',
+    '    float toSun = pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 6.);',
+    '    vec3 rimCol = mix(vec3(1.25, .80, .40), vec3(.40, .46, .80), uNight);',
+    '    for(int i = 0; i < 3; i++){',
+    '      float fi = float(i);',
+    '      float fr = 3.6 + fi * 3.4;',
+    /* El perfil: una forma ancha y, encima, crestas (ruido «con cresta», 1 - |2n - 1|). */
+    '      float n1 = fbm3(vec2(az * fr + fi * 17., fi * 3.1));',
+    '      float n2 = 1. - abs(2. * noise(vec2(az * fr * 3.1 + fi * 5., 9. + fi)) - 1.);',
+    '      float n3 = 1. - abs(2. * noise(vec2(az * fr * 7.3, 2. + fi * 7.)) - 1.);',
+    '      float mh = (.050 - fi * .016) + (.120 - fi * .030) * (n1 * .66 + n2 * .22 + n3 * .12) - .030;',
+    '      float inside = 1. - smoothstep(mh - .0025, mh + .0025, rd.y);',
+    '      float deep = (.34 + fi * .20);',
+    '      vec3 mc = mix(hz, mix(vec3(.36, .15, .22), vec3(.05, .055, .16), uNight), deep);',
+    /* Bruma al pie y filo de luz arriba. */
+    '      mc = mix(mc, hz, smoothstep(mh, mh - .07, rd.y) * .55);',
+    '      mc += rimCol * toSun * smoothstep(mh - .012, mh, rd.y) * (.30 - fi * .06);',
+    '      col = mix(col, mc, inside);',
+    '    }',
     '  }',
     /* Las luciérnagas, de noche (se calculan una vez por punto). */
     '  vec4 ff[24];',
@@ -372,7 +432,9 @@
     '    vec3 far = mix(vec3(.060, .105, .030), vec3(.25, .39, .10), zone * .6 + fine * .4);',
     '    far = mix(far, vec3(.44, .36, .15), smoothstep(.62, .92, fine) * .55);',
     '    far = mix(far, vec3(.30, .14, .09), smoothstep(.55, .85, fbm3(p.xz * .21 + 8.)) * .35 * (1. - uNight));',
-    '    float kFar = .35 + .65 * fine;',
+    '    float woods = smoothstep(.52, .66, fbm3(p.xz * .11 + 21.)) * smoothstep(24., 42., tHit);',
+    '    far = mix(far, mix(vec3(.030, .075, .034), vec3(.060, .11, .045), fine), woods * .85);',
+    '    float kFar = (.35 + .65 * fine) * (1. - .45 * woods);',
     '    alb = mix(far, alb, near);',
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
@@ -421,6 +483,26 @@
     '    }',
     '    col = gcol;',
     '    tFin = tGround;',
+    /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
+    /* finas, y el sol deja en él su camino de luz. */
+    '    float tW = (WATER_Y - ro.y) / min(rd.y, -1e-4);',
+    '    if(rd.y < 0. && tW < tGround){',
+    '      vec3 pw = ro + rd * tW;',
+    '      float depth = WATER_Y - terrain(pw.xz);',
+    '      float rip = noise(pw.xz * vec2(1.2, 5.) + vec2(uTime * .25, uTime * .1)) + .5 * noise(pw.xz * vec2(3., 11.) - uTime * .3);',
+    '      vec3 wn = normalize(vec3((rip - .75) * .05, 1., (noise(pw.xz * vec2(1.5, 6.) + 5. - uTime * .2) - .5) * .09));',
+    '      vec3 wr = reflect(rd, wn);',
+    '      wr.y = abs(wr.y);',
+    '      vec3 wc = sky(wr, L) * mix(.80, .92, uNight);',
+    /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
+    '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
+    '      wc += mix(vec3(1.6, 1.1, .55), vec3(.55, .60, .85), uNight) * pow(max(dot(wr, L), 0.), 180.) * 1.4;',
+    '      float shore = smoothstep(0., .10, depth);',
+    '      col = mix(col, wc, shore * .94);',
+    /* Un filo claro en la orilla. */
+    '      col += mix(vec3(.50, .32, .20), vec3(.10, .12, .20), uNight) * smoothstep(.06, .0, abs(depth - .03)) * .5;',
+    '      tFin = mix(tGround, tW, shore);',
+    '    }',
     '  }',
 
     /* ---------- El ordenador ---------- */
@@ -442,7 +524,7 @@
     '        b *= 1. - .20 * dot(su * .85, su * .85);',
     '        b *= 1. + .03 * sin(uTime * 7.);',
     '        col = b * mix(1.02, 1.14, uNight) + vec3(.05, .03, 0.) * (1. - uNight);',
-    '        col = mix(col, sky(refl, L), .05 + fres * .55);',
+    '        col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '        col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '      }else{',
     /* La carcasa: plástico azul grisáceo, más claro en el marco y más oscuro en la peana. */
@@ -481,7 +563,7 @@
     '        float skyL = .5 + .5 * n.y;',
     '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
     '        col += sunCol * spec * shd;',
-    '        col += sky(refl, L) * fres * .22 * ao;',
+    '        col += skyBase(refl, L) * fres * .22 * ao;',
     /* La hierba le devuelve un poco de verde por debajo. */
     '        col += alb * vec3(.05, .09, .03) * max(-n.y, 0.) * (1. - uNight);',
     /* La pantalla ilumina el hueco de su marco. */
@@ -494,10 +576,10 @@
     '  }',
 
     '  if(tFin > 0.){',
-    '    float fog = 1. - exp(-tFin * mix(.021, .024, uNight));',
+    '    float fog = 1. - exp(-tFin * mix(.017, .024, uNight));',
     /* A lo lejos el suelo se funde con la bruma del horizonte. */
     '    fog = max(fog, smoothstep(30., 110., tFin) * .92);',
-    '    col = mix(col, mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
+    '    col = mix(col, mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
     /* Bruma baja: se posa en las hondonadas y deja las crestas fuera. */
     '    float py = ro.y + rd.y * tFin;',
     '    float mist = exp(-max(py - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., tFin) * (1. - smoothstep(70., 150., tFin));',
@@ -506,8 +588,8 @@
     '  float zTree = -1.;',
     /* ---------- El cerezo ---------- */
     /* Es un modelo 3D renderizado aparte a una imagen con transparencia (assets/img/sakura.webp), */
-    /* puesta sobre un plano fijo, de cara a la cámara en reposo. No se mueve ni se deforma: lo */
-    /* que da vida al árbol son los pétalos que caen. */
+    /* puesta sobre un plano fijo, de cara a la cámara. El tronco y las ramas no se mueven; las */
+    /* flores, sí. */
     '  if(uTreeOn > .5){',
     '    vec3 pn = normalize(vec3(-2.2, 0., 11.5));',
     '    vec3 pr = vec3(pn.z, 0., -pn.x);',
@@ -516,9 +598,24 @@
     /* En unidades del modelo (la imagen abarca 9,2 de lado, con el suelo a 0,9 del borde de abajo). */
     '    vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
     '    vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
-    /* Se lee siempre, fuera de cualquier condición: dentro, el nivel de detalle de la textura */
+    /* La imagen trae dos capas, una al lado de la otra: la madera (tronco y ramas), que no se */
+    /* mueve, y las flores, que el viento desplaza un poco: un vaivén lento por zonas de la */
+    /* copa y un temblor fino, más fuertes cuando pasa una racha (la misma que tumba la */
+    /* hierba) y cuanto más arriba. El desplazamiento es suave, así que nada se rasga. */
+    '    vec2 wdir = normalize(vec2(1., .45));',
+    '    float gust = noise(gTree * .16 - wdir * uTime * .50);',
+    '    gust = gust * gust * (3. - 2. * gust);',
+    '    float ph = noise(u * .42 + 3.) * 6.283;',
+    '    vec2 dsp = vec2(1., .18) * (sin(uTime * 1.05 + ph) * .6 + sin(uTime * .61 + ph * 1.7) * .4) * (.030 + .085 * gust);',
+    '    dsp += (vec2(noise(u * 2.1 + vec2(uTime * .85, 0.)), noise(u * 2.1 + vec2(7., uTime * .75))) - .5) * (.035 + .060 * gust);',
+    '    dsp *= smoothstep(.6, 5.5, u.y);',
+    '    vec2 fuv = tuv - dsp / 9.2;',
+    /* Se leen siempre, fuera de cualquier condición: dentro, el nivel de detalle de la textura */
     /* queda indefinido y hay equipos que la pintan a saltos. */
-    '    vec4 tr = texture(uTree, clamp(tuv, 0., 1.));',
+    '    vec4 wood = texture(uTree, vec2(clamp(tuv.x, .002, .998) * .5, clamp(tuv.y, 0., 1.)));',
+    '    vec4 bloom = texture(uTree, vec2(clamp(fuv.x, .002, .998) * .5 + .5, clamp(fuv.y, 0., 1.)));',
+    '    bloom *= step(0., fuv.x) * step(fuv.x, 1.) * step(0., fuv.y) * step(fuv.y, 1.);',
+    '    vec4 tr = wood * (1. - bloom.a) + bloom;',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
@@ -527,8 +624,8 @@
     /* A contraluz las flores se encienden un poco. */
     '        tc += tr.rgb * vec3(1., .55, .45) * pow(max(dot(rd, L), 0.), 3.) * .18 * (1. - uNight);',
     /* La pantalla del ordenador no llega hasta aquí, pero la bruma sí. */
-    '        float tf = (1. - exp(-tp * mix(.021, .024, uNight))) * .7;',
-    '        tc = mix(tc, mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28) * tr.a, tf);',
+    '        float tf = (1. - exp(-tp * mix(.017, .024, uNight))) * .7;',
+    '        tc = mix(tc, mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28) * tr.a, tf);',
     '        col = col * (1. - tr.a) + tc;',
     '        if(tr.a > .5) zTree = tp;',
     '      }',
@@ -567,7 +664,7 @@
     '  vec3 ta = vec3(0., base + 1.02, 0.);',
     '  vec3 ro = vec3(2.2, base + .62, -11.5);',
     '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
-    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
+    '  vec3 L = sunDir();',
 
     /* aBlade: lado (-1..1) y altura dentro de la brizna (0 raíz, 1 punta). */
     /* aInst: raíz (x, z) y dos números al azar. */
@@ -646,10 +743,10 @@
 
     /* Bruma: la misma que el suelo. */
     '  vec3 rd = normalize(root - ro);',
-    '  vec3 fogCol = mix(vec3(.66, .26, .17), vec3(.09, .09, .22), uNight);',
-    '  fogCol += mix(vec3(.30, .16, .05), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
-    '  float fog = 1. - exp(-dist * mix(.021, .024, uNight));',
-    '  vec3 fc = mix(fogCol, sky(normalize(vec3(rd.x, .03, rd.z)), L), .28);',
+    '  vec3 fogCol = mix(vec3(.66, .30, .20), vec3(.09, .09, .22), uNight);',
+    '  fogCol += mix(vec3(.24, .15, .04), vec3(.03, .04, .09), uNight) * pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 3.);',
+    '  float fog = 1. - exp(-dist * mix(.017, .024, uNight));',
+    '  vec3 fc = mix(fogCol, skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28);',
     '  float mist = exp(-max(root.y - base + 1.9, 0.) * 1.5) * smoothstep(9., 34., dist);',
     '  vec3 mistCol = mix(vec3(1., .60, .36), vec3(.20, .23, .42), uNight);',
     /* Dos mezclas seguidas (bruma y bruma baja) resumidas en un color y una cantidad. */
@@ -696,7 +793,7 @@
     'void main(){',
     '  float t = vBlade.x, rA = vBlade.y, rB = vBlade.z, clump = vBlade.w;',
     '  float sh = vLight.x, contact = vLight.y, gust = vLight.z;',
-    '  vec3 L = normalize(mix(vec3(.72, .26, .64), vec3(.50, .40, .77), uNight));',
+    '  vec3 L = sunDir();',
     '  vec3 sunCol = mix(vec3(1.30, .58, .30), vec3(.30, .36, .62), uNight);',
     '  vec3 ambient = mix(vec3(.20, .11, .11), vec3(.045, .055, .12), uNight);',
     '  vec3 skyLight = mix(vec3(.12, .13, .17), vec3(.05, .07, .16), uNight);',
@@ -765,6 +862,37 @@
     '    col = col * (1. - a) + mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6) * a;',
     '    alpha = alpha * (1. - a) + a;',
     '  }',
+    /* El sol deslumbra: un resplandor que se derrama sobre lo que tiene delante y unos rayos */
+    /* tenues que giran muy despacio. De noche, la luna hace lo mismo, mucho más suave. */
+    '  {',
+    '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    '    vec3 fw = normalize(vec3(-2.2, .40, 11.5)), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '    vec3 L = sunDir();',
+    '    vec2 su = 1.5 * vec2(dot(L, rt), dot(L, up)) / dot(L, fw);',
+    '    vec2 d = uv - su;',
+    '    float r = length(d);',
+    '    float ang = atan(d.y, d.x);',
+    '    float rays = noise(vec2(ang * 7. + 2., uTime * .03)) * noise(vec2(ang * 17., 4. - uTime * .02));',
+    '    float bloom = exp(-r * r * 14.) * .20 + exp(-r * 3.4) * rays * .20;',
+    '    col += mix(vec3(1., .62, .28), vec3(.42, .50, .85) * .35, uNight) * bloom;',
+    '  }',
+    /* Una bandada cruza el cielo al atardecer, lejos. */
+    '  if(uNight < .99){',
+    '    float bt = uTime * .011;',
+    '    for(int i = 0; i < 6; i++){',
+    '      float fi = float(i);',
+    '      vec2 bp = vec2(fract(bt + .37) * (asp + .5) - .25, .80 + .035 * sin(bt * 9.));',
+    '      bp += vec2(-.022 * fi - .010 * mod(fi, 2.), (mod(fi, 2.) * 2. - 1.) * .011 * ceil(fi * .5));',
+    '      vec2 q = (pa - bp) / .0062;',
+    '      float flap = .25 + .65 * sin(uTime * 5.5 + fi * 1.9);',
+    '      float wing = abs(q.y - abs(q.x) * flap + .18 * q.x * q.x);',
+    '      float bird = (1. - smoothstep(.10, .26, wing)) * (1. - smoothstep(.85, 1., abs(q.x)));',
+    '      float a = bird * .62 * (1. - uNight);',
+    '      col *= 1. - a;',
+    '      col += vec3(.10, .05, .08) * a;',
+    '      alpha = alpha * (1. - a) + a;',
+    '    }',
+    '  }',
     /* Luciérnagas, de noche: un punto vivo, un halo y un resplandor amplio. Las tapa el ordenador. */
     '  if(uNight > .01){',
     '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
@@ -803,7 +931,8 @@
   /* Lado mayor del lienzo, en píxeles: por encima de esto se estira. */
   const MAX_SIDE = 1920;
   const FRAME_MS = 1000 / 30;
-  /* Desde /app/. La imagen es cuadrada (1024 px), con el árbol centrado y el suelo abajo. */
+  /* Desde /app/. La imagen (2048x1024) trae dos capas del mismo encuadre, una al lado de la
+     otra: a la izquierda la madera y a la derecha las flores. */
   const TREE_URL = '../assets/img/sakura.webp';
   /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
      lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo

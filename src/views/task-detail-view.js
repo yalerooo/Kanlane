@@ -187,7 +187,7 @@
       this.notesTitle.firstChild.textContent = Workhub.t(team.enabled() ? 'Actividad y comentarios' : 'Notas') + ' ';
       const s = TaskModel.statusOf(t.status);
       this.dlg.style.setProperty('--st', s.dot);
-      /* Cabecera: el cliente y, a su lado, las etiquetas (se pintan más abajo). El estado va en las propiedades. */
+      /* Cabecera: el cliente y, a su lado, las etiquetas (se pintan más abajo). El estado va en la franja de propiedades. */
       const labelNames = Array.isArray(t.labels) ? t.labels : [];
       const crumb = [];
       if(Workhub.clientsEnabled !== false){
@@ -388,7 +388,7 @@
       '<div class="gh-event-time">' + esc(ago(e.createdAt)) + '</div></div></li>';
   }
 
-  /* Propiedad de la ficha: una fila con la etiqueta a la izquierda y el valor a la derecha. */
+  /* Propiedad de la franja derecha: la etiqueta encima y el valor debajo. */
   function fact(icon, label, valueHtml){
     return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + esc(label) + '</span>' +
       '<div class="tv-prop-value tv-fact-value">' + valueHtml + '</div></div>';

@@ -907,26 +907,13 @@
       <button type="button" class="icon-only tv-close" id="btnTvClose" data-dismiss aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
   </div>
+  <div class="tv-scroll">
   <div class="tv-body">
     <h2 id="tvTitle" translate="no"></h2>
     <section id="tvDescWrap" hidden>
       <h3 class="sr-only">Descripción</h3>
       <div class="tv-desc" id="tvDesc" translate="no"></div>
     </section>
-    <div class="tv-props" role="group" aria-label="Propiedades de la tarea">
-      <div class="tv-prop tv-status-field">
-        <label class="tv-prop-label" for="tvEstado">Estado</label>
-        <div class="tv-prop-value">
-          <select id="tvEstado" data-dots="status">
-            <option value="pendiente">Pendiente</option>
-            <option value="proceso">En proceso</option>
-            <option value="espera">Esperando al cliente</option>
-            <option value="completada">Completada</option>
-          </select>
-        </div>
-      </div>
-      <div class="tv-facts" id="tvFacts"></div>
-    </div>
     <section class="tv-section" id="tvChecklistWrap" hidden>
       <h3>Subtareas <span class="tv-count" id="tvChecklistCount"></span></h3>
       <span class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></span>
@@ -948,7 +935,22 @@
       <h3>Vínculos</h3>
       <div class="tv-links" id="tvLinks"></div>
     </section>
+  </div>
+  <aside class="tv-side" aria-label="Propiedades de la tarea">
+    <div class="tv-prop tv-status-field">
+      <label class="tv-prop-label" for="tvEstado">Estado</label>
+      <div class="tv-prop-value">
+        <select id="tvEstado" data-dots="status">
+          <option value="pendiente">Pendiente</option>
+          <option value="proceso">En proceso</option>
+          <option value="espera">Esperando al cliente</option>
+          <option value="completada">Completada</option>
+        </select>
+      </div>
+    </div>
+    <div class="tv-facts" id="tvFacts"></div>
     <p class="tv-stamp" id="tvStamp"></p>
+  </aside>
   </div>
   <form class="tv-comment-form" id="tvCommentForm" hidden>
     <p class="lock-error" id="tvCommentError" role="alert" hidden></p>

@@ -151,14 +151,13 @@
     '  vec3 k1 = q - vec3(.50, .47, -.815), k2 = q - vec3(.68, .47, -.815);',
     '  float knobs = min(max(length(k1.xy) - .052, abs(k1.z) - .035), max(length(k2.xy) - .052, abs(k2.z) - .035)) - .010;',
     '  body = min(body, knobs);',
-    /* El pie, pegado al ordenador de arriba abajo: un faldón bajo la carcasa (se mete en ella), */
-    /* una rótula redonda sobre la que gira y un plato redondo en el suelo. Cada pieza entra en */
-    /* la siguiente y se funden: no queda hueco entre la pantalla y el pie. */
-    '  float skirt = sdBox(q - vec3(0., .34, -.16), vec3(.50, .12, .36)) - .05;',
-    '  float ball = (length((q - vec3(0., .17, -.12)) * vec3(1., 1.55, 1.)) - .36) / 1.55;',
-    '  vec2 dw = vec2(length(q.xz - vec2(0., -.12)) - .58, abs(q.y - .045) - .018);',
+    /* El pie, macizo y pegado al ordenador de arriba abajo: un zócalo que entra en la carcasa */
+    /* y baja hasta el suelo, y un plato redondo alrededor. Nada de cuello fino entre dos */
+    /* piezas: por la rendija que quedaba a los lados se veía el fondo, y parecía un hueco. */
+    '  float skirt = sdBox(q - vec3(0., .27, -.16), vec3(.50, .19, .36)) - .05;',
+    '  vec2 dw = vec2(length(q.xz - vec2(0., -.14)) - .66, abs(q.y - .045) - .018);',
     '  float dish = min(max(dw.x, dw.y), 0.) + length(max(dw, 0.)) - .035;',
-    '  float stand = smin(smin(skirt, ball, .07), dish, .10);',
+    '  float stand = smin(skirt, dish, .09);',
     /* El cable sale por detrás y se pierde en la hierba. */
     '  float cable = min(sdCapsule(q, vec3(.22, .62, .90), vec3(.30, .30, 1.20), .028), sdCapsule(q, vec3(.30, .30, 1.20), vec3(.70, -.05, 1.75), .028));',
     '  return min(smin(body, stand, .05), cable);',
@@ -463,9 +462,11 @@
     '  float t0 = sph(ro, rd, vec3(0., base + 1.02 * CS, 0.), 1.95 * CS);',
     '  if(t0 >= 0.){',
     '    float tt = t0;',
-    '    for(int i = 0; i < 64; i++){',
+    /* Si los pasos se acaban rozando una superficie (rincones estrechos, cantos vistos de */
+    /* refilón), cuenta como tocada: si no, por ahí se vería el fondo. */
+    '    for(int i = 0; i < 96; i++){',
     '      float d = computer(toLocal(ro + rd * tt, base));',
-    '      if(d < .0015){ tObj = tt; break; }',
+    '      if(d < .0015 || (i == 95 && d < .03)){ tObj = tt; break; }',
     '      tt += d * CS;',
     '      if(tt > t0 + 5. * CS) break;',
     '    }',
@@ -900,7 +901,7 @@
     /* Hasta dónde hay briznas; bajo el ordenador, ninguna. */
     '  float fade = 1. - smoothstep(GRASS_F0, GRASS_F1, dist);',
     '  vec3 ql = toLocal(root, base);',
-    '  fade *= 1. - step(length(ql.xz - vec2(0., -.12)), .64);',
+    '  fade *= 1. - step(length(ql.xz - vec2(0., -.14)), .72);',
 
     /* Matas: la hierba crece a manchas, más alta y más espesa en unas zonas que en otras. */
     '  float clump = noise(r0 * .85 + 3.);',

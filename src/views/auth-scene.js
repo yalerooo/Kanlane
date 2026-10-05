@@ -1844,7 +1844,11 @@
       done = true;
       watch.disconnect();
       document.removeEventListener('visibilitychange', go);
-      requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0));
+      /* Y no antes de que la foto de espera esté pintada (WORKHUB_AUTH.painted, en
+         auth-early.js): compilar ocupa a la tarjeta, y en un equipo modesto la foto no salía. */
+      const EARLY = window.WORKHUB_AUTH;
+      const painted = EARLY && EARLY.painted ? EARLY.painted() : Promise.resolve();
+      painted.then(() => requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0)));
     };
     /* La imagen de fondo sí, desde ya: no cuesta nada. */
     backdrop(screen);
@@ -2843,7 +2847,7 @@
   if(!EARLY) return;
   EARLY.scene = api;
   if(EARLY.shown){
-    const go = () => api.start(document.getElementById('authCanvas'), document.getElementById('authScreen'), document.getElementById('authWindow'));
-    if(window.requestIdleCallback) window.requestIdleCallback(go, {timeout:500}); else setTimeout(go, 60);
+    /* start() espera por su cuenta a que la pantalla de acceso y la foto de espera se vean. */
+    api.start(document.getElementById('authCanvas'), document.getElementById('authScreen'), document.getElementById('authWindow'));
   }
 })();

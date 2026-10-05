@@ -317,11 +317,21 @@ html.auth-gate body:not(.is-authing) .consent{display:none;}
 .auth-verify-msg.is-info{color:var(--st-done);}
 .auth-noaccess-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
 
-/* ---------- Tablet y móvil: solo el formulario ---------- */
-@media (max-width: 860px){
-  .auth-shell{width:min(420px, 100%);min-height:0;grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);}
+/* ---------- Tablet y móvil: solo el formulario, sobre fondo liso ----------
+   Pantallas estrechas y cualquier equipo táctil (la misma condición que WORKHUB_AUTH.plain, en
+   auth-early.js). Sin paisaje: la escena dejaba el teléfono parado y, sin la ventana de
+   cristal, apenas se veía. Queda el fondo de la app, claro u oscuro según el tema, y la
+   escena ni se descarga. */
+@media (max-width: 860px), (hover: none) and (pointer: coarse){
+  .auth-shell{width:min(420px, 100%);min-height:0;grid-template-columns:minmax(0, 1fr);border-radius:var(--r-sheet);box-shadow:0 0 0 1px var(--line), var(--shadow-pop, 0 12px 32px rgba(0, 0, 0, .12));}
   .auth-aside{display:none;}
   .auth-card{padding:30px 28px 24px;}
+  .auth-scene{display:none;}
+  /* Lo que iba sobre el paisaje (texto claro, cristal) pasa a los colores de la app. */
+  .auth-tools{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface-solid);border-color:var(--line);}
+  .auth-foot{color:var(--ink-soft);text-shadow:none;}
+  .auth-foot a{color:var(--ink);text-decoration-color:var(--line-strong);}
+  .auth-foot a:hover{text-decoration-color:var(--ink);}
 }
 @media (max-width: 480px){
   .auth-top{padding:10px 14px;}

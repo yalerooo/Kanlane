@@ -116,8 +116,28 @@
     paint: place
   };
   window.addEventListener('resize', place);
+
+  /* En móviles y tabletas no hay paisaje: fondo liso, claro u oscuro según el tema (la misma
+     condición que en auth.css). La escena dejaba el teléfono parado, y con solo el formulario
+     en pantalla apenas se veía. */
+  api.plain = window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)');
+  /* La escena (auth-scene.js, que pesa más que el resto del acceso junto) solo se baja cuando
+     se va a ver: con la pantalla de acceso a la vista y fuera del modo liso. Quien entra con
+     la sesión iniciada, o desde un móvil, no la descarga. Arranca sola al cargarse. */
+  var sceneLoad = null;
+  api.loadScene = function(){
+    if(!sceneLoad) sceneLoad = new Promise(function(resolve){
+      var s = document.createElement('script');
+      s.src = '../src/views/auth-scene.js';
+      s.onload = s.onerror = function(){ resolve(); };
+      document.head.appendChild(s);
+    });
+    return sceneLoad;
+  };
+  function wantScene(){ if(!screen.hidden && !api.plain.matches) api.loadScene(); }
+  if(api.plain.addEventListener) api.plain.addEventListener('change', wantScene);
   /* La pantalla de acceso aparece con el atributo hidden (aquí o desde AuthView). */
-  new MutationObserver(place).observe(screen, {attributes:true, attributeFilter:['hidden']});
+  new MutationObserver(function(){ place(); wantScene(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
 
   if(!window.__authFirst) return;
 

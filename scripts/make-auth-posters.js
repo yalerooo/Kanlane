@@ -59,6 +59,8 @@ async function shot(browser, theme, up, tree){
     try{ await page.goto('http://localhost:' + port + '/app/', {waitUntil:'load'}); break; }
     catch(e){ if(i > 40) throw e; await new Promise((r) => setTimeout(r, 150)); }
   }
+  /* La escena se baja aparte, cuando el acceso se ve (auth-early.js): aquí se pide ya. */
+  await page.evaluate(() => window.WORKHUB_AUTH.loadScene());
   await page.evaluate(([fx, fy, tx]) => {
     document.querySelectorAll('.consent').forEach((el) => el.remove());
     /* Quieta: siempre el mismo instante, para que las dos fotos del paisaje casen. */

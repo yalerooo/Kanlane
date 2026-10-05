@@ -9,7 +9,8 @@
      necesita antes de que exista nada de esto (pinta el formulario en el primer fotograma). */
   const EARLY = window.WORKHUB_AUTH;
   const {PROVIDERS, TEXT, SPIN} = EARLY;
-  /* La escena se carga antes que Workhub (ver auth-scene.js); aquí queda en su sitio de siempre. */
+  /* La escena se pide aparte y solo si se va a ver (auth-early.js): si ya ha llegado, queda en
+     su sitio de siempre; si llega después, se pone ella. En móviles no llega nunca. */
   Workhub.views.authScene = EARLY.scene;
   const MAIL_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
   const METER_LEVELS = {short:1, weak:2, fair:3, good:4};
@@ -130,8 +131,8 @@
       });
     }
 
-    /* Paisaje en 3D de detrás del acceso (src/views/auth-scene.js). Si no hay WebGL se queda
-       el degradado de cielo de auth.css. */
+    /* Paisaje en 3D de detrás del acceso (src/views/auth-scene.js), si ya se ha cargado (si
+       no, arranca sola al llegar). Si no hay WebGL se queda el degradado de cielo de auth.css. */
     buildScene(){
       const canvas = $('authCanvas');
       if(canvas && Workhub.views.authScene) Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));

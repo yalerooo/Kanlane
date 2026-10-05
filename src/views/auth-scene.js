@@ -1610,7 +1610,11 @@
      Workhub.views.authScene.poster(true | false). */
   const POSTER = window.__authPoster;
   /* La pantalla de acceso no se ve: ni oculta ni enseñada antes de tiempo (auth-early). */
-  const away = (screen) => screen.hidden && !document.documentElement.classList.contains('auth-early');
+  /* En móviles y tabletas no hay escena (WORKHUB_AUTH.plain, en auth-early.js): si una ventana
+     de escritorio se estrecha hasta ahí, se para; al ensancharla, sigue. */
+  const PLAIN = (window.WORKHUB_AUTH && window.WORKHUB_AUTH.plain) || {matches:false};
+  const onPlain = (fn) => { if(PLAIN.addEventListener) PLAIN.addEventListener('change', fn); };
+  const away = (screen) => PLAIN.matches || (screen.hidden && !document.documentElement.classList.contains('auth-early'));
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
   const BUDGET = 0.62;
@@ -1840,7 +1844,7 @@
     const go = () => {
       /* Hasta que la tarjeta se ve de verdad, no: con la pantalla enseñada a medias (auth-early)
          basta la imagen de fondo, y arrancar antes retrasaba medio segundo el formulario. */
-      if(done || screen.hidden || document.hidden) return;
+      if(done || screen.hidden || document.hidden || PLAIN.matches) return;
       done = true;
       watch.disconnect();
       document.removeEventListener('visibilitychange', go);
@@ -1855,6 +1859,7 @@
     const watch = new MutationObserver(go);
     watch.observe(screen, {attributes:true, attributeFilter:['hidden']});
     document.addEventListener('visibilitychange', go);
+    onPlain(go);
     requestAnimationFrame(go);
     return true;
   }
@@ -2813,6 +2818,7 @@
 
     window.addEventListener('resize', () => { resize(); wake(); });
     document.addEventListener('visibilitychange', wake);
+    onPlain(wake);
     /* La pantalla de acceso aparece y desaparece con el atributo hidden; el tema, con data-theme. */
     new MutationObserver(() => { relayout = true; resize(); wake(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
     new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
@@ -2837,17 +2843,16 @@
     signal(o){ if(early.length < 60) early.push(o); },
     state(){ return null; }, bench(){ return 0; }, poster(){ return null; }, hour(){}, quality(){}
   };
-  /* Este script va justo detrás de auth-early.js, antes de que exista Workhub (AuthView lo
-     publica después como Workhub.views.authScene). Si el formulario ya está a la vista, la
-     escena se empieza a preparar ya, mientras se cargan los demás scripts: en un equipo modesto
-     compilar los sombreadores lleva varios segundos en cada visita (el navegador no guarda lo
-     compilado en segundo plano), y así corren a la vez que la descarga. */
+  /* Este script lo pide auth-early.js (loadScene) cuando la pantalla de acceso se va a ver con
+     paisaje, así que puede llegar antes o después de que exista Workhub: se publica en los dos
+     sitios (AuthView lo recoge de WORKHUB_AUTH.scene si llegó antes). La escena se empieza a
+     preparar ya, mientras se cargan los demás scripts: en un equipo modesto compilar los
+     sombreadores lleva varios segundos en cada visita (el navegador no guarda lo compilado en
+     segundo plano), y así corren a la vez que la descarga. */
   const EARLY = window.WORKHUB_AUTH;
-  if(window.Workhub) Workhub.views.authScene = api;
+  if(window.Workhub && Workhub.views) Workhub.views.authScene = api;
   if(!EARLY) return;
   EARLY.scene = api;
-  if(EARLY.shown){
-    /* start() espera por su cuenta a que la pantalla de acceso y la foto de espera se vean. */
-    api.start(document.getElementById('authCanvas'), document.getElementById('authScreen'), document.getElementById('authWindow'));
-  }
+  /* start() espera por su cuenta a que la pantalla de acceso y la foto de espera se vean. */
+  api.start(document.getElementById('authCanvas'), document.getElementById('authScreen'), document.getElementById('authWindow'));
 })();

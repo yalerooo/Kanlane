@@ -121,10 +121,12 @@ test('la app de verdad: pocos archivos, el acceso va primero y el diccionario no
   const r = bundle(out);
   const html = read(out, 'app/index.html');
   const srcs = tags(html, SCRIPTS);
-  assert.ok(before.length > 90 && srcs.length <= 6, 'de ' + before.length + ' scripts a ' + srcs.length);
+  assert.ok(before.length > 90 && srcs.length <= 5, 'de ' + before.length + ' scripts a ' + srcs.length);
   assert.equal(tags(html, SHEETS).length, 1);
-  /* El script que enseña el formulario va solo, delante de la escena. */
-  assert.deepEqual(srcs.slice(1, 3), ['../src/views/auth-early.js', '../src/views/auth-scene.js']);
+  /* El script que enseña el formulario va solo; la escena no está en la página (la pide él
+     cuando hace falta), así que se queda suelta en dist/. */
+  assert.equal(srcs[1], '../src/views/auth-early.js');
+  assert.ok(!before.includes('../src/views/auth-scene.js') && fs.existsSync(path.join(out, 'src/views/auth-scene.js')));
   /* El diccionario se baja aparte y solo en inglés: ni está en la página ni dentro de un paquete. */
   assert.ok(!before.includes('../src/i18n/en.js'));
   assert.ok(fs.existsSync(path.join(out, 'src/i18n/en.js')));

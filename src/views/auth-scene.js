@@ -115,6 +115,16 @@
     '}',
     '#if SEASON == 3',
     'const float GRASSY = 0.;',
+    /* El relieve fino de la nieve, que el terreno no tiene: ventisqueros anchos, las ondas que
+       deja el viento (alargadas, de cresta afilada) y, cerca (fine), el grano. Solo se usa su
+       pendiente, para inclinar la normal: con el sol bajo es lo que hace que parezca nieve y
+       no una sábana. */
+    'float snowRelief(vec2 p, float fine){',
+    '  float h = .10 * fbm3(p * .55 + 7.);',
+    '  h += .022 * (1. - abs(2. * noise(p * vec2(1.1, 3.4) + 3.) - 1.));',
+    '  h += fine * (.006 * noise(p * vec2(7., 15.)) + .0013 * noise(p * 46.));',
+    '  return h;',
+    '}',
     '#else',
     'const float GRASSY = 1.;',
     '#endif',
@@ -149,6 +159,18 @@
     '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
     '  h += smoothstep(8., 60., p.y) * 4.2 * fbm3(p * .05 + 3.1);',
     '  h -= smoothstep(2., -9., p.y) * 1.1;',
+    /* Invierno: el ordenador está medio metido en la nieve. No baja él: sube la nieve a su
+       alrededor, un montón irregular contra el pie, más alto por detrás y hacia un lado (de
+       donde sopla), que le tapa el plato y parte del zócalo. Al ser terreno, lleva la misma
+       luz y las mismas sombras que el resto de la nieve, y el cursor también lo pisa. En las
+       medidas del ordenador. OJO: -.46 y 1.22 repiten YAW y CS, que se declaran más abajo. */
+    '#if SEASON == 3',
+    '  {',
+    '    vec2 q = rot(-.46) * p / 1.22;',
+    '    vec2 c = (q - vec2(-.10, -.25)) * vec2(.80, 1.);',
+    '    h += 1.22 * (.17 * exp(-dot(q, q) / 1.4) + .24 * exp(-dot(c, c) / .85) * (.78 + .5 * noise(q * 2.6 + 1.)));',
+    '  }',
+    '#endif',
     /* La hondonada del lago, al fondo a la derecha. */
     '  vec2 dl = (p - vec2(9., 27.)) * vec2(.75, 1.);',
     '  h -= 2.6 * exp(-dot(dl, dl) / 110.);',
@@ -206,6 +228,13 @@
     '  vec3 c = q - vec3(id * cell + (hash(vec2(id, 3.)) - .5) * .05, .345, -.70);',
     '  float t = clamp(-c.y / len, 0., 1.);',
     '  return (length(vec3(c.x, c.y + t * len, c.z)) - mix(.028, .003, t)) * .75;',
+    '}',
+    /* Escarcha en el cristal: entra desde los bordes y las esquinas, a vetas, y deja libre el
+       centro, que es donde se lee. su: el punto del cristal, de -1 a 1. */
+    'vec3 frosted(vec3 col, vec2 su){',
+    '  float f = max(abs(su.x), abs(su.y)) + length(max(abs(su) - .55, 0.)) * .9 + (fbm3(su * 4. + 2.) - .5) * .55;',
+    '  f = smoothstep(.80, 1.12, f) * (.55 + .45 * noise(su * vec2(38., 46.)));',
+    '  return mix(col, vec3(.74, .84, .98) * mix(.95, .42, uNight), f * mix(.60, .40, uNight));',
     '}',
     '#endif',
     'float computer(vec3 q){',
@@ -515,6 +544,17 @@
     '      if(t > 170.) break;',
     '    }',
     '  }',
+    /* Invierno: el montón de nieve del ordenador mira a la cámara, y ahí el último paso se */
+    /* mete en el terreno una distancia distinta en cada franja de píxeles (se veía a bandas */
+    /* con la luz de la pantalla): se afina el punto con unos pasos cortos de vuelta. */
+    '#if SEASON == 3',
+    '  if(tHit > 0. && tHit < 40.){',
+    '    for(int i = 0; i < 4; i++){',
+    '      vec3 p = ro + rd * tHit;',
+    '      tHit += (p.y - terrain(p.xz)) * .55;',
+    '    }',
+    '  }',
+    '#endif',
     /* Por debajo del horizonte siempre hay suelo. */
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
     '  return tHit;',
@@ -874,6 +914,15 @@
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
     /* dejan pasar la luz cuando se miran a contraluz. */
+    /* Invierno: el relieve fino de la nieve (snowRelief), que se apaga con la distancia. */
+    '#if SEASON == 3',
+    '    {',
+    '      float fine = 1. - smoothstep(2., 12., tHit);',
+    '      float s0 = snowRelief(p.xz, fine);',
+    '      vec2 sg = vec2(snowRelief(p.xz + vec2(.04, 0.), fine) - s0, snowRelief(p.xz + vec2(0., .04), fine) - s0) / .04;',
+    '      n = normalize(n + vec3(-sg.x, 0., -sg.y) * (1. - smoothstep(5., 30., tHit)));',
+    '    }',
+    '#endif',
     /* Invierno: la nieve se hunde por donde pasa el cursor. No es una mancha pintada: el
        relieve está en uSnow y aquí solo se lee. De sus alturas sale la pendiente, que inclina
        la normal antes de iluminar, así que la pared que mira al sol se enciende sola y la otra
@@ -944,8 +993,21 @@
     '    gcol += sunCol * vec3(.78, .62, .18) * through * 1.25 * sh * (.4 + .6 * streak);',
     /* Las puntas, al sol, brillan: un filo de luz en lo alto de cada brizna. */
     '    gcol += sunCol * vec3(.60, .66, .26) * pow(kk, 5.) * (.35 + .65 * b.z) * dif * .50 * sh * near * GRASSY;',
-    /* La nieve, en cambio, chispea donde le da el sol. */
-    '    gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .55 * near * (1. - GRASSY);',
+    /* La nieve, en cambio, chispea: cristales sueltos que se encienden y se apagan cada uno a
+       su ritmo (solo cerca: lejos serían más pequeños que un píxel), sobre un brillo fino y
+       quieto. Sus sombras son azules, que es el cielo lo que las alumbra; y a contraluz deja
+       pasar algo de sol. */
+    '#if SEASON == 3',
+    '    {',
+    '      vec2 cell = floor(p.xz * 90.);',
+    '      float gh = hash(cell);',
+    '      float tw = .5 + .5 * sin(uTime * (1.2 + 3. * hash(cell + 3.1)) + gh * 50.);',
+    '      gcol += sunCol * step(.965, gh) * tw * tw * (1. - smoothstep(3., 13., tHit)) * (dif * sh * 1.5 + .10);',
+    '      gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .30 * near;',
+    '      gcol = mix(gcol, gcol * vec3(.80, .93, 1.22), (1. - dif * sh) * .55 * (1. - uNight));',
+    '      gcol += alb * sunCol * pow(max(dot(rd, L), 0.), 5.) * .22 * sh;',
+    '    }',
+    '#endif',
     /* Luz rasante en las crestas de las lomas. */
     '    gcol += alb * sunCol * pow(clamp(1. - n.y, 0., 1.), .7) * max(dot(n, L), 0.) * 2.2 * sh;',
     '    float gustWave = smoothstep(.55, 1., sin(p.x * .55 + p.z * .33 - uTime * .9) * .5 + .5) * (.5 + .5 * noise(p.xz * .7 + uTime * .1));',
@@ -965,6 +1027,14 @@
     '      }',
     '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
+    /* Invierno: el viento levanta nieve y la arrastra a ras de suelo, a rachas. */
+    '#if SEASON == 3',
+    '    {',
+    '      float gust = smoothstep(.45, .85, noise(p.xz * .16 + vec2(uTime * .11, 0.)));',
+    '      float veil = smoothstep(.50, .90, fbm3(p.xz * vec2(.45, 2.4) + vec2(uTime * 1.1, uTime * .2)));',
+    '      gcol += (ambient + skyLight * 1.6 + sunCol * .5 * sh) * veil * gust * .16 * (1. - smoothstep(10., 34., tHit));',
+    '    }',
+    '#endif',
     '    col = gcol;',
     '    tFin = tGround;',
     /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
@@ -1016,6 +1086,9 @@
     '        b *= 1. - .20 * dot(su * .85, su * .85);',
     '        b *= 1. + .03 * sin(uTime * 7.);',
     '        col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '#if SEASON == 3',
+    '        col = frosted(col, su);',
+    '#endif',
     '        col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '        col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '      }else',
@@ -1069,8 +1142,12 @@
     '        float iceK = 0., snowK = 0.;',
     '#if SEASON == 3',
     '        iceK = 1. - smoothstep(.004, .012, icicles(q));',
-    '        snowK = (1. - smoothstep(.006, .016, snowCap(q))) * (1. - iceK);',
-    '        alb = mix(alb, vec3(1.25, 1.30, 1.40), snowK);',
+    '        snowK = 1. - smoothstep(.006, .016, snowCap(q));',
+    /* Y la que se posa en todo lo que mira hacia arriba: el alféizar de la pantalla, los */
+    /* mandos, el cable. A manchas, no una capa lisa. */
+    '        snowK = max(snowK, smoothstep(.50, .88, nl.y) * smoothstep(.30, .55, noise(q.xz * 11.) * .6 + noise(q.xz * 29. + q.y * 7.) * .4) * .9);',
+    '        snowK *= 1. - iceK;',
+    '        alb = mix(alb, mix(vec3(.92, 1.02, 1.26), vec3(1.30, 1.34, 1.42), noise(q.xz * 5. + 2.)) * mix(1., .50, uNight), snowK);',
     '        alb = mix(alb, vec3(.62, .80, 1.), iceK);',
     '#endif',
     '        float dif = max(dot(n, L), 0.);',
@@ -1079,6 +1156,15 @@
     '        float spec = pow(max(dot(n, hv), 0.), 48.) * .55 + pow(max(dot(n, hv), 0.), 8.) * .08;',
     '        float skyL = .5 + .5 * n.y;',
     '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
+    '#if SEASON == 3',
+    /* La nieve, con la luz del suelo (no la del plástico): que sea la misma nieve arriba y abajo. */
+    '        {',
+    '          float wrap = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
+    '          vec3 snowCol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * wrap * 2.4 * ao * shd);',
+    '          snowCol = mix(snowCol, snowCol * vec3(.80, .93, 1.22), (1. - wrap * shd) * .55 * (1. - uNight));',
+    '          col = mix(col, snowCol, snowK);',
+    '        }',
+    '#endif',
     '        col += sunCol * spec * shd * (1. - snowK) * (1. + 2.5 * iceK);',
     /* El hielo deja pasar la luz y refleja el cielo. */
     '        col += (skyBase(refl, L) * (.25 + fres * .6) + sunCol * pow(max(dot(rd, L), 0.), 4.) * .5) * iceK;',
@@ -1240,6 +1326,9 @@
     '  b *= 1. - .20 * dot(su * .85, su * .85);',
     '  b *= 1. + .03 * sin(uTime * 7.);',
     '  vec3 col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '#if SEASON == 3',
+    '  col = frosted(col, su);',
+    '#endif',
     '  col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '  col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '  float fog = 1. - exp(-sl * CS * mix(.017, .024, uNight));',

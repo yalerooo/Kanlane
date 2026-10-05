@@ -8,12 +8,50 @@
 (function(){
   var root = document.documentElement;
   var c = window.WORKHUB_FIREBASE || {};
+  /* SDK de Firebase: la lista que usa src/services/firebase-backend.js, aquí para poder
+     adelantar su descarga. */
+  var SDK = window.WORKHUB_SDK = {
+    base: 'https://www.gstatic.com/firebasejs/10.14.1/',
+    files: ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'],
+    appCheck: 'firebase-app-check-compat.js'
+  };
   if(c.apiKey && c.projectId && /^https?:$/.test(location.protocol)){
     root.classList.add('auth-gate');
     /* ¿Ya entró antes en este navegador? Se sabe al instante (Firebase tarda en responder):
        si sí, desde el primer fotograma se ve el esqueleto de la página principal; si no,
        negro hasta que aparezca el acceso. La marca la pone AuthController al entrar. */
-    try{ if(localStorage.getItem('workhub_session') === '1') root.classList.add('boot-session'); }catch(e){}
+    var session = false, guest = false;
+    try{
+      session = localStorage.getItem('workhub_session') === '1';
+      guest = !!String((JSON.parse(localStorage.getItem('workhub_guest') || 'null') || {}).name || '').trim();
+    }catch(e){}
+    if(session) root.classList.add('boot-session');
+    /* Ni sesión ni invitado: casi seguro hay que iniciar sesión. El formulario ya viene escrito
+       en la página, así que se enseña en el primer fotograma, sin esperar al resto de scripts ni
+       a Firebase (lo hace src/views/auth-early.js, que va justo detrás del formulario). Dentro
+       de claude.ai (window.claude) no hay acceso. */
+    else if(!guest && !window.claude) window.__authFirst = true;
+    /* El SDK de Firebase se empieza a bajar ya, a la vez que los scripts de la app, en lugar de
+       después de todos ellos. Un invitado no contacta con nada. */
+    if(!guest && !window.claude){
+      var hint = function(rel, href, as){
+        var l = document.createElement('link');
+        l.rel = rel; l.href = href;
+        if(rel === 'preload') l.as = as || 'script';
+        document.head.appendChild(l);
+      };
+      /* Lo primero, la foto de fondo del acceso (auth.css, --sc-poster y --sc-tree), la del tema que toca:
+         así el fondo está ya en el primer fotograma. */
+      if(window.__authFirst){
+        var saved = null;
+        try{ saved = localStorage.getItem('workhub_theme'); }catch(e){}
+        var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        hint('preload', '../assets/img/auth-poster-' + (dark ? 'dark' : 'light') + '.webp', 'image');
+        hint('preload', '../assets/img/auth-tree-' + (dark ? 'dark' : 'light') + '.webp', 'image');
+      }
+      hint('preconnect', 'https://www.gstatic.com');
+      SDK.files.concat(c.appCheckSiteKey && !c.useEmulators ? [SDK.appCheck] : []).forEach(function(f){ hint('preload', SDK.base + f); });
+    }
     /* Por si la carga se atasca, el esqueleto no se queda para siempre. */
     setTimeout(function(){ window.__hideBootSkeleton(); }, 15000);
   }
@@ -30,79 +68,5 @@
     if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);
     /* Navegación arriba (Ajustes → Apariencia): también antes de pintar. */
     if(localStorage.getItem('workhub_nav') === 'top') root.setAttribute('data-nav', 'top');
-  }catch(e){}
-
-  /* ---------- El fondo de la pantalla de acceso, antes que nada ----------
-     Detrás del acceso va una escena en 3D (src/views/auth-scene.js) que tarda unos segundos en
-     estar lista; mientras, se enseña una imagen suya hecha de antemano (assets/img/acceso-*.webp),
-     colocada para que el ordenador caiga en el centro del panel de cristal de la tarjeta. Esa
-     imagen y esa colocación viven aquí, y no en auth-scene.js, para poder ponerla desde el
-     primer fotograma, sin esperar a que carguen los demás scripts ni a que Firebase diga si
-     hay sesión: si no, la pantalla se quedaba en negro alrededor de un segundo.
-     Medidas de la imagen, en píxeles; fx, fy: dónde cae el ordenador (fy, desde abajo); una
-     altura de pantalla son h píxeles; tree: dónde va el tronco del cerezo respecto al
-     ordenador, en alturas. Las usa también auth-scene.js (POSTER) y hay que cambiarlas si se
-     regeneran las imágenes con otro encuadre. */
-  var poster = window.__authPoster = {
-    w:1952, h:640, fx:1088, fy:301, tree:-1.12,
-    night:'../assets/img/acceso-noche.webp', dusk:'../assets/img/acceso-tarde.webp',
-    /* El color del cielo en el borde de arriba de cada imagen: en ventanas donde la imagen no
-       llega hasta arriba, la franja que falta se rellena con él. */
-    nightTop:'#181b43', duskTop:'#b35762',
-    dark:function(){
-      var set = root.getAttribute('data-theme');
-      return set ? set === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    },
-    /* Dónde va el ordenador en pantalla (fx, fy: el centro del panel de cristal, algo a la
-       derecha, porque el frontal del ordenador queda a la izquierda de su fondo) y dónde
-       empieza la tarjeta (left). Con offsetLeft/offsetTop y no getBoundingClientRect, que
-       incluye la animación de entrada de la tarjeta. */
-    focus:function(screen, el, w, h){
-      var off = function(n){ var x = 0, y = 0; for(; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; } return {x:x, y:y}; };
-      var fx = w / 2, fy = h * 0.6, left = w * 0.2;
-      if(el && el.offsetParent){ var o = off(el); fx = o.x + el.offsetWidth * 0.575; fy = o.y + el.offsetHeight * 0.585; }
-      var card = el && el.parentElement;
-      if(card && card.offsetParent) left = Math.max(off(card).x, 0);
-      return {fx:fx, fy:fy, left:left};
-    },
-    /* Pone (o recoloca) la imagen como fondo de .auth-scene. Devuelve false si la pantalla de
-       acceso aún no está en la página o no se ve. */
-    done:'',
-    paint:function(){
-      var screen = document.getElementById('authScreen'), canvas = document.getElementById('authCanvas');
-      if(!screen || !canvas || (screen.hidden && !root.classList.contains('auth-early'))) return false;
-      var el = canvas.parentElement;
-      var w = el.clientWidth || window.innerWidth, h = el.clientHeight || window.innerHeight;
-      var at = poster.focus(screen, document.getElementById('authWindow'), w, h), k = h / poster.h;
-      var now = [poster.dark() ? poster.night : poster.dusk, Math.round(poster.w * k), Math.round(poster.h * k), Math.round(at.fx - poster.fx * k), Math.round(at.fy - (poster.h - poster.fy) * k)].join();
-      if(now === poster.done) return true;
-      poster.done = now;
-      now = now.split(',');
-      el.style.backgroundImage = 'url("' + now[0] + '")';
-      el.style.backgroundColor = poster.dark() ? poster.nightTop : poster.duskTop;
-      el.style.backgroundRepeat = 'no-repeat';
-      el.style.backgroundSize = now[1] + 'px ' + now[2] + 'px';
-      el.style.backgroundPosition = now[3] + 'px ' + now[4] + 'px';
-      return true;
-    }
-  };
-  /* Si todo apunta a que va a salir la pantalla de acceso (hay Firebase, no consta sesión y no
-     se entró como invitado), se enseña ya su fondo: la clase auth-early deja ver la pantalla
-     de acceso sin su tarjeta (auth.css), se pide la imagen y se coloca en cuanto la página
-     tiene dónde. AuthView quita la clase cuando se sabe qué hay que enseñar. */
-  try{
-    if(root.classList.contains('auth-gate') && !root.classList.contains('boot-session') && !localStorage.getItem('workhub_guest')){
-      root.classList.add('auth-early');
-      var img = new Image();
-      img.decoding = 'async';
-      img.src = poster.dark() ? poster.night : poster.dusk;
-      /* Se guarda para que el navegador no la suelte antes de usarla. */
-      poster.img = img;
-      var tries = 0;
-      (function wait(){
-        if(!root.classList.contains('auth-early') || poster.paint() || ++tries > 600) return;
-        (window.requestAnimationFrame || setTimeout)(wait, 16);
-      })();
-    }
   }catch(e){}
 })();

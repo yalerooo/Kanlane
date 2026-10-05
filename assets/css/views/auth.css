@@ -335,21 +335,46 @@ html.auth-gate .app{display:none !important;}
 /* ---------- Paisaje de fondo ----------
    Detrás del acceso hay una escena en 3D pintada con WebGL (src/views/auth-scene.js): una
    colina, un árbol y un ordenador antiguo con un tablero en la pantalla; atardecer en claro
-   y noche en oscuro. Aquí solo va el lienzo y, debajo, un degradado de cielo por si el
-   navegador no tiene WebGL. El panel derecho de la tarjeta es una ventana de cristal. */
-.auth-screen{--sc-sky:linear-gradient(180deg, #33495F 0%, #6E4A60 34%, #D2553F 66%, #F0863F 84%, #3A2A1C 100%);}
-:root[data-theme="dark"] .auth-screen{--sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);}
+   y noche en oscuro. Aquí va el lienzo y, debajo, lo que se ve mientras la escena se prepara
+   (o si el navegador no tiene WebGL): una foto pequeña de la propia escena, desenfocada, en
+   dos piezas: el paisaje (--sc-poster) y el cerezo (--sc-tree). Las genera
+   scripts/make-auth-posters.js, boot.js adelanta su descarga y auth-early.js las coloca
+   (--pl, --pt… y --tl, --tt…) con la misma cuenta que la escena, para que coincidan con ella
+   en cualquier tamaño de ventana: el fondo está desde el primer fotograma y la escena de
+   verdad aparece encima como si enfocara. Bajo la foto, un degradado de cielo por si tarda. El panel derecho de la
+   tarjeta es una ventana de cristal. */
+.auth-screen{
+  --sc-sky:linear-gradient(180deg, #33495F 0%, #6E4A60 34%, #D2553F 66%, #F0863F 84%, #3A2A1C 100%);
+  --sc-poster:url(../../img/auth-poster-light.webp);
+  --sc-tree:url(../../img/auth-tree-light.webp);
+}
+:root[data-theme="dark"] .auth-screen{
+  --sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);
+  --sc-poster:url(../../img/auth-poster-dark.webp);
+  --sc-tree:url(../../img/auth-tree-dark.webp);
+}
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .auth-screen{--sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);}
+  :root:not([data-theme="light"]) .auth-screen{
+    --sc-sky:linear-gradient(180deg, #050713 0%, #111634 46%, #2A2452 78%, #0B0D1C 100%);
+    --sc-poster:url(../../img/auth-poster-dark.webp);
+  --sc-tree:url(../../img/auth-tree-dark.webp);
+  }
 }
 .auth-scene{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--sc-sky);}
-.auth-scene canvas{display:block;width:100%;height:100%;opacity:0;transition:opacity .6s ease;}
+.auth-scene::before,.auth-scene::after{content:"";position:absolute;background:center / var(--ps, cover) no-repeat;filter:blur(10px);}
+/* Sin colocar todavía, cubre la pantalla (y sobresale, para que el desenfoque no deje bordes). */
+.auth-scene::before{left:var(--pl, -28px);top:var(--pt, -28px);width:var(--pw, calc(100% + 56px));height:var(--ph, calc(100% + 56px));background-image:var(--sc-poster);}
+/* El cerezo es un recorte con su trozo de paisaje: los bordes se funden con lo de debajo. */
+.auth-scene::after{
+  left:var(--tl, 0);top:var(--tt, 0);width:var(--tw, 0);height:var(--th, 0);background-image:var(--sc-tree);
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 10%, #000 70%, transparent), linear-gradient(to bottom, transparent, #000 8%);
+  mask-image:linear-gradient(to right, transparent, #000 10%, #000 70%, transparent), linear-gradient(to bottom, transparent, #000 8%);
+  -webkit-mask-composite:source-in;mask-composite:intersect;
+}
+.auth-scene canvas{position:relative;z-index:1;display:block;width:100%;height:100%;opacity:0;transition:opacity .7s ease;}
 .auth-scene canvas.is-on{opacity:1;}
-/* Antes de saber si hay sesión (clase auth-early, la pone src/boot.js cuando todo apunta a que
-   habrá que iniciarla): se enseña ya el fondo de la pantalla de acceso, sin la tarjeta ni lo
-   demás, en vez de dejar la pantalla en negro. */
-html.auth-early .auth-screen[hidden]{display:flex !important;}
-html.auth-early .auth-screen[hidden] > :not(.auth-scene){visibility:hidden;}
+/* Con la escena ya encima, la foto deja de pintarse. */
+.auth-scene:has(canvas.is-on)::before,.auth-scene:has(canvas.is-on)::after{visibility:hidden;transition:visibility 0s .8s;}
 
 /* Cuenta en la barra lateral */
 .account{display:flex;align-items:center;gap:9px;padding:6px 2px 6px 8px;margin:0 0 4px;border-radius:var(--r-md);}

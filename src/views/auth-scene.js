@@ -26,7 +26,9 @@
    por segundo); si después va justa, se baja otro. Se pinta solo mientras la pantalla de
    acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
    sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
-   parado varios segundos): hasta que acaban se ve el degradado de cielo. Con movimiento
+   parado varios segundos). Hasta que acaban se enseña una imagen de la escena hecha de antemano
+   (WAIT, POSTER, backdrop), colocada con la misma cuenta y con la pantalla del ordenador pintada
+   de verdad; cuando la escena está lista, la imagen se funde sobre ella. Con movimiento
    reducido se pinta un único fotograma. Si el navegador no tiene WebGL 2, queda el degradado
    de cielo que pone auth.css. */
 (function(){
@@ -64,6 +66,9 @@
     /* desenrollar: sin esto, cada llamada a una función grande se copia entera tantas veces */
     /* como se la llama, y compilar la escena tardaba varios segundos con el navegador parado. */
     'uniform int uZero;',
+    /* Solo para generar las imágenes de espera (ver poster()): 1, el color sin el revelado */
+    /* final; 2, en blanco los píxeles del cristal de la pantalla y en negro los demás. */
+    'uniform float uRaw;',
 
     'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'vec2 hash2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }',
@@ -424,6 +429,7 @@
     'float depth01(float zv){ return clamp(Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * max(zv, 1e-3)), 0., 1.); }',
     /* Revelado final, igual para todo lo que se pinta: viñeta, recorte, contraste y grano. */
     'vec3 post(vec3 col, vec2 fc){',
+    '  if(uRaw > .5) return clamp(col, 0., 1.);',
     '  vec2 vq = fc / uRes - .5;',
     '  col *= 1. - .34 * dot(vq, vq) * 2.2;',
     '  col = clamp(col, 0., 1.);',
@@ -618,6 +624,7 @@
     '#endif',
     '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
+    '  float glass = 0.;',
 
     /* ---------- Hierba y suelo ---------- */
     '  vec3 gcol = vec3(0.);',
@@ -750,6 +757,7 @@
     '      float fres = pow(1. - max(dot(n, -rd), 0.), 4.);',
     '      vec3 refl = reflect(rd, n);',
     '      if(abs(glassD(q)) < .006 && q.z < -.5){',
+    '        glass = 1.;',
     /* La pantalla: el tablero, líneas del tubo, bordes más oscuros y el reflejo del cielo. */
     '        vec2 su = (q.xy - vec2(0., 1.16)) / vec2(.60, .44);',
     '        vec3 b = board(su);',
@@ -898,6 +906,7 @@
     '  float dq = length(oc + rd * max(-bq, 0.));',
     '  col += screenGlow * .06 * exp(-dq * dq * 1.5) * mix(.5, 1.5, uNight) * step(0., -bq);',
     '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.);',
+    '  if(uRaw > 1.5) fragColor = vec4(vec3(glass), 1.);',
     /* Profundidad de lo pintado, para que la hierba quede delante o detrás de cada cosa. */
     '  float zr = tFin > 0. ? tFin : 1e4;',
     '  if(zTree > 0.) zr = min(zr, zTree);',
@@ -994,6 +1003,67 @@
     '  col = mix(col, vec3(.045, .035, .035) * (1. - uNight * .5), (1. - aCrown) * aTrunk);',
     '  col = mix(col, vFog.rgb, vFog.a);',
     '  fragColor = vec4(post(col, gl_FragCoord.xy) * a, a);',
+    '}'
+  ].join('\n');
+  const WAIT = [
+    /* ---------- Mientras se compila lo demás ---------- */
+    /* Los programas de la escena tardan segundos en compilarse. Entre tanto se enseña una imagen */
+    /* de la escena hecha de antemano con este mismo código (poster(), assets/img/acceso-*.webp): */
+    /* la escena solo depende de dónde cae cada píxel respecto al ordenador, en alturas de */
+    /* pantalla, así que la imagen se coloca con esa misma cuenta y coincide con lo que vendrá. */
+    /* uPosterMap: en la imagen, dónde está el ordenador (x, y, en píxeles) y cuánto mide una */
+    /* altura de pantalla. La imagen va sin el revelado final (post), que se le da aquí. */
+    /* Con LIVE, además, la pantalla del ordenador se pinta de verdad (el cuadro de acceso, lo */
+    /* que se escribe): la imagen marca con su transparencia qué píxeles son cristal, y dónde */
+    /* toca cada rayo el cristal sale de una cuenta directa, porque es un trozo de esfera. Son */
+    /* las mismas cuentas que la rama de la pantalla en FRAG: si se toca una, tocar la otra. */
+    'uniform sampler2D uPoster;',
+    'uniform vec3 uPosterMap;',
+    'uniform float uFade;',
+    'out vec4 fragColor;',
+
+    'void main(){',
+    '  vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    '  vec4 px = texture(uPoster, clamp((uv * uPosterMap.z + uPosterMap.xy) / vec2(textureSize(uPoster, 0)), .001, .999));',
+    '  vec3 col = px.rgb;',
+    '#ifdef LIVE',
+    '  if(px.a < .75){',
+    '    float base = uBase;',
+    '    vec3 ta = vec3(0., base + 1.02, 0.);',
+    '    vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '    vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '    vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
+    '    vec3 L = sunDir();',
+    /* El rayo, en las medidas del ordenador, contra la esfera del cristal. */
+    '    vec3 rol = toLocal(ro, base);',
+    '    vec3 rdl = rd; rdl.xz = rot(YAW) * rdl.xz;',
+    '    vec3 gc = vec3(0., 1.16, 5.37);',
+    '    float sl = sph(rol, rdl, gc, 6.);',
+    '    vec3 q = rol + rdl * sl;',
+    '    vec3 n = (q - gc) / 6.; n.xz = rot(-YAW) * n.xz;',
+    '    float fres = pow(1. - max(dot(n, -rd), 0.), 4.);',
+    '    vec3 refl = reflect(rd, n);',
+    '    vec2 su = (q.xy - vec2(0., 1.16)) / vec2(.60, .44);',
+    '    vec3 b = board(su);',
+    '    b *= .93 + .07 * sin(su.y * 170.);',
+    '    b *= 1. - .20 * dot(su * .85, su * .85);',
+    '    b *= 1. + .03 * sin(uTime * 7.);',
+    '    col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '    col = mix(col, skyBase(refl, L), .05 + fres * .55);',
+    '    col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
+    /* La bruma que hay hasta el ordenador y el halo de la pantalla en el aire. */
+    '    float tFin = sl * CS;',
+    '    float fog = 1. - exp(-tFin * mix(.017, .024, uNight));',
+    '    col = mix(col, mix(fogColor(rd, L), skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), fog);',
+    '    vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '    vec3 oc = ro - sc;',
+    '    float bq = dot(oc, rd);',
+    '    float dq = length(oc + rd * max(-bq, 0.));',
+    '    col += screenLight() * .06 * exp(-dq * dq * 1.5) * mix(.5, 1.5, uNight) * step(0., -bq);',
+    '  }',
+    '#endif',
+    /* uFade: cuánto se ve, para fundirla con la escena de verdad cuando llega. */
+    '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.) * uFade;',
     '}'
   ].join('\n');
   const GRASS_SIM = [
@@ -1367,6 +1437,13 @@
     {side:960, part:0.22, tall:false, fps:30, lit:8, sharp:0},
     {side:800, part:0.14, tall:false, fps:20, lit:0, sharp:0}
   ];
+  /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer, desde /app/. Medidas
+     en píxeles; fx, fy: dónde cae el ordenador (fy, desde abajo); una altura de pantalla son h
+     píxeles; tree: dónde va el tronco del cerezo respecto al ordenador, en alturas (el de una
+     ventana de escritorio corriente; el cerezo no sale en la imagen, pero el terreno le hace
+     una loma). Abarca más ancho que cualquier ventana; lo poco que pueda faltar por arriba es
+     cielo y se estira. Se generan con Workhub.views.authScene.poster(true | false). */
+  const POSTER = {w:1952, h:640, fx:1088, fy:301, tree:-0.94, night:'../assets/img/acceso-noche.webp', dusk:'../assets/img/acceso-tarde.webp'};
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
   const BUDGET = 0.62;
@@ -1502,6 +1579,73 @@
     return (h + 0.55 * k) * (1 - k * k) + TREE_H * k * k;
   }
 
+  /* Dónde va cada cosa, en píxeles de pantalla. Se calcula una vez por tamaño de ventana y
+     no en cada fotograma: si siguiera a la tarjeta, la escena entera (y con ella el árbol)
+     daría saltos cada vez que la tarjeta se anima o cambia de alto. Por eso tampoco se usa
+     getBoundingClientRect, que incluye las transformaciones de la animación de entrada.
+     - fx, fy: centro del panel de cristal, donde se coloca el ordenador.
+     - tx: dónde cae el tronco del cerezo, cerca del borde izquierdo.
+     - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas.
+     - base: altura del suelo bajo el ordenador (uBase). */
+  function layoutOf(screen, focusEl, w, h){
+    const offset = (el) => {
+      let x = 0, y = 0;
+      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
+      return {x, y};
+    };
+    let fx = w / 2, fy = h * 0.6, left = w * 0.2;
+    if(focusEl && focusEl.offsetParent){
+      const o = offset(focusEl);
+      /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
+         su fondo, y centrado se arrimaba demasiado al formulario. */
+      fx = o.x + focusEl.offsetWidth * 0.575;
+      fy = o.y + focusEl.offsetHeight * 0.585;
+    }
+    const card = focusEl && focusEl.parentElement;
+    if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
+    return placeAt(w, h, fx, fy, Math.max(left * 0.36, h * 0.05), Math.min(Math.max(w / h * 0.8, 0.6), 1));
+  }
+  function placeAt(w, h, fx, fy, tx, ts){
+    /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
+       sombreador (el rayo que pasa por tx, hasta la distancia TREE_Z). */
+    const fl = Math.hypot(2.2, 0.4, 11.5), fw = [-2.2 / fl, 0.4 / fl, 11.5 / fl];
+    const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
+    const k = (tx - fx) / h;
+    const dx = fw[0] * 1.5 + k * rt[0], dz = fw[2] * 1.5 + k * rt[2];
+    const tree = [2.2 + dx * (TREE_Z + 11.5) / dz, TREE_Z];
+    return {w, h, fx, fy, tx, ts, tree, base: baseHeight(tree)};
+  }
+
+  /* La imagen de espera (ver WAIT y POSTER), de fondo tras el lienzo y colocada con la misma
+     cuenta que la escena. Se pone nada más verse la pantalla de acceso, antes de tocar la
+     tarjeta gráfica, y se queda: es lo que se ve hasta que el lienzo pinta (entra sobre ella
+     con el fundido de auth.css, porque a la imagen le falta el revelado final) y lo que queda
+     si no hay WebGL o el lienzo se pierde. */
+  function backdrop(canvas, screen, focusEl){
+    const el = canvas.parentElement;
+    const root = document.documentElement;
+    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    let done = '';
+    const paint = () => {
+      if(screen.hidden) return;
+      const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
+      const at = layoutOf(screen, focusEl, w, h), k = h / POSTER.h;
+      const theme = root.getAttribute('data-theme');
+      const now = [(theme ? theme === 'dark' : darkQuery.matches) ? POSTER.night : POSTER.dusk, Math.round(POSTER.w * k), Math.round(POSTER.h * k), Math.round(at.fx - POSTER.fx * k), Math.round(at.fy - (POSTER.h - POSTER.fy) * k)];
+      if(now.join() === done) return;
+      done = now.join();
+      el.style.backgroundImage = 'url("' + now[0] + '")';
+      el.style.backgroundRepeat = 'no-repeat';
+      el.style.backgroundSize = now[1] + 'px ' + now[2] + 'px';
+      el.style.backgroundPosition = now[3] + 'px ' + now[4] + 'px';
+    };
+    paint();
+    window.addEventListener('resize', paint);
+    new MutationObserver(paint).observe(screen, {attributes:true, attributeFilter:['hidden']});
+    new MutationObserver(paint).observe(root, {attributes:true, attributeFilter:['data-theme']});
+    if(darkQuery.addEventListener) darkQuery.addEventListener('change', paint);
+  }
+
   /* La escena no se prepara hasta que la pantalla de acceso se ve por primera vez: quien entra
      con la sesión ya iniciada no paga la compilación de los sombreadores. */
   function start(canvas, screen, focusEl){
@@ -1511,7 +1655,9 @@
       done = true;
       watch.disconnect();
       document.removeEventListener('visibilitychange', go);
-      boot(canvas, screen, focusEl);
+      /* Primero la imagen de espera, que no cuesta nada; lo demás, cuando ya se ha pintado. */
+      backdrop(canvas, screen, focusEl);
+      requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0));
     };
     const watch = new MutationObserver(go);
     watch.observe(screen, {attributes:true, attributeFilter:['hidden']});
@@ -1562,9 +1708,15 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uFade'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
+    /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
+       para que acaben los primeros: la imagen sola, que es casi inmediato, y la imagen con la
+       pantalla del ordenador en vivo. Si no se puede compilar en segundo plano no hay espera
+       que cubrir. */
+    const holds = parallel ? [prepare(VERT, HEAD + '#define LIVE\n' + COMMON + '\n' + WAIT), prepare(VERT, HEAD + COMMON + '\n' + WAIT)] : [];
+    const held = [null, null];
     /* Por orden: hierba (dos pasos), arbolado, lo de delante, lo que no cambia y, al final, la
        escena: sus tres partes (ver FRAG) o, sin CACHE, una sola con todo. */
     const part = (n) => prepare(VERT, HEAD + DEF + '#define PART ' + n + '\n' + COMMON + '\n' + GEO + '\n' + FRAG);
@@ -1576,17 +1728,40 @@
       cache ? prepare(VERT, HEAD + COMMON + '\n' + GEO + '\n' + BAKE) : null
     ].concat(cache ? [part(1), part(2), part(3)] : [part(0)]);
     const compiled = () => !parallel || gl.isContextLost() || queue.every((p) => !p || gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
-    (function wait(){
-      if(!compiled()){ setTimeout(wait, 40); return; }
-      const list = queue.map(finish);
-      if(list.some((p, i) => !p && (i !== 4 || cache))) return;
-      setup(gl, canvas, screen, focusEl, cache, list);
-    })();
+    setup(gl, canvas, screen, focusEl, cache, {
+      /* Hay espera que cubrir: se compila en segundo plano. */
+      waits: !!parallel,
+      /* El programa de la imagen de espera: con la pantalla en vivo en cuanto está; antes, el
+         de la imagen sola; null si aún no hay ninguno. */
+      hold(){
+        holds.forEach((p, i) => {
+          if(p && gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR)){ held[i] = finish(p); holds[i] = null; }
+        });
+        return held[0] || held[1];
+      },
+      /* Avisa cuando todos los programas están compilados (con la lista, por orden). */
+      linked(done){
+        const wait = () => {
+          if(!compiled()){ setTimeout(wait, 40); return; }
+          const list = queue.map(finish);
+          if(!list.some((p, i) => !p && (i !== 4 || cache))) done(list);
+        };
+        setTimeout(wait, 0);
+      }
+    });
     return true;
   }
 
-  function setup(gl, canvas, screen, focusEl, cache, list){
-    const sim = list[0], grass = list[1], wood = list[2], over = list[3], bake = list[4], scenes = list.slice(5);
+  function setup(gl, canvas, screen, focusEl, cache, kit){
+    /* Los programas llegan cuando acaban de compilarse (live); hasta entonces, la imagen de espera. */
+    let sim = null, grass = null, wood = null, over = null, bake = null, scenes = [], live = false;
+    kit.linked((list) => {
+      sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; scenes = list.slice(5);
+      plant();
+      live = true;
+      last = 0;
+      wake();
+    });
 
     /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
     const fullVao = gl.createVertexArray();
@@ -1598,12 +1773,19 @@
 
     /* La hierba. instBuf: la raíz y el azar de cada brizna. simBuf: lo que GRASS_SIM calcula
        para cada una en cada fotograma (cuatro vec4). */
-    const instBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, blades(), gl.STATIC_DRAW);
-    const simBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, simBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, BLADES * 64, gl.DYNAMIC_COPY);
+    const instBuf = gl.createBuffer(), simBuf = gl.createBuffer();
+    /* Sembrar las briznas lleva unas décimas: se hace aparte, mientras se compila (plant). */
+    let planted = false;
+    function plant(){
+      if(planted) return;
+      planted = true;
+      gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, blades(), gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, simBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 64, gl.DYNAMIC_COPY);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+    setTimeout(plant, 400);
     const simVao = gl.createVertexArray();
     gl.bindVertexArray(simVao);
     gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
@@ -1708,7 +1890,9 @@
        cabe, se ve el final, como en un campo de verdad. La contraseña no pasa por aquí. */
     const textCanvas = document.createElement('canvas');
     textCanvas.width = 512; textCanvas.height = 96;
-    const textCtx = textCanvas.getContext('2d');
+    /* willReadFrequently: el lienzo se queda en memoria y subirlo como imagen es inmediato (si
+       no, la primera vez tardaba cerca de un segundo). */
+    const textCtx = textCanvas.getContext('2d', {willReadFrequently:true});
     const textTex = gl.createTexture();
     let textW = -1;
     function setText(value){
@@ -1734,8 +1918,13 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.activeTexture(gl.TEXTURE0);
     }
-    setText('');
-    textW = -1;
+    /* Hasta que se escriba algo, una imagen vacía. */
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, textTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.activeTexture(gl.TEXTURE0);
 
     const root = document.documentElement;
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1801,41 +1990,8 @@
       resize();
     }
 
-    /* Dónde va cada cosa, en píxeles de pantalla. Se calcula una vez por tamaño de ventana y
-       no en cada fotograma: si siguiera a la tarjeta, la escena entera (y con ella el árbol)
-       daría saltos cada vez que la tarjeta se anima o cambia de alto. Por eso tampoco se usa
-       getBoundingClientRect, que incluye las transformaciones de la animación de entrada.
-       - fx, fy: centro del panel de cristal, donde se coloca el ordenador.
-       - tx: dónde cae el tronco del cerezo, cerca del borde izquierdo.
-       - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas.
-       - base: altura del suelo bajo el ordenador (uBase). */
     let place = null;
-    function offset(el){
-      let x = 0, y = 0;
-      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
-      return {x, y};
-    }
-    function layout(w, h){
-      let fx = w / 2, fy = h * 0.6, left = w * 0.2;
-      if(focusEl && focusEl.offsetParent){
-        const o = offset(focusEl);
-        /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
-           su fondo, y centrado se arrimaba demasiado al formulario. */
-        fx = o.x + focusEl.offsetWidth * 0.575;
-        fy = o.y + focusEl.offsetHeight * 0.585;
-      }
-      const card = focusEl && focusEl.parentElement;
-      if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
-      const tx = Math.max(left * 0.36, h * 0.05);
-      /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
-         sombreador (el rayo que pasa por tx, hasta la distancia TREE_Z). */
-      const fl = Math.hypot(2.2, 0.4, 11.5), fw = [-2.2 / fl, 0.4 / fl, 11.5 / fl];
-      const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
-      const k = (tx - fx) / h;
-      const dx = fw[0] * 1.5 + k * rt[0], dz = fw[2] * 1.5 + k * rt[2];
-      const tree = [2.2 + dx * (TREE_Z + 11.5) / dz, TREE_Z];
-      return {w, h, fx, fy, tx, ts: Math.min(Math.max(w / h * 0.8, 0.6), 1), tree, base: baseHeight(tree)};
-    }
+    const layout = (w, h) => layoutOf(screen, focusEl, w, h);
 
     function uniforms(p, time){
       gl.useProgram(p.prog);
@@ -1850,21 +2006,26 @@
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
       gl.uniform1f(p.U.uBase, place.base);
-      gl.uniform1i(p.U.uFFLit, LEVELS[level].lit);
+      gl.uniform1i(p.U.uFFLit, posing ? 0 : LEVELS[level].lit);
+      gl.uniform1f(p.U.uRaw, raw);
       if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffNow);
       if(p.U.uFFp) gl.uniform4fv(p.U.uFFp, ffBefore);
     }
 
-    function draw(now){
-      const still = isStill();
-      const q = LEVELS[level];
+    /* Lo que avanza con el tiempo, lo use la escena o la imagen de espera. posing: se está
+       generando una imagen de espera (poster): todo quieto, sin cerezo ni luciérnagas. */
+    let still = false, time = 0, toNight = 0, toDay = 0, ease = null;
+    let posing = false, raw = 0, nightFixed = null;
+    function advance(now){
+      still = isStill() || posing;
       /* Todo lo que cambia poco a poco avanza según el tiempo pasado, no por fotograma: dura lo
          mismo en un equipo rápido que en uno lento. */
       const dt = prev ? Math.min((now - prev) / 1000, 0.1) : 0;
       prev = now;
-      const ease = (cur, to, rate) => (still || Math.abs(to - cur) < 0.002 ? to : cur + (to - cur) * (1 - Math.exp(-dt * rate)));
+      ease = (cur, to, rate) => (still || Math.abs(to - cur) < 0.002 ? to : cur + (to - cur) * (1 - Math.exp(-dt * rate)));
       /* Cambiar de tema es un atardecer (o un amanecer) de un par de segundos. */
-      const toNight = isDark() ? 1 : 0, toDay = dayAt(hour());
+      toNight = nightFixed !== null ? nightFixed : (isDark() ? 1 : 0);
+      toDay = dayAt(hour());
       night = ease(night, toNight, 1.9);
       day = ease(day, toDay, 1.5);
       dawn = ease(dawn, dawnAt(hour()), 1.5);
@@ -1877,7 +2038,12 @@
       /* El error es un golpe que se apaga solo; el acceso correcto se queda. */
       if(ui.tRes < 0) ui.tRes = Math.min(ui.tRes + dt * 1.4, 0);
       ui.res = ease(ui.res, ui.tRes, 9);
-      const time = still ? 12 : (now - t0) / 1000;
+      time = still ? 12 : (now - t0) / 1000;
+    }
+
+    function draw(now){
+      advance(now);
+      const q = LEVELS[level];
       /* Las luciérnagas, ahora y hace un instante (para la estela). */
       for(let i = 0; i < FIREFLIES; i++){
         fly(i, time, place.tree, ffNow, i * 4);
@@ -1929,7 +2095,7 @@
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, textTex);
       gl.activeTexture(gl.TEXTURE0);
-      treeFade = treeReady ? ease(treeFade, 1, 2.6) : 0;
+      treeFade = treeReady && !posing ? ease(treeFade, 1, 2.6) : 0;
       gl.bindVertexArray(fullVao);
       /* Cada parte pinta solo sus píxeles (cielo, suelo, ordenador): entre todas, la pantalla. */
       scenes.forEach((scene) => {
@@ -1982,6 +2148,99 @@
       gl.depthMask(true);
     }
 
+    /* La imagen de espera (ver WAIT), en la unidad de textura 4: la del tema que haya. veil:
+       cuánto tapa todavía a la escena (1 hasta que llega; después se funde y se suelta). */
+    const posterTex = gl.createTexture();
+    let posterOk = false, posterDark = null, posterBusy = false, veil = 1, veilFrom = 0;
+    function loadPoster(){
+      const dark = isDark();
+      if(!kit.waits || posterBusy || posterDark === dark || veil <= 0) return;
+      posterBusy = true;
+      const img = new Image();
+      img.onload = () => {
+        posterBusy = false;
+        posterDark = dark;
+        if(veil <= 0) return;
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, posterTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.activeTexture(gl.TEXTURE0);
+        posterOk = true;
+        last = 0;
+        wake();
+      };
+      img.onerror = () => { posterBusy = false; posterDark = dark; };
+      img.src = dark ? POSTER.night : POSTER.dusk;
+    }
+    /* Encima de lo que haya pintado, con esa opacidad. */
+    function drawPoster(alpha){
+      const p = kit.hold();
+      gl.disable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      uniforms(p, time);
+      gl.uniform1i(p.U.uPoster, 4);
+      gl.uniform3f(p.U.uPosterMap, POSTER.fx, POSTER.fy, POSTER.h);
+      gl.uniform1f(p.U.uFade, alpha);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, textTex);
+      gl.uniform1i(p.U.uText, 1);
+      gl.uniform1f(p.U.uTextW, textW);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindVertexArray(fullVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+    }
+    /* Para generar las imágenes de espera: pinta la escena a su tamaño, con el ordenador en su
+       sitio, quieta, sin cerezo, sin luciérnagas y sin el revelado final, y devuelve la imagen
+       (WebP, como data:) con el cristal de la pantalla marcado en la transparencia. Hay que
+       guardarla en assets/img/ (acceso-noche.webp con true, acceso-tarde.webp con false) y
+       repetirlo si cambia el aspecto de la escena. */
+    function poster(dark){
+      if(!live) return null;
+      const W = POSTER.w, H = POSTER.h, back = level;
+      level = 0; scale = 1;
+      canvas.width = W; canvas.height = H;
+      gl.viewport(0, 0, W, H);
+      place = placeAt(W, H, POSTER.fx, H - POSTER.fy, POSTER.fx + POSTER.tree * H, 1);
+      posing = true; nightFixed = dark ? 1 : 0;
+      const shot = (kind, which) => {
+        raw = kind; passes = which; stale = true;
+        draw(performance.now());
+        draw(performance.now());
+        const px = new Uint8Array(W * H * 4);
+        gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        return px;
+      };
+      const colour = shot(1, 7), glass = shot(2, 1);
+      raw = 0; passes = 15; posing = false; nightFixed = null;
+      level = back; place = null; stale = true;
+      resize();
+      last = 0;
+      wake();
+      const out = document.createElement('canvas');
+      out.width = W; out.height = H;
+      const ctx = out.getContext('2d');
+      const data = ctx.createImageData(W, H);
+      for(let y = 0; y < H; y++){
+        for(let x = 0; x < W; x++){
+          const from = ((H - 1 - y) * W + x) * 4, to = (y * W + x) * 4;
+          data.data[to] = colour[from]; data.data[to + 1] = colour[from + 1]; data.data[to + 2] = colour[from + 2];
+          data.data[to + 3] = glass[from] > 127 ? 128 : 255;
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+      return out.toDataURL('image/webp', 0.86);
+    }
+
     /* Cuánto tarda de verdad pintar n fotogramas (readPixels obliga a la tarjeta a terminar
        antes de seguir), en milisegundos por fotograma. Para la página mientras dura: solo para
        las pruebas (bench). */
@@ -1999,6 +2258,8 @@
         const from = performance.now();
         for(let i = 0; i < n; i++) draw(performance.now());
         const flag = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        /* Estos fotogramas son de prueba: encima, la imagen de espera. */
+        if(posterOk && veil > 0 && kit.hold()) drawPoster(1);
         gl.flush();
         const poll = () => {
           if(flag && gl.clientWaitSync(flag, 0, 0) === gl.TIMEOUT_EXPIRED && performance.now() - from < 4000){ setTimeout(poll, 2); return; }
@@ -2080,6 +2341,18 @@
     function loop(now){
       raf = 0;
       if(screen.hidden || document.hidden || measuring) return;
+      /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
+      if(!live){
+        loadPoster();
+        if(posterOk && kit.hold() && now - last >= 1000 / 30 - 2){
+          last = now;
+          advance(now);
+          if(!shown){ shown = true; canvas.classList.add('is-on'); }
+          drawPoster(1);
+        }
+        if(!isStill()) raf = requestAnimationFrame(loop);
+        return;
+      }
       if(!measured && !isStill()){ measure(); return; }
       const every = 1000 / LEVELS[level].fps;
       if(now - last >= every - 2){
@@ -2102,6 +2375,13 @@
         last = now;
         if(!shown){ shown = true; canvas.classList.add('is-on'); }
         draw(now);
+        /* La escena ya está: la imagen de espera se funde sobre ella y se suelta. */
+        if(veil > 0){
+          if(!veilFrom) veilFrom = now;
+          veil = posterOk && kit.hold() && !isStill() ? Math.max(0, 1 - (now - veilFrom) / 900) : 0;
+          if(veil > 0) drawPoster(veil * veil * (3 - 2 * veil));
+          else gl.deleteTexture(posterTex);
+        }
         if(!isStill()){
           /* Pesado: la tarjeta sigue con él pasada la mayor parte del tiempo del fotograma. */
           const flag = mark = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -2141,9 +2421,10 @@
        fijar la hora, fijar el escalón y cuánto tarda de verdad un fotograma (only: solo esas
        pasadas, ver passes). */
     function state(){
-      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:LEVELS[level].fps, frozen, software, cache, cost, night, day, dawn, canvas:[canvas.width, canvas.height]};
+      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:LEVELS[level].fps, frozen, software, cache, live, cost, night, day, dawn, canvas:[canvas.width, canvas.height]};
     }
     function bench(frames, only){
+      if(!live) return 0;
       passes = only || 15;
       timed(2);
       const ms = timed(frames || 20);
@@ -2153,6 +2434,7 @@
     api.signal = signal;
     api.state = state;
     api.bench = bench;
+    api.poster = poster;
     api.hour = (h) => { hourFixed = h == null ? null : +h; last = 0; wake(); };
     api.quality = (l) => { measured = true; measuring = false; frozen = false; setLevel(l); last = 0; wake(); };
 
@@ -2178,6 +2460,6 @@
   }
 
   /* signal() no hace nada hasta que la escena arranca (o si no hay WebGL). */
-  const api = {start, signal(){}, state(){ return null; }, bench(){ return 0; }, hour(){}, quality(){}};
+  const api = {start, signal(){}, state(){ return null; }, bench(){ return 0; }, poster(){ return null; }, hour(){}, quality(){}};
   Workhub.views.authScene = api;
 })();

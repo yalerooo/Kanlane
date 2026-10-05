@@ -1,4 +1,6 @@
-/* Paisaje en 3D de la pantalla de acceso.
+/* Paisaje en 3D de la pantalla de acceso. Cambia con la estación del año (SEASON, más abajo):
+   lo que sigue describe la primavera; en verano el árbol es verde, en otoño es rojizo, la
+   hierba amarillea y caen hojas, y en invierno hay nieve en vez de hierba y nieva.
    Una escena pintada en tiempo real con WebGL 2, sin librerías: una colina de hierba mecida
    por el viento, cielo con nubes, un cerezo y, en lo alto, un monitor de tubo antiguo con un
    tablero en la pantalla. Atardecer en tema claro y noche en oscuro. La cámara está fija: lo
@@ -34,7 +36,11 @@
    reducido se pinta un único fotograma. Si el navegador no tiene WebGL 2, queda el degradado
    de cielo que pone auth.css. */
 (function(){
-  const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\n';
+  /* La estación del año (la decide boot.js: fecha y hemisferio). Cambia el árbol, el color de
+     la hierba, el arbolado lejano y lo que cae del cielo; en invierno no hay hierba, hay nieve.
+     Va como constante en todos los sombreadores: 0 primavera, 1 verano, 2 otoño, 3 invierno. */
+  const SEASON = Math.max(['spring', 'summer', 'autumn', 'winter'].indexOf(document.documentElement.getAttribute('data-season')), 0);
+  const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\n#define SEASON ' + SEASON + '\n';
   const VERT = HEAD + 'layout(location = 0) in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const COMMON = [
     'uniform vec2 uRes;',
@@ -87,6 +93,22 @@
     '  gold = mix(gold, gold * vec3(.94, .93, 1.17), uDawn);',
     '  return mix(mix(gold, noon, uDay), night, uNight);',
     '}',
+    /* La hierba de cada estación: más seca y dorada en verano, ocre en otoño. En invierno */
+    /* no hay (GRASSY 0.): el suelo es nieve y las briznas no se pintan. */
+    'vec3 seasonGrass(vec3 a){',
+    '#if SEASON == 1',
+    '  return mix(a, a * vec3(1.22, 1.04, .62), .40);',
+    '#elif SEASON == 2',
+    '  return mix(a, dot(a, vec3(.30, .59, .11)) * vec3(2.05, 1.22, .40) * mix(1., .55, uNight), .78);',
+    '#else',
+    '  return a;',
+    '#endif',
+    '}',
+    '#if SEASON == 3',
+    'const float GRASSY = 0.;',
+    '#else',
+    'const float GRASSY = 1.;',
+    '#endif',
     'vec3 sunColor(){ return pal(vec3(1.30, .58, .30), vec3(.76, .73, .62), vec3(.30, .36, .62)); }',
     'vec3 ambientColor(){ return pal(vec3(.20, .11, .11), vec3(.15, .19, .25), vec3(.045, .055, .12)); }',
     'vec3 skyLightColor(){ return pal(vec3(.12, .13, .17), vec3(.17, .22, .31), vec3(.05, .07, .16)); }',
@@ -797,7 +819,14 @@
     '    float woods = smoothstep(.52, .66, fbm3(p.xz * .11 + 21.)) * smoothstep(24., 42., tHit);',
     '    far = mix(far, mix(vec3(.030, .075, .034), vec3(.060, .11, .045), fine), woods * .85);',
     '    float kFar = (.35 + .65 * fine) * (1. - .45 * woods);',
-    '    alb = mix(far, alb, near);',
+    '    alb = seasonGrass(mix(far, alb, near));',
+    /* Invierno: nieve, con sus ventisqueros; los bosques lejanos asoman oscuros. */
+    '#if SEASON == 3',
+    '    alb = mix(vec3(.80, .92, 1.22), vec3(1.30, 1.34, 1.42), fbm3(p.xz * .9 + 4.) * .6 + fine * .4);',
+    '    alb = mix(alb, vec3(.10, .12, .14), woods * .7) * mix(1., .50, uNight);',
+    '    kFar = 1.;',
+    '    kk = 1.;',
+    '#endif',
     /* De noche el ojo casi no ve el color: la hierba se apaga y se enfría (si no, queda de un */
     /* verde encendido que no es de noche). */
     '    alb = mix(alb, vec3(dot(alb, vec3(.30, .59, .11))) * vec3(.70, .90, 1.02), uNight * .50);',
@@ -806,7 +835,7 @@
     /* dejan pasar la luz cuando se miran a contraluz. */
     '    float ao = mix(.26, 1., smoothstep(0., .85, kk));',
     '    float dif = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
-    '    float through = pow(max(dot(rd, L), 0.), 3.) * kk;',
+    '    float through = pow(max(dot(rd, L), 0.), 3.) * kk * GRASSY;',
     '#ifdef CACHE',
     '    float sh = texelFetch(uShade, ivec2(gl_FragCoord.xy), 0).x;',
     '#else',
@@ -828,18 +857,20 @@
     '    gcol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * dif * 2.4 * ao * sh);',
     '    gcol += sunCol * vec3(.78, .62, .18) * through * 1.25 * sh * (.4 + .6 * streak);',
     /* Las puntas, al sol, brillan: un filo de luz en lo alto de cada brizna. */
-    '    gcol += sunCol * vec3(.60, .66, .26) * pow(kk, 5.) * (.35 + .65 * b.z) * dif * .50 * sh * near;',
+    '    gcol += sunCol * vec3(.60, .66, .26) * pow(kk, 5.) * (.35 + .65 * b.z) * dif * .50 * sh * near * GRASSY;',
+    /* La nieve, en cambio, chispea donde le da el sol. */
+    '    gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .55 * near * (1. - GRASSY);',
     /* Luz rasante en las crestas de las lomas. */
     '    gcol += alb * sunCol * pow(clamp(1. - n.y, 0., 1.), .7) * max(dot(n, L), 0.) * 2.2 * sh;',
     '    float gustWave = smoothstep(.55, 1., sin(p.x * .55 + p.z * .33 - uTime * .9) * .5 + .5) * (.5 + .5 * noise(p.xz * .7 + uTime * .1));',
-    '    gcol += alb * sunCol * gustWave * kk * .55 * sh * (1. - uNight * .7);',
+    '    gcol += alb * sunCol * gustWave * kk * .55 * sh * (1. - uNight * .7) * GRASSY;',
     /* La pantalla ilumina la hierba que tiene delante. */
     '    vec3 tl = sc - p;',
     '    float dl = length(tl);',
     '    float spill = max(dot(normalize(tl), normalize(n + vec3(0., .6, 0.))), 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
     '    gcol += mix(alb, vec3(dot(alb, vec3(.33))), .35 * uNight) * screenGlow * spill * mix(mix(1.6, .9, uDay), 7.0, uNight) * (.35 + .65 * kk);',
     /* Cada luciérnaga alumbra un corro de hierba debajo. */
-    '    if(uNight > .01){',
+    '    if(uNight > .01 && SEASON != 3){',
     '      vec3 fl = vec3(0.);',
     '      for(int i = 0; i < FF_N; i++){',
     '        if(i >= uFFLit) break;',
@@ -1048,7 +1079,8 @@
     '  float kind = vKind.x, seed = vKind.y * 31.;',
     '  vec2 u = vUv;',
     '  float cypress = step(.5, kind) * step(kind, 1.5);',
-    '  float pink = step(1.5, kind);',
+    /* Los cerezos lejanos solo están en flor en primavera. */
+    '  float pink = SEASON == 0 ? step(1.5, kind) : 0.;',
     /* Copa. Redonda: tres bultos con el borde irregular. Ciprés: una llama estrecha. */
     '  float lump = (noise(u * vec2(4., 7.) + seed) - .5) * .30 + (noise(u * vec2(9., 15.) + seed * 2.) - .5) * .14;',
     '  float r1 = length((u - vec2(0., .64)) / vec2(.92, .36));',
@@ -1071,6 +1103,15 @@
     '  dark = mix(dark, dark * 1.7, uDay);',
     '  dark = mix(dark, vec3(.34, .17, .22), pink);',
     '  lit = mix(lit, vec3(1.10, .62, .58), pink);',
+    /* Otoño: los de hoja caduca (los cipreses no) se ponen rojizos. Invierno: nevados. */
+    '#if SEASON == 2',
+    '  float turned = (1. - cypress) * (.55 + .45 * vKind.z);',
+    '  dark = mix(dark, vec3(.20, .085, .035), turned);',
+    '  lit = mix(lit, vec3(1.05, .50, .13), turned);',
+    '#elif SEASON == 3',
+    '  dark = mix(dark, vec3(.15, .17, .20), 1. - cypress * .5);',
+    '  lit = mix(lit, vec3(.80, .84, .92), .85);',
+    '#endif',
     /* De noche todo se apaga y se enfría. */
     '  dark = mix(dark, dark * vec3(.45, .55, 1.1) * .7, uNight);',
     '  lit = mix(lit, vec3(.10, .13, .26) + pink * vec3(.08, .03, .08), uNight);',
@@ -1455,6 +1496,7 @@
     '  alb = mix(alb, vec3(.50, .43, .17) * (.35 + .65 * t), dry * .75);',
     /* Manchas rojizas de tierra seca, de día. */
     '  alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(vPos.xz * .23 + 8.)) * .20 * (1. - uNight));',
+    '  alb = seasonGrass(alb);',
     /* De noche, apagada y fría, igual que el suelo. */
     '  alb = mix(alb, vec3(dot(alb, vec3(.30, .59, .11))) * vec3(.70, .90, 1.02), uNight * .50);',
 
@@ -1506,11 +1548,23 @@
     '  for(int i = 0; i < 22; i++){',
     '    vec2 v = pa - uPetal[i].xy;',
     /* Lejos del pétalo no hay nada que pintar. */
-    '    if(dot(v, v) > .00002) continue;',
+    '    if(dot(v, v) > .00004) continue;',
     '    vec2 dp = vec2(uPetal[i].z * v.x + uPetal[i].w * v.y, uPetal[i].z * v.y - uPetal[i].w * v.x);',
+    /* Según la estación: pétalos rosas, hojas secas (más grandes, cada una de su color) o */
+    /* copos de nieve (redondos). En verano no cae nada (lo apaga el JS, petals). */
+    '#if SEASON == 2',
+    '    float petal = 1. - smoothstep(.0028, .0056, length(dp * vec2(1., 1.6)));',
+    '    vec3 pc = mix(vec3(1., .52, .14), vec3(.66, .20, .08), fract(float(i) * .37));',
+    '    pc = mix(pc, pc * vec3(.50, .52, .95), uNight * .6);',
+    '#elif SEASON == 3',
+    '    float petal = 1. - smoothstep(.0010, .0034, length(dp));',
+    '    vec3 pc = mix(vec3(1., 1., 1.), vec3(.72, .78, 1.), uNight * .6);',
+    '#else',
     '    float petal = 1. - smoothstep(.0020, .0042, length(dp * vec2(1., 1.9)));',
+    '    vec3 pc = mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6);',
+    '#endif',
     '    float a = petal * uPetalA[i] * .9;',
-    '    col = col * (1. - a) + mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6) * a;',
+    '    col = col * (1. - a) + pc * a;',
     '    alpha = alpha * (1. - a) + a;',
     '  }',
     /* Una bandada cruza el cielo al atardecer, lejos. */
@@ -1531,7 +1585,7 @@
     '    }',
     '  }',
     /* Luciérnagas, de noche. Las tapa el ordenador. */
-    '  if(uNight > .01){',
+    '  if(uNight > .01 && SEASON != 3){',
     '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
     '#ifdef CACHE',
     '    float tObj = texelFetch(uGeo, ivec2(gl_FragCoord.xy), 0).y;',
@@ -1622,7 +1676,7 @@
      otra: a la izquierda la madera y a la derecha las flores. */
   /* Hasta dónde se corre la imagen de espera: la misma que en el sombreador (WARP_X1 en WAIT). */
   const WARP_X1 = -0.30;
-  const TREE_URL = '../assets/img/sakura.webp';
+  const TREE_URL = '../assets/img/' + ['sakura', 'tree-summer', 'tree-autumn', 'tree-winter'][SEASON] + '.webp';
   /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
      lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo
      una parte (LEVELS): salen en orden al azar, así que cualquier tramo inicial cubre toda la
@@ -1752,15 +1806,19 @@
   const hash = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
   function petals(t, asp, out, alpha){
     const st = (a, b, v) => { const k = Math.min(Math.max((v - a) / (b - a), 0), 1); return k * k * (3 - 2 * k); };
+    const snow = SEASON === 3;
     for(let i = 0; i < PETALS; i++){
-      const sp = 0.028 + hash(i, 2.2) * 0.030;
+      /* La nieve cae algo más deprisa, casi a plomo y por todo el ancho; los pétalos y las
+         hojas salen del lado del árbol y el viento se los lleva. */
+      const sp = (0.028 + hash(i, 2.2) * 0.030) * (snow ? 1.5 : 1);
       const v = hash(i, 9.1) + t * sp, ph = v - Math.floor(v);
       const ang = t * (0.6 + hash(i, 5.5)) + i;
-      out[i * 4] = -0.05 + hash(i, 4.7) * 0.30 * asp + ph * (0.55 + hash(i, 6.3) * 0.5) * asp + 0.020 * Math.sin(t * 0.9 + i * 3.1);
+      out[i * 4] = -0.05 + hash(i, 4.7) * (snow ? 1.0 : 0.30) * asp + ph * (0.55 + hash(i, 6.3) * 0.5) * asp * (snow ? 0.12 : 1) + 0.020 * Math.sin(t * 0.9 + i * 3.1);
       out[i * 4 + 1] = 0.95 - ph * 1.05 + 0.020 * Math.cos(t * 1.3 + i * 1.7);
       out[i * 4 + 2] = Math.cos(ang);
       out[i * 4 + 3] = Math.sin(ang);
-      alpha[i] = st(0, 0.08, ph) * (1 - st(0.85, 1, ph));
+      /* En verano no cae nada. */
+      alpha[i] = SEASON === 1 ? 0 : st(0, 0.08, ph) * (1 - st(0.85, 1, ph));
     }
   }
 
@@ -2294,7 +2352,7 @@
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
       gl.uniform1f(p.U.uBase, place.base);
-      gl.uniform1i(p.U.uFFLit, posing ? 0 : LEVELS[level].lit);
+      gl.uniform1i(p.U.uFFLit, posing || SEASON === 3 ? 0 : LEVELS[level].lit);
       gl.uniform1f(p.U.uRaw, raw);
       if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffNow);
       if(p.U.uFFp) gl.uniform4fv(p.U.uFFp, ffBefore);
@@ -2374,7 +2432,7 @@
         gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
         gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
       };
-      if(passes & 4){
+      if((passes & 4) && SEASON !== 3){
         widen();
         /* Las briznas de este escalón, de cerca a lejos (ver nearFirst). */
         if(sown !== count){
@@ -2462,7 +2520,7 @@
 
       /* 4. La hierba, segundo paso: las cintas, delante o detrás de lo ya pintado según su
          profundidad. */
-      if(passes & 4){
+      if((passes & 4) && SEASON !== 3){
         const blade = (tallForced === null ? q.tall : tallForced) ? bladeTall : bladeShort;
         uniforms(grass, time);
         gl.bindVertexArray(blade.vao);

@@ -44,7 +44,7 @@
      ordenador, en alturas. Las usa también auth-scene.js (POSTER) y hay que cambiarlas si se
      regeneran las imágenes con otro encuadre. */
   var poster = window.__authPoster = {
-    w:1952, h:640, fx:1088, fy:301, tree:-0.94,
+    w:1952, h:640, fx:1088, fy:301, tree:-1.12,
     night:'../assets/img/acceso-noche.webp', dusk:'../assets/img/acceso-tarde.webp',
     /* El color del cielo en el borde de arriba de cada imagen: en ventanas donde la imagen no
        llega hasta arriba, la franja que falta se rellena con él. */

@@ -1262,6 +1262,9 @@
     'layout(location = 3) in vec4 aB1;',
     'layout(location = 4) in vec4 aB2;',
     'uniform float uWide;',
+    /* Cuánto ha crecido la hierba (0..1): al relevar a la imagen de espera sale del suelo en */
+    /* vez de aparecer de golpe encima de la hierba de la imagen. */
+    'uniform float uGrow;',
     /* Raíz (altura), alto de la brizna y hacia dónde cae. */
     'out vec4 oA;',
     /* Sombra, contacto, racha y mata. */
@@ -1284,6 +1287,10 @@
     '  float rA = aInst.z, rB = aInst.w;',
     '  vec3 root = vec3(r0.x, aB0.x, r0.y);',
     '  float h = aB0.y, clump = aB1.x, dist = aB1.w;',
+    /* Sale por zonas, del ordenador hacia fuera, y no toda a la vez: unas briznas sueltas o a */
+    /* medio crecer enseñan el pie, que es oscuro, y el relevo se veía como un césped ralo y */
+    /* apagado tapando el de la imagen. Detrás del frente la hierba ya está entera. */
+    '  h *= smoothstep(0., .2, uGrow * 1.3 - min(length(r0) / 30., 1.) - .1 * fract(rB * 5.3));',
     /* De lejos las briznas se ensanchan para seguir cubriendo con menos. */
     '  float w = (.0046 + .0032 * fract(rB * 3.7)) * (1. + dist * .13) * uWide;',
 
@@ -1885,7 +1892,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -2343,6 +2350,7 @@
         }
         uniforms(sim, time);
         gl.uniform1f(sim.U.uWide, 1 / Math.sqrt(q.part));
+        gl.uniform1f(sim.U.uGrow, grow);
         store(sim, simVao, simBuf);
       }
 
@@ -2403,6 +2411,14 @@
       gl.disable(gl.BLEND);
       gl.depthMask(true);
 
+      /* El relevo de la imagen de espera: va aquí, bajo la hierba, que crece encima mientras la
+         imagen se va (ver loop). */
+      if(cover > 0){
+        drawPoster(cover);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LESS);
+      }
+
       /* 4. La hierba, segundo paso: las cintas, delante o detrás de lo ya pintado según su
          profundidad. */
       if(passes & 4){
@@ -2434,6 +2450,12 @@
        cuánto tapa todavía a la escena (1 hasta que llega; después se funde y se suelta). */
     const posterTex = gl.createTexture();
     let posterOk = false, posterDark = null, posterBusy = false, veil = 1, veilFrom = 0;
+    /* El relevo. La imagen y la escena no pueden ser iguales brizna a brizna (otra calidad, otro
+       instante del viento): fundir una sobre otra enseñaba dos hierbas distintas a la vez. Así
+       que la imagen se desvanece por debajo (cover: cuánto tapa aún) y la hierba de verdad
+       crece encima (grow, ver uGrow en GRASS_SIM). Mientras se mide el equipo la hierba va
+       entera: si no, la medida saldría más ligera de lo que es. */
+    let cover = 0, grow = 1;
     function loadPoster(){
       const dark = isDark();
       if(!kit.waits || posterBusy || posterDark === dark || veil <= 0) return;
@@ -2675,14 +2697,17 @@
         heavy = false;
         last = now;
         if(!shown){ shown = true; canvas.classList.add('is-on'); }
-        draw(now);
-        /* La escena ya está: la imagen de espera se funde sobre ella y se suelta. */
+        /* La escena ya está: la imagen de espera se va por debajo de la hierba, que crece, y
+           se suelta. */
         if(veil > 0){
           if(!veilFrom) veilFrom = now;
-          veil = posterOk && kit.hold() && !isStill() ? Math.max(0, 1 - (now - veilFrom) / 900) : 0;
-          if(veil > 0) drawPoster(veil * veil * (3 - 2 * veil));
-          else gl.deleteTexture(posterTex);
+          veil = posterOk && kit.hold() && !isStill() ? Math.max(0, 1 - (now - veilFrom) / 1500) : 0;
         }
+        cover = veil * veil * (3 - 2 * veil);
+        grow = veilFrom && !isStill() ? Math.min(1, (now - veilFrom) / 1100) : 1;
+        draw(now);
+        cover = 0;
+        if(veil <= 0 && veilFrom >= 0){ gl.deleteTexture(posterTex); veilFrom = -1; }
         if(!isStill()){
           /* Pesado: la tarjeta sigue con él pasada la mayor parte del tiempo del fotograma. */
           const flag = mark = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);

@@ -16,6 +16,7 @@
       cientos de miles, dibujadas de una vez (instancias). La profundidad de la pasada 1 decide
       qué briznas quedan delante o detrás del ordenador y del tronco. Lo que es igual para toda
       la brizna se calcula antes, una vez por brizna (GRASS_SIM, transform feedback).
+   En primavera, entre el arbolado y la hierba, las flores (FLOWERS_VERT / FLOWERS_FRAG).
    4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas. En invierno, además, la
       nevada: miles de puntos (FLAKES_VERT / FLAKES_FRAG).
    COMMON son las funciones que comparten (ruido, terreno, ordenador, cielo...).
@@ -1914,6 +1915,99 @@
   /* Hasta dónde se corre la imagen de espera: la misma que en el sombreador (WARP_X1 en WAIT). */
   const WARP_X1 = -0.30;
   const TREE_URL = '../assets/img/' + ['sakura', 'tree-summer', 'tree-autumn', 'tree-winter'][SEASON] + '.webp';
+  /* ---------- Las flores (primavera) ----------
+     Flores sueltas entre la hierba. Como el arbolado lejano, cada una es un rectángulo que mira
+     a la cámara; lo que lleva pintado sale de una imagen (assets/img/flowers.webp, la hace
+     scripts/make-flowers.js de un modelo 3D): varias flores, una al lado de otra, cada una en
+     su casilla cuadrada con el pie del tallo abajo en el centro. Se pintan antes que la hierba
+     y escriben la profundidad, así que las briznas de delante las tapan y ellas tapan a las de
+     detrás. aInst: raíz (x, z), azar y cuál de las flores. uCells: cuántas trae la imagen. */
+  const FLOWERS_VERT = [
+    'layout(location = 0) in vec2 aQuad;',
+    'layout(location = 1) in vec4 aInst;',
+    'uniform float uCells;',
+    'out vec2 vUv;',
+    'out vec3 vLight;',
+    'out vec4 vFog;',
+
+    'void main(){',
+    '  setupTree();',
+    '  float base = uBase;',
+    '  vec3 ta = vec3(0., base + 1.02, 0.);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 L = sunDir();',
+    '  vec2 r0 = aInst.xy;',
+    '  float rnd = aInst.z, kind = aInst.w;',
+    '  vec3 root = vec3(r0.x, terrain(r0) - .03, r0.y);',
+    /* Ni dentro del lago ni en su orilla. */
+    '  float h = (.50 + .34 * rnd) * step(WATER_Y + .10, root.y);',
+    '  vec3 side = normalize(vec3(rt.x, 0., rt.z));',
+    /* El viento las mece: el pie quieto y la flor, arriba, de un lado a otro; unas van del */
+    /* derecho y otras del revés, para que no sean todas la misma. */
+    '  float sway = sin(uTime * 1.3 + r0.x * .9 + r0.y * .6) * .055 + sin(uTime * 2.9 + r0.x * 2.3 + rnd * 9.) * .02;',
+    '  vec3 p = root + side * (aQuad.x * .5 + sway * aQuad.y * aQuad.y) * h + vec3(0., aQuad.y * h, 0.);',
+    '  float flip = step(.5, fract(rnd * 7.3)) * 2. - 1.;',
+    '  vUv = vec2((kind + .5 + aQuad.x * .5 * flip) / uCells, aQuad.y);',
+    /* La luz, una por flor: la del suelo, con las manchas de sombra de las nubes. */
+    '  float cloudSh = smoothstep(.34, .66, fbm3(r0 * .075 + vec2(uTime * .035, uTime * .014)));',
+    '  vec3 rd = normalize(root - ro);',
+    '  vLight = ambientColor() * 1.5 + skyLightColor() * 2.2 + sunColor() * (1.5 + 1.2 * pow(max(dot(rd, L), 0.), 3.)) * mix(.40, 1., cloudSh) * mix(1., .75, uNight);',
+    /* Bruma: la misma que el suelo. */
+    '  float dist = length(root - ro);',
+    '  vFog = vec4(mix(fogColor(rd, L), skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), 1. - exp(-dist * mix(.017, .024, uNight)));',
+    '  vec3 v = p - ro;',
+    '  float zv = dot(v, fw);',
+    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '  vec2 ndc = frag / uRes * 2. - 1.;',
+    '  float zn = (Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * zv)) * 2. - 1.;',
+    '  gl_Position = vec4(ndc * zv, zn * zv, zv);',
+    '}'
+  ].join('\n');
+  const FLOWERS_FRAG = [
+    'uniform sampler2D uFlowers;',
+    'in vec2 vUv;',
+    'in vec3 vLight;',
+    'in vec4 vFog;',
+    'out vec4 fragColor;',
+    'void main(){',
+    '  vec4 t = texture(uFlowers, vUv);',
+    '  if(t.a < .06) discard;',
+    '  vec3 alb = t.rgb * t.rgb;',
+    /* De noche el ojo casi no ve el color: sin esto, con la luz azul, salían todas de un azul */
+    /* encendido. Quedan pálidas, y las claras siguen siendo las que más se ven. */
+    '  alb = mix(alb, vec3(dot(sqrt(alb), vec3(.30, .59, .11))) * vec3(1.0, 1.12, 1.34), uNight * .72);',
+    '  vec3 light = mix(vLight, vec3(dot(vLight, vec3(.333))) * vec3(.80, .96, 1.04), uNight * .85);',
+    '  vec3 col = mix(alb * light, vFog.rgb, vFog.a);',
+    /* La transparencia del borde la reparte el suavizado del lienzo (ver draw). */
+    '  fragColor = vec4(post(col, gl_FragCoord.xy), t.a);',
+    '}'
+  ].join('\n');
+  /* Dónde va cada flor: a corros (cada corro, casi todo de un color), más cerca que lejos, en
+     el abanico que ve la cámara y sin pegarse a ella (de cerca la imagen se vería borrosa) ni
+     al ordenador. kinds: cuántas flores distintas trae la imagen. */
+  const FLOWERS = 720;
+  function flowerField(kinds){
+    let seed = 4121;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const patches = [];
+    for(let i = 0; i < 64; i++){
+      const r = 4.6 + 20 * Math.pow(rnd(), 1.5), a = CAM_YAW + (rnd() - 0.5) * 2.0;
+      patches.push([CAM_X + Math.sin(a) * r, CAM_Z + Math.cos(a) * r, 0.35 + 1.5 * rnd(), Math.floor(rnd() * kinds)]);
+    }
+    const data = new Float32Array(FLOWERS * 4);
+    for(let i = 0; i < FLOWERS; i++){
+      const g = patches[Math.floor(rnd() * patches.length)];
+      const a = rnd() * Math.PI * 2, d = g[2] * Math.sqrt(rnd());
+      let x = g[0] + Math.cos(a) * d, z = g[1] + Math.sin(a) * d;
+      /* La que cae pegada al ordenador se aparta. */
+      const near = Math.hypot(x, z);
+      if(near < 1.5){ x *= 1.5 / Math.max(near, 0.01); z *= 1.5 / Math.max(near, 0.01); }
+      data.set([x, z, rnd(), rnd() < 0.82 ? g[3] : Math.floor(rnd() * kinds)], i * 4);
+    }
+    return data;
+  }
+
   /* ---------- La nevada (invierno) ----------
      Es el «Snowfall WebGL Shader» de Boris Šehovac (codepen.io/bsehovac/pen/GPwXxq), traído a
      esta escena: miles de puntos repartidos en una caja delante de una cámara propia (a 100
@@ -2257,7 +2351,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uSnow', 'uWind', 'uWorld', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uSnow', 'uWind', 'uWorld', 'uFlowers', 'uCells', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -2287,6 +2381,8 @@
     ].concat(cache ? [part(1), part(2), part(3), prepare(VERT, HEAD + COMMON + '\n' + SCREEN + '\n' + GLASS), prepare(VERT, HEAD + COMMON + '\n' + TREE_FN + '\n' + COMP)] : [part(0)]);
     /* En invierno, al final de la lista, la nevada (ver FLAKES_VERT). */
     if(SEASON === 3) queue.push(prepare(HEAD + FLAKES_VERT, HEAD + FLAKES_FRAG));
+    /* Y en primavera, las flores (ver FLOWERS_VERT). */
+    if(SEASON === 0) queue.push(prepare(HEAD + COMMON + '\n' + FLOWERS_VERT, HEAD + COMMON + '\n' + FLOWERS_FRAG));
     const compiled = () => !parallel || gl.isContextLost() || queue.every((p) => !p || gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
     setup(gl, canvas, screen, focusEl, cache, {
       /* Hay espera que cubrir: se compila en segundo plano. */
@@ -2314,10 +2410,11 @@
 
   function setup(gl, canvas, screen, focusEl, cache, kit){
     /* Los programas llegan cuando acaban de compilarse (live); hasta entonces, la imagen de espera. */
-    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], fall = null, live = false;
+    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], fall = null, bloom = null, live = false;
     kit.linked((list) => {
       sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; grassBase = list[5]; scenes = list.slice(6);
       if(SEASON === 3) fall = scenes.pop();
+      if(SEASON === 0) bloom = scenes.pop();
       plant();
       live = true;
       last = 0;
@@ -2510,6 +2607,43 @@
       wake();
     };
     treeImg.src = TREE_URL;
+
+    /* Primavera: las flores. Su imagen va en la unidad de textura 7; hasta que llega no se
+       pintan. Cuántas flores trae lo dice su forma (casillas cuadradas en fila). */
+    const bloomVao = gl.createVertexArray(), bloomTex = gl.createTexture();
+    let bloomCells = 0;
+    if(SEASON === 0){
+      const img = new Image();
+      img.onload = () => {
+        bloomCells = Math.max(1, Math.round(img.width / img.height));
+        gl.activeTexture(gl.TEXTURE7);
+        gl.bindTexture(gl.TEXTURE_2D, bloomTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindVertexArray(bloomVao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, flowerField(bloomCells), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribDivisor(1, 1);
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        last = 0;
+        wake();
+      };
+      img.src = '../assets/img/flowers.webp';
+    }
 
     /* Lo que se escribe en el formulario (correo o nombre), como texto para la pantalla del
        ordenador: se pinta en un lienzo aparte y se sube como imagen cada vez que cambia. Si no
@@ -2991,6 +3125,23 @@
         drawPoster(cover);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LESS);
+      }
+
+      /* Primavera: las flores, antes que la hierba. Sin mezcla: el borde de cada una lo suaviza
+         el propio lienzo, que reparte su transparencia entre las muestras de cada píxel; así
+         pueden escribir la profundidad y cruzarse bien con las briznas. */
+      if((passes & 4) && bloom && bloomCells && !posing){
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LESS);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+        gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+        uniforms(bloom, time);
+        gl.uniform1i(bloom.U.uFlowers, 7);
+        gl.uniform1f(bloom.U.uCells, bloomCells);
+        gl.bindVertexArray(bloomVao);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, FLOWERS);
+        gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
       }
 
       /* 4. La hierba, segundo paso: las cintas, delante o detrás de lo ya pintado según su

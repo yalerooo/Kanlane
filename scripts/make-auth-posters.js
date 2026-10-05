@@ -1,9 +1,10 @@
 /* Genera las imágenes de espera de la pantalla de acceso: una foto pequeña de la propia escena
    en 3D, que se ve desenfocada desde el primer fotograma mientras la de verdad se compila
    (auth.css, .auth-scene::before y ::after; las coloca WORKHUB_AUTH.place, en auth-early.js).
-   Por cada tema (light, dark) salen dos imágenes pequeñas, que se incrustan en auth.css
-   (variables --sc-poster-<tema> y --sc-tree-<tema>): el paisaje sin el cerezo, y el cerezo
-   recortado.
+   Hay un juego por estación del año (cambian el árbol, la hierba y la nieve). Por cada tema
+   (light, dark) salen dos imágenes pequeñas, que van incrustadas en la hoja de su estación,
+   assets/css/seasons/<estación>.css (variables --sc-poster-<tema> y --sc-tree-<tema>): el
+   paisaje sin el árbol, y el árbol recortado. boot.js enlaza solo la de la estación en curso.
 
    Van por separado porque en la escena no se mueven igual: el paisaje se ancla al panel de
    cristal de la tarjeta y se escala con el alto de la ventana; el cerezo va pegado al borde
@@ -13,7 +14,8 @@
    de ventana en vertical), así que se monta con dos fotos, una con el punto de fuga alto y
    otra con él bajo. Las medidas (POSTER, más abajo) están repetidas en auth-early.js.
 
-   Hay que volver a generarlas si cambia el aspecto de la escena (src/views/auth-scene.js):
+   Hay que volver a generarlas si cambia el aspecto de la escena (src/views/auth-scene.js) o
+   la imagen de un árbol (scripts/make-trees.js):
 
      node scripts/make-auth-posters.js
 
@@ -45,7 +47,7 @@ const OUT_H = 384, QUALITY = 0.74;
 const MINI_H = 96, MINI_QUALITY = 0.6;
 
 /* Una foto de la escena con el punto de fuga a `up` altos del borde de arriba. */
-async function shot(browser, theme, up, tree){
+async function shot(browser, theme, up, tree, season){
   /* Sin cerezo, su loma se manda al borde izquierdo (lo mínimo que admite la escena). */
   const trunk = tree ? POSTER.treeX * H : 0.05 * H;
   /* Con cerezo, el punto de fuga a un alto de ventana del tronco, que es lo habitual: así su
@@ -54,9 +56,9 @@ async function shot(browser, theme, up, tree){
   const context = await browser.newContext({viewport:{width:W, height:H}, locale:'es-ES'});
   const page = await context.newPage();
   await page.addInitScript((t) => { try{ localStorage.setItem('workhub_theme', t); }catch(e){} }, theme);
-  if(!tree) await page.route('**/sakura.webp', (route) => route.abort());
+  if(!tree) await page.route(/\/(sakura|tree-\w+)\.webp/,(route) => route.abort());
   for(let i = 0; ; i++){
-    try{ await page.goto('http://localhost:' + port + '/app/', {waitUntil:'load'}); break; }
+    try{ await page.goto('http://localhost:' + port + '/app/?estacion=' + season, {waitUntil:'load'}); break; }
     catch(e){ if(i > 40) throw e; await new Promise((r) => setTimeout(r, 150)); }
   }
   /* La escena se baja aparte, cuando el acceso se ve (auth-early.js): aquí se pide ya. */
@@ -99,12 +101,16 @@ async function shot(browser, theme, up, tree){
   const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
   const browser = await chromium.launch({headless:true, args:['--use-angle=d3d11', '--enable-gpu'], ...(chrome ? {executablePath:chrome} : {})});
   try{
+    /* Un juego de fotos por estación (boot.js pone html[data-season]; ?estacion= la fuerza). */
+    const SEASONS = {primavera:'spring', verano:'summer', otono:'autumn', invierno:'winter'};
+    const rules = [];
+    for(const season of Object.keys(SEASONS)){
     const minis = {};
     for(const theme of ['light', 'dark']){
-      const high = await shot(browser, theme, POSTER.up, false);
-      const low = await shot(browser, theme, 1 - POSTER.down, false);
-      const treeHigh = await shot(browser, theme, POSTER.up, true);
-      const treeLow = await shot(browser, theme, 1 - POSTER.down, true);
+      const high = await shot(browser, theme, POSTER.up, false, season);
+      const low = await shot(browser, theme, 1 - POSTER.down, false, season);
+      const treeHigh = await shot(browser, theme, POSTER.up, true, season);
+      const treeLow = await shot(browser, theme, 1 - POSTER.down, true, season);
       /* El montaje se hace en una página en blanco, con un lienzo 2D. */
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -127,19 +133,15 @@ async function shot(browser, theme, up, tree){
       minis[theme] = '--sc-poster-' + theme + ':url(' + out.posterMini + ');--sc-tree-' + theme + ':url(' + out.treeMini + ');';
       await context.close();
     }
-    /* A auth.css. */
-    const cssFile = path.join(root, 'assets/css/views/auth.css');
-    const css = fs.readFileSync(cssFile, 'utf8');
-    const eol = css.includes('\r\n') ? '\r\n' : '\n';
-    const block = [
-      '/* FOTOS:inicio (lo escribe scripts/make-auth-posters.js; no tocar a mano) */',
-      '.auth-screen{' + minis.light + minis.dark + '}',
-      '/* FOTOS:fin */'
-    ].join(eol);
-    const marks = /\/\* FOTOS:inicio[\s\S]*?FOTOS:fin \*\//;
-    if(!marks.test(css)) throw new Error('auth.css: no encuentro las marcas FOTOS');
-    fs.writeFileSync(cssFile, css.replace(marks, () => block));
-    console.log('OK   fotos de espera en assets/css/views/auth.css (' + Math.round((minis.light.length + minis.dark.length) / 1024 * 10) / 10 + ' KB)');
+    rules.push([SEASONS[season], '.auth-screen{' + minis.light + minis.dark + '}']);
+    console.log('fotos de ' + season);
+    }
+    /* Una hoja pequeña por estación: boot.js enlaza solo la que toca. */
+    const dir = path.join(root, 'assets/css/seasons');
+    const NOTE = '/* Fotos de espera de la pantalla de acceso (las escribe scripts/make-auth-posters.js; no tocar a mano). */\n';
+    fs.mkdirSync(dir, {recursive:true});
+    rules.forEach(([name, rule]) => fs.writeFileSync(path.join(dir, name + '.css'), NOTE + rule + '\n'));
+    console.log('OK   fotos de espera en assets/css/seasons/ (' + rules.map(([name, rule]) => name + ' ' + Math.round(rule.length / 1024 * 10) / 10 + ' KB').join(', ') + ')');
   } finally {
     await browser.close();
     server.kill();

@@ -60,6 +60,33 @@
       document.head.appendChild(dict);
     }
   }catch(e){}
+  /* Estación del año, para el paisaje de la pantalla de acceso (auth-scene.js): cerezo en flor
+     en primavera, árbol verde en verano, hojas rojas en otoño y nieve en invierno. Sale de la
+     fecha del equipo (estaciones por meses completos: marzo-mayo, junio-agosto…) y del
+     hemisferio, que el navegador no dice: se deduce de la zona horaria. Para probar otra:
+     /app/?estacion=invierno (primavera, verano, otono, invierno). */
+  try{
+    var SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+    var asked = (location.search.match(/[?&]estacion=([a-z]+)/) || [])[1];
+    var season = {primavera:0, verano:1, otono:2, invierno:3}[asked];
+    if(season === undefined){
+      season = Math.floor((new Date().getMonth() + 10) % 12 / 3);
+      var zone = '';
+      try{ zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }catch(e){}
+      /* Zonas horarias al sur del ecuador: allí las estaciones van al revés. */
+      var south = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Apia|Noumea|Port_Moresby|Tahiti|Easter|Rarotonga|Efate|Guadalcanal|Norfolk|Pago_Pago|Niue|Fakaofo|Wallis|Funafuti|Gambier|Marquesas|Pitcairn|Galapagos)$|^America\/(Argentina\/.+|Buenos_Aires|Cordoba|Mendoza|Catamarca|Jujuy|Rosario|Sao_Paulo|Bahia|Fortaleza|Recife|Maceio|Araguaina|Belem|Manaus|Cuiaba|Campo_Grande|Porto_Velho|Rio_Branco|Santarem|Noronha|Santiago|Punta_Arenas|Coyhaique|Montevideo|Asuncion|La_Paz|Lima)$|^Africa\/(Johannesburg|Maputo|Harare|Lusaka|Windhoek|Gaborone|Maseru|Mbabane|Blantyre|Luanda|Dar_es_Salaam|Lubumbashi)$|^Indian\/(Antananarivo|Mauritius|Reunion|Mayotte|Comoro)$|^Atlantic\/(Stanley|St_Helena|South_Georgia)$/.test(zone);
+      if(south) season = (season + 2) % 4;
+    }
+    root.setAttribute('data-season', SEASONS[season]);
+    /* Las fotos de espera del paisaje de esa estación (assets/css/seasons/, las genera
+       scripts/make-auth-posters.js). Solo donde puede salir el acceso con paisaje: no en modo
+       local ni en móviles y tabletas (la misma condición que auth.css y auth-early.js). */
+    if(root.classList.contains('auth-gate') && !window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches){
+      var photos = document.createElement('link');
+      photos.rel = 'stylesheet'; photos.href = '../assets/css/seasons/' + SEASONS[season] + '.css';
+      document.head.appendChild(photos);
+    }
+  }catch(e){}
   try{
     var theme = localStorage.getItem('workhub_theme');
     if(theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme);

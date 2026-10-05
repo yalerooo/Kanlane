@@ -35,6 +35,7 @@ jobs:
           node tests/backup/backup.test.js
           node tests/assets/limits.test.js
           node tests/build/bundle.test.js
+          node tests/season/season.test.js
           node tests/worker/rate-limit.test.js
           node tests/worker/kms.test.js
           node tests/worker/domains.test.js

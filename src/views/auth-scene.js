@@ -55,6 +55,13 @@
     'uniform float uDawn;',
     /* El cursor sobre la escena: posición en píxeles del lienzo y fuerza (0 si no está). */
     'uniform vec3 uMouse;',
+    /* Invierno: por dónde ha pasado el cursor, para el surco que deja en la nieve. Puntos en */
+    /* píxeles del lienzo, del más viejo al más nuevo; z, cuánto queda de la huella (se va */
+    /* tapando sola), en negativo si ahí empieza un trazo nuevo. Los lleva el JS (trail). */
+    '#if SEASON == 3',
+    'const int TRAIL_N = 24;',
+    'uniform vec3 uTrail[24];',
+    '#endif',
     /* El formulario, para la pantalla del ordenador: caracteres escritos, cuánto se ve el */
     /* cuadro de acceso, «entrando…» y el resultado (hacia 1, acceso correcto; hacia -1, error). */
     'uniform vec4 uUI;',
@@ -176,6 +183,27 @@
     'float glassD(vec3 q){',
     '  return max(sdBox(q - vec3(0., 1.16, -.57), vec3(.62, .46, .07)) - .01, length(q - vec3(0., 1.16, 5.37)) - 6.);',
     '}',
+    /* Invierno: una capa de nieve encima del monitor (sobre el marco y, más atrás, siguiendo */
+    /* la caída de la carcasa) y carámbanos colgando del alero de nieve, por delante. */
+    '#if SEASON == 3',
+    'float snowCap(vec3 q){',
+    '  float lump = (noise(q.xz * 6.) - .5) * .05 + (noise(q.xz * 15. + 3.) - .5) * .02;',
+    '  float front = sdBox(q - vec3(0., 1.87 + lump, -.60), vec3(.76, .04, .19)) - .075;',
+    '  float taper = mix(1., .60, smoothstep(-.40, .92, q.z));',
+    '  float roof = .78 + .98 * taper + .05 + lump;',
+    '  float back = max(abs(q.y - roof) - .045, sdBox2(q.xz - vec2(0., .14), vec2(.58 * taper, .56))) - .04;',
+    '  return smin(front, back, .08) * .7;',
+    '}',
+    'float icicles(vec3 q){',
+    '  float cell = .150;',
+    '  float id = clamp(floor(q.x / cell + .5), -5., 5.);',
+    '  float h = hash(vec2(id, 7.));',
+    '  float len = .06 + .24 * h * h;',
+    '  vec3 c = q - vec3(id * cell + (hash(vec2(id, 3.)) - .5) * .05, 1.78, -.835);',
+    '  float t = clamp(-c.y / len, 0., 1.);',
+    '  return (length(vec3(c.x, c.y + t * len, c.z)) - mix(.030, .003, t)) * .75;',
+    '}',
+    '#endif',
     'float computer(vec3 q){',
     /* Como un monitor de tubo de verdad (el dueño mandó fotos de referencia): un marco frontal */
     /* grueso y, detrás, la carcasa, que se estrecha hacia atrás siguiendo al tubo (el techo cae */
@@ -206,7 +234,11 @@
     '  float stand = smin(skirt, dish, .09);',
     /* El cable sale por detrás y se pierde en la hierba. */
     '  float cable = min(sdCapsule(q, vec3(.22, .62, .90), vec3(.30, .30, 1.20), .028), sdCapsule(q, vec3(.30, .30, 1.20), vec3(.70, -.05, 1.75), .028));',
+    '#if SEASON == 3',
+    '  return min(smin(min(smin(body, stand, .05), cable), snowCap(q), .03), icicles(q));',
+    '#else',
     '  return min(smin(body, stand, .05), cable);',
+    '#endif',
     '}',
     /* La pendiente de la superficie: seis medidas alrededor del punto, en un bucle que empieza */
     /* en uZero (ver arriba) para que computer() se compile una vez y no seis. */
@@ -884,6 +916,38 @@
     '      }',
     '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
+    /* El cursor deja un surco en la nieve: hundido y en sombra por dentro, con la pared que */
+    /* mira al sol encendida y un reborde de nieve apartada. Se mide en pantalla, llevado a */
+    /* medidas de la escena a la distancia de este punto (como el cursor en la hierba). */
+    '#if SEASON == 3',
+    '    {',
+    '      float kpx = max(dot(p - ro, fw), .3) / (1.5 * uRes.y);',
+    '      float dent = 0., rim = 0.;',
+    '      vec2 toMid = vec2(0.);',
+    '      for(int i = 1; i < TRAIL_N; i++){',
+    '        vec3 A = uTrail[i - 1], B = uTrail[i];',
+    '        float s = min(abs(A.z), abs(B.z));',
+    '        if(s < .01) continue;',
+    '        vec2 a = (A.xy - gl_FragCoord.xy) * kpx, b = (B.xy - gl_FragCoord.xy) * kpx;',
+    '        if(B.z < 0.) a = b;',
+    '        a.y *= 2.4; b.y *= 2.4;',
+    '        vec2 ab = b - a;',
+    '        vec2 c = a + ab * clamp(-dot(a, ab) / max(dot(ab, ab), 1e-6), 0., 1.);',
+    '        float d = length(c) / .24;',
+    '        float w = s * (1. - smoothstep(.45, 1., d));',
+    '        if(w > dent){ dent = w; toMid = c; }',
+    '        rim = max(rim, s * smoothstep(.80, 1.08, d) * (1. - smoothstep(1.08, 1.7, d)));',
+    '      }',
+    '      if(dent + rim > .001){',
+    '        vec2 w2 = normalize(rt.xz * toMid.x + normalize(fw.xz) * toMid.y + 1e-5);',
+    '        float wall = dent * (1. - dent) * 4.;',
+    '        gcol *= 1. - .22 * dent;',
+    '        gcol += alb * sunCol * dot(w2, normalize(L.xz)) * wall * .9 * sh;',
+    '        gcol += alb * (ambient + skyLight) * rim * (1. - dent) * .40;',
+    '        gcol = max(gcol, vec3(0.));',
+    '      }',
+    '    }',
+    '#endif',
     '    col = gcol;',
     '    tFin = tGround;',
     /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
@@ -984,19 +1048,29 @@
     '        alb = mix(alb, mix(vec3(.10, .11, .15), vec3(.94, .96, 1.), clamp(bars, 0., 1.)), badge);',
     /* Grano fino del plástico. */
     '        alb *= .94 + .12 * noise(q.xy * 60. + q.z * 37.);',
+    /* Invierno: lo que es nieve, blanco y mate; los carámbanos, hielo azulado y brillante. */
+    '        float iceK = 0., snowK = 0.;',
+    '#if SEASON == 3',
+    '        iceK = 1. - smoothstep(.004, .012, icicles(q));',
+    '        snowK = (1. - smoothstep(.006, .016, snowCap(q))) * (1. - iceK);',
+    '        alb = mix(alb, vec3(1.25, 1.30, 1.40), snowK);',
+    '        alb = mix(alb, vec3(.62, .80, 1.), iceK);',
+    '#endif',
     '        float dif = max(dot(n, L), 0.);',
     '        float shd = computerShadow(q + nl * .02, Ll);',
     '        vec3 hv = normalize(L - rd);',
     '        float spec = pow(max(dot(n, hv), 0.), 48.) * .55 + pow(max(dot(n, hv), 0.), 8.) * .08;',
     '        float skyL = .5 + .5 * n.y;',
     '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
-    '        col += sunCol * spec * shd;',
+    '        col += sunCol * spec * shd * (1. - snowK) * (1. + 2.5 * iceK);',
+    /* El hielo deja pasar la luz y refleja el cielo. */
+    '        col += (skyBase(refl, L) * (.25 + fres * .6) + sunCol * pow(max(dot(rd, L), 0.), 4.) * .5) * iceK;',
     /* De noche, sin esto, la carcasa se queda en una silueta negra: luz de relleno del cielo */
     /* y un filo frío en los cantos, para que se lea la forma. */
     '        col += alb * (vec3(.030, .040, .075) + vec3(.10, .13, .24) * pow(1. - max(dot(n, -rd), 0.), 2.5)) * uNight;',
     '        col += skyBase(refl, L) * fres * .22 * ao;',
     /* La hierba le devuelve un poco de verde por debajo. */
-    '        col += alb * vec3(.05, .09, .03) * max(-n.y, 0.) * (1. - uNight);',
+    '        col += alb * vec3(.05, .09, .03) * max(-n.y, 0.) * (1. - uNight) * GRASSY;',
     /* La pantalla ilumina el hueco de su marco. */
     '        col += screenGlow * inRecess * .34 * mix(.7, 1.2, uNight);',
     /* Piloto verde. */
@@ -1969,7 +2043,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uTrail', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -2309,6 +2383,22 @@
 
     /* El cursor sobre la escena (en píxeles de pantalla) y con cuánta fuerza aparta la hierba. */
     const mouse = {x:0, y:0, tx:0, ty:0, s:0, inside:false, moved:0};
+    /* Invierno: el rastro del cursor en la nieve (uTrail). Un punto nuevo cada vez que el
+       cursor se aleja un poco del último; la huella se va tapando sola en TRAIL_LIFE segundos.
+       up: el cursor salió o dio un salto, y el punto siguiente empieza otro trazo. */
+    const TRAIL_N = 24, TRAIL_LIFE = 16;
+    const trail = [], trailNow = new Float32Array(TRAIL_N * 3);
+    let trailUp = true;
+    function track(){
+      if(SEASON !== 3 || still) return;
+      if(!mouse.inside){ trailUp = true; return; }
+      const last = trail[trail.length - 1];
+      const far = last ? Math.hypot(mouse.x - last.x, mouse.y - last.y) : Infinity;
+      if(far < place.h * 0.022) return;
+      trail.push({x:mouse.x, y:mouse.y, t:time, start:trailUp || far > place.h * 0.3});
+      trailUp = false;
+      if(trail.length > TRAIL_N) trail.shift();
+    }
     /* El formulario, para la pantalla del ordenador (ver signal()). */
     const ui = {chars:0, show:0, busy:0, res:0, tChars:0, tShow:0, tBusy:0, tRes:0};
 
@@ -2353,6 +2443,17 @@
       gl.uniform1f(p.U.uDay, day);
       gl.uniform1f(p.U.uDawn, dawn * (1 - day));
       gl.uniform3f(p.U.uMouse, mouse.x * scale, (place.h - mouse.y) * scale, mouse.s);
+      if(SEASON === 3 && p.U.uTrail){
+        trailNow.fill(0);
+        const from = TRAIL_N - trail.length;
+        trail.forEach((q, i) => {
+          const left = Math.max(1 - (time - q.t) / TRAIL_LIFE, 0);
+          trailNow[(from + i) * 3] = q.x * scale;
+          trailNow[(from + i) * 3 + 1] = (place.h - q.y) * scale;
+          trailNow[(from + i) * 3 + 2] = Math.min(left * 4, 1) * (q.start ? -1 : 1);
+        });
+        gl.uniform3fv(p.U.uTrail, trailNow);
+      }
       gl.uniform4f(p.U.uUI, ui.chars, ui.show, ui.busy, ui.res);
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
@@ -2383,6 +2484,7 @@
       mouse.x += (mouse.tx - mouse.x) * (1 - Math.exp(-dt * 9));
       mouse.y += (mouse.ty - mouse.y) * (1 - Math.exp(-dt * 9));
       mouse.s = still ? 0 : ease(mouse.s, mouse.inside ? (now - mouse.moved < 1500 ? 1 : 0.55) : 0, 4);
+      track();
       ui.chars = ease(ui.chars, ui.tChars, 14);
       ui.show = ease(ui.show, ui.tShow, 6);
       ui.busy = ease(ui.busy, ui.tBusy, 7);

@@ -428,21 +428,44 @@
     /* Cuánto se mira hacia el sol, en horizontal: de ese lado el cielo arde; del otro, se enfría. */
     '  float sunny = max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.);',
     '  sunny *= sunny;',
-    '  vec3 day = mix(vec3(.84, .40, .34), vec3(1., .70, .30), sunny);',
-    '  day = mix(day, mix(vec3(.72, .27, .32), vec3(.98, .42, .24), sunny), smoothstep(0., .15, y));',
-    '  day = mix(day, mix(vec3(.42, .22, .42), vec3(.62, .26, .36), sunny), smoothstep(.10, .38, y));',
-    '  day = mix(day, vec3(.15, .18, .40), smoothstep(.28, .85, y));',
-    /* Invierno: cielo de tarde fría. Crema y melocotón pálido pegados al horizonte del lado del */
-    /* sol y rosa apagado del otro (la franja rosa de los atardeceres de invierno), lila por */
-    /* encima y azul claro arriba, en vez de los rojos y naranjas del resto del año. */
-    '#if SEASON == 3',
-    '  day = mix(vec3(.96, .70, .70), vec3(1.16, .92, .66), sunny);',
+    /* Cada estación tiene su cielo. De abajo arriba, cuatro franjas: el horizonte, lo que hay
+       justo encima, el cielo medio y lo alto; las tres primeras, con un tono del lado del sol
+       y otro del lado contrario. Y lo mismo, más corto, para la noche.
+       Primavera: tarde limpia y suave, de rosas y melocotón que suben a un azul claro; noche
+       azul, algo verdosa en el horizonte. Verano: hora dorada, amarillos y naranjas encendidos
+       bajo un azul hondo y despejado; noche tibia, con el horizonte aún caliente. Otoño: el
+       atardecer que arde, cobre y granate hasta el morado; noche más parda y cerrada.
+       Invierno: tarde fría, crema y melocotón pálido hacia el sol, la franja rosa del otro
+       lado, lila y azul claro arriba; noche limpia y helada, la más azul. */
+    '#if SEASON == 0',
+    '  vec3 day = mix(vec3(.98, .64, .62), vec3(1.08, .84, .56), sunny);',
+    '  day = mix(day, mix(vec3(.92, .54, .66), vec3(1.04, .64, .52), sunny), smoothstep(0., .14, y));',
+    '  day = mix(day, mix(vec3(.54, .50, .84), vec3(.76, .54, .74), sunny), smoothstep(.09, .36, y));',
+    '  day = mix(day, vec3(.19, .34, .72), smoothstep(.26, .85, y));',
+    '  vec3 night = mix(mix(vec3(.13, .18, .36), vec3(.21, .28, .48), sunny), vec3(.05, .08, .22), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.010, .018, .065), smoothstep(.25, .9, y));',
+    '#elif SEASON == 1',
+    '  vec3 day = mix(vec3(.96, .56, .30), vec3(1.14, .88, .38), sunny);',
+    '  day = mix(day, mix(vec3(.90, .44, .30), vec3(1.08, .62, .24), sunny), smoothstep(0., .15, y));',
+    '  day = mix(day, mix(vec3(.38, .36, .64), vec3(.72, .42, .42), sunny), smoothstep(.10, .38, y));',
+    '  day = mix(day, vec3(.09, .23, .58), smoothstep(.28, .85, y));',
+    '  vec3 night = mix(mix(vec3(.20, .16, .34), vec3(.36, .25, .40), sunny), vec3(.07, .07, .22), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.014, .016, .07), smoothstep(.25, .9, y));',
+    '#elif SEASON == 2',
+    '  vec3 day = mix(vec3(.86, .41, .30), vec3(1.05, .72, .26), sunny);',
+    '  day = mix(day, mix(vec3(.74, .27, .27), vec3(1., .44, .20), sunny), smoothstep(0., .15, y));',
+    '  day = mix(day, mix(vec3(.44, .20, .37), vec3(.66, .26, .31), sunny), smoothstep(.10, .38, y));',
+    '  day = mix(day, vec3(.16, .16, .36), smoothstep(.28, .85, y));',
+    '  vec3 night = mix(mix(vec3(.18, .14, .30), vec3(.27, .21, .38), sunny), vec3(.07, .06, .19), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.014, .014, .055), smoothstep(.25, .9, y));',
+    '#else',
+    '  vec3 day = mix(vec3(.96, .70, .70), vec3(1.16, .92, .66), sunny);',
     '  day = mix(day, mix(vec3(.80, .62, .78), vec3(1.02, .76, .70), sunny), smoothstep(0., .13, y));',
     '  day = mix(day, mix(vec3(.54, .56, .84), vec3(.70, .62, .82), sunny), smoothstep(.08, .34, y));',
     '  day = mix(day, vec3(.26, .38, .70), smoothstep(.24, .85, y));',
+    '  vec3 night = mix(mix(vec3(.11, .17, .37), vec3(.17, .25, .50), sunny), vec3(.04, .07, .23), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.008, .014, .062), smoothstep(.25, .9, y));',
     '#endif',
-    '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
-    '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
     /* Pleno día: azul hondo arriba y claro, casi blanco, en el horizonte del lado del sol. */
     '  vec3 noon = mix(vec3(.60, .76, .94), vec3(.86, .90, .95), sunny);',
     '  noon = mix(noon, vec3(.30, .52, .88), smoothstep(0., .34, y));',
@@ -485,24 +508,37 @@
     '  float perp = length(rel + sdir * along);',
     '  float streak = exp(-perp * perp * 120000.) * smoothstep(.10, 0., along) * step(0., along);',
     '  stars += vec3(.92, .96, 1.) * streak * smoothstep(0., .03, sf) * (1. - smoothstep(.10, .20, sf)) * step(.45, hash(vec2(sid, 1.3))) * 1.6;',
+    /* Cuánta nube: desde qué densidad empiezan a verse los jirones altos y los bancos bajos
+       (cuanto más alto el número, menos nube). Verano, casi despejado; primavera, bancos
+       sueltos; otoño, cargado; invierno, el más cubierto. STARS: lo que lucen las estrellas
+       (más en las noches limpias de verano e invierno). */
+    '#if SEASON == 0',
+    'const vec2 CLOUDS = vec2(.53, .46); const float STARS = 1.;',
+    '#elif SEASON == 1',
+    'const vec2 CLOUDS = vec2(.52, .55); const float STARS = 1.3;',
+    '#elif SEASON == 2',
+    'const vec2 CLOUDS = vec2(.47, .40); const float STARS = .9;',
+    '#else',
+    'const vec2 CLOUDS = vec2(.46, .39); const float STARS = 1.2;',
+    '#endif',
     /* Nubes altas: jirones finos y alargados, encendidos por debajo. */
     '  float sunny = pow(max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.), 2.);',
     '  vec2 c1 = rd.xz / (rd.y + .10);',
     '  float hi = fbm(vec2(c1.x * .34 + uTime * .013, c1.y * 1.25 + 4. + uTime * .003));',
-    '  float cirrus = smoothstep(.50, .78, hi) * smoothstep(.03, .22, rd.y) * .62;',
+    '  float cirrus = smoothstep(CLOUDS.x, CLOUDS.x + .28, hi) * smoothstep(.03, .22, rd.y) * .62;',
     '  vec3 hiCol = pal(mix(vec3(.66, .28, .36), vec3(1., .68, .40), sunny * .7 + hi * .3), mix(vec3(.80, .86, .95), vec3(1.), hi), mix(vec3(.07, .08, .18), vec3(.20, .23, .42), hi));',
     /* Nubes bajas: bancos con volumen; el borde que mira al sol se enciende. */
     '  vec2 c2 = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .032, 0.);',
     /* Los bancos no solo pasan: se deshacen y se rehacen despacio. */
     '  c2 += .30 * (vec2(noise(c2 * .55 + vec2(0., uTime * .021)), noise(c2 * .55 + vec2(5.2, -uTime * .017))) - .5);',
     '  float dn = fbm(c2);',
-    '  float cl = smoothstep(.44, .74, dn) * smoothstep(0., .11, rd.y);',
+    '  float cl = smoothstep(CLOUDS.y, CLOUDS.y + .30, dn) * smoothstep(0., .11, rd.y);',
     '  float edge = clamp((dn - fbm(c2 + normalize(L.xz) * .32)) * 3. + .45, 0., 1.);',
     '  vec3 loCol = pal(mix(vec3(.25, .12, .22), vec3(1.05, .60, .34), edge), mix(vec3(.56, .63, .78), vec3(1.02, 1.01, .98), edge), mix(vec3(.04, .05, .12), vec3(.22, .25, .45), edge));',
     /* Cerca del sol, el filo de la nube se pone de oro. */
     '  loCol += vec3(1., .72, .36) * pow(s, 10.) * (1. - smoothstep(.55, .9, dn)) * .9 * (1. - uNight) * (1. - .8 * uDay);',
     '  float cover = max(cirrus, cl);',
-    '  col += stars * starry * (1. - cover);',
+    '  col += stars * starry * (1. - cover) * STARS;',
     '  col = mix(col, hiCol, cirrus);',
     '  col = mix(col, loCol, cl * .9);',
     '  return col;',

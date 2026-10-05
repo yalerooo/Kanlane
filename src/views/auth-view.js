@@ -9,6 +9,8 @@
      necesita antes de que exista nada de esto (pinta el formulario en el primer fotograma). */
   const EARLY = window.WORKHUB_AUTH;
   const {PROVIDERS, TEXT, SPIN} = EARLY;
+  /* La escena se carga antes que Workhub (ver auth-scene.js); aquí queda en su sitio de siempre. */
+  Workhub.views.authScene = EARLY.scene;
   const MAIL_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
   const METER_LEVELS = {short:1, weak:2, fair:3, good:4};
   const RESEND_WAIT = 30;
@@ -91,7 +93,6 @@
         b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');
       });
 
-      this.buildScene();
       /* La pantalla del ordenador de la escena acompaña al formulario: mientras se escribe
          enseña un cuadro de acceso con el correo (o el nombre) letra a letra. De la contraseña
          solo se le pasa cuántos caracteres hay, y salen como puntos. */
@@ -131,10 +132,16 @@
     }
 
     /* Paisaje en 3D de detrás del acceso (src/views/auth-scene.js). Si no hay WebGL se queda
-       el degradado de cielo de auth.css. */
+       el degradado de cielo de auth.css. Solo se prepara si la pantalla de acceso llega a verse
+       (quien ya tiene sesión no la paga) y cuando el navegador tiene un hueco, para que nunca
+       retrase al formulario. */
     buildScene(){
+      if(this.sceneAsked) return;
+      this.sceneAsked = true;
       const canvas = $('authCanvas');
-      if(canvas && Workhub.views.authScene) Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));
+      if(!canvas || !Workhub.views.authScene) return;
+      const go = () => Workhub.views.authScene.start(canvas, this.screen, $('authWindow'));
+      if(window.requestIdleCallback) window.requestIdleCallback(go, {timeout:700}); else setTimeout(go, 120);
     }
 
     scene(o){
@@ -225,13 +232,11 @@
 
     /* Ya hay sesión y se están cargando los datos: esqueleto de la página principal. */
     showAppSkeleton(){
-      document.documentElement.classList.remove('auth-early');
       document.documentElement.classList.add('skel-on');
       this.screen.hidden = true;
     }
 
     showLoadError(onRetry){
-      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       EARLY.take(false);
       this.screen.hidden = false;
@@ -249,6 +254,7 @@
       btn.textContent = t('Reintentar');
       btn.addEventListener('click', onRetry);
       this.loading.appendChild(btn);
+      this.buildScene();
     }
 
     /* providers: lista de claves ('google', 'github', …, 'password').
@@ -256,8 +262,6 @@
     showSignIn(providers, allowSignup){
       /* early: el formulario ya está a la vista desde el primer fotograma (auth-early.js). */
       const early = EARLY.shown;
-      /* El fondo ya se estaba viendo (src/boot.js); desde aquí manda el atributo hidden. */
-      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
@@ -280,6 +284,7 @@
          entrada) y el cursor se queda donde lo tenga la persona. */
       if(early && early.mode === mode) this.mode = mode;
       this.setMode(mode, !early || !this.panel.contains(document.activeElement));
+      this.buildScene();
       /* Lo que se pulsó mientras cargaba la app se atiende ahora. */
       EARLY.take(true);
     }
@@ -307,9 +312,9 @@
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
        resend() → Promise<bool>, signOut()} */
     showVerify(email, handlers){
-      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       EARLY.take(false);
+      this.buildScene();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
       this.panel.hidden = true;
@@ -388,7 +393,7 @@
 
     hide(){
       EARLY.take(false);
-      document.documentElement.classList.remove('auth-gate', 'auth-early');
+      document.documentElement.classList.remove('auth-gate');
       document.body.classList.remove('is-authing');
       this.screen.hidden = true;
       this.verifyRun = null;

@@ -610,7 +610,12 @@
     /* tapa la hierba en la escena, con el borde desigual de las briznas. */
     '#ifdef LIVE',
     '    float wx = u.x * treeSc;',
+    /* En invierno no hay briznas: el tronco baja hasta donde lo corta la nieve. */
+    '#if SEASON == 3',
+    '    float top = -.62;',
+    '#else',
     '    float top = -.22 + (.04 + .16 * noise(vec2(wx * 34., 3.)) + .12 * noise(vec2(wx * 5., 9.))) / treeSc;',
+    '#endif',
     '    tr *= smoothstep(top - .05, top + .05, u.y);',
     '#endif',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',

@@ -32,10 +32,15 @@ const MODELS = modelsDir();
 /* Cada árbol: su OBJ y, por material, la capa (wood: madera; leaf: hojas) y sus texturas.
    turn: giro alrededor del tronco, en grados, para elegir el lado bueno. cut: transparencia
    a partir de la cual un punto de la textura no se pinta. tint: color [r, g, b, cuánto] que
-   sustituye al de la textura (cuando esta solo trae la silueta). gain: más o menos luz. */
+   sustituye al de la textura (cuando esta solo trae la silueta). gain: más o menos luz.
+   sink: cuánto se hunde el pie en el suelo, en unidades del encuadre; la escena recorta el
+   árbol a ras de suelo, y con el pie justo en la línea parecía flotar sobre la loma.
+   strip: quita lo que el modelo trae a ras de suelo alrededor del tronco (un montón de nieve):
+   las caras por debajo de `below` y a más de `beyond` del eje, las dos en partes del alto.
+   foot: entre qué alturas (partes del alto) se mide dónde está el eje del tronco. */
 const TREES = {
   verano: {
-    out: 'tree-summer.webp', obj: 'summer tree/TreeOld_2.obj', turn: 270,
+    out: 'tree-summer.webp', obj: 'summer tree/TreeOld_2.obj', turn: 270, sink: 0.85,
     materials: {
       Trunk: {layer: 'wood', tex: 'summer tree/Textures/Textures/Trunk_BaseColorUntitled.png'},
       Branches: {layer: 'wood', tex: 'summer tree/Textures/Textures/BranchesDiffuse.jpg'},
@@ -44,14 +49,15 @@ const TREES = {
     }
   },
   otono: {
-    out: 'tree-autumn.webp', obj: 'Autumn tree/TR_01_autumn.obj', turn: 180,
+    out: 'tree-autumn.webp', obj: 'Autumn tree/TR_01_autumn.obj', turn: 180, sink: 0.7,
     materials: {
       Tr_01_Stem_autumn_001_mat: {layer: 'wood', tex: 'Autumn tree/texture/Tr_01_Stem_autumn_001_mat_Base_color.png'},
       Tr_01_Leaves_autumn_001_mat: {layer: 'leaf', tex: 'Autumn tree/texture/Tr_01_Leaves_autumn_001_Base_color.png', alpha: 'Autumn tree/texture/Tr_01_Leaves_autumn_001_Opacity.png', cut: 0.5}
     }
   },
   invierno: {
-    out: 'tree-winter.webp', obj: 'winter tree/winter-tree8_HIGH_RES.obj', turn: 0,
+    out: 'tree-winter.webp', obj: 'winter tree/winter-tree8_HIGH_RES.obj', turn: 0, sink: 1.0,
+    strip: {below: 0.09, beyond: 0.10}, foot: [0.14, 0.20],
     /* Un solo material, con la nieve ya puesta en las ramas: todo es madera, nada se mueve. */
     materials: {'winter-tree8': {layer: 'wood', tex: 'winter tree/textures/winter-tree8.png'}}
   }
@@ -238,8 +244,22 @@ async function render(cfg){
     each((x, y, z, layer) => { if(layer === 'wood' && y < minY) minY = y; if(y > maxY) maxY = y; });
     const h = maxY - minY;
     let bx = 0, bz = 0, bn = 0;
-    each((x, y, z, layer) => { if(layer === 'wood' && y < minY + h * 0.03){ bx += x; bz += z; bn++; } });
+    const foot = tree.foot || [0, 0.03];
+    each((x, y, z, layer) => { if(layer === 'wood' && y >= minY + h * foot[0] && y < minY + h * foot[1]){ bx += x; bz += z; bn++; } });
     bx /= bn; bz /= bn;
+    if(tree.strip){
+      const low = minY + h * tree.strip.below, far = h * tree.strip.beyond;
+      Object.keys(groups).forEach((m) => {
+        const g = groups[m], kept = [];
+        for(let i = 0; i < g.length; i += 24){
+          const ys = Math.max(g[i + 1], g[i + 9], g[i + 17]);
+          const cx = (g[i] + g[i + 8] + g[i + 16]) / 3 - bx, cz = (g[i + 2] + g[i + 10] + g[i + 18]) / 3 - bz;
+          if(ys < low && Math.hypot(cx, cz) > far) continue;
+          for(let j = 0; j < 24; j++) kept.push(g[i + j]);
+        }
+        groups[m] = kept;
+      });
+    }
     let wide = 0, top = 0, cx = 0, cyy = 0, cz = 0, cn = 0;
     each((x, y, z) => {
       const rx = (x - bx) * c + (z - bz) * s, rz = -(x - bx) * s + (z - bz) * c;
@@ -250,7 +270,7 @@ async function render(cfg){
     });
     const scale = Math.min(7.9 / top, 4.35 / wide);
     const crown = [cx / cn * scale, cyy / cn * scale, cz / cn * scale];
-    const cfg = {turn: tree.turn, scale, base: [bx, minY, bz], crown, crownR: Math.max(wide, top * 0.6) * scale * 0.75, quality: 0.9, groups: []};
+    const cfg = {turn: tree.turn, scale, base: [bx, minY + (tree.sink || 0) / scale, bz], crown, crownR: Math.max(wide, top * 0.6) * scale * 0.75, quality: 0.9, groups: []};
     Object.keys(groups).forEach((m, i) => {
       const mat = tree.materials[m];
       if(!mat) return;

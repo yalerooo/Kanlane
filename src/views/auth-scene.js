@@ -557,6 +557,8 @@
     /* En unidades del modelo (la imagen abarca 9,2 de lado, con el suelo a 0,9 del borde de abajo). */
     '    vec2 u = vec2(dot(hp, pr), hp.y) / treeSc;',
     '    vec2 tuv = vec2(u.x / 9.2 + .5, (u.y + .9) / 9.2);',
+    /* Fuera de la imagen (casi toda la pantalla) no hay árbol: ni se mira el viento. */
+    '    if(tp > 0. && tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* La imagen trae dos capas, una al lado de la otra: la madera (tronco y ramas), que no se */
     /* mueve, y las flores, que el viento desplaza un poco: un vaivén lento por zonas de la */
     /* copa y un temblor fino, más fuertes cuando pasa una racha (la misma que tumba la */
@@ -593,6 +595,7 @@
     '        col = col * (1. - tr.a) + tc;',
     '        if(tr.a > .2) zTree = tp;',
     '      }',
+    '    }',
     '    }',
     '  }',
     /* Halo de la pantalla en el aire. */
@@ -1441,7 +1444,10 @@
   ].join('\n');
   const OVER = [
     /* ---------- Lo que va por delante de la hierba: pétalos y luciérnagas ---------- */
-    'uniform vec4 uFFp[40];',
+    /* Las luciérnagas, ya llevadas a la pantalla (flies2d): dónde cae cada una, su escala y a */
+    /* qué distancia está; y hacia dónde queda su estela, cuánto se desenfoca y cuánto brilla. */
+    'uniform vec4 uFly[40];',
+    'uniform vec4 uFlyB[40];',
     /* Los pétalos: dónde está cada uno y cómo está girado (coseno y seno), y cuánto se ve. Los */
     /* mueve el JS (petals): calcularlo aquí era repetir las mismas cuentas en cada píxel. */
     'uniform vec4 uPetal[22];',
@@ -1488,15 +1494,15 @@
     /* Luciérnagas, de noche. Las tapa el ordenador. */
     '  if(uNight > .01){',
     '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    '#ifdef CACHE',
+    '    float tObj = texelFetch(uGeo, ivec2(gl_FragCoord.xy), 0).y;',
+    '    if(tObj < 0.) tObj = 1e4;',
+    '#else',
     '    float base = uBase;',
     '    vec3 ta = vec3(0., base + 1.02, 0.);',
     '    vec3 ro = vec3(2.2, base + .62, -11.5);',
     '    vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
     '    vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
-    '#ifdef CACHE',
-    '    float tObj = texelFetch(uGeo, ivec2(gl_FragCoord.xy), 0).y;',
-    '    if(tObj < 0.) tObj = 1e4;',
-    '#else',
     '    float tObj = 1e4;',
     '    float t0 = sph(ro, rd, vec3(0., base + 1.02 * CS, 0.), 1.95 * CS);',
     '    if(t0 >= 0.){',
@@ -1513,35 +1519,31 @@
     /* de pasar. Las que vuelan pegadas a la cámara salen desenfocadas, como discos de luz. */
     '    vec3 glow = vec3(0.);',
     '    for(int i = 0; i < FF_N; i++){',
-    '      vec3 v = uFF[i].xyz - ro;',
-    '      float zv = dot(v, fw);',
-    '      if(zv > .25 && length(v) < tObj){',
-    '        vec2 c = 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
-    '        vec2 d = uv - c;',
-    '        float k = zv / 1.5;',
-    '        float d2 = dot(d, d) * k * k;',
-    /* A esta distancia ya no llega ni el resplandor amplio ni la estela. */
-    '        if(d2 > .25) continue;',
-    '        float fi = float(i);',
-    '        vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(fi, 2.9)));',
-    '        float g = 1.5 * exp(-d2 / .00042) + .30 * exp(-d2 / .0055) + .040 * exp(-d2 / .070);',
+    '      vec2 d = uv - uFly[i].xy;',
+    '      float k = uFly[i].z;',
+    '      float d2 = dot(d, d) * k * k;',
+    /* A esta distancia ya no llega ni el resplandor amplio ni la estela; o la tapa el ordenador */
+    /* (las que quedan detrás de la cámara traen una distancia enorme). */
+    '      if(d2 > .25 || uFly[i].w >= tObj) continue;',
+    '      vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(float(i), 2.9)));',
+    '      float g = 1.5 * exp(-d2 / .00042) + .30 * exp(-d2 / .0055) + .040 * exp(-d2 / .070);',
     /* Estela. */
-    '        vec3 vp = uFFp[i].xyz - ro;',
-    '        vec2 ab = 1.5 * vec2(dot(vp, rt), dot(vp, up)) / max(dot(vp, fw), .25) - c;',
-    '        float h = clamp(dot(d, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
-    '        vec2 dt = d - ab * h;',
-    '        g += .34 * exp(-dot(dt, dt) * k * k / .00050) * (1. - h) * (1. - h);',
+    '      vec2 ab = uFlyB[i].xy;',
+    '      float h = clamp(dot(d, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
+    '      vec2 dt = d - ab * h;',
+    '      g += .34 * exp(-dot(dt, dt) * k * k / .00050) * (1. - h) * (1. - h);',
     /* Desenfoque de las cercanas: un disco suave con el borde algo más marcado. */
-    '        float blur = clamp((3.0 - zv) * .007, 0., .011);',
-    '        if(blur > 0.){',
-    '          float rr = length(d) / blur;',
-    '          g = g * .35 + (1. - smoothstep(.55, 1., rr)) * (.13 + .07 * smoothstep(.55, .95, rr));',
-    '        }',
-    '        glow += tint * g * uFF[i].w;',
+    '      float blur = uFlyB[i].z;',
+    '      if(blur > 0.){',
+    '        float rr = length(d) / blur;',
+    '        g = g * .35 + (1. - smoothstep(.55, 1., rr)) * (.13 + .07 * smoothstep(.55, .95, rr));',
     '      }',
+    '      glow += tint * g * uFlyB[i].w;',
     '    }',
     '    col += min(glow, vec3(1.)) * smoothstep(.35, 1., uNight);',
     '  }',
+    /* Donde no hay nada (casi toda la pantalla), ni se escribe. */
+    '  if(alpha <= 0. && col == vec3(0.)) discard;',
     '  fragColor = vec4(col, alpha);',
     '}'
   ].join('\n');
@@ -1562,13 +1564,14 @@
     {side:960, part:0.22, tall:false, fps:30, lit:8, sharp:0},
     {side:800, part:0.14, tall:false, fps:20, lit:0, sharp:0}
   ];
-  /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer, desde /app/. Medidas
-     en píxeles; fx, fy: dónde cae el ordenador (fy, desde abajo); una altura de pantalla son h
-     píxeles; tree: dónde va el tronco del cerezo respecto al ordenador, en alturas (el de una
-     ventana de escritorio corriente; el cerezo no sale en la imagen, pero el terreno le hace
-     una loma). Abarca más ancho que cualquier ventana; lo poco que pueda faltar por arriba es
-     cielo y se estira. Se generan con Workhub.views.authScene.poster(true | false). */
-  const POSTER = {w:1952, h:640, fx:1088, fy:301, tree:-0.94, night:'../assets/img/acceso-noche.webp', dusk:'../assets/img/acceso-tarde.webp'};
+  /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer. Sus medidas y dónde
+     cae en ellas el ordenador están en src/boot.js (window.__authPoster), que es quien las
+     pone de fondo desde el primer fotograma. Abarcan más ancho que cualquier ventana; lo poco
+     que pueda faltar por arriba es cielo y se estira. Se generan con
+     Workhub.views.authScene.poster(true | false). */
+  const POSTER = window.__authPoster;
+  /* La pantalla de acceso no se ve: ni oculta ni enseñada antes de tiempo (auth-early). */
+  const away = (screen) => screen.hidden && !document.documentElement.classList.contains('auth-early');
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
   const BUDGET = 0.62;
@@ -1577,7 +1580,8 @@
   const TREE_URL = '../assets/img/sakura.webp';
   /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
      lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo
-     una parte (LEVELS): el orden es al azar, así que cualquier tramo inicial cubre toda la colina. */
+     una parte (LEVELS): salen en orden al azar, así que cualquier tramo inicial cubre toda la
+     colina; antes de subirlas, las de cada escalón se ordenan de cerca a lejos (nearFirst). */
   const BLADES = 420000;
   /* La cámara de la escena, vista desde arriba: dónde está y hacia dónde mira. */
   const CAM_X = 2.2, CAM_Z = -11.5, CAM_YAW = Math.atan2(-2.2, 11.5);
@@ -1587,6 +1591,7 @@
     /* Azar con semilla: la colina es la misma en cada visita. */
     let seed = 20261004;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const far = new Float32Array(BLADES);
     for(let i = 0; i < BLADES; i++){
       const r = 0.7 + 27 * Math.pow(rnd(), 1.32);
       const a = CAM_YAW + (rnd() - 0.5) * 1.7;
@@ -1594,8 +1599,22 @@
       data[i * 4 + 1] = CAM_Z + Math.cos(a) * r;
       data[i * 4 + 2] = rnd();
       data[i * 4 + 3] = rnd();
+      far[i] = r;
     }
-    return data;
+    return {data, far};
+  }
+  /* Las primeras count briznas (las que pinta un escalón), ordenadas de cerca a lejos. Así las
+     de delante se pintan antes y la tarjeta descarta sin colorear casi todo lo que queda tapado
+     detrás: pintadas al azar, la mitad del trabajo de la hierba era colorear briznas que luego
+     no se veían. La imagen es la misma (quién tapa a quién lo decide la profundidad, no el
+     orden). Se ordenan por cajones de distancia, que es inmediato. */
+  function nearFirst(field, count){
+    const SLOTS = 4096, heads = new Int32Array(SLOTS + 1), out = new Float32Array(count * 4);
+    const slot = (i) => Math.min(SLOTS - 1, Math.floor((field.far[i] - 0.7) / 27 * SLOTS));
+    for(let i = 0; i < count; i++) heads[slot(i) + 1]++;
+    for(let k = 0; k < SLOTS; k++) heads[k + 1] += heads[k];
+    for(let i = 0; i < count; i++) out.set(field.data.subarray(i * 4, i * 4 + 4), heads[slot(i)]++ * 4);
+    return out;
   }
 
   /* Arbolado lejano: entre 30 y 95 unidades de la cámara, a manchas (bosquetes) y ordenado
@@ -1713,22 +1732,10 @@
      - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas.
      - base: altura del suelo bajo el ordenador (uBase). */
   function layoutOf(screen, focusEl, w, h){
-    const offset = (el) => {
-      let x = 0, y = 0;
-      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
-      return {x, y};
-    };
-    let fx = w / 2, fy = h * 0.6, left = w * 0.2;
-    if(focusEl && focusEl.offsetParent){
-      const o = offset(focusEl);
-      /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
-         su fondo, y centrado se arrimaba demasiado al formulario. */
-      fx = o.x + focusEl.offsetWidth * 0.575;
-      fy = o.y + focusEl.offsetHeight * 0.585;
-    }
-    const card = focusEl && focusEl.parentElement;
-    if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
-    return placeAt(w, h, fx, fy, Math.max(left * 0.36, h * 0.05), Math.min(Math.max(w / h * 0.8, 0.6), 1));
+    /* Dónde va el ordenador y dónde empieza la tarjeta: la cuenta es de src/boot.js, que la
+       necesita antes para colocar la imagen de espera. */
+    const at = POSTER.focus(screen, focusEl, w, h);
+    return placeAt(w, h, at.fx, at.fy, Math.max(at.left * 0.36, h * 0.05), Math.min(Math.max(w / h * 0.8, 0.6), 1));
   }
   function placeAt(w, h, fx, fy, tx, ts){
     /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
@@ -1742,28 +1749,14 @@
   }
 
   /* La imagen de espera (ver WAIT y POSTER), de fondo tras el lienzo y colocada con la misma
-     cuenta que la escena. Se pone nada más verse la pantalla de acceso, antes de tocar la
-     tarjeta gráfica, y se queda: es lo que se ve hasta que el lienzo pinta (entra sobre ella
-     con el fundido de auth.css, porque a la imagen le falta el revelado final) y lo que queda
-     si no hay WebGL o el lienzo se pierde. */
-  function backdrop(canvas, screen, focusEl){
-    const el = canvas.parentElement;
+     cuenta que la escena. La pone src/boot.js desde el primer fotograma; aquí se mantiene al
+     día (tamaño de ventana, tema, la tarjeta que aparece). Se queda puesta: es lo que se ve
+     hasta que el lienzo pinta (entra sobre ella con el fundido de auth.css, porque a la imagen
+     le falta el revelado final) y lo que queda si no hay WebGL o el lienzo se pierde. */
+  function backdrop(screen){
     const root = document.documentElement;
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    let done = '';
-    const paint = () => {
-      if(screen.hidden) return;
-      const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
-      const at = layoutOf(screen, focusEl, w, h), k = h / POSTER.h;
-      const theme = root.getAttribute('data-theme');
-      const now = [(theme ? theme === 'dark' : darkQuery.matches) ? POSTER.night : POSTER.dusk, Math.round(POSTER.w * k), Math.round(POSTER.h * k), Math.round(at.fx - POSTER.fx * k), Math.round(at.fy - (POSTER.h - POSTER.fy) * k)];
-      if(now.join() === done) return;
-      done = now.join();
-      el.style.backgroundImage = 'url("' + now[0] + '")';
-      el.style.backgroundRepeat = 'no-repeat';
-      el.style.backgroundSize = now[1] + 'px ' + now[2] + 'px';
-      el.style.backgroundPosition = now[3] + 'px ' + now[4] + 'px';
-    };
+    const paint = () => { POSTER.paint(); };
     paint();
     window.addEventListener('resize', paint);
     new MutationObserver(paint).observe(screen, {attributes:true, attributeFilter:['hidden']});
@@ -1776,14 +1769,16 @@
   function start(canvas, screen, focusEl){
     let done = false;
     const go = () => {
+      /* Hasta que la tarjeta se ve de verdad, no: con la pantalla enseñada a medias (auth-early)
+         basta la imagen de fondo, y arrancar antes retrasaba medio segundo el formulario. */
       if(done || screen.hidden || document.hidden) return;
       done = true;
       watch.disconnect();
       document.removeEventListener('visibilitychange', go);
-      /* Primero la imagen de espera, que no cuesta nada; lo demás, cuando ya se ha pintado. */
-      backdrop(canvas, screen, focusEl);
       requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0));
     };
+    /* La imagen de fondo sí, desde ya: no cuesta nada. */
+    backdrop(screen);
     const watch = new MutationObserver(go);
     watch.observe(screen, {attributes:true, attributeFilter:['hidden']});
     document.addEventListener('visibilitychange', go);
@@ -1833,7 +1828,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uFade', 'uScene'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -1902,16 +1897,18 @@
     /* La hierba. instBuf: la raíz y el azar de cada brizna. simBuf: lo que GRASS_SIM calcula
        para cada una en cada fotograma (cuatro vec4). */
     /* baseBuf: lo que GRASS_BASE calcula para cada una y no cambia (tres vec4). grown: para
-       cuántas briznas y con qué luz está calculado. */
+       cuántas briznas y con qué luz está calculado. field: todas las briznas, en su orden al
+       azar; sown: cuántas hay subidas a instBuf, ordenadas de cerca a lejos. */
     const instBuf = gl.createBuffer(), simBuf = gl.createBuffer(), baseBuf = gl.createBuffer();
     let grown = 0, grownNight = -1, grownDay = -1, grownWait = 0;
     /* Sembrar las briznas lleva unas décimas: se hace aparte, mientras se compila (plant). */
-    let planted = false;
+    let planted = false, field = null, sown = 0;
     function plant(){
       if(planted) return;
       planted = true;
       gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, blades(), gl.STATIC_DRAW);
+      field = blades();
+      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 16, gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, simBuf);
       gl.bufferData(gl.ARRAY_BUFFER, BLADES * 64, gl.DYNAMIC_COPY);
       gl.bindBuffer(gl.ARRAY_BUFFER, baseBuf);
@@ -1975,6 +1972,35 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     const ffNow = new Float32Array(FIREFLIES * 4), ffBefore = new Float32Array(FIREFLIES * 4);
     const petalNow = new Float32Array(PETALS * 4), petalAlpha = new Float32Array(PETALS);
+    /* Las luciérnagas llevadas a la pantalla, para pintarlas (ver OVER): con la misma cámara que
+       los sombreadores, dónde cae cada una (en alturas de pantalla desde el ordenador), su
+       escala y su distancia; y el tramo hasta donde estaba hace un instante (la estela), cuánto
+       se desenfoca por cercana y cuánto brilla. Hacerlo por píxel era repetir las mismas
+       cuentas dos millones de veces. */
+    const flyA = new Float32Array(FIREFLIES * 4), flyB = new Float32Array(FIREFLIES * 4);
+    function flies2d(){
+      const ro = [2.2, place.base + 0.62, -11.5];
+      let fw = [-ro[0], place.base + 1.02 - ro[1], -ro[2]];
+      const fl = Math.hypot(fw[0], fw[1], fw[2]);
+      fw = [fw[0] / fl, fw[1] / fl, fw[2] / fl];
+      const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
+      const up = [fw[1] * rt[2], fw[2] * rt[0] - fw[0] * rt[2], -fw[1] * rt[0]];
+      const dot = (a, x, y, z) => a[0] * x + a[1] * y + a[2] * z;
+      for(let i = 0; i < FIREFLIES; i++){
+        const o = i * 4;
+        const x = ffNow[o] - ro[0], y = ffNow[o + 1] - ro[1], z = ffNow[o + 2] - ro[2];
+        const zv = dot(fw, x, y, z);
+        if(!(zv > 0.25)){ flyA[o] = 0; flyA[o + 1] = 0; flyA[o + 2] = 0; flyA[o + 3] = 1e9; continue; }
+        const cx = 1.5 * dot(rt, x, y, z) / zv, cy = 1.5 * dot(up, x, y, z) / zv;
+        const px = ffBefore[o] - ro[0], py = ffBefore[o + 1] - ro[1], pz = ffBefore[o + 2] - ro[2];
+        const zp = Math.max(dot(fw, px, py, pz), 0.25);
+        flyA[o] = cx; flyA[o + 1] = cy; flyA[o + 2] = zv / 1.5; flyA[o + 3] = Math.hypot(x, y, z);
+        flyB[o] = 1.5 * dot(rt, px, py, pz) / zp - cx;
+        flyB[o + 1] = 1.5 * dot(up, px, py, pz) / zp - cy;
+        flyB[o + 2] = Math.min(Math.max((3 - zv) * 0.007, 0), 0.011);
+        flyB[o + 3] = ffNow[o + 3];
+      }
+    }
 
     /* Las imágenes de lo que no cambia (ver GEO y BAKE), del tamaño del lienzo. Van siempre en
        las unidades de textura 2 y 3. stale: hay que volver a calcularlas. */
@@ -2130,7 +2156,12 @@
       const cw = Math.max(2, Math.round(w * scale)), ch = Math.max(2, Math.round(h * scale));
       if(canvas.width !== cw || canvas.height !== ch){ canvas.width = cw; canvas.height = ch; stale = true; }
       gl.viewport(0, 0, cw, ch);
-      if(!place || place.w !== w || place.h !== h){ place = layout(w, h); stale = true; }
+      if(!place || relayout || place.w !== w || place.h !== h){
+        const at = layout(w, h);
+        /* Solo se rehace lo que no cambia si de verdad se ha movido algo. */
+        if(!place || at.w !== place.w || at.h !== place.h || at.fx !== place.fx || at.fy !== place.fy || at.tx !== place.tx){ place = at; stale = true; }
+        relayout = false;
+      }
     }
     function setLevel(l){
       level = Math.max(0, Math.min(LEVELS.length - 1, l | 0));
@@ -2141,7 +2172,9 @@
       resize();
     }
 
-    let place = null;
+    /* relayout: la tarjeta acaba de aparecer (la escena puede arrancar antes, con la pantalla
+       de acceso enseñada a medias, ver auth-early): hay que volver a mirar dónde ha quedado. */
+    let place = null, relayout = false;
     const layout = (w, h) => layoutOf(screen, focusEl, w, h);
 
     function uniforms(p, time){
@@ -2238,8 +2271,15 @@
         gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
       };
       if(passes & 4){
+        /* Las briznas de este escalón, de cerca a lejos (ver nearFirst). */
+        if(sown !== count){
+          gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, nearFirst(field, count));
+          gl.bindBuffer(gl.ARRAY_BUFFER, null);
+          sown = count; grown = 0;
+        }
         const relit = night !== grownNight || day !== grownDay;
-        if(fresh || count > grown || (relit && (!(night !== toNight || day !== toDay) || ++grownWait >= 4))){
+        if(fresh || count !== grown || (relit && (!(night !== toNight || day !== toDay) || ++grownWait >= 4))){
           uniforms(grassBase, time);
           store(grassBase, baseVao, baseBuf);
           grown = count; grownNight = night; grownDay = day; grownWait = 0;
@@ -2274,14 +2314,18 @@
       };
       if((passes & 1) && cache){
         /* Por partes, en la imagen intermedia: cada una pinta solo sus píxeles y los demás se
-           quedan como estaban. La carcasa y la pantalla del ordenador, siempre (son pocos
-           píxeles); el cielo y el suelo, por turnos, salvo que haya que rehacerlo todo. */
+           quedan como estaban. La pantalla del ordenador, siempre (es lo que se mira al
+           escribir); el cielo y el suelo, por turnos, y la carcasa, que apenas cambia (el
+           piloto, el reflejo de la pantalla), con el cielo; salvo que haya que rehacerlo todo. */
         gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
         gl.disable(gl.DEPTH_TEST);
-        paint(scenes[2]);
         paint(scenes[3]);
-        if(fresh || still){ paint(scenes[0]); paint(scenes[1]); }
-        else{ paint(scenes[turn]); turn = 1 - turn; }
+        if(fresh || still){ paint(scenes[0]); paint(scenes[1]); paint(scenes[2]); }
+        else{
+          paint(scenes[turn]);
+          if(turn === 0) paint(scenes[2]);
+          turn = 1 - turn;
+        }
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
       gl.enable(gl.DEPTH_TEST);
@@ -2319,6 +2363,9 @@
       uniforms(over, time);
       if(cache) gl.uniform1i(over.U.uGeo, 2);
       petals(time, canvas.width / canvas.height, petalNow, petalAlpha);
+      flies2d();
+      gl.uniform4fv(over.U.uFly, flyA);
+      gl.uniform4fv(over.U.uFlyB, flyB);
       gl.uniform4fv(over.U.uPetal, petalNow);
       gl.uniform1fv(over.U.uPetalA, petalAlpha);
       gl.bindVertexArray(fullVao);
@@ -2461,7 +2508,7 @@
        algo más deprisa que el número de píxeles. */
     function weight(i){
       const q = LEVELS[i], s = Math.min(1, q.side / Math.max(place.w, place.h));
-      return Math.pow(place.w * place.h * s * s, 1.35) / 268 + BLADES * q.part * (q.tall ? 1 : 0.84);
+      return Math.pow(place.w * place.h * s * s, 1.15) / 35 + BLADES * q.part * (q.tall ? 1 : 0.6);
     }
     /* Qué calidad aguanta este equipo. No se deduce del nombre de la tarjeta ni del número de
        núcleos (un portátil con gráfica integrada tiene ocho y dieciséis gigas): se mide, con la
@@ -2495,7 +2542,8 @@
         if(fluid && ms > room(l)){
           /* A 60 no llega aquí: ¿en uno más ligero, sin pasar del cuarto? Si no, a 30. */
           next = -1;
-          for(let j = 3; j > l; j--) if(fits(j)) next = j;
+          /* Aquí sin margen: la primera medida sale inflada y la ronda siguiente lo comprueba. */
+          for(let j = 3; j > l; j--) if(ms * weight(j) / weight(l) <= room(j)) next = j;
           if(next < 0){ fluid = false; next = l; }
         }
         if(!fluid && next === l && ms > room(l) && l < lowest){
@@ -2527,7 +2575,7 @@
     }
     function loop(now){
       raf = 0;
-      if(screen.hidden || document.hidden || measuring) return;
+      if(away(screen) || document.hidden || measuring) return;
       /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
       if(!live){
         loadPoster();
@@ -2582,7 +2630,7 @@
       if(!isStill()) raf = requestAnimationFrame(loop);
     }
     function wake(){
-      if(raf || measuring || screen.hidden || document.hidden) return;
+      if(raf || measuring || away(screen) || document.hidden) return;
       resize();
       /* Tras una pausa (pestaña oculta, escena quieta) el primer fotograma no cuenta como pesado. */
       last = 0;
@@ -2641,7 +2689,7 @@
     window.addEventListener('resize', () => { resize(); wake(); });
     document.addEventListener('visibilitychange', wake);
     /* La pantalla de acceso aparece y desaparece con el atributo hidden; el tema, con data-theme. */
-    new MutationObserver(wake).observe(screen, {attributes:true, attributeFilter:['hidden']});
+    new MutationObserver(() => { relayout = true; resize(); wake(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
     new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
     if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake);
     canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; mark = null; canvas.classList.remove('is-on'); });

@@ -235,11 +235,13 @@
 
     /* Ya hay sesión y se están cargando los datos: esqueleto de la página principal. */
     showAppSkeleton(){
+      document.documentElement.classList.remove('auth-early');
       document.documentElement.classList.add('skel-on');
       this.screen.hidden = true;
     }
 
     showLoadError(onRetry){
+      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       this.screen.hidden = false;
       this.panel.hidden = true;
@@ -261,6 +263,8 @@
     /* providers: lista de claves ('google', 'github', …, 'password').
        allowSignup: false oculta "Crear una cuenta". */
     showSignIn(providers, allowSignup){
+      /* El fondo ya se estaba viendo (src/boot.js); desde aquí manda el atributo hidden. */
+      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
@@ -307,6 +311,7 @@
     /* Cuenta de correo sin verificar. handlers: {check() → Promise<bool>,
        resend() → Promise<bool>, signOut()} */
     showVerify(email, handlers){
+      document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       document.body.classList.add('is-authing');
       this.screen.hidden = false;
@@ -385,7 +390,7 @@
     }
 
     hide(){
-      document.documentElement.classList.remove('auth-gate');
+      document.documentElement.classList.remove('auth-gate', 'auth-early');
       document.body.classList.remove('is-authing');
       this.screen.hidden = true;
       this.verifyRun = null;

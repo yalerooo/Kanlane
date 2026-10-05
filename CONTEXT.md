@@ -187,7 +187,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - **Convertir a cifrado total (PR11):** `enc` admite `conv` (solo `mode: 'pw'`); a un proyecto personal que ya existe solo se le añade `enc` si lleva `conv` y no tiene `github`; `encConverted` deja quitar `conv` sin tocar nada más; mientras hay `conv` no se cambia la clave; los equipos no nacen con `conv` ni se les añade `enc`.
   - Probadas con `tests/rules` (282 casos contra el emulador; ver §9). El usuario publica las reglas a mano; el 3-oct-2026 confirmó que ya están publicadas las del cifrado PR9 (modo gestionado; incluyen las del PR2 y todo lo de #74).
 - **Publicación en Cloudflare** (`docs/CLOUDFLARE.md`; `netlify.toml` y `docs/NETLIFY.md` se eliminaron):
-  - Build: `node scripts/build-public.js`; `wrangler.jsonc` publica `dist/` como recursos estáticos y el Worker atiende `/__/auth/*` y `/__/firebase/*`. Copia solo `index.html` (portada), `app/` (la aplicación), `robots.txt`, `manifest.webmanifest`, `sw.js`, `assets`, `src` y `plugins` (inyecta en `sw.js` la lista de archivos y la versión, ver «Aplicación instalable») y **genera `dist/_headers`**; esa constante (`ALL`, `PAGE`, `CSP` en el script) es la única fuente de las cabeceras. Las respuestas del Worker no llevan `_headers` (solo los ficheros estáticos).
+  - Build: `node scripts/build-public.js`; `wrangler.jsonc` publica `dist/` como recursos estáticos y el Worker atiende `/__/auth/*` y `/__/firebase/*`. Copia solo `index.html` (portada), `app/` (la aplicación), `robots.txt`, `manifest.webmanifest`, `sw.js`, `assets`, `src` y `plugins` (inyecta en `sw.js` la lista de archivos y la versión, ver «Aplicación instalable») , **une los scripts y las hojas de estilo de cada página** (`scripts/bundle.js`, ver abajo) y **genera `dist/_headers`**; esa constante (`ALL`, `PAGE`, `CSP` en el script) es la única fuente de las cabeceras. Las respuestas del Worker no llevan `_headers` (solo los ficheros estáticos).
+  - **Empaquetado al publicar (`scripts/bundle.js`, oct-2026):** en el repositorio cada página sigue cargando sus archivos sueltos (así se desarrolla y así los sirve `scripts/dev.js`); en `dist/` cada grupo de `<script src>` o `<link rel="stylesheet">` seguidos se sustituye por uno solo en `dist/assets/bundle/<resumen>.js|.css` (se pegan en orden, sin minificar y sin dependencias). La app pasa de 105 scripts y 29 hojas a 5 scripts y 1 hoja. Un comentario con **`[paquete aparte]`** entre dos etiquetas corta el grupo: en `app/index.html` hay dos, para que `auth-early.js` (enseña el formulario) no espere a la escena y para que `i18n.js` vaya en un paquete pequeño delante del grande. Los nombres llevan el resumen del contenido y se sirven con caché de un año (`_headers` y `firebase.json`). Los archivos sueltos que ya no carga ninguna página se quitan de `dist/` (el service worker guardaba todo). El build falla si un script de un grupo tiene `'use strict'` fuera de una función o usa `document.currentScript`. **Al añadir un script a una página no hay que hacer nada**: entra solo en su paquete. Pruebas: `tests/build/bundle.test.js`. Las pruebas de navegador (`tests/e2e`) usan los archivos sueltos, no `dist/`.
   - Cabeceras de seguridad (`_headers`):
     - `X-Frame-Options: DENY`, HSTS, `nosniff` y `Permissions-Policy`.
     - **CSP estricta**: sin scripts en línea; `script-src` solo el propio dominio más gstatic y apis.google; las conexiones de App Check permiten los dominios de reCAPTCHA necesarios.
@@ -583,7 +584,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - Los campos (input y textarea) solo traducen sus atributos, nunca su valor.
 - **`translate="no"`** marca los datos del usuario, que nunca se traducen.
 - **API:** `Workhub.t(texto, {params})`, `Workhub.i18n.{lang, locale, setLang, missing()}`.
-- **Diccionario:** `src/i18n/en.js`.
+- **Diccionario:** `src/i18n/en.js`. **Solo se descarga si el idioma no es español** (son 115 KB): no está en `app/index.html`; lo pide `i18n.js` al cargarse (`boot.js` adelanta la descarga con un `preload`) y `main.js` espera a `Workhub.i18n.ready` antes de arrancar. Al cambiar a inglés en la pantalla de acceso se baja en ese momento (`setLang` devuelve una promesa). Un script que llame a `Workhub.t()` al cargarse, fuera de una función, no tendría aún el diccionario.
 - **Idioma inicial:** el del navegador (si es español, español; si no, inglés).
 - **Guardado:** en `localStorage['workhub_lang']` y en la cuenta (campo `lang` de settings). Cambiarlo recarga la app.
 - **Selectores:** en Ajustes (`#langSegment`) y en la pantalla de login (`#authLang`).
@@ -591,7 +592,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Para añadir un idioma:**
   1. Crea `src/i18n/xx.js` con `Workhub.i18n.add('xx', {...}, [...])`.
   2. Añádelo a `LANGS` en `i18n.js`.
-  3. Pon su `<script>` en `index.html`.
+  3. No hace falta ponerlo en la página: se pide solo por su código (`src/i18n/xx.js`).
   4. Añade un botón en el selector de Ajustes.
 - **Nota:** los textos con datos se traducen con claves con marcadores (`Workhub.t('hace {n} min', {n})` necesita esa clave exacta en `en.js`) o con patrones regex al final de `en.js`. En `en.js` las barras invertidas de los patrones deben escaparse bien al generarlos con scripts.
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).

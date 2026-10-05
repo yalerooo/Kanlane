@@ -1,6 +1,8 @@
 /* Prepara dist/: la carpeta que publica Cloudflare (y Firebase Hosting).
    Copia SOLO lo que forma la app (lista blanca), para que nunca se publiquen
    por error datos o archivos privados de la carpeta (data-backup.json, etc.).
+   Los scripts y las hojas de estilo de cada página se unen en unos pocos archivos
+   (scripts/bundle.js): la app pasa de más de cien peticiones a un puñado.
    Además genera dist/_headers con las cabeceras de seguridad: es la ÚNICA
    fuente de la CSP y del resto de cabeceras (guía: docs/CLOUDFLARE.md).
    Cloudflare ejecuta este script en cada publicación (Build command:
@@ -9,6 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const {pageDirs, buildSitemap} = require('./site-pages');
+const {bundle, DIR: BUNDLE_DIR} = require('./bundle');
 
 /* KANLANE_ROOT solo lo usan las pruebas (tests/e2e/sitemap-check.js) para construir una copia. */
 const root = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..');
@@ -86,8 +89,11 @@ function headersFile(){
   const block = (route, values) => route + '\n' + Object.keys(values).map((k) => '  ' + k + ': ' + values[k]).join('\n') + '\n';
   /* El service worker nunca se guarda en caché: así una versión nueva se detecta al momento. */
   const SW = {'Cache-Control': 'no-cache'};
+  /* Los paquetes de scripts y estilos llevan el resumen de su contenido en el nombre: uno que
+     cambia tiene otro nombre, así que el navegador puede guardarlos sin volver a preguntar. */
+  const BUNDLES = {'Cache-Control': 'public, max-age=31536000, immutable'};
   /* Una entrada por página de captación o idioma, detectadas de las carpetas (PAGES). */
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].concat(PAGES.map((p) => block('/' + p + '/*', PAGE)), [block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW)]).join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].concat(PAGES.map((p) => block('/' + p + '/*', PAGE)), [block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW), block('/' + BUNDLE_DIR + '/*', BUNDLES)]).join('\n');
 }
 
 /* ---------- dist/ ---------- */
@@ -99,6 +105,17 @@ for(const item of INCLUDE){
   fs.cpSync(path.join(root, item), path.join(out, item), {recursive:true});
 }
 fs.writeFileSync(path.join(out, '_headers'), headersFile());
+
+/* Un archivo por grupo de scripts o de hojas de estilo. Los plugins no se tocan: cada uno es
+   una página aparte que se carga en su propio marco. Si algo no se puede unir, el build falla. */
+let packed;
+try{
+  packed = bundle(out, ['plugins']);
+}catch(e){
+  console.error('✖ ' + e.message);
+  process.exit(1);
+}
+console.log('paquetes: ' + packed.bundles.length + ' archivos en ' + BUNDLE_DIR + '/ para ' + packed.pages + ' páginas (sustituyen a ' + packed.removed.length + ' sueltos)');
 
 /* sitemap.xml se genera aquí (no hay copia manual): URL y alternativas de idioma salen del
    canonical y los hreflang de cada página. Si algo no cuadra, el build falla. */

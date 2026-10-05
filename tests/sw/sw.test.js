@@ -52,8 +52,9 @@ const fire = async (type, extra) => {
 const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALLO ') + m); if(!c) process.exitCode = 1; };
 const req = (url, o) => Object.assign(new Request(url), {}, o);
 
-/* El build copia src/ entero y mete en FILES todo lo que hay en dist/: cualquier script que cargue
-   app/index.html se precachea si existe. Se comprueba que existen (incluidos los del cifrado). */
+/* El build copia src/ entero, une los scripts de cada página (scripts/bundle.js) y mete en FILES
+   todo lo que queda en dist/: cualquier script que cargue app/index.html se precachea, suelto o
+   dentro de un paquete, si existe. Se comprueba que existen (incluidos los del cifrado). */
 const repo = path.join(__dirname, '..', '..');
 const appScripts = [...fs.readFileSync(path.join(repo, 'app', 'index.html'), 'utf8').matchAll(/<script src="\.\.\/(src\/[^"]+)"/g)].map((m) => m[1]);
 ok(/const INCLUDE = [^;]*'src'/.test(fs.readFileSync(path.join(repo, 'scripts', 'build-public.js'), 'utf8')) &&

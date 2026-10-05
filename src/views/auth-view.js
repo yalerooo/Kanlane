@@ -82,12 +82,10 @@
         const b = ev.target.closest('button[data-lang-choice]');
         if(!b) return;
         const code = b.getAttribute('data-lang-choice');
-        if(code === Workhub.i18n.lang) return;
         /* Con el formulario a la vista el idioma cambia en vivo, sin recargar (la recarga cortaba
            la escena y hacía parpadear la página). En los demás estados, como siempre. */
         if(this.panel.hidden || this.busy){ Workhub.i18n.setLang(code); return; }
-        Workhub.i18n.setLang(code, {live:true});
-        this.relabel();
+        Workhub.i18n.setLang(code, {live:true}).then((changed) => { if(changed) this.relabel(); });
       });
       $('authLang').querySelectorAll('button').forEach((b) => {
         b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === Workhub.i18n.lang ? 'true' : 'false');

@@ -1,6 +1,7 @@
 /* Paisaje en 3D de la pantalla de acceso. Cambia con la estación del año (SEASON, más abajo):
    lo que sigue describe la primavera; en verano el árbol es verde, en otoño es rojizo, la
-   hierba amarillea y caen hojas, y en invierno hay nieve en vez de hierba y nieva.
+   hierba amarillea y caen hojas, y en invierno hay nieve en vez de hierba, nieva (FLAKES_VERT)
+   y el cursor deja su surco en la nieve (uSnow).
    Una escena pintada en tiempo real con WebGL 2, sin librerías: una colina de hierba mecida
    por el viento, cielo con nubes, un cerezo y, en lo alto, un monitor de tubo antiguo con un
    tablero en la pantalla. Atardecer en tema claro y noche en oscuro. La cámara está fija: lo
@@ -15,7 +16,9 @@
       cientos de miles, dibujadas de una vez (instancias). La profundidad de la pasada 1 decide
       qué briznas quedan delante o detrás del ordenador y del tronco. Lo que es igual para toda
       la brizna se calcula antes, una vez por brizna (GRASS_SIM, transform feedback).
-   4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas.
+   En primavera, entre el arbolado y la hierba, las flores (FLOWERS_VERT / FLOWERS_FRAG).
+   4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas. En invierno, además, la
+      nevada: miles de puntos (FLAKES_VERT / FLAKES_FRAG).
    COMMON son las funciones que comparten (ruido, terreno, ordenador, cielo...).
 
    El ordenador se coloca siempre en el centro del panel de cristal de la tarjeta de acceso
@@ -55,12 +58,12 @@
     'uniform float uDawn;',
     /* El cursor sobre la escena: posición en píxeles del lienzo y fuerza (0 si no está). */
     'uniform vec3 uMouse;',
-    /* Invierno: por dónde ha pasado el cursor, para el surco que deja en la nieve. Puntos en */
-    /* píxeles del lienzo, del más viejo al más nuevo; z, cuánto queda de la huella (se va */
-    /* tapando sola), en negativo si ahí empieza un trazo nuevo. Los lleva el JS (trail). */
+    /* Invierno: el relieve que el cursor va dejando en la nieve. Una imagen de alturas que
+       cubre la pantalla (la cámara no se mueve, así que cada casilla es siempre el mismo trozo
+       de suelo): 0 la nieve intacta, hasta -1 lo hundido y por encima de 0 la que se amontona
+       a los lados. La lleva el JS (stamp), que es quien hunde las casillas. */
     '#if SEASON == 3',
-    'const int TRAIL_N = 24;',
-    'uniform vec3 uTrail[24];',
+    'uniform sampler2D uSnow;',
     '#endif',
     /* El formulario, para la pantalla del ordenador: caracteres escritos, cuánto se ve el */
     /* cuadro de acceso, «entrando…» y el resultado (hacia 1, acceso correcto; hacia -1, error). */
@@ -98,6 +101,12 @@
     /* Un color según el momento: hora dorada, pleno día o noche. */
     'vec3 pal(vec3 gold, vec3 noon, vec3 night){',
     '  gold = mix(gold, gold * vec3(.94, .93, 1.17), uDawn);',
+    /* Invierno: el atardecer no arde. La luz es más fría y más pálida: cada color de la hora */
+    /* dorada se apaga hacia un gris azulado de su misma claridad (el cielo lleva además sus */
+    /* propios tonos, ver skyBase). */
+    '#if SEASON == 3',
+    '  gold = mix(gold, vec3(dot(gold, vec3(.30, .59, .11))) * vec3(.94, 1., 1.14), .42);',
+    '#endif',
     '  return mix(mix(gold, noon, uDay), night, uNight);',
     '}',
     /* La hierba de cada estación: más seca y dorada en verano, ocre en otoño. En invierno */
@@ -113,6 +122,16 @@
     '}',
     '#if SEASON == 3',
     'const float GRASSY = 0.;',
+    /* El relieve fino de la nieve, que el terreno no tiene: ventisqueros anchos, las ondas que
+       deja el viento (alargadas, de cresta afilada) y, cerca (fine), el grano. Solo se usa su
+       pendiente, para inclinar la normal: con el sol bajo es lo que hace que parezca nieve y
+       no una sábana. */
+    'float snowRelief(vec2 p, float fine){',
+    '  float h = .10 * fbm3(p * .55 + 7.);',
+    '  h += .022 * (1. - abs(2. * noise(p * vec2(1.1, 3.4) + 3.) - 1.));',
+    '  h += fine * (.006 * noise(p * vec2(7., 15.)) + .0013 * noise(p * 46.));',
+    '  return h;',
+    '}',
     '#else',
     'const float GRASSY = 1.;',
     '#endif',
@@ -147,6 +166,18 @@
     '  h += (.75 * fbm3(p * .30 + 4.) + .16 * noise(p * 1.4)) * smoothstep(1.5, 22., r2);',
     '  h += smoothstep(8., 60., p.y) * 4.2 * fbm3(p * .05 + 3.1);',
     '  h -= smoothstep(2., -9., p.y) * 1.1;',
+    /* Invierno: el ordenador está medio metido en la nieve. No baja él: sube la nieve a su
+       alrededor, un montón irregular contra el pie, más alto por detrás y hacia un lado (de
+       donde sopla), que le tapa el plato y parte del zócalo. Al ser terreno, lleva la misma
+       luz y las mismas sombras que el resto de la nieve, y el cursor también lo pisa. En las
+       medidas del ordenador. OJO: -.46 y 1.22 repiten YAW y CS, que se declaran más abajo. */
+    '#if SEASON == 3',
+    '  {',
+    '    vec2 q = rot(-.46) * p / 1.22;',
+    '    vec2 c = (q - vec2(-.10, -.25)) * vec2(.80, 1.);',
+    '    h += 1.22 * (.17 * exp(-dot(q, q) / 1.4) + .24 * exp(-dot(c, c) / .85) * (.78 + .5 * noise(q * 2.6 + 1.)));',
+    '  }',
+    '#endif',
     /* La hondonada del lago, al fondo a la derecha. */
     '  vec2 dl = (p - vec2(9., 27.)) * vec2(.75, 1.);',
     '  h -= 2.6 * exp(-dot(dl, dl) / 110.);',
@@ -204,6 +235,13 @@
     '  vec3 c = q - vec3(id * cell + (hash(vec2(id, 3.)) - .5) * .05, .345, -.70);',
     '  float t = clamp(-c.y / len, 0., 1.);',
     '  return (length(vec3(c.x, c.y + t * len, c.z)) - mix(.028, .003, t)) * .75;',
+    '}',
+    /* Escarcha en el cristal: entra desde los bordes y las esquinas, a vetas, y deja libre el
+       centro, que es donde se lee. su: el punto del cristal, de -1 a 1. */
+    'vec3 frosted(vec3 col, vec2 su){',
+    '  float f = max(abs(su.x), abs(su.y)) + length(max(abs(su) - .55, 0.)) * .9 + (fbm3(su * 4. + 2.) - .5) * .55;',
+    '  f = smoothstep(.80, 1.12, f) * (.55 + .45 * noise(su * vec2(38., 46.)));',
+    '  return mix(col, vec3(.74, .84, .98) * mix(.95, .42, uNight), f * mix(.60, .40, uNight));',
     '}',
     '#endif',
     'float computer(vec3 q){',
@@ -391,12 +429,44 @@
     /* Cuánto se mira hacia el sol, en horizontal: de ese lado el cielo arde; del otro, se enfría. */
     '  float sunny = max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.);',
     '  sunny *= sunny;',
-    '  vec3 day = mix(vec3(.84, .40, .34), vec3(1., .70, .30), sunny);',
-    '  day = mix(day, mix(vec3(.72, .27, .32), vec3(.98, .42, .24), sunny), smoothstep(0., .15, y));',
-    '  day = mix(day, mix(vec3(.42, .22, .42), vec3(.62, .26, .36), sunny), smoothstep(.10, .38, y));',
-    '  day = mix(day, vec3(.15, .18, .40), smoothstep(.28, .85, y));',
-    '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
-    '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
+    /* Cada estación tiene su cielo. De abajo arriba, cuatro franjas: el horizonte, lo que hay
+       justo encima, el cielo medio y lo alto; las tres primeras, con un tono del lado del sol
+       y otro del lado contrario. Y lo mismo, más corto, para la noche.
+       Primavera: tarde limpia y suave, de rosas y melocotón que suben a un azul claro; noche
+       azul, algo verdosa en el horizonte. Verano: hora dorada, amarillos y naranjas encendidos
+       bajo un azul hondo y despejado; noche tibia, con el horizonte aún caliente. Otoño: el
+       atardecer que arde, cobre y granate hasta el morado; noche más parda y cerrada.
+       Invierno: tarde fría, crema y melocotón pálido hacia el sol, la franja rosa del otro
+       lado, lila y azul claro arriba; noche limpia y helada, la más azul. */
+    '#if SEASON == 0',
+    '  vec3 day = mix(vec3(.98, .64, .62), vec3(1.08, .84, .56), sunny);',
+    '  day = mix(day, mix(vec3(.92, .54, .66), vec3(1.04, .64, .52), sunny), smoothstep(0., .14, y));',
+    '  day = mix(day, mix(vec3(.54, .50, .84), vec3(.76, .54, .74), sunny), smoothstep(.09, .36, y));',
+    '  day = mix(day, vec3(.19, .34, .72), smoothstep(.26, .85, y));',
+    '  vec3 night = mix(mix(vec3(.13, .18, .36), vec3(.21, .28, .48), sunny), vec3(.05, .08, .22), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.010, .018, .065), smoothstep(.25, .9, y));',
+    '#elif SEASON == 1',
+    '  vec3 day = mix(vec3(.96, .56, .30), vec3(1.14, .88, .38), sunny);',
+    '  day = mix(day, mix(vec3(.90, .44, .30), vec3(1.08, .62, .24), sunny), smoothstep(0., .15, y));',
+    '  day = mix(day, mix(vec3(.38, .36, .64), vec3(.72, .42, .42), sunny), smoothstep(.10, .38, y));',
+    '  day = mix(day, vec3(.09, .23, .58), smoothstep(.28, .85, y));',
+    '  vec3 night = mix(mix(vec3(.20, .16, .34), vec3(.36, .25, .40), sunny), vec3(.07, .07, .22), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.014, .016, .07), smoothstep(.25, .9, y));',
+    '#elif SEASON == 2',
+    '  vec3 day = mix(vec3(.86, .41, .30), vec3(1.05, .72, .26), sunny);',
+    '  day = mix(day, mix(vec3(.74, .27, .27), vec3(1., .44, .20), sunny), smoothstep(0., .15, y));',
+    '  day = mix(day, mix(vec3(.44, .20, .37), vec3(.66, .26, .31), sunny), smoothstep(.10, .38, y));',
+    '  day = mix(day, vec3(.16, .16, .36), smoothstep(.28, .85, y));',
+    '  vec3 night = mix(mix(vec3(.18, .14, .30), vec3(.27, .21, .38), sunny), vec3(.07, .06, .19), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.014, .014, .055), smoothstep(.25, .9, y));',
+    '#else',
+    '  vec3 day = mix(vec3(.96, .70, .70), vec3(1.16, .92, .66), sunny);',
+    '  day = mix(day, mix(vec3(.80, .62, .78), vec3(1.02, .76, .70), sunny), smoothstep(0., .13, y));',
+    '  day = mix(day, mix(vec3(.54, .56, .84), vec3(.70, .62, .82), sunny), smoothstep(.08, .34, y));',
+    '  day = mix(day, vec3(.26, .38, .70), smoothstep(.24, .85, y));',
+    '  vec3 night = mix(mix(vec3(.11, .17, .37), vec3(.17, .25, .50), sunny), vec3(.04, .07, .23), smoothstep(0., .3, y));',
+    '  night = mix(night, vec3(.008, .014, .062), smoothstep(.25, .9, y));',
+    '#endif',
     /* Pleno día: azul hondo arriba y claro, casi blanco, en el horizonte del lado del sol. */
     '  vec3 noon = mix(vec3(.60, .76, .94), vec3(.86, .90, .95), sunny);',
     '  noon = mix(noon, vec3(.30, .52, .88), smoothstep(0., .34, y));',
@@ -439,24 +509,37 @@
     '  float perp = length(rel + sdir * along);',
     '  float streak = exp(-perp * perp * 120000.) * smoothstep(.10, 0., along) * step(0., along);',
     '  stars += vec3(.92, .96, 1.) * streak * smoothstep(0., .03, sf) * (1. - smoothstep(.10, .20, sf)) * step(.45, hash(vec2(sid, 1.3))) * 1.6;',
+    /* Cuánta nube: desde qué densidad empiezan a verse los jirones altos y los bancos bajos
+       (cuanto más alto el número, menos nube). Verano, casi despejado; primavera, bancos
+       sueltos; otoño, cargado; invierno, el más cubierto. STARS: lo que lucen las estrellas
+       (más en las noches limpias de verano e invierno). */
+    '#if SEASON == 0',
+    'const vec2 CLOUDS = vec2(.53, .46); const float STARS = 1.;',
+    '#elif SEASON == 1',
+    'const vec2 CLOUDS = vec2(.52, .55); const float STARS = 1.3;',
+    '#elif SEASON == 2',
+    'const vec2 CLOUDS = vec2(.47, .40); const float STARS = .9;',
+    '#else',
+    'const vec2 CLOUDS = vec2(.46, .39); const float STARS = 1.2;',
+    '#endif',
     /* Nubes altas: jirones finos y alargados, encendidos por debajo. */
     '  float sunny = pow(max(dot(normalize(vec3(rd.x, 0., rd.z) + 1e-5), normalize(vec3(L.x, 0., L.z))), 0.), 2.);',
     '  vec2 c1 = rd.xz / (rd.y + .10);',
     '  float hi = fbm(vec2(c1.x * .34 + uTime * .013, c1.y * 1.25 + 4. + uTime * .003));',
-    '  float cirrus = smoothstep(.50, .78, hi) * smoothstep(.03, .22, rd.y) * .62;',
+    '  float cirrus = smoothstep(CLOUDS.x, CLOUDS.x + .28, hi) * smoothstep(.03, .22, rd.y) * .62;',
     '  vec3 hiCol = pal(mix(vec3(.66, .28, .36), vec3(1., .68, .40), sunny * .7 + hi * .3), mix(vec3(.80, .86, .95), vec3(1.), hi), mix(vec3(.07, .08, .18), vec3(.20, .23, .42), hi));',
     /* Nubes bajas: bancos con volumen; el borde que mira al sol se enciende. */
     '  vec2 c2 = rd.xz / (rd.y + .16) * 1.3 + vec2(uTime * .032, 0.);',
     /* Los bancos no solo pasan: se deshacen y se rehacen despacio. */
     '  c2 += .30 * (vec2(noise(c2 * .55 + vec2(0., uTime * .021)), noise(c2 * .55 + vec2(5.2, -uTime * .017))) - .5);',
     '  float dn = fbm(c2);',
-    '  float cl = smoothstep(.44, .74, dn) * smoothstep(0., .11, rd.y);',
+    '  float cl = smoothstep(CLOUDS.y, CLOUDS.y + .30, dn) * smoothstep(0., .11, rd.y);',
     '  float edge = clamp((dn - fbm(c2 + normalize(L.xz) * .32)) * 3. + .45, 0., 1.);',
     '  vec3 loCol = pal(mix(vec3(.25, .12, .22), vec3(1.05, .60, .34), edge), mix(vec3(.56, .63, .78), vec3(1.02, 1.01, .98), edge), mix(vec3(.04, .05, .12), vec3(.22, .25, .45), edge));',
     /* Cerca del sol, el filo de la nube se pone de oro. */
     '  loCol += vec3(1., .72, .36) * pow(s, 10.) * (1. - smoothstep(.55, .9, dn)) * .9 * (1. - uNight) * (1. - .8 * uDay);',
     '  float cover = max(cirrus, cl);',
-    '  col += stars * starry * (1. - cover);',
+    '  col += stars * starry * (1. - cover) * STARS;',
     '  col = mix(col, hiCol, cirrus);',
     '  col = mix(col, loCol, cl * .9);',
     '  return col;',
@@ -513,6 +596,17 @@
     '      if(t > 170.) break;',
     '    }',
     '  }',
+    /* Invierno: el montón de nieve del ordenador mira a la cámara, y ahí el último paso se */
+    /* mete en el terreno una distancia distinta en cada franja de píxeles (se veía a bandas */
+    /* con la luz de la pantalla): se afina el punto con unos pasos cortos de vuelta. */
+    '#if SEASON == 3',
+    '  if(tHit > 0. && tHit < 40.){',
+    '    for(int i = 0; i < 4; i++){',
+    '      vec3 p = ro + rd * tHit;',
+    '      tHit += (p.y - terrain(p.xz)) * .55;',
+    '    }',
+    '  }',
+    '#endif',
     /* Por debajo del horizonte siempre hay suelo. */
     '  if(tHit < 0. && rd.y < .012) tHit = 170.;',
     '  return tHit;',
@@ -872,6 +966,56 @@
     '    kk = mix(kFar, kk, near);',
     /* Luz: las raíces quedan a la sombra de las demás briznas; las puntas reciben el sol y */
     /* dejan pasar la luz cuando se miran a contraluz. */
+    /* Invierno: el relieve fino de la nieve (snowRelief), que se apaga con la distancia. */
+    '#if SEASON == 3',
+    '    {',
+    '      float fine = 1. - smoothstep(2., 12., tHit);',
+    '      float s0 = snowRelief(p.xz, fine);',
+    '      vec2 sg = vec2(snowRelief(p.xz + vec2(.04, 0.), fine) - s0, snowRelief(p.xz + vec2(0., .04), fine) - s0) / .04;',
+    '      n = normalize(n + vec3(-sg.x, 0., -sg.y) * (1. - smoothstep(5., 30., tHit)));',
+    '    }',
+    '#endif',
+    /* Invierno: la nieve se hunde por donde pasa el cursor. No es una mancha pintada: el
+       relieve está en uSnow y aquí solo se lee. De sus alturas sale la pendiente, que inclina
+       la normal antes de iluminar, así que la pared que mira al sol se enciende sola y la otra
+       se apaga; y mirando la altura hacia el sol se sabe si el borde tapa la luz (lee). Una
+       casilla es un trozo de pantalla: se lleva a medidas de la escena con la distancia de
+       este punto y con lo tumbado que se ve el suelo (fs, con tope: de verdad, a ras de suelo
+       el surco quedaría en un hilo), igual que hace snowAt() en el JS.
+       OJO: .24 y .075 repiten SNOW_R y lo hondo del surco. */
+    '#if SEASON == 3',
+    '    float pit = 0., lee = 0.;',
+    '    {',
+    '      vec2 tx = 1. / vec2(textureSize(uSnow, 0));',
+    '      vec2 suv = gl_FragCoord.xy / uRes;',
+    '      float h0 = texture(uSnow, suv).r;',
+    '      vec4 hs = vec4(texture(uSnow, suv + vec2(tx.x, 0.)).r, texture(uSnow, suv - vec2(tx.x, 0.)).r, texture(uSnow, suv + vec2(0., tx.y)).r, texture(uSnow, suv - vec2(0., tx.y)).r);',
+    '      if(abs(h0) + dot(abs(hs), vec4(1.)) > .002){',
+    '        float kpx = max(dot(p - ro, fw), .3) / (1.5 * uRes.y);',
+    '        float fs = 1. / clamp(-rd.y, .30, 1.);',
+    '        vec2 cell = tx * uRes * kpx * vec2(1., fs);',
+    '        vec2 g = vec2(hs.x - hs.y, hs.z - hs.w) * .075 / (2. * cell);',
+    /* La nieve no se rompe limpia: la pendiente cambia de un grumo a otro. */
+    '        float rough = noise(p.xz * 11.) * .6 + noise(p.xz * 31.) * .4;',
+    '        vec2 fwd = normalize(fw.xz);',
+    '        vec2 gw = (rt.xz * g.x + fwd * g.y) * (.65 + .7 * rough);',
+    '        n = normalize(n + vec3(-gw.x, 0., -gw.y) * .9);',
+    '        pit = clamp(-h0, 0., 1.);',
+    /* Hacia el sol, a tres pasos: si la nieve de allí queda por encima del rayo, da sombra. */
+    '        vec2 sun = vec2(dot(L.xz, rt.xz), dot(L.xz, fwd)) / max(length(L.xz), 1e-3);',
+    '        float rise = L.y / max(length(L.xz), 1e-3);',
+    '        float occ = 0.;',
+    '        for(int i = 1; i <= 3; i++){',
+    '          float s = .24 * .42 * float(i);',
+    '          float hh = texture(uSnow, suv + sun * vec2(1., 1. / fs) * s / (kpx * uRes)).r;',
+    '          occ = max(occ, ((hh - h0) * .075 - rise * s) / s);',
+    '        }',
+    '        lee = smoothstep(0., .22, occ);',
+    /* La nieve pisada es más densa: algo más oscura y azulada. */
+    '        alb *= mix(vec3(1.), vec3(.91, .94, .99), pit * (.7 + .6 * rough));',
+    '      }',
+    '    }',
+    '#endif',
     '    float ao = mix(.26, 1., smoothstep(0., .85, kk));',
     '    float dif = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
     '    float through = pow(max(dot(rd, L), 0.), 3.) * kk * GRASSY;',
@@ -893,12 +1037,32 @@
     '    sh *= contact;',
     '    ao *= .45 + .55 * contact;',
     '    sh = mix(sh, 1., uNight * .5);',
+    '#if SEASON == 3',
+    '    sh *= 1. - .85 * lee * mix(1., .45, uNight);',
+    '    ao *= 1. - .16 * pit;',
+    '#endif',
     '    gcol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * dif * 2.4 * ao * sh);',
     '    gcol += sunCol * vec3(.78, .62, .18) * through * 1.25 * sh * (.4 + .6 * streak);',
     /* Las puntas, al sol, brillan: un filo de luz en lo alto de cada brizna. */
     '    gcol += sunCol * vec3(.60, .66, .26) * pow(kk, 5.) * (.35 + .65 * b.z) * dif * .50 * sh * near * GRASSY;',
-    /* La nieve, en cambio, chispea donde le da el sol. */
-    '    gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .55 * near * (1. - GRASSY);',
+    /* La nieve, en cambio, chispea: cristales sueltos que se encienden y se apagan cada uno a
+       su ritmo (solo cerca: lejos serían más pequeños que un píxel), sobre un brillo fino y
+       quieto. Sus sombras son azules, que es el cielo lo que las alumbra; y a contraluz deja
+       pasar algo de sol. */
+    '#if SEASON == 3',
+    '    {',
+    '      vec2 cell = floor(p.xz * 90.);',
+    '      float gh = hash(cell);',
+    '      float tw = .5 + .5 * sin(uTime * (1.2 + 3. * hash(cell + 3.1)) + gh * 50.);',
+    '      gcol += sunCol * step(.965, gh) * tw * tw * (1. - smoothstep(3., 13., tHit)) * (dif * sh * 1.5 + .10);',
+    '      gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .30 * near;',
+    '      gcol = mix(gcol, gcol * vec3(.80, .93, 1.22), (1. - dif * sh) * .55 * (1. - uNight));',
+    '      gcol += alb * sunCol * pow(max(dot(rd, L), 0.), 5.) * .22 * sh;',
+    /* Con el tema claro la nieve tiraba a morado (luz rojiza sobre blanco azulado): se lleva */
+    /* hacia un blanco frío y se aclara un poco. */
+    '      gcol = mix(gcol, vec3(dot(gcol, vec3(.30, .59, .11))) * vec3(.95, 1., 1.10), .42 * (1. - uNight)) * mix(1.10, 1., uNight);',
+    '    }',
+    '#endif',
     /* Luz rasante en las crestas de las lomas. */
     '    gcol += alb * sunCol * pow(clamp(1. - n.y, 0., 1.), .7) * max(dot(n, L), 0.) * 2.2 * sh;',
     '    float gustWave = smoothstep(.55, 1., sin(p.x * .55 + p.z * .33 - uTime * .9) * .5 + .5) * (.5 + .5 * noise(p.xz * .7 + uTime * .1));',
@@ -918,60 +1082,12 @@
     '      }',
     '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
-    /* El cursor deja un surco en la nieve. No es una mancha pintada: se calcula el relieve */
-    /* (un canal de fondo redondeado y, a los lados, la nieve apartada en un reborde irregular) */
-    /* y con su pendiente se vuelve a iluminar el punto igual que el resto del suelo, así que la */
-    /* pared que mira al sol se enciende y la otra queda en sombra. Se mide en pantalla, llevado */
-    /* a medidas de la escena a la distancia de este punto (como el cursor en la hierba). */
+    /* Invierno: el viento levanta nieve y la arrastra a ras de suelo, a rachas. */
     '#if SEASON == 3',
     '    {',
-    '      float kpx = max(dot(p - ro, fw), .3) / (1.5 * uRes.y);',
-    '      float dMin = 9.;',
-    '      vec2 toMid = vec2(0.);',
-    '      for(int i = 1; i < TRAIL_N; i++){',
-    '        vec3 A = uTrail[i - 1], B = uTrail[i];',
-    '        float s = min(abs(A.z), abs(B.z));',
-    '        if(s < .01) continue;',
-    '        vec2 a = (A.xy - gl_FragCoord.xy) * kpx, b = (B.xy - gl_FragCoord.xy) * kpx;',
-    '        if(B.z < 0.) a = b;',
-    '        a.y *= 2.4; b.y *= 2.4;',
-    '        vec2 ab = b - a;',
-    '        vec2 c = a + ab * clamp(-dot(a, ab) / max(dot(ab, ab), 1e-6), 0., 1.);',
-    /* Una huella que se está tapando cuenta como si quedara más lejos: se estrecha y se va. */
-    '        float d = length(c) / .20 + (1. - s) * 1.6;',
-    '        if(d < dMin){ dMin = d; toMid = c; }',
-    '      }',
-    '      if(dMin < 2.4){',
-    /* El borde no es una línea limpia: la nieve se rompe a trozos. */
-    '        float rough = noise(p.xz * 11.) * .6 + noise(p.xz * 31.) * .4;',
-    '        float d = dMin + (rough - .5) * .42;',
-    /* Altura del relieve a esta distancia del eje del surco y un poco más allá. */
-    '        float e = .06;',
-    /* Fondo plano y paredes cortas: como una mano o una bota arrastrada, no una cuneta. */
-    '        float h0 = -(1. - smoothstep(.50, 1., d)) + .11 * exp(-pow((d - 1.16) / .15, 2.)) * (.3 + 1.4 * rough);',
-    '        float d1 = d + e;',
-    '        float h1 = -(1. - smoothstep(.50, 1., d1)) + .11 * exp(-pow((d1 - 1.16) / .15, 2.)) * (.3 + 1.4 * rough);',
-    '        float slope = (h1 - h0) / e;',
-    '        vec2 w2 = normalize(rt.xz * toMid.x + normalize(fw.xz) * toMid.y + 1e-5);',
-    /* Hacia el eje la distancia baja: la normal se inclina según sube o baja el relieve. */
-    '        vec3 n2 = normalize(n + vec3(w2.x, 0., w2.y) * slope * .80);',
-    /* El sol está bajo y al fondo: la pared de ese lado tapa la luz y deja en sombra el fondo */
-    /* del surco, casi hasta la pared de este lado, que es la que se enciende. */
-    '        float side = d * sign(dot(w2, normalize(L.xz)));',
-    '        float lee = (1. - smoothstep(.48, .70, side)) * (1. - smoothstep(.88, 1.04, d));',
-    /* La pared de este lado, de cara al sol: un filo de luz en el labio del surco. */
-    '        float lip = smoothstep(.55, .82, side) * (1. - smoothstep(.98, 1.22, d));',
-    '        float trough = 1. - smoothstep(.50, 1., d);',
-    '        float dif2 = clamp((dot(n2, L) + .30) / 1.30, 0., 1.);',
-    '        float ao2 = ao * (1. - .14 * trough);',
-    /* La nieve pisada es más densa: algo más oscura y azulada. */
-    '        vec3 alb2 = alb * mix(vec3(1.), vec3(.93, .95, .99), trough + .5 * (rough - .5) * trough);',
-    '        float sh2 = sh * (1. - .88 * lee * mix(1., .45, uNight));',
-    '        vec3 relit = alb2 * (ambient * 1.5 * ao2 + skyLight * 2.2 * ao2 + sunCol * dif2 * 2.4 * ao2 * sh2);',
-    '        relit += alb2 * sunCol * pow(clamp(1. - n2.y, 0., 1.), .7) * max(dot(n2, L), 0.) * 1.5 * sh2 * mix(1., .25, uNight);',
-    '        relit += (alb * sunCol * lip * 1.05 * sh + alb * skyLight * lip * .6) * mix(1., .22, uNight);',
-    '        gcol = mix(gcol, relit, 1. - smoothstep(1.5, 2.0, d));',
-    '      }',
+    '      float gust = smoothstep(.45, .85, noise(p.xz * .16 + vec2(uTime * .11, 0.)));',
+    '      float veil = smoothstep(.50, .90, fbm3(p.xz * vec2(.45, 2.4) + vec2(uTime * 1.1, uTime * .2)));',
+    '      gcol += (ambient + skyLight * 1.6 + sunCol * .5 * sh) * veil * gust * .16 * (1. - smoothstep(10., 34., tHit));',
     '    }',
     '#endif',
     '    col = gcol;',
@@ -1025,6 +1141,9 @@
     '        b *= 1. - .20 * dot(su * .85, su * .85);',
     '        b *= 1. + .03 * sin(uTime * 7.);',
     '        col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '#if SEASON == 3',
+    '        col = frosted(col, su);',
+    '#endif',
     '        col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '        col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '      }else',
@@ -1078,8 +1197,12 @@
     '        float iceK = 0., snowK = 0.;',
     '#if SEASON == 3',
     '        iceK = 1. - smoothstep(.004, .012, icicles(q));',
-    '        snowK = (1. - smoothstep(.006, .016, snowCap(q))) * (1. - iceK);',
-    '        alb = mix(alb, vec3(1.25, 1.30, 1.40), snowK);',
+    '        snowK = 1. - smoothstep(.006, .016, snowCap(q));',
+    /* Y la que se posa en todo lo que mira hacia arriba: el alféizar de la pantalla, los */
+    /* mandos, el cable. A manchas, no una capa lisa. */
+    '        snowK = max(snowK, smoothstep(.50, .88, nl.y) * smoothstep(.30, .55, noise(q.xz * 11.) * .6 + noise(q.xz * 29. + q.y * 7.) * .4) * .9);',
+    '        snowK *= 1. - iceK;',
+    '        alb = mix(alb, mix(vec3(.92, 1.02, 1.26), vec3(1.30, 1.34, 1.42), noise(q.xz * 5. + 2.)) * mix(1., .50, uNight), snowK);',
     '        alb = mix(alb, vec3(.62, .80, 1.), iceK);',
     '#endif',
     '        float dif = max(dot(n, L), 0.);',
@@ -1088,6 +1211,16 @@
     '        float spec = pow(max(dot(n, hv), 0.), 48.) * .55 + pow(max(dot(n, hv), 0.), 8.) * .08;',
     '        float skyL = .5 + .5 * n.y;',
     '        col = alb * (ambient * .9 * ao + mix(vec3(.20, .27, .40), skyLight, uNight) * skyL * 1.7 * ao + sunCol * dif * 1.1 * shd);',
+    '#if SEASON == 3',
+    /* La nieve, con la luz del suelo (no la del plástico): que sea la misma nieve arriba y abajo. */
+    '        {',
+    '          float wrap = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
+    '          vec3 snowCol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * wrap * 2.4 * ao * shd);',
+    '          snowCol = mix(snowCol, snowCol * vec3(.80, .93, 1.22), (1. - wrap * shd) * .55 * (1. - uNight));',
+    '          snowCol = mix(snowCol, vec3(dot(snowCol, vec3(.30, .59, .11))) * vec3(.95, 1., 1.10), .42 * (1. - uNight)) * mix(1.10, 1., uNight);',
+    '          col = mix(col, snowCol, snowK);',
+    '        }',
+    '#endif',
     '        col += sunCol * spec * shd * (1. - snowK) * (1. + 2.5 * iceK);',
     /* El hielo deja pasar la luz y refleja el cielo. */
     '        col += (skyBase(refl, L) * (.25 + fres * .6) + sunCol * pow(max(dot(rd, L), 0.), 4.) * .5) * iceK;',
@@ -1249,6 +1382,9 @@
     '  b *= 1. - .20 * dot(su * .85, su * .85);',
     '  b *= 1. + .03 * sin(uTime * 7.);',
     '  vec3 col = b * (mix(1.02, 1.14, uNight) + .16 * max(uUI.w, 0.)) + vec3(.05, .03, 0.) * (1. - uNight);',
+    '#if SEASON == 3',
+    '  col = frosted(col, su);',
+    '#endif',
     '  col = mix(col, skyBase(refl, L), .05 + fres * .55);',
     '  col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '  float fog = 1. - exp(-sl * CS * mix(.017, .024, uNight));',
@@ -1655,15 +1791,12 @@
     /* Lejos del pétalo no hay nada que pintar. */
     '    if(dot(v, v) > .00004) continue;',
     '    vec2 dp = vec2(uPetal[i].z * v.x + uPetal[i].w * v.y, uPetal[i].z * v.y - uPetal[i].w * v.x);',
-    /* Según la estación: pétalos rosas, hojas secas (más grandes, cada una de su color) o */
-    /* copos de nieve (redondos). En verano no cae nada (lo apaga el JS, petals). */
+    /* Según la estación: pétalos rosas u hojas secas (más grandes, cada una de su color). En */
+    /* verano no cae nada y en invierno nieva aparte (FLAKES): lo apaga el JS (petals). */
     '#if SEASON == 2',
     '    float petal = 1. - smoothstep(.0028, .0056, length(dp * vec2(1., 1.6)));',
     '    vec3 pc = mix(vec3(1., .52, .14), vec3(.66, .20, .08), fract(float(i) * .37));',
     '    pc = mix(pc, pc * vec3(.50, .52, .95), uNight * .6);',
-    '#elif SEASON == 3',
-    '    float petal = 1. - smoothstep(.0010, .0034, length(dp));',
-    '    vec3 pc = mix(vec3(1., 1., 1.), vec3(.72, .78, 1.), uNight * .6);',
     '#else',
     '    float petal = 1. - smoothstep(.0020, .0042, length(dp * vec2(1., 1.9)));',
     '    vec3 pc = mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6);',
@@ -1782,6 +1915,192 @@
   /* Hasta dónde se corre la imagen de espera: la misma que en el sombreador (WARP_X1 en WAIT). */
   const WARP_X1 = -0.30;
   const TREE_URL = '../assets/img/' + ['sakura', 'tree-summer', 'tree-autumn', 'tree-winter'][SEASON] + '.webp';
+  /* ---------- Las flores (primavera) ----------
+     Flores sueltas entre la hierba. Como el arbolado lejano, cada una es un rectángulo que mira
+     a la cámara; lo que lleva pintado sale de una imagen (assets/img/flowers.webp, la hace
+     scripts/make-flowers.js de un modelo 3D): varias flores, una al lado de otra, cada una en
+     su casilla cuadrada con el pie del tallo abajo en el centro. Se pintan antes que la hierba
+     y escriben la profundidad, así que las briznas de delante las tapan y ellas tapan a las de
+     detrás. aInst: raíz (x, z), azar y cuál de las flores. uCells: cuántas trae la imagen. */
+  const FLOWERS_VERT = [
+    'layout(location = 0) in vec2 aQuad;',
+    'layout(location = 1) in vec4 aInst;',
+    'uniform float uCells;',
+    'out vec2 vUv;',
+    'out vec3 vLight;',
+    'out vec3 vExtra;',
+    'out vec4 vFog;',
+
+    'void main(){',
+    '  setupTree();',
+    '  float base = uBase;',
+    '  vec3 ta = vec3(0., base + 1.02, 0.);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 L = sunDir();',
+    '  vec2 r0 = aInst.xy;',
+    '  float rnd = aInst.z, kind = aInst.w;',
+    '  vec3 root = vec3(r0.x, terrain(r0) - .03, r0.y);',
+    /* Ni dentro del lago ni en su orilla. */
+    '  float h = (.50 + .34 * rnd) * step(WATER_Y + .10, root.y);',
+    '  vec3 side = normalize(vec3(rt.x, 0., rt.z));',
+    /* El viento las mece: el pie quieto y la flor, arriba, de un lado a otro; unas van del */
+    /* derecho y otras del revés, para que no sean todas la misma. */
+    '  float sway = sin(uTime * 1.3 + r0.x * .9 + r0.y * .6) * .055 + sin(uTime * 2.9 + r0.x * 2.3 + rnd * 9.) * .02;',
+    /* El cursor: las flores de su alrededor se apartan con la hierba, como si pasara una mano */
+    /* (la misma cuenta que en GRASS_SIM): se tumban hacia fuera y bajan un poco. */
+    '  vec2 bend = vec2(0.);',
+    '  if(uMouse.z > .002){',
+    '    vec3 v0 = root - ro;',
+    '    float z0 = max(dot(v0, fw), .3);',
+    '    vec2 f0 = uFocus + uRes.y * 1.5 * vec2(dot(v0, rt), dot(v0, up)) / z0;',
+    '    vec2 md = (f0 - uMouse.xy) / uRes.y * z0 / 1.5;',
+    '    md.y *= 2.4;',
+    '    float push = exp(-dot(md, md) / .62) * uMouse.z;',
+    '    bend = normalize(rt.xz * md.x + normalize(fw.xz) * md.y + 1e-4) * push * .85;',
+    '    h *= 1. - .30 * push;',
+    '  }',
+    '  float k = aQuad.y * aQuad.y;',
+    '  vec3 p = root + side * (aQuad.x * .5 + sway * k) * h + vec3(bend.x * k * h, aQuad.y * h, bend.y * k * h);',
+    '  float flip = step(.5, fract(rnd * 7.3)) * 2. - 1.;',
+    '  vUv = vec2((kind + .5 + aQuad.x * .5 * flip) / uCells, aQuad.y);',
+    /* La luz, una por flor: la del suelo, con las manchas de sombra de las nubes. */
+    '  float cloudSh = smoothstep(.34, .66, fbm3(r0 * .075 + vec2(uTime * .035, uTime * .014)));',
+    '  vec3 rd = normalize(root - ro);',
+    '  vLight = ambientColor() * 1.5 + skyLightColor() * 2.2 + sunColor() * (1.5 + 1.2 * pow(max(dot(rd, L), 0.), 3.)) * mix(.40, 1., cloudSh) * mix(1., .75, uNight);',
+    /* Luces de cerca, como en la hierba (GRASS_SIM): la pantalla del ordenador y, de noche, las
+       luciérnagas. Se miden desde la flor, que es lo que se ve, no desde el pie del tallo. */
+    '  vec3 head = root + vec3(0., h * .75, 0.);',
+    '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
+    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 tl = sc - head;',
+    '  float dl = length(tl);',
+    '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
+    '  vec3 extra = screenLight() * spill * mix(mix(1.6, .9, uDay), 7.0, uNight);',
+    '  if(uNight > .01){',
+    '    vec3 fl = vec3(0.);',
+    '    for(int i = 0; i < FF_N; i++){',
+    '      if(i >= uFFLit) break;',
+    '      vec3 d = uFF[i].xyz - head;',
+    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
+    '    }',
+    '    extra += fl * 1.5 * uNight;',
+    '  }',
+    '  vExtra = extra;',
+    /* Bruma: la misma que el suelo. */
+    '  float dist = length(root - ro);',
+    '  vFog = vec4(mix(fogColor(rd, L), skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), 1. - exp(-dist * mix(.017, .024, uNight)));',
+    '  vec3 v = p - ro;',
+    '  float zv = dot(v, fw);',
+    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '  vec2 ndc = frag / uRes * 2. - 1.;',
+    '  float zn = (Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * zv)) * 2. - 1.;',
+    '  gl_Position = vec4(ndc * zv, zn * zv, zv);',
+    '}'
+  ].join('\n');
+  const FLOWERS_FRAG = [
+    'uniform sampler2D uFlowers;',
+    'in vec2 vUv;',
+    'in vec3 vLight;',
+    'in vec3 vExtra;',
+    'in vec4 vFog;',
+    'out vec4 fragColor;',
+    'void main(){',
+    '  vec4 t = texture(uFlowers, vUv);',
+    '  if(t.a < .06) discard;',
+    '  vec3 alb = t.rgb * t.rgb;',
+    /* De noche el ojo casi no ve el color: sin esto, con la luz azul, salían todas de un azul */
+    /* encendido. Quedan pálidas, y las claras siguen siendo las que más se ven. */
+    '  alb = mix(alb, vec3(dot(sqrt(alb), vec3(.30, .59, .11))) * vec3(1.0, 1.12, 1.34), uNight * .72);',
+    '  vec3 light = mix(vLight, vec3(dot(vLight, vec3(.333))) * vec3(.80, .96, 1.04), uNight * .85);',
+    '  vec3 col = mix(alb * (light + vExtra), vFog.rgb, vFog.a);',
+    /* La transparencia del borde la reparte el suavizado del lienzo (ver draw). */
+    '  fragColor = vec4(post(col, gl_FragCoord.xy), t.a);',
+    '}'
+  ].join('\n');
+  /* Dónde va cada flor: a corros (cada corro, casi todo de un color), más cerca que lejos, en
+     el abanico que ve la cámara y sin pegarse a ella (de cerca la imagen se vería borrosa) ni
+     al ordenador. kinds: cuántas flores distintas trae la imagen. */
+  const FLOWERS = 720;
+  function flowerField(kinds){
+    let seed = 4121;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const patches = [];
+    for(let i = 0; i < 64; i++){
+      const r = 4.6 + 20 * Math.pow(rnd(), 1.5), a = CAM_YAW + (rnd() - 0.5) * 2.0;
+      patches.push([CAM_X + Math.sin(a) * r, CAM_Z + Math.cos(a) * r, 0.35 + 1.5 * rnd(), Math.floor(rnd() * kinds)]);
+    }
+    const data = new Float32Array(FLOWERS * 4);
+    for(let i = 0; i < FLOWERS; i++){
+      const g = patches[Math.floor(rnd() * patches.length)];
+      const a = rnd() * Math.PI * 2, d = g[2] * Math.sqrt(rnd());
+      let x = g[0] + Math.cos(a) * d, z = g[1] + Math.sin(a) * d;
+      /* La que cae pegada al ordenador se aparta. */
+      const near = Math.hypot(x, z);
+      if(near < 1.5){ x *= 1.5 / Math.max(near, 0.01); z *= 1.5 / Math.max(near, 0.01); }
+      data.set([x, z, rnd(), rnd() < 0.82 ? g[3] : Math.floor(rnd() * kinds)], i * 4);
+    }
+    return data;
+  }
+
+  /* ---------- La nevada (invierno) ----------
+     Es el «Snowfall WebGL Shader» de Boris Šehovac (codepen.io/bsehovac/pen/GPwXxq), traído a
+     esta escena: miles de puntos repartidos en una caja delante de una cámara propia (a 100
+     de distancia, 60 grados), que caen, dan la vuelta por arriba al salir por abajo, se mecen
+     en una hélice y se van con un viento que cambia de fuerza y de lado (lo lleva el JS, wind).
+     Los de cerca pasan grandes y desenfocados. Se suman a lo pintado, como allí. El copo de
+     aquel es una imagen: una mancha blanca redonda y difusa, que aquí se calcula (misma forma).
+     aPos: dónde nace. aSpeed: cuánto le empuja el viento, a qué velocidad cae y el ritmo del
+     vaivén. aLook: tamaño, anchura del vaivén y opacidad. uWorld: media caja (ancho, alto). */
+  const FLAKES_VERT = [
+    'layout(location = 0) in vec3 aPos;',
+    'layout(location = 1) in vec3 aSpeed;',
+    'layout(location = 2) in vec3 aLook;',
+    'uniform vec2 uRes;',
+    'uniform float uTime;',
+    'uniform float uWind;',
+    'uniform vec2 uWorld;',
+    'out float vAlpha;',
+    'void main(){',
+    '  float t = uTime / 5.;',
+    '  vec3 pos = aPos;',
+    '  pos.x = mod(pos.x + t + uWind * aSpeed.x, uWorld.x * 2.) - uWorld.x;',
+    '  pos.y = mod(pos.y - t * aSpeed.y * 100., uWorld.y * 2.) - uWorld.y;',
+    '  pos.x += sin(t * aSpeed.z) * aLook.y;',
+    '  pos.z += cos(t * aSpeed.z) * aLook.y;',
+    '  float w = 100. - pos.z;',
+    '  vAlpha = aLook.z;',
+    /* Los que quedan detrás de la cámara, fuera. Y un tope al tamaño: pegado a la cámara un */
+    /* copo llenaría la pantalla. */
+    '  gl_Position = w < 1. ? vec4(2., 2., 2., 1.) : vec4(pos.x * 1.7320508 * uRes.y / uRes.x, pos.y * 1.7320508, 0., w);',
+    '  gl_PointSize = min(aLook.x * uRes.y / 1000. / max(w, 1.) * 100., uRes.y * .22);',
+    '}'
+  ].join('\n');
+  const FLAKES_FRAG = [
+    'uniform float uNight;',
+    'in float vAlpha;',
+    'out vec4 fragColor;',
+    'void main(){',
+    '  vec2 v = gl_PointCoord - .5;',
+    '  float a = .757 * exp(-dot(v, v) / .061) * vAlpha;',
+    '  fragColor = vec4(mix(vec3(1.), vec3(.72, .78, 1.), uNight * .6) * a, 0.);',
+    '}'
+  ].join('\n');
+  /* Los copos para una ventana de esa proporción (asp: ancho entre alto), como en el original:
+     7000 por cada alto de ancho, en una caja de 110 de media altura. Nueve números por copo. */
+  function flakes(asp){
+    const count = Math.round(asp * 7000), data = new Float32Array(count * 9);
+    const width = asp * 110, height = 110, depth = 80;
+    for(let i = 0; i < count; i++){
+      data.set([
+        -width + Math.random() * width * 2, -height + Math.random() * height * 2, Math.random() * depth * 2,
+        1 + Math.random(), 1 + Math.random(), Math.random() * 10,
+        25 * Math.random(), Math.random() * 10, 0.1 + Math.random() * 0.2
+      ], i * 9);
+    }
+    return {data, count, world:[width, height]};
+  }
+
   /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
      lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo
      una parte (LEVELS): salen en orden al azar, así que cualquier tramo inicial cubre toda la
@@ -1911,19 +2230,17 @@
   const hash = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return v - Math.floor(v); };
   function petals(t, asp, out, alpha){
     const st = (a, b, v) => { const k = Math.min(Math.max((v - a) / (b - a), 0), 1); return k * k * (3 - 2 * k); };
-    const snow = SEASON === 3;
     for(let i = 0; i < PETALS; i++){
-      /* La nieve cae algo más deprisa, casi a plomo y por todo el ancho; los pétalos y las
-         hojas salen del lado del árbol y el viento se los lleva. */
-      const sp = (0.028 + hash(i, 2.2) * 0.030) * (snow ? 1.5 : 1);
+      /* Salen del lado del árbol y el viento se los lleva. */
+      const sp = 0.028 + hash(i, 2.2) * 0.030;
       const v = hash(i, 9.1) + t * sp, ph = v - Math.floor(v);
       const ang = t * (0.6 + hash(i, 5.5)) + i;
-      out[i * 4] = -0.05 + hash(i, 4.7) * (snow ? 1.0 : 0.30) * asp + ph * (0.55 + hash(i, 6.3) * 0.5) * asp * (snow ? 0.12 : 1) + 0.020 * Math.sin(t * 0.9 + i * 3.1);
+      out[i * 4] = -0.05 + hash(i, 4.7) * 0.30 * asp + ph * (0.55 + hash(i, 6.3) * 0.5) * asp + 0.020 * Math.sin(t * 0.9 + i * 3.1);
       out[i * 4 + 1] = 0.95 - ph * 1.05 + 0.020 * Math.cos(t * 1.3 + i * 1.7);
       out[i * 4 + 2] = Math.cos(ang);
       out[i * 4 + 3] = Math.sin(ang);
-      /* En verano no cae nada. */
-      alpha[i] = SEASON === 1 ? 0 : st(0, 0.08, ph) * (1 - st(0.85, 1, ph));
+      /* En verano no cae nada; en invierno nieva, que va aparte (FLAKES). */
+      alpha[i] = SEASON === 1 || SEASON === 3 ? 0 : st(0, 0.08, ph) * (1 - st(0.85, 1, ph));
     }
   }
 
@@ -2069,7 +2386,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uTrail', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uSnow', 'uWind', 'uWorld', 'uFlowers', 'uCells', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uGrow', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -2097,6 +2414,10 @@
       cache ? prepare(VERT, HEAD + COMMON + '\n' + GEO + '\n' + BAKE) : null,
       prepare(HEAD + COMMON + '\n' + GRASS_BASE, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oB0', 'oB1', 'oB2'])
     ].concat(cache ? [part(1), part(2), part(3), prepare(VERT, HEAD + COMMON + '\n' + SCREEN + '\n' + GLASS), prepare(VERT, HEAD + COMMON + '\n' + TREE_FN + '\n' + COMP)] : [part(0)]);
+    /* En invierno, al final de la lista, la nevada (ver FLAKES_VERT). */
+    if(SEASON === 3) queue.push(prepare(HEAD + FLAKES_VERT, HEAD + FLAKES_FRAG));
+    /* Y en primavera, las flores (ver FLOWERS_VERT). */
+    if(SEASON === 0) queue.push(prepare(HEAD + COMMON + '\n' + FLOWERS_VERT, HEAD + COMMON + '\n' + FLOWERS_FRAG));
     const compiled = () => !parallel || gl.isContextLost() || queue.every((p) => !p || gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
     setup(gl, canvas, screen, focusEl, cache, {
       /* Hay espera que cubrir: se compila en segundo plano. */
@@ -2124,9 +2445,11 @@
 
   function setup(gl, canvas, screen, focusEl, cache, kit){
     /* Los programas llegan cuando acaban de compilarse (live); hasta entonces, la imagen de espera. */
-    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], live = false;
+    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], fall = null, bloom = null, live = false;
     kit.linked((list) => {
       sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; grassBase = list[5]; scenes = list.slice(6);
+      if(SEASON === 3) fall = scenes.pop();
+      if(SEASON === 0) bloom = scenes.pop();
       plant();
       live = true;
       last = 0;
@@ -2320,6 +2643,43 @@
     };
     treeImg.src = TREE_URL;
 
+    /* Primavera: las flores. Su imagen va en la unidad de textura 7; hasta que llega no se
+       pintan. Cuántas flores trae lo dice su forma (casillas cuadradas en fila). */
+    const bloomVao = gl.createVertexArray(), bloomTex = gl.createTexture();
+    let bloomCells = 0;
+    if(SEASON === 0){
+      const img = new Image();
+      img.onload = () => {
+        bloomCells = Math.max(1, Math.round(img.width / img.height));
+        gl.activeTexture(gl.TEXTURE7);
+        gl.bindTexture(gl.TEXTURE_2D, bloomTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindVertexArray(bloomVao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, flowerField(bloomCells), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribDivisor(1, 1);
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        last = 0;
+        wake();
+      };
+      img.src = '../assets/img/flowers.webp';
+    }
+
     /* Lo que se escribe en el formulario (correo o nombre), como texto para la pantalla del
        ordenador: se pinta en un lienzo aparte y se sube como imagen cada vez que cambia. Si no
        cabe, se ve el final, como en un campo de verdad. La contraseña no pasa por aquí. */
@@ -2409,21 +2769,182 @@
 
     /* El cursor sobre la escena (en píxeles de pantalla) y con cuánta fuerza aparta la hierba. */
     const mouse = {x:0, y:0, tx:0, ty:0, s:0, inside:false, moved:0};
-    /* Invierno: el rastro del cursor en la nieve (uTrail). Un punto nuevo cada vez que el
-       cursor se aleja un poco del último; la huella se va tapando sola en TRAIL_LIFE segundos.
-       up: el cursor salió o dio un salto, y el punto siguiente empieza otro trazo. */
-    const TRAIL_N = 24, TRAIL_LIFE = 16;
-    const trail = [], trailNow = new Float32Array(TRAIL_N * 3);
-    let trailUp = true;
-    function track(){
-      if(SEASON !== 3 || still) return;
-      if(!mouse.inside){ trailUp = true; return; }
-      const last = trail[trail.length - 1];
-      const far = last ? Math.hypot(mouse.x - last.x, mouse.y - last.y) : Infinity;
-      if(far < place.h * 0.022) return;
-      trail.push({x:mouse.x, y:mouse.y, t:time, start:trailUp || far > place.h * 0.3});
-      trailUp = false;
-      if(trail.length > TRAIL_N) trail.shift();
+    /* Invierno: el viento de la nevada, como en el original (ver FLAKES_VERT): una fuerza que
+       tira hacia un objetivo, y el objetivo cambia de vez en cuando de valor y de lado. current
+       es lo que lleva empujado cada copo. Allí se contaba por fotograma (a 60); aquí, por
+       tiempo, para que nieve igual en un equipo lento. */
+    const wind = {current:0, force:0.1, target:0.1, min:0.1, max:0.25, easing:0.005};
+    const fallVao = gl.createVertexArray(), fallBuf = gl.createBuffer();
+    let fallAsp = 0, fallCount = 0, fallWorld = [0, 0];
+    /* Los copos de una ventana de esa proporción: se reparten otra vez si cambia. */
+    function sow(asp){
+      const f = flakes(asp);
+      fallAsp = asp; fallCount = f.count; fallWorld = f.world;
+      gl.bindVertexArray(fallVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, fallBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, f.data, gl.STATIC_DRAW);
+      for(let i = 0; i < 3; i++){
+        gl.enableVertexAttribArray(i);
+        gl.vertexAttribPointer(i, 3, gl.FLOAT, false, 36, i * 12);
+      }
+      gl.bindVertexArray(null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+
+    /* Invierno: la nieve del suelo se hunde al paso del cursor. La idea es la de «A man walking
+       on snow» de Den Dionigi (codepen.io/DenDionigi/pen/vEGwVYQ): el suelo es una malla y lo
+       que la pisa hunde los vértices que tiene cerca, y hundidos se quedan; cada pisada resta
+       altura con la misma curva que allí ((1 - d)^3 · sen(d·π), con d de 0 en el centro a 1 en
+       el borde: un hoyo de centro algo más alto), y pisada tras pisada sale el surco.
+       Aquí la malla es una rejilla de alturas que cubre la pantalla (snowMap; la cámara no se
+       mueve, así que cada casilla es siempre el mismo trozo de suelo) y quien pisa es el cursor.
+       El sombreador no la deforma: lee las alturas e ilumina con su pendiente (uSnow, en la
+       unidad de textura 6). Dos cosas de más: la nieve apartada se amontona en los bordes, y,
+       como está nevando, las huellas se van tapando despacio (SNOW_HEAL).
+       SNOW_SIDE: casillas en el lado largo. SNOW_R: radio de la pisada, en medidas de la escena. */
+    const SNOW_SIDE = 640, SNOW_R = 0.24, SNOW_HEAL = 90;
+    const snowTex = gl.createTexture();
+    let snowMap = null, snowW = 1, snowH = 1, snowFor = null;
+    /* snowLast: la última pisada (null: el cursor acaba de llegar). snowArea: el recuadro de
+       casillas tocadas, que es lo que hay que ir tapando. snowNew: lo que falta por subir. */
+    let snowLast = null, snowArea = null, snowNew = null, snowWait = 0;
+    const boxed = (box, i0, j0, i1, j1) => (box ? [Math.min(box[0], i0), Math.min(box[1], j0), Math.max(box[2], i1), Math.max(box[3], j1)] : [i0, j0, i1, j1]);
+    function snowUp(box){
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, snowTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      if(!box){
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, snowW, snowH, 0, gl.RED, gl.FLOAT, snowMap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      }else{
+        /* Solo el recuadro que ha cambiado, leído del sitio que le toca en la rejilla. */
+        gl.pixelStorei(gl.UNPACK_ROW_LENGTH, snowW);
+        gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, box[0]);
+        gl.pixelStorei(gl.UNPACK_SKIP_ROWS, box[1]);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, box[0], box[1], box[2] - box[0] + 1, box[3] - box[1] + 1, gl.RED, gl.FLOAT, snowMap);
+        gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+        gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+        gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+      }
+      gl.activeTexture(gl.TEXTURE0);
+    }
+    /* Hasta que haya ventana que medir, una casilla sin pisar. */
+    snowMap = new Float32Array(1);
+    if(SEASON === 3) snowUp(null);
+    /* La rejilla, a la medida de la ventana: nieve nueva cada vez que cambia. */
+    function snowFit(){
+      if(snowFor === place) return;
+      snowFor = place;
+      const k = SNOW_SIDE / Math.max(place.w, place.h);
+      snowW = Math.max(2, Math.round(place.w * k)); snowH = Math.max(2, Math.round(place.h * k));
+      snowMap = new Float32Array(snowW * snowH);
+      snowLast = snowArea = snowNew = null;
+      snowUp(null);
+    }
+    /* La cámara (la misma de los sombreadores): hacia dónde mira, su derecha y su arriba. */
+    const eyeFw = [-2.2 / Math.hypot(2.2, 0.4, 11.5), 0.4 / Math.hypot(2.2, 0.4, 11.5), 11.5 / Math.hypot(2.2, 0.4, 11.5)];
+    const eyeRt = [eyeFw[2] / Math.hypot(eyeFw[2], eyeFw[0]), 0, -eyeFw[0] / Math.hypot(eyeFw[2], eyeFw[0])];
+    const eyeUp = [eyeFw[1] * eyeRt[2], eyeFw[2] * eyeRt[0] - eyeFw[0] * eyeRt[2], -eyeFw[1] * eyeRt[0]];
+    /* El suelo que hay bajo un punto de la pantalla: k, cuánto mide allí un píxel en medidas
+       de la escena; fs, cuántas veces más tumbado que de frente se ve (lo mismo que calcula
+       FRAG al leer uSnow). null si ahí no hay suelo cerca (el cielo, las lomas del fondo). */
+    function snowAt(x, y){
+      const ux = (x - place.fx) / place.h, uy = (place.fy - y) / place.h;
+      let rx = eyeFw[0] * 1.5 + ux * eyeRt[0] + uy * eyeUp[0], ry = eyeFw[1] * 1.5 + ux * eyeRt[1] + uy * eyeUp[1], rz = eyeFw[2] * 1.5 + ux * eyeRt[2] + uy * eyeUp[2];
+      const rl = Math.hypot(rx, ry, rz);
+      rx /= rl; ry /= rl; rz /= rl;
+      if(ry > -0.03) return null;
+      const oy = place.base + 0.62;
+      let t = 0.3;
+      for(let i = 0; i < 70; i++){
+        const d = oy + ry * t - ground(CAM_X + rx * t, CAM_Z + rz * t, place.tree);
+        if(d < 0.015) break;
+        t += Math.max(d * 0.7, 0.06);
+        if(t > 40) return null;
+      }
+      return {k:Math.max(t * (rx * eyeFw[0] + ry * eyeFw[1] + rz * eyeFw[2]), 0.3) / (1.5 * place.h), fs:1 / Math.min(Math.max(-ry, 0.30), 1)};
+    }
+    /* Una pisada en ese punto de la pantalla (at: lo que dice snowAt de él). */
+    function stamp(x, y, at){
+      const cw = place.w / snowW, ch = place.h / snowH;
+      const rx = SNOW_R / at.k / cw, ry = Math.max(SNOW_R / (at.k * at.fs) / ch, 0.9);
+      /* Demasiado lejos: la pisada no llega a una casilla. */
+      if(rx < 1.3) return;
+      const gx = x / cw - 0.5, gy = (place.h - y) / ch - 0.5;
+      const i0 = Math.max(0, Math.floor(gx - rx * 1.4)), i1 = Math.min(snowW - 1, Math.ceil(gx + rx * 1.4));
+      const j0 = Math.max(0, Math.floor(gy - ry * 1.4)), j1 = Math.min(snowH - 1, Math.ceil(gy + ry * 1.4));
+      if(i0 > i1 || j0 > j1) return;
+      for(let j = j0; j <= j1; j++){
+        for(let i = i0; i <= i1; i++){
+          const d = Math.hypot((i - gx) / rx, (j - gy) / ry);
+          if(d >= 1.4) continue;
+          const o = j * snowW + i;
+          let h = snowMap[o];
+          /* La curva del original; cada casilla cede un poco distinto y ninguna pasa del fondo. */
+          if(d < 1) h = Math.max(h - 1.6 * (1 - d) * (1 - d) * (1 - d) * Math.sin(d * Math.PI) * (0.85 + 0.3 * hash(i, j)), -1);
+          /* La nieve apartada: un reborde irregular alrededor, que no rellena lo ya hundido. */
+          if(d > 0.7 && h > -0.12){
+            const e = (d - 1.06) / 0.17;
+            h = Math.max(h, 0.30 * Math.exp(-e * e) * (0.55 + 0.45 * Math.sin(i * 0.9 + j * 1.7) * Math.sin(i * 0.37 - j * 0.53)));
+          }
+          snowMap[o] = h;
+        }
+      }
+      snowArea = boxed(snowArea, i0, j0, i1, j1);
+      snowNew = boxed(snowNew, i0, j0, i1, j1);
+    }
+    /* El cursor avanza: una pisada cada tercio de radio de camino, para que el surco salga
+       igual vaya el cursor deprisa o despacio. Si sale, o da un salto, el trazo se corta. */
+    function tread(){
+      if(!mouse.inside){ snowLast = null; return; }
+      const at = snowAt(mouse.x, mouse.y);
+      if(!at){ snowLast = null; return; }
+      if(!snowLast || Math.hypot(mouse.x - snowLast.x, mouse.y - snowLast.y) > place.h * 0.3){
+        stamp(mouse.x, mouse.y, at);
+        snowLast = {x:mouse.x, y:mouse.y};
+        return;
+      }
+      const dx = mouse.x - snowLast.x, dy = mouse.y - snowLast.y;
+      /* El camino, medido sobre el suelo: hacia el fondo cunde más de lo que parece. */
+      const steps = Math.hypot(dx, dy * at.fs) / (0.3 * SNOW_R / at.k);
+      if(steps < 1) return;
+      const n = Math.min(Math.floor(steps), 48);
+      for(let i = 1; i <= n; i++){
+        const x = snowLast.x + dx * i / steps, y = snowLast.y + dy * i / steps;
+        const here = snowAt(x, y);
+        if(here) stamp(x, y, here);
+      }
+      snowLast = steps > 48 ? {x:mouse.x, y:mouse.y} : {x:snowLast.x + dx * n / steps, y:snowLast.y + dy * n / steps};
+    }
+    /* Lo que avanza en invierno con el tiempo: el viento, las pisadas y la nieve que las tapa. */
+    function snowfall(dt){
+      if(!place) return;
+      snowFit();
+      if(still) return;
+      const frames = dt * 60;
+      wind.force += (wind.target - wind.force) * (1 - Math.pow(1 - wind.easing, frames));
+      wind.current += wind.force * dt * 200;
+      if(Math.random() < 0.005 * frames) wind.target = (wind.min + Math.random() * (wind.max - wind.min)) * (Math.random() > 0.5 ? -1 : 1);
+      tread();
+      snowWait += dt;
+      if(snowArea && snowWait > 0.4){
+        const keep = Math.exp(-snowWait / SNOW_HEAL);
+        let any = false;
+        for(let j = snowArea[1]; j <= snowArea[3]; j++){
+          for(let o = j * snowW + snowArea[0], end = j * snowW + snowArea[2]; o <= end; o++){
+            const h = snowMap[o] * keep;
+            if(h > 0.004 || h < -0.004){ snowMap[o] = h; any = true; }else snowMap[o] = 0;
+          }
+        }
+        snowNew = snowArea;
+        if(!any) snowArea = null;
+      }
+      if(snowWait > 0.4) snowWait = 0;
+      if(snowNew){ snowUp(snowNew); snowNew = null; }
     }
     /* El formulario, para la pantalla del ordenador (ver signal()). */
     const ui = {chars:0, show:0, busy:0, res:0, tChars:0, tShow:0, tBusy:0, tRes:0};
@@ -2469,17 +2990,7 @@
       gl.uniform1f(p.U.uDay, day);
       gl.uniform1f(p.U.uDawn, dawn * (1 - day));
       gl.uniform3f(p.U.uMouse, mouse.x * scale, (place.h - mouse.y) * scale, mouse.s);
-      if(SEASON === 3 && p.U.uTrail){
-        trailNow.fill(0);
-        const from = TRAIL_N - trail.length;
-        trail.forEach((q, i) => {
-          const left = Math.max(1 - (time - q.t) / TRAIL_LIFE, 0);
-          trailNow[(from + i) * 3] = q.x * scale;
-          trailNow[(from + i) * 3 + 1] = (place.h - q.y) * scale;
-          trailNow[(from + i) * 3 + 2] = Math.min(left * 4, 1) * (q.start ? -1 : 1);
-        });
-        gl.uniform3fv(p.U.uTrail, trailNow);
-      }
+      if(SEASON === 3 && p.U.uSnow) gl.uniform1i(p.U.uSnow, 6);
       gl.uniform4f(p.U.uUI, ui.chars, ui.show, ui.busy, ui.res);
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
@@ -2510,7 +3021,7 @@
       mouse.x += (mouse.tx - mouse.x) * (1 - Math.exp(-dt * 9));
       mouse.y += (mouse.ty - mouse.y) * (1 - Math.exp(-dt * 9));
       mouse.s = still ? 0 : ease(mouse.s, mouse.inside ? (now - mouse.moved < 1500 ? 1 : 0.55) : 0, 4);
-      track();
+      if(SEASON === 3) snowfall(dt);
       ui.chars = ease(ui.chars, ui.tChars, 14);
       ui.show = ease(ui.show, ui.tShow, 6);
       ui.busy = ease(ui.busy, ui.tBusy, 7);
@@ -2651,6 +3162,23 @@
         gl.depthFunc(gl.LESS);
       }
 
+      /* Primavera: las flores, antes que la hierba. Sin mezcla: el borde de cada una lo suaviza
+         el propio lienzo, que reparte su transparencia entre las muestras de cada píxel; así
+         pueden escribir la profundidad y cruzarse bien con las briznas. */
+      if((passes & 4) && bloom && bloomCells && !posing){
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LESS);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+        gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+        uniforms(bloom, time);
+        gl.uniform1i(bloom.U.uFlowers, 7);
+        gl.uniform1f(bloom.U.uCells, bloomCells);
+        gl.bindVertexArray(bloomVao);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, FLOWERS);
+        gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+      }
+
       /* 4. La hierba, segundo paso: las cintas, delante o detrás de lo ya pintado según su
          profundidad. */
       if((passes & 4) && SEASON !== 3){
@@ -2675,6 +3203,19 @@
       gl.uniform1fv(over.U.uPetalA, petalAlpha);
       gl.bindVertexArray(fullVao);
       if(passes & 8) gl.drawArrays(gl.TRIANGLES, 0, 3);
+      /* La nevada, encima: los puntos se suman a lo pintado. */
+      if((passes & 8) && fall){
+        const asp = canvas.width / canvas.height;
+        if(Math.abs(asp - fallAsp) > 0.01) sow(asp);
+        gl.useProgram(fall.prog);
+        gl.uniform2f(fall.U.uRes, canvas.width, canvas.height);
+        gl.uniform1f(fall.U.uTime, time);
+        gl.uniform1f(fall.U.uNight, night);
+        gl.uniform1f(fall.U.uWind, wind.current);
+        gl.uniform2f(fall.U.uWorld, fallWorld[0], fallWorld[1]);
+        gl.bindVertexArray(fallVao);
+        gl.drawArrays(gl.POINTS, 0, fallCount);
+      }
       gl.depthMask(true);
     }
 

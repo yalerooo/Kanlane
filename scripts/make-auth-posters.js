@@ -42,9 +42,11 @@ const POSTER = {
 const H = 900, W = Math.round((POSTER.left + POSTER.right) * H);
 const OUT_H = 384, QUALITY = 0.74;
 /* Las fotos van incrustadas en auth.css (entre las marcas FOTOS), no en archivos: así están en
-   el primer fotograma sin esperar a ninguna descarga. Alto en píxeles: como se enseñan
-   desenfocadas, con poco basta, y son unos pocos KB entre las cuatro. */
-const MINI_H = 96, MINI_QUALITY = 0.6;
+   el primer fotograma sin esperar a ninguna descarga. Alto en píxeles: se enseñan desenfocadas,
+   pero a 96 de alto (lo que hubo al principio) cada píxel se estiraba a más de diez en pantalla
+   y, con la compresión, se veían manchas y escalones a través del desenfoque: lo vio el dueño.
+   A 240 la foto llega limpia; son unas decenas de KB por estación, y solo se baja la que toca. */
+const MINI_H = 240, MINI_QUALITY = 0.8;
 
 /* Una foto de la escena con el punto de fuga a `up` altos del borde de arriba. */
 async function shot(browser, theme, up, tree, season){
@@ -86,12 +88,15 @@ async function shot(browser, theme, up, tree, season){
   }, [focusX, up * H, trunk]);
   await page.waitForFunction(() => { const s = Workhub.views.authScene.state(); return s && s.live && !s.software; }, null, {timeout:120000});
   await page.waitForTimeout(tree ? 3500 : 600);
-  const data = await page.evaluate(() => {
+  /* En invierno, sin lo que va por delante (pasadas 1, 2 y 4 de la escena): la nevada son puntos
+     en la pantalla, no en el paisaje, así que no casaría entre las dos fotos del montaje, y unos
+     copos parados en la foto se notan cuando llegan los de verdad. */
+  const data = await page.evaluate((only) => {
     const scene = Workhub.views.authScene;
     /* bench() pinta y espera a la tarjeta: en este mismo turno el lienzo aún tiene la imagen. */
-    for(let i = 0; i < 40; i++) scene.bench(1);
+    for(let i = 0; i < 40; i++) scene.bench(1, only);
     return document.getElementById('authCanvas').toDataURL('image/png');
-  });
+  }, season === 'invierno' ? 7 : 15);
   await context.close();
   return data;
 }

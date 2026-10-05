@@ -100,6 +100,12 @@
     /* Un color según el momento: hora dorada, pleno día o noche. */
     'vec3 pal(vec3 gold, vec3 noon, vec3 night){',
     '  gold = mix(gold, gold * vec3(.94, .93, 1.17), uDawn);',
+    /* Invierno: el atardecer no arde. La luz es más fría y más pálida: cada color de la hora */
+    /* dorada se apaga hacia un gris azulado de su misma claridad (el cielo lleva además sus */
+    /* propios tonos, ver skyBase). */
+    '#if SEASON == 3',
+    '  gold = mix(gold, vec3(dot(gold, vec3(.30, .59, .11))) * vec3(.94, 1., 1.14), .42);',
+    '#endif',
     '  return mix(mix(gold, noon, uDay), night, uNight);',
     '}',
     /* La hierba de cada estación: más seca y dorada en verano, ocre en otoño. En invierno */
@@ -426,6 +432,15 @@
     '  day = mix(day, mix(vec3(.72, .27, .32), vec3(.98, .42, .24), sunny), smoothstep(0., .15, y));',
     '  day = mix(day, mix(vec3(.42, .22, .42), vec3(.62, .26, .36), sunny), smoothstep(.10, .38, y));',
     '  day = mix(day, vec3(.15, .18, .40), smoothstep(.28, .85, y));',
+    /* Invierno: cielo de tarde fría. Crema y melocotón pálido pegados al horizonte del lado del */
+    /* sol y rosa apagado del otro (la franja rosa de los atardeceres de invierno), lila por */
+    /* encima y azul claro arriba, en vez de los rojos y naranjas del resto del año. */
+    '#if SEASON == 3',
+    '  day = mix(vec3(.96, .70, .70), vec3(1.16, .92, .66), sunny);',
+    '  day = mix(day, mix(vec3(.80, .62, .78), vec3(1.02, .76, .70), sunny), smoothstep(0., .13, y));',
+    '  day = mix(day, mix(vec3(.54, .56, .84), vec3(.70, .62, .82), sunny), smoothstep(.08, .34, y));',
+    '  day = mix(day, vec3(.26, .38, .70), smoothstep(.24, .85, y));',
+    '#endif',
     '  vec3 night = mix(mix(vec3(.16, .15, .34), vec3(.24, .24, .46), sunny), vec3(.06, .07, .21), smoothstep(0., .3, y));',
     '  night = mix(night, vec3(.012, .016, .06), smoothstep(.25, .9, y));',
     /* Pleno día: azul hondo arriba y claro, casi blanco, en el horizonte del lado del sol. */
@@ -1006,6 +1021,9 @@
     '      gcol += sunCol * step(.93, noise(p.xz * 60.)) * dif * sh * .30 * near;',
     '      gcol = mix(gcol, gcol * vec3(.80, .93, 1.22), (1. - dif * sh) * .55 * (1. - uNight));',
     '      gcol += alb * sunCol * pow(max(dot(rd, L), 0.), 5.) * .22 * sh;',
+    /* Con el tema claro la nieve tiraba a morado (luz rojiza sobre blanco azulado): se lleva */
+    /* hacia un blanco frío y se aclara un poco. */
+    '      gcol = mix(gcol, vec3(dot(gcol, vec3(.30, .59, .11))) * vec3(.95, 1., 1.10), .42 * (1. - uNight)) * mix(1.10, 1., uNight);',
     '    }',
     '#endif',
     /* Luz rasante en las crestas de las lomas. */
@@ -1162,6 +1180,7 @@
     '          float wrap = clamp((dot(n, L) + .30) / 1.30, 0., 1.);',
     '          vec3 snowCol = alb * (ambient * 1.5 * ao + skyLight * 2.2 * ao + sunCol * wrap * 2.4 * ao * shd);',
     '          snowCol = mix(snowCol, snowCol * vec3(.80, .93, 1.22), (1. - wrap * shd) * .55 * (1. - uNight));',
+    '          snowCol = mix(snowCol, vec3(dot(snowCol, vec3(.30, .59, .11))) * vec3(.95, 1., 1.10), .42 * (1. - uNight)) * mix(1.10, 1., uNight);',
     '          col = mix(col, snowCol, snowK);',
     '        }',
     '#endif',

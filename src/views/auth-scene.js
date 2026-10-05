@@ -1928,6 +1928,7 @@
     'uniform float uCells;',
     'out vec2 vUv;',
     'out vec3 vLight;',
+    'out vec3 vExtra;',
     'out vec4 vFog;',
 
     'void main(){',
@@ -1967,6 +1968,25 @@
     '  float cloudSh = smoothstep(.34, .66, fbm3(r0 * .075 + vec2(uTime * .035, uTime * .014)));',
     '  vec3 rd = normalize(root - ro);',
     '  vLight = ambientColor() * 1.5 + skyLightColor() * 2.2 + sunColor() * (1.5 + 1.2 * pow(max(dot(rd, L), 0.), 3.)) * mix(.40, 1., cloudSh) * mix(1., .75, uNight);',
+    /* Luces de cerca, como en la hierba (GRASS_SIM): la pantalla del ordenador y, de noche, las
+       luciérnagas. Se miden desde la flor, que es lo que se ve, no desde el pie del tallo. */
+    '  vec3 head = root + vec3(0., h * .75, 0.);',
+    '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
+    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 tl = sc - head;',
+    '  float dl = length(tl);',
+    '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
+    '  vec3 extra = screenLight() * spill * mix(mix(1.6, .9, uDay), 7.0, uNight);',
+    '  if(uNight > .01){',
+    '    vec3 fl = vec3(0.);',
+    '    for(int i = 0; i < FF_N; i++){',
+    '      if(i >= uFFLit) break;',
+    '      vec3 d = uFF[i].xyz - head;',
+    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
+    '    }',
+    '    extra += fl * 1.5 * uNight;',
+    '  }',
+    '  vExtra = extra;',
     /* Bruma: la misma que el suelo. */
     '  float dist = length(root - ro);',
     '  vFog = vec4(mix(fogColor(rd, L), skyBase(normalize(vec3(rd.x, .03, rd.z)), L), .28), 1. - exp(-dist * mix(.017, .024, uNight)));',
@@ -1982,6 +2002,7 @@
     'uniform sampler2D uFlowers;',
     'in vec2 vUv;',
     'in vec3 vLight;',
+    'in vec3 vExtra;',
     'in vec4 vFog;',
     'out vec4 fragColor;',
     'void main(){',
@@ -1992,7 +2013,7 @@
     /* encendido. Quedan pálidas, y las claras siguen siendo las que más se ven. */
     '  alb = mix(alb, vec3(dot(sqrt(alb), vec3(.30, .59, .11))) * vec3(1.0, 1.12, 1.34), uNight * .72);',
     '  vec3 light = mix(vLight, vec3(dot(vLight, vec3(.333))) * vec3(.80, .96, 1.04), uNight * .85);',
-    '  vec3 col = mix(alb * light, vFog.rgb, vFog.a);',
+    '  vec3 col = mix(alb * (light + vExtra), vFog.rgb, vFog.a);',
     /* La transparencia del borde la reparte el suavizado del lienzo (ver draw). */
     '  fragColor = vec4(post(col, gl_FragCoord.xy), t.a);',
     '}'

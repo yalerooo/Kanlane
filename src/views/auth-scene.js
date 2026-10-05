@@ -24,11 +24,13 @@
    (GEO, BAKE). La calidad se adapta al equipo: antes de enseñar la escena se mide lo que tarda
    la tarjeta gráfica y se elige un escalón (LEVELS: resolución, cantidad de hierba, fotogramas
    por segundo); si después va justa, se baja otro. Se pinta solo mientras la pantalla de
-   acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Con movimiento
+   acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
+   sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
+   parado varios segundos): hasta que acaban se ve el degradado de cielo. Con movimiento
    reducido se pinta un único fotograma. Si el navegador no tiene WebGL 2, queda el degradado
    de cielo que pone auth.css. */
 (function(){
-  const HEAD = '#version 300 es\nprecision highp float;\n';
+  const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\n';
   const VERT = HEAD + 'layout(location = 0) in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const COMMON = [
     'uniform vec2 uRes;',
@@ -58,6 +60,10 @@
     'uniform float uBase;',
     /* Cuántas luciérnagas alumbran la hierba: todas, o solo unas pocas en los equipos justos. */
     'uniform int uFFLit;',
+    /* Siempre cero. Un bucle que empieza en un valor que el compilador no conoce no se puede */
+    /* desenrollar: sin esto, cada llamada a una función grande se copia entera tantas veces */
+    /* como se la llama, y compilar la escena tardaba varios segundos con el navegador parado. */
+    'uniform int uZero;',
 
     'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'vec2 hash2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }',
@@ -173,9 +179,18 @@
     '  float cable = min(sdCapsule(q, vec3(.22, .62, .90), vec3(.30, .30, 1.20), .028), sdCapsule(q, vec3(.30, .30, 1.20), vec3(.70, -.05, 1.75), .028));',
     '  return min(smin(body, stand, .05), cable);',
     '}',
+    /* La pendiente de la superficie: seis medidas alrededor del punto, en un bucle que empieza */
+    /* en uZero (ver arriba) para que computer() se compile una vez y no seis. */
     'vec3 computerNormal(vec3 q){',
-    '  vec2 e = vec2(.003, 0.);',
-    '  return normalize(vec3(computer(q + e.xyy) - computer(q - e.xyy), computer(q + e.yxy) - computer(q - e.yxy), computer(q + e.yyx) - computer(q - e.yyx)));',
+    '  vec3 n = vec3(0.);',
+    '  for(int i = uZero; i < 6; i++){',
+    '    int axis = i / 2;',
+    '    float sg = float(1 - 2 * (i - axis * 2));',
+    '    vec3 e = vec3(0.);',
+    '    e[axis] = .003 * sg;',
+    '    n[axis] += sg * computer(q + e);',
+    '  }',
+    '  return normalize(n);',
     '}',
     /* Sombra suave del ordenador hacia la luz (en coordenadas del ordenador). */
     'float computerShadow(vec3 q, vec3 l){',
@@ -218,7 +233,7 @@
     '  col = mix(col, vec3(.925, .885, .79), smoothstep(.70, .72, u.y));',
     '  col = mix(col, vec3(.30, .28, .27), 1. - smoothstep(0., aa, rr(u - vec2(-.56, .84), vec2(.24, .045), .04)));',
     '  col = mix(col, vec3(.14, .14, .16), 1. - smoothstep(0., aa, rr(u - vec2(.72, .84), vec2(.15, .058), .05)));',
-    '  for(int i = 0; i < 3; i++){',
+    '  for(int i = uZero; i < 3; i++){',
     '    float fi = float(i);',
     '    float cx = -.62 + fi * .62;',
     '    col = mix(col, vec3(.95, .915, .82), 1. - smoothstep(0., aa, rr(u - vec2(cx, -.14), vec2(.28, .80), .06)));',
@@ -226,7 +241,7 @@
     '    float dr = i == 2 ? length(u - vec2(cx - .20, .55)) - .05 : abs(length(u - vec2(cx - .20, .55)) - .035) - .014;',
     '    col = mix(col, ring, 1. - smoothstep(0., aa, dr));',
     '    col = mix(col, vec3(.36, .35, .34), 1. - smoothstep(0., aa, rr(u - vec2(cx + .02, .55), vec2(.12, .025), .02)));',
-    '    for(int j = 0; j < 3; j++){',
+    '    for(int j = uZero; j < 3; j++){',
     /* La tercera fila queda libre: por ahí pasa la tarjeta que viaja. */
     '      if(j == 2) continue;',
     '      float fj = float(j);',
@@ -263,7 +278,7 @@
     '    float fd = rr(dc - vec2(0., .08), vec2(.78, .19), .08);',
     '    dlg = mix(dlg, mix(vec3(.90, .88, .83), vec3(.98, .72, .68), bad), 1. - smoothstep(0., aa, fd));',
     '    float dots = 1e3;',
-    '    for(int i = 0; i < 9; i++){',
+    '    for(int i = uZero; i < 9; i++){',
     '      float fi = float(i);',
     '      float on = clamp(uUI.x - fi, 0., 1.);',
     '      dots = min(dots, length((dc - vec2(-.60 + fi * .15, .08)) * e) - .050 * on + (1. - on));',
@@ -497,6 +512,12 @@
     '}'
   ].join('\n');
   const FRAG = [
+    /* La escena va en tres programas, uno por cada cosa que puede haber en un píxel: el cielo */
+    /* con sus sierras (PART 1), el suelo con el lago (PART 2) y el ordenador (PART 3). Cada uno */
+    /* descarta los píxeles que no son suyos, así que entre los tres pintan la pantalla entera */
+    /* sin pisarse. Es por la compilación: un solo programa con todo tardaba varios segundos, y */
+    /* los tres se compilan a la vez. Hace falta saber de antemano qué hay en cada píxel (CACHE); */
+    /* sin eso va todo en un programa (PART 0). */
     'uniform sampler2D uTree;',
     'uniform float uTreeOn;',
     '#ifdef CACHE',
@@ -545,12 +566,23 @@
     '  float tHit = hitTerrain(ro, rd);',
     '  float tObj = hitComputer(ro, rd, base);',
     '#endif',
+    '#if PART != 0',
+    '  bool isComputer = tObj > 0. && (tHit < 0. || tObj < tHit);',
+    '#endif',
+    '#if PART == 1',
+    '  if(isComputer || tHit > 0.) discard;',
+    '#elif PART == 2',
+    '  if(isComputer || tHit < 0.) discard;',
+    '#elif PART == 3',
+    '  if(!isComputer) discard;',
+    '#endif',
 
     /* El cerezo, plantado: las raíces quedan a medias entre la hierba. */
     '  vec3 treeB = vec3(gTree.x, TREE_H + .22 * treeSc, gTree.y);',
 
-    '  vec3 col = sky(rd, L);',
     '  vec3 fogCol = fogColor(rd, L);',
+    '#if PART == 0 || PART == 1',
+    '  vec3 col = sky(rd, L);',
     /* Sierras lejanas: tres cordilleras, una tras otra. Cuanto más lejos, más pálidas; al pie */
     /* de cada una se posa la bruma y el filo que mira al sol se enciende. */
     '  if(tHit < 0.){',
@@ -581,12 +613,16 @@
     '      col = mix(col, mc, inside);',
     '    }',
     '  }',
+    '#else',
+    '  vec3 col = vec3(0.);',
+    '#endif',
     '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
 
     /* ---------- Hierba y suelo ---------- */
     '  vec3 gcol = vec3(0.);',
-    '  float tGround = -1.;',
+    '  float tGround = tHit > 0. ? tHit : -1.;',
+    '#if PART == 0 || PART == 2',
     '  if(tHit > 0.){',
     '    vec3 p0 = ro + rd * tHit;',
     '#ifdef CACHE',
@@ -699,8 +735,10 @@
     '      tFin = mix(tGround, tW, shore);',
     '    }',
     '  }',
+    '#endif',
 
     /* ---------- El ordenador ---------- */
+    '#if PART == 0 || PART == 3',
     '  if(tObj > 0. && (tGround < 0. || tObj < tGround)){',
     '    tFin = tObj;',
     '    vec3 p = ro + rd * tObj;',
@@ -723,8 +761,12 @@
     '        col += vec3(1.) * pow(max(dot(refl, L), 0.), 60.) * .5;',
     '      }else{',
     /* La carcasa: plástico azul grisáceo, más claro en el marco y más oscuro en la peana. */
-    '        float ao = clamp(computer(q + nl * .10) / .10, 0., 1.);',
-    '        ao *= clamp(computer(q + nl * .30) / .30, 0., 1.) * .5 + .5;',
+    '        float ao = 1.;',
+    '        for(int i = uZero; i < 2; i++){',
+    '          float r = i == 0 ? .10 : .30;',
+    '          float k = clamp(computer(q + nl * r) / r, 0., 1.);',
+    '          ao *= i == 0 ? k : k * .5 + .5;',
+    '        }',
     '        ao = mix(1., ao, .8);',
     /* Dos plásticos, como los monitores de la época: el marco frontal, claro; la carcasa, */
     /* azul, algo más honda hacia atrás. El pie, del color del marco. */
@@ -785,6 +827,7 @@
     '      }',
     '    }',
     '  }',
+    '#endif',
 
     '  if(tFin > 0.){',
     '    float fog = 1. - exp(-tFin * mix(.017, .024, uNight));',
@@ -1482,26 +1525,6 @@
     try{ gl = canvas.getContext('webgl2', {antialias:true, alpha:false, depth:true, stencil:false}); }catch(e){}
     if(!gl) return false;
 
-    /* feedback: nombres de lo que el sombreador de vértices guarda (transform feedback). */
-    function program(vsrc, fsrc, feedback){
-      const make = (type, src) => {
-        const s = gl.createShader(type);
-        gl.shaderSource(s, src);
-        gl.compileShader(s);
-        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
-      };
-      const vs = make(gl.VERTEX_SHADER, vsrc), fs = make(gl.FRAGMENT_SHADER, fsrc);
-      if(!vs || !fs) return null;
-      const prog = gl.createProgram();
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
-      if(feedback) gl.transformFeedbackVaryings(prog, feedback, gl.INTERLEAVED_ATTRIBS);
-      gl.linkProgram(prog);
-      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
-      const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
-      return {prog, U};
-    }
     /* Lo que no cambia de un fotograma a otro (GEO) se guarda en imágenes de números con
        decimales. Si el navegador no deja pintar en ellas, se calcula en cada fotograma. */
     const cache = (function(){
@@ -1518,13 +1541,52 @@
       return ok;
     })();
     const DEF = cache ? '#define CACHE\n' : '';
-    const scene = program(VERT, HEAD + DEF + COMMON + '\n' + GEO + '\n' + FRAG);
-    const sim = program(HEAD + COMMON + '\n' + GRASS_SIM, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oA', 'oLight', 'oFog', 'oExtra']);
-    const grass = program(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG);
-    const wood = program(HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG);
-    const over = program(VERT, HEAD + DEF + COMMON + '\n' + OVER);
-    const bake = cache ? program(VERT, HEAD + COMMON + '\n' + GEO + '\n' + BAKE) : null;
-    if(!scene || !sim || !grass || !wood || !over || (cache && !bake)) return false;
+    /* Los sombreadores son largos y compilarlos tarda (segundos la primera vez, hasta que el
+       navegador los guarda): se piden todos y, si el navegador sabe compilar en segundo plano
+       (KHR_parallel_shader_compile), se espera sin parar la página; mientras, se ve el degradado
+       de cielo. Preguntar antes de tiempo por el resultado es lo que la dejaba congelada.
+       feedback: nombres de lo que el sombreador de vértices guarda (transform feedback). */
+    const parallel = gl.getExtension('KHR_parallel_shader_compile');
+    function prepare(vsrc, fsrc, feedback){
+      const prog = gl.createProgram();
+      [[gl.VERTEX_SHADER, vsrc], [gl.FRAGMENT_SHADER, fsrc]].forEach((part) => {
+        const sh = gl.createShader(part[0]);
+        gl.shaderSource(sh, part[1]);
+        gl.compileShader(sh);
+        gl.attachShader(prog, sh);
+      });
+      if(feedback) gl.transformFeedbackVaryings(prog, feedback, gl.INTERLEAVED_ATTRIBS);
+      gl.linkProgram(prog);
+      return prog;
+    }
+    function finish(prog){
+      if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+      const U = {};
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      return {prog, U};
+    }
+    /* Por orden: hierba (dos pasos), arbolado, lo de delante, lo que no cambia y, al final, la
+       escena: sus tres partes (ver FRAG) o, sin CACHE, una sola con todo. */
+    const part = (n) => prepare(VERT, HEAD + DEF + '#define PART ' + n + '\n' + COMMON + '\n' + GEO + '\n' + FRAG);
+    const queue = [
+      prepare(HEAD + COMMON + '\n' + GRASS_SIM, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oA', 'oLight', 'oFog', 'oExtra']),
+      prepare(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG),
+      prepare(HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG),
+      prepare(VERT, HEAD + DEF + COMMON + '\n' + OVER),
+      cache ? prepare(VERT, HEAD + COMMON + '\n' + GEO + '\n' + BAKE) : null
+    ].concat(cache ? [part(1), part(2), part(3)] : [part(0)]);
+    const compiled = () => !parallel || gl.isContextLost() || queue.every((p) => !p || gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
+    (function wait(){
+      if(!compiled()){ setTimeout(wait, 40); return; }
+      const list = queue.map(finish);
+      if(list.some((p, i) => !p && (i !== 4 || cache))) return;
+      setup(gl, canvas, screen, focusEl, cache, list);
+    })();
+    return true;
+  }
+
+  function setup(gl, canvas, screen, focusEl, cache, list){
+    const sim = list[0], grass = list[1], wood = list[2], over = list[3], bake = list[4], scenes = list.slice(5);
 
     /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
     const fullVao = gl.createVertexArray();
@@ -1862,24 +1924,27 @@
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.ALWAYS);
       gl.depthMask(true);
-      uniforms(scene, time);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
-      gl.uniform1i(scene.U.uTree, 0);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, textTex);
-      gl.uniform1i(scene.U.uText, 1);
-      gl.uniform1f(scene.U.uTextW, textW);
       gl.activeTexture(gl.TEXTURE0);
-      if(cache){
-        gl.uniform1i(scene.U.uGeo, 2);
-        gl.uniform1i(scene.U.uShade, 3);
-      }
-      gl.uniform1f(scene.U.uSharp, q.sharp);
       treeFade = treeReady ? ease(treeFade, 1, 2.6) : 0;
-      gl.uniform1f(scene.U.uTreeOn, treeFade);
       gl.bindVertexArray(fullVao);
-      if(passes & 1) gl.drawArrays(gl.TRIANGLES, 0, 3);
+      /* Cada parte pinta solo sus píxeles (cielo, suelo, ordenador): entre todas, la pantalla. */
+      scenes.forEach((scene) => {
+        uniforms(scene, time);
+        gl.uniform1i(scene.U.uTree, 0);
+        gl.uniform1i(scene.U.uText, 1);
+        gl.uniform1f(scene.U.uTextW, textW);
+        if(cache){
+          gl.uniform1i(scene.U.uGeo, 2);
+          gl.uniform1i(scene.U.uShade, 3);
+        }
+        gl.uniform1f(scene.U.uSharp, q.sharp);
+        gl.uniform1f(scene.U.uTreeOn, treeFade);
+        if(passes & 1) gl.drawArrays(gl.TRIANGLES, 0, 3);
+      });
 
       /* 3. El arbolado lejano: con prueba de profundidad (lo tapan las lomas), pero sin
          escribirla, y con los bordes transparentes. */
@@ -1962,15 +2027,17 @@
     const room = (i) => BUDGET * 1000 / LEVELS[i].fps;
     /* Qué calidad aguanta este equipo. No se deduce del nombre de la tarjeta ni del número de
        núcleos (un portátil con gráfica integrada tiene ocho y dieciséis gigas): se mide, con el
-       lienzo todavía sin enseñar. Se pinta en el mejor escalón y se cronometra; si no cabe en su
-       parte del fotograma, se salta al mejor escalón que, por lo que pesa, cabría, y se vuelve a
-       medir (tres rondas como mucho; unas décimas de segundo en total). El primer fotograma de cada ronda no cuenta: calcula lo
+       lienzo todavía sin enseñar. Se empieza por un escalón intermedio, que no ahoga a una
+       tarjeta floja (mientras la tarjeta está saturada, el navegador entero va a tirones): si
+       cabe en su parte del fotograma y, por lo que pesan, cabría uno mejor, se salta a ese y se
+       comprueba; si no cabe, se baja al mejor que cabría y se vuelve a medir. Tres rondas como
+       mucho, unas décimas de segundo. El primer fotograma de cada ronda no cuenta: calcula lo
        que no cambia. */
     async function measure(){
       measuring = true;
       const lowest = LEVELS.length - 1;
       const log = [];
-      let l = 0;
+      let l = 2, climb = true;
       for(let round = 0; round < 3; round++){
         setLevel(l);
         await gauge(1);
@@ -1981,9 +2048,15 @@
         /* Se fijó la calidad a mano mientras tanto (quality): manda eso. */
         if(measured) return;
         log.push([l, Math.round(ms * 10) / 10]);
-        if(ms <= room(l) || l === lowest) break;
-        let next = lowest;
-        for(let j = lowest; j > l; j--) if(ms * weight(j) / weight(l) <= 0.9 * room(j)) next = j;
+        let next = l;
+        if(ms <= room(l)){
+          if(climb) for(let j = l - 1; j >= 0; j--) if(ms * weight(j) / weight(l) <= 0.9 * room(j)) next = j;
+        }else if(l < lowest){
+          next = lowest;
+          for(let j = lowest; j > l; j--) if(ms * weight(j) / weight(l) <= 0.9 * room(j)) next = j;
+        }
+        climb = false;
+        if(next === l) break;
         l = next;
       }
       /* En móviles y tabletas, nunca por encima del tercer escalón: se calientan enseguida. */

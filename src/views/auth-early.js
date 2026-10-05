@@ -135,7 +135,7 @@
   /* El idioma en uso, marcado ya en su botón (la misma cuenta que boot.js e i18n.js). */
   var lang = null;
   try{ lang = localStorage.getItem('workhub_lang'); }catch(e){}
-  if(lang !== 'es' && lang !== 'en') lang = /^es/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
+  if(lang !== 'es' && lang !== 'en') lang = /^es\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
   screen.querySelectorAll('#authLang button').forEach(function(b){ b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === lang ? 'true' : 'false'); });
 
   /* Lo pulsado antes de que la app esté lista, en orden. */

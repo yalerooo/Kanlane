@@ -6,11 +6,14 @@
      pasa a una etapa final, pide con wh.ui.form las horas, los días y el proyecto.
      También añade «Registrar horas» en la ficha de cada tarea y una etiqueta con
      las horas en las tarjetas.
-   - panel (sección Plugins): el calendario, el detalle de cada día y los proyectos.
+   - panel (sección Plugins): el calendario, el detalle de cada día, los proyectos y
+     las incidencias (vacaciones, bajas, permisos…).
 
    Datos del proyecto abierto de Kanlane (wh.storage):
      projects   [{id, name, color}]
-     log-AAAA-MM [{id, date, hours, project, task, title}]   (uno por día y tarea)
+     log-AAAA-MM [{id, date, hours, project, task, title, absence?}]   (uno por día y tarea;
+                 con absence es una incidencia y lleva el id de su tipo)
+     absences   [{id, name, color}]   tipos de incidencia añadidos a mano (los fijos van en ABSENCES)
      logged     {idTarea: true}    tareas ya registradas u omitidas
      taskhours  {idTarea: horas}   total por tarea (para la etiqueta de la tarjeta)
      prefs      {project}          el último proyecto usado (las horas siempre empiezan en 0) */
@@ -20,7 +23,7 @@
   var MANIFEST = {
     id: 'workhub.smartgp',
     name: 'Smart GP',
-    version: '1.1.0',
+    version: '1.2.0',
     description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
     author: 'Kanlane',
     icon: 'clock',
@@ -32,6 +35,17 @@
   var GRAY = '#8B8B94';
   var DAY_HOURS = 8;               /* la barra de un día se llena con 8 h */
   var PENDING_DAYS = 45;           /* «terminadas sin horas»: las de los últimos días */
+  /* Incidencias fijas (las de la empresa); cada cual añade las suyas aparte. */
+  var ABSENCES = [
+    {id: 'AC', name: 'A compensar', color: '#EA6A1F'},
+    {id: 'BE', name: 'Baja enfermedad', color: '#E0457B'},
+    {id: 'BM', name: 'Baja maternidad', color: '#C45AD6'},
+    {id: 'CO', name: 'Compensación', color: '#16A36A'},
+    {id: 'DS', name: 'Delegados sindicales', color: '#7C5CFF'},
+    {id: 'OA', name: 'Otros absentismos', color: '#8B8B94'},
+    {id: 'PR', name: 'Permiso retribuido', color: '#E6A310'},
+    {id: 'VA', name: 'Vacaciones', color: '#0E9AA7'}
+  ];
 
   var tr = WorkhubPlugin.translations({en:{
     'Conectando con Kanlane…':'Connecting to Kanlane…',
@@ -74,13 +88,24 @@
     'Ese día: {u} de {l} h (te quedan {f} h).':'That day: {u} of {l} h ({f} h left).',
     'Ese día no admite horas.':'That day accepts no hours.',
     'máx.':'max.',
+    'Incidencias':'Absences', 'Incidencia':'Absence', 'Añadir incidencia':'Add absence', 'Añadir incidencia este día':'Add absence this day',
+    'Editar incidencia':'Edit absence', 'Tipo de incidencia':'Absence type', '+ Otra incidencia…':'+ Another absence…',
+    'Ej.: Reconocimiento médico':'E.g. Medical check-up', 'Horas por día':'Hours per day', 'Días':'Days', 'Nota (opcional)':'Note (optional)',
+    'Vacaciones, bajas, permisos… o la que tú escribas.':'Holidays, sick leave, paid leave… or one you write yourself.',
+    'Vacío = el día completo según tu jornada (8 h de lunes a viernes si no hay límite).':'Empty = the full day per your schedule (8 h Monday to Friday if there is no limit).',
+    'Ninguno de esos días admite horas según tu jornada. Escribe las horas por día.':'None of those days accept hours per your schedule. Type the hours per day.',
+    'Las fijas y las que añadas tú (reconocimiento médico, formación…).':'The built-in ones and the ones you add (medical check-up, training…).',
+    'Nueva incidencia':'New absence', 'Nombre de la incidencia':'Absence name', 'Color de la incidencia':'Absence color',
+    'Smart GP: añadir incidencia':'Smart GP: add absence',
+    'A compensar':'To be made up', 'Baja enfermedad':'Sick leave', 'Baja maternidad':'Maternity leave', 'Compensación':'Compensation',
+    'Delegados sindicales':'Union representatives', 'Otros absentismos':'Other absences', 'Permiso retribuido':'Paid leave', 'Vacaciones':'Holidays',
     'lun':'Mon', 'mar':'Tue', 'mié':'Wed', 'jue':'Thu', 'vie':'Fri', 'sáb':'Sat', 'dom':'Sun'
   }});
 
   var wh = null;
   var now = new Date();
   var st = {
-    projects: [], logged: {}, taskHours: {}, prefs: {project: ''}, schedule: [],
+    projects: [], absences: [], logged: {}, taskHours: {}, prefs: {project: ''}, schedule: [],
     tasks: [], doneKeys: [],
     month: {y: now.getFullYear(), m: now.getMonth()}, selected: '', hidden: {},
     view: 'calendar', entries: [], armed: '', colorPicker: '', newColor: '', newName: ''
@@ -102,6 +127,18 @@
   function project(id){ return st.projects.filter(function(p){ return p.id === id; })[0] || null; }
   function projectName(id){ var p = project(id); return p ? p.name : tr('Sin proyecto'); }
   function projectColor(id){ var p = project(id); return p && /^#[0-9a-fA-F]{6}$/.test(p.color) ? p.color : GRAY; }
+  /* Incidencias: las fijas y las añadidas a mano. */
+  function absence(id){ return ABSENCES.concat(st.absences).filter(function(a){ return a.id === id; })[0] || null; }
+  function isFixed(id){ return ABSENCES.some(function(a){ return a.id === id; }); }
+  function absenceName(id){ var a = absence(id); return a ? (isFixed(id) ? tr(a.name) : a.name) : tr('Incidencia'); }
+  function itemColor(x){ return x && /^#[0-9a-fA-F]{6}$/.test(x.color) ? x.color : GRAY; }
+  /* Grupo de un registro en el calendario y el filtro: su proyecto o, si es una incidencia, su tipo. */
+  function groupKey(e){ return e.absence ? 'a:' + e.absence : (e.project || '_'); }
+  function groupName(k){ return k.slice(0, 2) === 'a:' ? absenceName(k.slice(2)) : k === '_' ? tr('Sin proyecto') : projectName(k); }
+  function groupColor(k){ return k.slice(0, 2) === 'a:' ? itemColor(absence(k.slice(2))) : projectColor(k === '_' ? '' : k); }
+  /* La lista que se edita en la vista abierta: proyectos o incidencias propias. */
+  function coll(){ return st.view === 'absences' ? {key: 'absences', list: st.absences} : {key: 'projects', list: st.projects}; }
+  function item(id){ return coll().list.filter(function(x){ return x.id === id; })[0] || null; }
   function fail(err){
     var el = document.getElementById('app');
     el.innerHTML = '<p class="wh-muted">' + esc(err && err.message === 'not-in-workhub'
@@ -142,6 +179,12 @@
   function dateLabel(date){
     var p = date.split('-');
     return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(WorkhubPlugin.locale, {weekday: 'short', day: 'numeric', month: 'short'});
+  }
+  /* Horas de un día completo: su máximo; sin límite, 8 h de lunes a viernes. */
+  function fullDay(date){
+    var limit = limitFor(date);
+    if(limit !== Infinity) return limit;
+    return weekdayIndex(date) < 5 ? DAY_HOURS : 0;
   }
   /* Horas ya registradas en esos días (sin contar el registro ignoreId, si se edita). */
   function usedOn(dates, ignoreId){
@@ -214,8 +257,8 @@
   }
 
   function loadBase(){
-    return Promise.all([get('projects', []), get('logged', {}), get('taskhours', {}), get('prefs', {project: ''}), get('schedule', [])]).then(function(r){
-      st.projects = r[0]; st.logged = r[1]; st.taskHours = r[2]; st.prefs = r[3]; st.schedule = r[4];
+    return Promise.all([get('projects', []), get('logged', {}), get('taskhours', {}), get('prefs', {project: ''}), get('schedule', []), get('absences', [])]).then(function(r){
+      st.projects = r[0]; st.logged = r[1]; st.taskHours = r[2]; st.prefs = r[3]; st.schedule = r[4]; st.absences = r[5];
     });
   }
   function loadMonth(){
@@ -253,6 +296,18 @@
       });
     }
     return Promise.resolve(v || '');
+  }
+
+  /* La incidencia elegida en el formulario: una existente o una nueva ({new, color}). */
+  function resolveAbsence(v){
+    if(v && typeof v === 'object'){
+      return serial(function(){
+        var a = {id: newId(), name: v.new, color: v.color || PALETTE[st.absences.length % PALETTE.length]};
+        st.absences.push(a);
+        return set('absences', st.absences).then(function(){ return a.id; });
+      });
+    }
+    return Promise.resolve(v || 'VA');
   }
 
   /* ---------- Formularios (los dibuja Kanlane) ---------- */
@@ -320,9 +375,91 @@
     });
   }
 
+  /* value: id de una incidencia, o {new, color} si se había escrito una nueva y se vuelve a abrir. */
+  function absenceField(value){
+    var isNew = value && typeof value === 'object';
+    return {
+      key: 'absence', type: 'select', label: tr('Tipo de incidencia'), value: isNew ? '__new__' : (value || 'VA'),
+      newName: isNew ? value.new : '', newColorValue: isNew ? value.color : '',
+      options: ABSENCES.concat(st.absences).map(function(a){ return {value: a.id, label: absenceName(a.id)}; }),
+      allowNew: true, newLabel: tr('+ Otra incidencia…'), newPlaceholder: tr('Ej.: Reconocimiento médico'), newColor: true
+    };
+  }
+  function noteField(value){
+    return {key: 'title', type: 'text', label: tr('Nota (opcional)'), value: value || '', required: false, maxlength: 120};
+  }
+
+  /* Vacaciones, bajas, permisos…: las horas son por día (vacío = el día completo). */
+  function logAbsence(dates, state, notice){
+    state = state || {};
+    var days = state.days || (dates && dates.length ? dates : [today()]);
+    return wh.ui.form({
+      title: tr('Añadir incidencia'),
+      intro: tr('Vacaciones, bajas, permisos… o la que tú escribas.'),
+      notice: notice || '',
+      submit: tr('Guardar'),
+      cancel: tr('Cancelar'),
+      fields: [
+        absenceField(state.absence),
+        {key: 'hours', type: 'number', label: tr('Horas por día'), unit: 'h', min: 0.25, max: 24, step: 0.25, value: state.hours != null ? state.hours : null, required: false,
+          hint: tr('Vacío = el día completo según tu jornada (8 h de lunes a viernes si no hay límite).')},
+        {key: 'days', type: 'dates', label: tr('Días'), value: days},
+        noteField(state.title)
+      ]
+    }).then(function(v){
+      if(!v) return false;
+      var again = function(msg){ return logAbsence(dates, {absence: v.absence, hours: v.hours, days: v.days, title: v.title}, msg); };
+      /* Sin horas escritas, cada día lleva su jornada; los que no admiten horas (fines de semana) se saltan. */
+      var perDay = v.days.map(function(d){ return {date: d, hours: v.hours != null ? v.hours : fullDay(d)}; }).filter(function(x){ return x.hours > 0; });
+      if(!perDay.length) return again(tr('Ninguno de esos días admite horas según tu jornada. Escribe las horas por día.'));
+      return usedOn(v.days).then(function(used){
+        var bad = violations(perDay, used);
+        if(bad.length) return again(bad.map(violationText).join(' '));
+        return resolveAbsence(v.absence).then(function(aid){
+          var entries = perDay.map(function(x){
+            return {id: newId(), date: x.date, hours: x.hours, project: '', task: '', title: v.title || '', absence: aid};
+          });
+          return addEntries(entries).then(function(){
+            var total = perDay.reduce(function(n, x){ return n + x.hours; }, 0);
+            wh.ui.toast(tr('{h} h registradas en {p}', {h: fmt(total), p: absenceName(aid)}));
+            return true;
+          });
+        });
+      });
+    });
+  }
+
+  function editAbsence(e, state, notice){
+    state = state || {};
+    return usedOn([e.date], e.id).then(function(used){
+      var hf = hoursField(state.hours != null ? state.hours : e.hours);
+      hf.label = tr('Horas por día');
+      hf.max = 24;
+      hf.hint = limitHint(e.date, used);
+      return wh.ui.form({
+        title: tr('Editar incidencia'), subtitle: dateLabel(e.date), notice: notice || '', submit: tr('Guardar'), cancel: tr('Cancelar'),
+        fields: [absenceField(state.absence !== undefined ? state.absence : e.absence), hf, noteField(state.title !== undefined ? state.title : e.title)]
+      }).then(function(v){
+        if(!v) return;
+        var bad = violations([{date: e.date, hours: v.hours}], used);
+        if(bad.length) return editAbsence(e, {absence: v.absence, hours: v.hours, title: v.title}, bad.map(violationText).join(' '));
+        return resolveAbsence(v.absence).then(function(aid){
+          return serial(function(){
+            var key = 'log-' + e.date.slice(0, 7);
+            return get(key, []).then(function(arr){
+              arr.forEach(function(x){ if(x.id === e.id){ x.hours = v.hours; x.absence = aid; x.title = v.title || ''; } });
+              return set(key, arr);
+            });
+          });
+        });
+      });
+    });
+  }
+
   function editEntry(id, state, notice){
     var e = st.entries.filter(function(x){ return x.id === id; })[0];
     if(!e) return Promise.resolve();
+    if(e.absence) return editAbsence(e);
     state = state || {};
     return usedOn([e.date], id).then(function(used){
       var hf = hoursField(state.hours != null ? state.hours : e.hours);
@@ -362,7 +499,7 @@
 
   /* ================= PANEL ================= */
 
-  function visible(){ return st.entries.filter(function(e){ return !st.hidden[e.project || '_']; }); }
+  function visible(){ return st.entries.filter(function(e){ return !st.hidden[groupKey(e)]; }); }
 
   function calendarHtml(){
     var y = st.month.y, m = st.month.m;
@@ -370,7 +507,7 @@
     var days = new Date(y, m + 1, 0).getDate();
     var byDay = {};
     visible().forEach(function(e){ (byDay[e.date] = byDay[e.date] || []).push(e); });
-    /* Horas de cada día de todos los proyectos (aunque haya un filtro): el máximo se comprueba con ellas. */
+    /* Horas de cada día de todos los proyectos e incidencias (aunque haya un filtro): el máximo se comprueba con ellas. */
     var allByDay = {};
     st.entries.forEach(function(e){ allByDay[e.date] = (allByDay[e.date] || 0) + e.hours; });
     var head = '';
@@ -392,10 +529,10 @@
       var over = limited && (allByDay[key] || 0) > limit + 0.001;
       var scale = limited && limit > 0 ? limit : DAY_HOURS;
       var perProject = {};
-      list.forEach(function(e){ perProject[e.project || '_'] = (perProject[e.project || '_'] || 0) + e.hours; });
+      list.forEach(function(e){ perProject[groupKey(e)] = (perProject[groupKey(e)] || 0) + e.hours; });
       var bar = list.length
         ? '<div class="cap"><div class="trk" style="width:' + Math.min(100, sum / scale * 100) + '%">' + Object.keys(perProject).map(function(k){
-            return '<i style="flex:' + perProject[k] + ';--c:' + esc(projectColor(k === '_' ? '' : k)) + '"></i>';
+            return '<i style="flex:' + perProject[k] + ';--c:' + esc(groupColor(k)) + '"></i>';
           }).join('') + '</div></div>'
         : '<div class="cap is-empty"></div>';
       cells += '<button type="button" class="sg-cell' + (weekend ? ' is-weekend' : '') + (limit === 0 ? ' is-off' : '') + (over ? ' is-over' : '') + (key === today() ? ' is-today' : '') + (key === st.selected ? ' is-selected' : '') + '" data-act="day" data-date="' + key + '"' +
@@ -408,19 +545,23 @@
 
   function legendHtml(){
     var perProject = {};
-    st.entries.forEach(function(e){ perProject[e.project || '_'] = (perProject[e.project || '_'] || 0) + e.hours; });
+    st.entries.forEach(function(e){ perProject[groupKey(e)] = (perProject[groupKey(e)] || 0) + e.hours; });
     var ids = st.projects.map(function(p){ return p.id; });
     if(perProject._) ids.push('_');
+    /* Las incidencias, solo las que tienen horas este mes. */
+    Object.keys(perProject).forEach(function(k){ if(k.slice(0, 2) === 'a:') ids.push(k); });
     if(!ids.length) return '';
     return '<div class="sg-legend">' + ids.map(function(id){
       var off = !!st.hidden[id];
-      return '<button type="button" class="sg-chip' + (off ? ' is-off' : '') + '" data-act="filter" data-id="' + esc(id) + '" aria-pressed="' + (!off) + '" style="--c:' + esc(projectColor(id === '_' ? '' : id)) + '">' +
-        '<i></i>' + esc(id === '_' ? tr('Sin proyecto') : projectName(id)) + (perProject[id] ? ' <em>' + fmt(perProject[id]) + ' h</em>' : '') + '</button>';
+      return '<button type="button" class="sg-chip' + (off ? ' is-off' : '') + '" data-act="filter" data-id="' + esc(id) + '" aria-pressed="' + (!off) + '" style="--c:' + esc(groupColor(id)) + '">' +
+        '<i></i>' + esc(groupName(id)) + (perProject[id] ? ' <em>' + fmt(perProject[id]) + ' h</em>' : '') + '</button>';
     }).join('') + '</div>';
   }
 
   function statsHtml(){
-    var list = visible();
+    /* Las cifras de trabajo no cuentan las incidencias: van aparte. */
+    var list = visible().filter(function(e){ return !e.absence; });
+    var away = visible().reduce(function(n, e){ return n + (e.absence ? e.hours : 0); }, 0);
     var total = list.reduce(function(n, e){ return n + e.hours; }, 0);
     var dayset = {};
     list.forEach(function(e){ dayset[e.date] = true; });
@@ -428,7 +569,8 @@
     return '<div class="sg-stats">' +
       '<div class="sg-stat"><b>' + fmt(total) + ' h</b><span>' + tr('Horas del mes') + '</span></div>' +
       '<div class="sg-stat"><b>' + worked + '</b><span>' + tr('Días trabajados') + '</span></div>' +
-      '<div class="sg-stat"><b>' + (worked ? fmt(total / worked) : '0') + ' h</b><span>' + tr('Media por día') + '</span></div></div>';
+      '<div class="sg-stat"><b>' + (worked ? fmt(total / worked) : '0') + ' h</b><span>' + tr('Media por día') + '</span></div>' +
+      '<div class="sg-stat"><b>' + fmt(away) + ' h</b><span>' + tr('Incidencias') + '</span></div></div>';
   }
 
   function pendingHtml(){
@@ -451,8 +593,8 @@
     var sum = list.reduce(function(n, e){ return n + e.hours; }, 0);
     var rows = list.length ? list.map(function(e){
       var armed = st.armed === e.id;
-      return '<div class="sg-entry"><span class="dot" style="--c:' + esc(projectColor(e.project)) + '"></span>' +
-        '<div class="who"><b>' + esc(e.title) + '</b><span>' + esc(projectName(e.project)) + '</span></div>' +
+      return '<div class="sg-entry"><span class="dot" style="--c:' + esc(groupColor(groupKey(e))) + '"></span>' +
+        '<div class="who"><b>' + esc(e.absence ? absenceName(e.absence) : e.title) + '</b><span>' + esc(e.absence ? (e.title || tr('Incidencia')) : projectName(e.project)) + '</span></div>' +
         '<span class="hrs">' + fmt(e.hours) + ' h</span><span class="ops">' +
         (e.task && taskById(e.task) ? '<button type="button" class="sg-link" data-act="open-task" data-id="' + esc(e.task) + '">' + tr('Abrir la tarea') + '</button>' : '') +
         '<button type="button" class="sg-link" data-act="edit" data-id="' + esc(e.id) + '">' + tr('Editar') + '</button>' +
@@ -460,7 +602,8 @@
     }).join('') : '<p class="sg-empty">' + tr('Sin registros este día.') + '</p>';
     return '<section class="sg-day"><div class="sg-day-head"><h2>' + esc(date.toLocaleDateString(WorkhubPlugin.locale, {weekday: 'long', day: 'numeric', month: 'long'})) + '</h2>' +
       '<span>' + (sum ? fmt(sum) + ' h' : '') + '</span></div>' + rows +
-      '<button type="button" class="wh-btn" data-act="add-day">' + tr('Añadir horas este día') + '</button></section>';
+      '<div class="sg-day-actions"><button type="button" class="wh-btn" data-act="add-day">' + tr('Añadir horas este día') + '</button>' +
+      '<button type="button" class="wh-btn" data-act="absence-day">' + tr('Añadir incidencia este día') + '</button></div></section>';
   }
 
   function calendarView(){
@@ -470,6 +613,8 @@
     return '<header class="sg-head"><div><h1>Smart GP</h1><p class="wh-muted">' + tr('Tus horas por día y proyecto') + '</p></div>' +
       '<div class="sg-actions"><button type="button" class="wh-btn" data-act="schedule">' + tr('Jornada') + '</button>' +
       '<button type="button" class="wh-btn" data-act="projects">' + tr('Proyectos') + '</button>' +
+      '<button type="button" class="wh-btn" data-act="absences">' + tr('Incidencias') + '</button>' +
+      '<button type="button" class="wh-btn" data-act="absence">' + tr('Añadir incidencia') + '</button>' +
       '<button type="button" class="wh-btn is-primary" data-act="add">' + tr('Registrar horas') + '</button></div></header>' +
       pendingHtml() +
       '<div class="sg-bar"><div class="sg-month"><button type="button" class="sg-icon" data-act="prev" aria-label="' + esc(tr('Mes anterior')) + '">' + L + '</button>' +
@@ -520,27 +665,35 @@
     return serial(function(){ return set('schedule', st.schedule); });
   }
 
+  /* Proyectos o, con la vista «absences», incidencias: las fijas (sin editar) y las propias. */
   function projectsView(){
-    var hours = {};
-    st.entries.forEach(function(e){ hours[e.project] = (hours[e.project] || 0) + e.hours; });
-    var rows = st.projects.length ? st.projects.map(function(p){
-      var color = projectColor(p.id);
+    var abs = st.view === 'absences';
+    var items = coll().list;
+    var nameLabel = abs ? tr('Nombre de la incidencia') : tr('Nombre del proyecto');
+    var newLabel = abs ? tr('Nueva incidencia') : tr('Nuevo proyecto');
+    var fixed = abs ? ABSENCES.map(function(a){
+      return '<div class="sg-proj-wrap"><div class="sg-proj is-fixed"><span class="sw" style="--c:' + a.color + '"></span><span class="nm">' + esc(tr(a.name)) + '</span><span class="hrs">' + a.id + '</span></div></div>';
+    }).join('') : '';
+    var rows = items.length ? items.map(function(p){
+      var color = itemColor(p);
       return '<div class="sg-proj-wrap"><div class="sg-proj"><button type="button" class="sg-color-trigger" data-act="show-color" data-id="' + esc(p.id) + '" style="--c:' + color + '" aria-label="' + esc(tr('Cambiar color')) + '" aria-expanded="' + (st.colorPicker === p.id) + '"><span></span></button>' +
-        '<input class="wh-input" data-act="rename" data-id="' + esc(p.id) + '" value="' + esc(p.name) + '" maxlength="160" aria-label="' + esc(tr('Nombre del proyecto')) + '">' +
+        '<input class="wh-input" data-act="rename" data-id="' + esc(p.id) + '" value="' + esc(p.name) + '" maxlength="160" aria-label="' + esc(nameLabel) + '">' +
         '<button type="button" class="sg-link is-muted" data-act="proj-del" data-id="' + esc(p.id) + '">' + (st.armed === p.id ? tr('¿Seguro?') : tr('Eliminar')) + '</button></div>' +
         (st.colorPicker === p.id ? colorChoices(p.id, color) : '') + '</div>';
-    }).join('') : '<p class="sg-empty">' + tr('Aún no hay proyectos. Crea el primero abajo.') + '</p>';
-    var newColor = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[st.projects.length % PALETTE.length];
-    return '<header class="sg-head"><div><h1>' + tr('Proyectos') + '</h1><p class="wh-muted">' + tr('Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).') + '</p></div>' +
+    }).join('') : abs ? '' : '<p class="sg-empty">' + tr('Aún no hay proyectos. Crea el primero abajo.') + '</p>';
+    var newColor = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[items.length % PALETTE.length];
+    return '<header class="sg-head"><div><h1>' + (abs ? tr('Incidencias') : tr('Proyectos')) + '</h1><p class="wh-muted">' + (abs ? tr('Las fijas y las que añadas tú (reconocimiento médico, formación…).') : tr('Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).')) + '</p></div>' +
       '<div class="sg-actions"><button type="button" class="wh-btn" data-act="back">' + tr('Volver') + '</button></div></header>' +
-      '<div class="sg-box">' + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="160" value="' + esc(st.newName) + '" placeholder="' + esc(tr('Nuevo proyecto')) + '" aria-label="' + esc(tr('Nuevo proyecto')) + '">' +
+      '<div class="sg-box">' + fixed + rows + '<div class="sg-newproj"><input class="wh-input" id="newProject" maxlength="160" value="' + esc(st.newName) + '" placeholder="' + esc(newLabel) + '" aria-label="' + esc(newLabel) + '">' +
       '<button type="button" class="wh-btn is-primary" data-act="proj-add">' + tr('Añadir') + '</button></div>' +
-      '<div class="sg-new-colors"><span class="sg-color-caption">' + tr('Color del proyecto') + '</span>' + colorChoices('', newColor) + '</div></div>';
+      '<div class="sg-new-colors"><span class="sg-color-caption">' + colorLabel() + '</span>' + colorChoices('', newColor) + '</div></div>';
   }
+
+  function colorLabel(){ return st.view === 'absences' ? tr('Color de la incidencia') : tr('Color del proyecto'); }
 
   function colorChoices(id, selected){
     var custom = !PALETTE.some(function(color){ return color.toLowerCase() === selected.toLowerCase(); });
-    return '<div class="sg-color-options" role="group" aria-label="' + esc(tr('Color del proyecto')) + '">' +
+    return '<div class="sg-color-options" role="group" aria-label="' + esc(colorLabel()) + '">' +
       PALETTE.map(function(color){
         return '<button type="button" class="sg-color-choice' + (color.toLowerCase() === selected.toLowerCase() ? ' is-selected' : '') + '" style="--c:' + color + '" data-act="choose-color" data-id="' + esc(id) + '" data-color="' + color + '" aria-label="' + color + '" aria-pressed="' + (color.toLowerCase() === selected.toLowerCase()) + '"></button>';
       }).join('') +
@@ -550,7 +703,7 @@
   function render(){
     var app = document.getElementById('app');
     if(!app) return;
-    app.innerHTML = st.view === 'projects' ? projectsView() : st.view === 'schedule' ? scheduleView() : calendarView();
+    app.innerHTML = st.view === 'projects' || st.view === 'absences' ? projectsView() : st.view === 'schedule' ? scheduleView() : calendarView();
   }
 
   function refresh(){
@@ -565,12 +718,13 @@
   }
 
   function saveProjectColor(id, color){
-    var p = project(id);
+    var p = item(id);
+    var c = coll();
     if(!p || !/^#[0-9a-fA-F]{6}$/.test(color)) return;
     p.color = color;
     st.colorPicker = '';
     render();
-    serial(function(){ return set('projects', st.projects); }).then(refresh).catch(function(err){ wh.ui.toast(err.message || 'Error', {type:'error'}); });
+    serial(function(){ return set(c.key, c.list); }).then(refresh).catch(function(err){ wh.ui.toast(err.message || 'Error', {type:'error'}); });
   }
 
   function onClick(ev){
@@ -587,6 +741,8 @@
       case 'filter': st.hidden[id] = !st.hidden[id]; render(); break;
       case 'add': busy(logTask(null)); break;
       case 'add-day': busy(logTask(null, [st.selected])); break;
+      case 'absence': busy(logAbsence()); break;
+      case 'absence-day': busy(logAbsence([st.selected])); break;
       case 'pending-log': busy(logTask(taskById(id))); break;
       case 'pending-skip': st.logged[id] = true; busy(set('logged', st.logged)); break;
       case 'open-task': wh.ui.openTask(id); break;
@@ -596,7 +752,8 @@
         st.armed = '';
         busy(deleteEntry(id));
         break;
-      case 'projects': st.view = 'projects'; render(); break;
+      case 'projects': st.view = 'projects'; st.colorPicker = ''; st.newName = ''; st.newColor = ''; render(); break;
+      case 'absences': st.view = 'absences'; st.colorPicker = ''; st.newName = ''; st.newColor = ''; render(); break;
       case 'show-color': st.colorPicker = st.colorPicker === id ? '' : id; render(); break;
       case 'choose-color':
         if(id){ saveProjectColor(id, t.getAttribute('data-color')); }
@@ -637,18 +794,20 @@
         var input = document.getElementById('newProject');
         var name = input.value.trim();
         if(!name){ input.focus(); break; }
-        var color = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[st.projects.length % PALETTE.length];
+        var into = coll();
+        var color = /^#[0-9a-fA-F]{6}$/.test(st.newColor) ? st.newColor : PALETTE[into.list.length % PALETTE.length];
         busy(serial(function(){
-          st.projects.push({id: newId(), name: name, color: color});
-          return set('projects', st.projects);
+          into.list.push({id: newId(), name: name, color: color});
+          return set(into.key, into.list);
         }).then(function(){ st.newName = ''; st.newColor = ''; }));
         break;
       }
       case 'proj-del':
         if(st.armed !== id){ st.armed = id; render(); setTimeout(function(){ if(st.armed === id){ st.armed = ''; render(); } }, 3500); break; }
         st.armed = '';
-        st.projects = st.projects.filter(function(x){ return x.id !== id; });
-        busy(serial(function(){ return set('projects', st.projects); }));
+        var from = coll();
+        if(item(id)) from.list.splice(from.list.indexOf(item(id)), 1);
+        busy(serial(function(){ return set(from.key, from.list); }));
         break;
     }
   }
@@ -671,11 +830,12 @@
       return;
     }
     if(t.getAttribute('data-act') !== 'rename') return;
-    var p = project(t.getAttribute('data-id'));
+    var p = item(t.getAttribute('data-id'));
+    var c = coll();
     var name = t.value.trim();
     if(!p || !name){ t.value = p ? p.name : ''; return; }
     p.name = name;
-    serial(function(){ return set('projects', st.projects); }).catch(function(){});
+    serial(function(){ return set(c.key, c.list); }).catch(function(){});
   }
 
   function startPanel(){
@@ -730,6 +890,7 @@
   function startBackground(){
     wh.ui.addButton({id: 'log', location: 'task.actions', label: tr('Registrar horas'), icon: 'clock', tooltip: tr('Apuntar las horas de esta tarea')});
     wh.ui.addButton({id: 'add', location: 'command', label: tr('Smart GP: registrar horas'), icon: 'clock'});
+    wh.ui.addButton({id: 'absence', location: 'command', label: tr('Smart GP: añadir incidencia'), icon: 'calendar'});
     wh.ui.addButton({id: 'open', location: 'command', label: tr('Abrir Smart GP'), icon: 'calendar'});
     wh.on('action', function(a){
       if(a.id === 'log'){
@@ -737,6 +898,8 @@
         if(t) asking = asking.then(function(){ return logTask(t); }).then(updateBadges).catch(function(){});
       } else if(a.id === 'add'){
         asking = asking.then(function(){ return logTask(null); }).then(updateBadges).catch(function(){});
+      } else if(a.id === 'absence'){
+        asking = asking.then(function(){ return logAbsence(); }).catch(function(){});
       } else if(a.id === 'open'){
         wh.ui.openPanel();
       }

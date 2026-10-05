@@ -543,7 +543,8 @@
   ].join('\n');
   /* El final de cada píxel, igual vaya todo junto (FRAG, PART 0) o por partes (COMP): el cerezo
      por delante, el halo de la pantalla, el revelado y la profundidad. */
-  const TAIL = [
+  /* El cerezo, por delante de lo ya pintado. Lo usa también la imagen de espera (WAIT). */
+  const TREE_PART = [
     '  float zTree = -1.;',
     /* ---------- El cerezo ---------- */
     /* Es un modelo 3D renderizado aparte a una imagen con transparencia (assets/img/sakura.webp), */
@@ -598,6 +599,8 @@
     '    }',
     '    }',
     '  }',
+  ];
+  const TAIL = TREE_PART.concat([
     /* Halo de la pantalla en el aire. */
     '  vec3 oc = ro - sc;',
     '  float bq = dot(oc, rd);',
@@ -608,8 +611,8 @@
     /* Profundidad de lo pintado, para que la hierba quede delante o detrás de cada cosa. */
     '  float zr = tFin > 0. ? tFin : 1e4;',
     '  if(zTree > 0.) zr = min(zr, zTree);',
-    '  gl_FragDepth = depth01(zr * dot(rd, fw));',
-  ];
+    '  gl_FragDepth = depth01(zr * dot(rd, fw));'
+  ]);
   const COMP = [
     /* ---------- La escena: lo que se pone en cada fotograma ---------- */
     /* Lee la imagen intermedia que pintan las partes (ver FRAG) y le pone el final: el cerezo, */
@@ -853,7 +856,10 @@
     /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
     '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
     '      wc += pal(vec3(1.2, .78, .40), vec3(.90, .90, .84), vec3(.40, .46, .70)) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
-    '      float shore = smoothstep(0., .10, depth);',
+    /* Agua, solo de la colina hacia el fondo: el terreno también queda por debajo de su nivel */
+    /* al pie de la colina, pegado a la cámara, y ahí asomaba un charco en la esquina de abajo */
+    /* a la izquierda de las ventanas anchas; eso es hierba. */
+    '      float shore = smoothstep(0., .10, depth) * smoothstep(0., 6., pw.z);',
     '      wet = shore;',
     '      col = mix(col, wc, shore * .94);',
     /* Un filo claro en la orilla. */
@@ -1122,7 +1128,7 @@
     /* pantalla, así que la imagen se coloca con esa misma cuenta y coincide con lo que vendrá. */
     /* uPosterMap: en la imagen, dónde está el ordenador (x, y, en píxeles) y cuánto mide una */
     /* altura de pantalla. La imagen va sin el revelado final (post), que se le da aquí. */
-    /* Con LIVE, además, la pantalla del ordenador se pinta de verdad (el cuadro de acceso, lo */
+    /* Con LIVE, además, van el cerezo y la pantalla del ordenador, pintada de verdad (el cuadro de acceso, lo */
     /* que se escribe): la imagen marca con su transparencia qué píxeles son cristal, y dónde */
     /* toca cada rayo el cristal sale de una cuenta directa (SCREEN), la misma que usa la escena. */
     'uniform sampler2D uPoster;',
@@ -1135,13 +1141,14 @@
     '  vec4 px = texture(uPoster, clamp((uv * uPosterMap.z + uPosterMap.xy) / vec2(textureSize(uPoster, 0)), .001, .999));',
     '  vec3 col = px.rgb;',
     '#ifdef LIVE',
+    '  float base = uBase;',
+    '  vec3 ta = vec3(0., base + 1.02, 0.);',
+    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
+    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
+    '  vec3 L = sunDir();',
     '  if(px.a < .75){',
-    '    float base = uBase;',
-    '    vec3 ta = vec3(0., base + 1.02, 0.);',
-    '    vec3 ro = vec3(2.2, base + .62, -11.5);',
-    '    vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
-    '    vec3 rd = normalize(fw * 1.5 + uv.x * rt + uv.y * up);',
-    '    col = screenColor(ro, rd, base, sunDir());',
+    '    col = screenColor(ro, rd, base, L);',
     /* El halo de la pantalla en el aire. */
     '    vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
     '    vec3 oc = ro - sc;',
@@ -1149,11 +1156,19 @@
     '    float dq = length(oc + rd * max(-bq, 0.));',
     '    col += screenLight() * .06 * exp(-dq * dq * 1.5) * mix(.5, 1.5, uNight) * step(0., -bq);',
     '  }',
+    /* El cerezo, igual que en la escena y en su sitio (que depende de la ventana: por eso no */
+    /* va en la imagen). Aquí no se sabe qué terreno hay delante, así que nada lo tapa. */
+    '  setupTree();',
+    '  float treeSc = TREE_SC * uTreeS;',
+    '  vec3 treeB = vec3(gTree.x, TREE_H + .22 * treeSc, gTree.y);',
+    '  vec3 fogCol = fogColor(rd, L);',
+    '  float tGround = -1.;'
+  ].concat(TREE_PART, [
     '#endif',
     /* uFade: cuánto se ve, para fundirla con la escena de verdad cuando llega. */
     '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.) * uFade;',
     '}'
-  ].join('\n');
+  ]).join('\n');
   const GRASS_BASE = [
     /* ---------- La hierba, paso previo: lo que no cambia de cada brizna ---------- */
     /* Dónde está su raíz, cuánto mide, la sombra fija que le cae (la del terreno y la del */
@@ -1835,7 +1850,7 @@
        para que acaben los primeros: la imagen sola, que es casi inmediato, y la imagen con la
        pantalla del ordenador en vivo. Si no se puede compilar en segundo plano no hay espera
        que cubrir. */
-    const holds = parallel ? [prepare(VERT, HEAD + '#define LIVE\n' + COMMON + '\n' + SCREEN + '\n' + WAIT), prepare(VERT, HEAD + COMMON + '\n' + WAIT)] : [];
+    const holds = parallel ? [prepare(VERT, HEAD + '#define LIVE\n' + COMMON + '\n' + SCREEN + '\n' + TREE_FN + '\n' + WAIT), prepare(VERT, HEAD + COMMON + '\n' + WAIT)] : [];
     const held = [null, null];
     /* Por orden: hierba (dos pasos), arbolado, lo de delante, lo que no cambia, lo fijo de la
        hierba y, al final, la
@@ -2419,6 +2434,10 @@
       gl.uniform1i(p.U.uText, 1);
       gl.uniform1f(p.U.uTextW, textW);
       gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, treeTex);
+      gl.uniform1i(p.U.uTree, 0);
+      gl.uniform1f(p.U.uTreeOn, treeFade);
+      gl.uniform1f(p.U.uSharp, LEVELS[level].sharp);
       gl.bindVertexArray(fullVao);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.disable(gl.BLEND);
@@ -2582,6 +2601,7 @@
         if(posterOk && kit.hold() && now - last >= 1000 / 30 - 2){
           last = now;
           advance(now);
+          treeFade = treeReady ? ease(treeFade, 1, 2.6) : 0;
           if(!shown){ shown = true; canvas.classList.add('is-on'); }
           drawPoster(1);
         }

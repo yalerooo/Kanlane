@@ -40,6 +40,10 @@ const POSTER = {
 };
 const H = 900, W = Math.round((POSTER.left + POSTER.right) * H);
 const OUT_H = 384, QUALITY = 0.74;
+/* Miniaturas: van incrustadas en auth.css (entre las marcas MINIATURAS) y se ven debajo de las
+   fotos hasta que estas se descargan, para que haya paisaje desde el primer fotograma. Alto en
+   píxeles: como se enseñan desenfocadas, con muy poco basta, y son unos cientos de bytes. */
+const MINI_H = 36, MINI_QUALITY = 0.5;
 
 /* Una foto de la escena con el punto de fuga a `up` altos del borde de arriba. */
 async function shot(browser, theme, up, tree){
@@ -94,6 +98,7 @@ async function shot(browser, theme, up, tree){
   const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
   const browser = await chromium.launch({headless:true, args:['--use-angle=d3d11', '--enable-gpu'], ...(chrome ? {executablePath:chrome} : {})});
   try{
+    const minis = {};
     for(const theme of ['light', 'dark']){
       const high = await shot(browser, theme, POSTER.up, false);
       const low = await shot(browser, theme, 1 - POSTER.down, false);
@@ -102,7 +107,7 @@ async function shot(browser, theme, up, tree){
       /* El montaje se hace en una página en blanco, con un lienzo 2D. */
       const context = await browser.newContext();
       const page = await context.newPage();
-      const out = await page.evaluate(async ([high, low, treeHigh, treeLow, P, outH, q]) => {
+      const out = await page.evaluate(async ([high, low, treeHigh, treeLow, P, outH, q, miniH, miniQ]) => {
         const load = (src) => new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = src; });
         const a = await load(high), b = await load(low), ta = await load(treeHigh), tb = await load(treeLow);
         const k = outH / (P.up + P.down);   /* píxeles de salida por alto de ventana */
@@ -115,8 +120,10 @@ async function shot(browser, theme, up, tree){
         const part = P.treeW * ta.height;
         tx.drawImage(tb, 0, 0, part, tb.height, 0, (P.up - (1 - P.down)) * k, tc.width, k);
         tx.drawImage(ta, 0, 0, part, ta.height, 0, 0, tc.width, k);
-        return {poster:pc.toDataURL('image/webp', q), tree:tc.toDataURL('image/webp', q)};
-      }, [high, low, treeHigh, treeLow, POSTER, OUT_H, QUALITY]);
+        const mini = (from) => { const [c, x] = canvas(from.width * miniH / from.height, miniH); x.drawImage(from, 0, 0, c.width, c.height); return c.toDataURL('image/webp', miniQ); };
+        return {poster:pc.toDataURL('image/webp', q), tree:tc.toDataURL('image/webp', q), posterMini:mini(pc), treeMini:mini(tc)};
+      }, [high, low, treeHigh, treeLow, POSTER, OUT_H, QUALITY, MINI_H, MINI_QUALITY]);
+      minis[theme] = '--sc-poster-mini:url(' + out.posterMini + ');--sc-tree-mini:url(' + out.treeMini + ');';
       await context.close();
       for(const name of ['poster', 'tree']){
         const file = path.join(root, 'assets/img/auth-' + name + '-' + theme + '.webp');
@@ -124,6 +131,21 @@ async function shot(browser, theme, up, tree){
         console.log('OK   ' + path.relative(root, file) + ' (' + Math.round(fs.statSync(file).size / 1024) + ' KB)');
       }
     }
+    /* Las miniaturas, a auth.css. */
+    const cssFile = path.join(root, 'assets/css/views/auth.css');
+    const css = fs.readFileSync(cssFile, 'utf8');
+    const eol = css.includes('\r\n') ? '\r\n' : '\n';
+    const block = [
+      '/* MINIATURAS:inicio (lo escribe scripts/make-auth-posters.js; no tocar a mano) */',
+      '.auth-screen{' + minis.light + '}',
+      ':root[data-theme="dark"] .auth-screen{' + minis.dark + '}',
+      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .auth-screen{' + minis.dark + '}}',
+      '/* MINIATURAS:fin */'
+    ].join(eol);
+    const marks = /\/\* MINIATURAS:inicio[\s\S]*?MINIATURAS:fin \*\//;
+    if(!marks.test(css)) throw new Error('auth.css: no encuentro las marcas MINIATURAS');
+    fs.writeFileSync(cssFile, css.replace(marks, () => block));
+    console.log('OK   miniaturas en assets/css/views/auth.css (' + Math.round((minis.light.length + minis.dark.length * 2) / 1024 * 10) / 10 + ' KB)');
   } finally {
     await browser.close();
     server.kill();

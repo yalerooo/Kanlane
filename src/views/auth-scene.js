@@ -583,6 +583,14 @@
     '    }',
     /* Mientras llega la imagen, el árbol entra poco a poco. */
     '    tr *= uTreeOn;',
+    /* En la imagen de espera no hay terreno ni briznas que tapen el pie del cerezo (lo que la */
+    /* imagen trae por debajo del suelo se vería entero): se recorta a la altura a la que lo */
+    /* tapa la hierba en la escena, con el borde desigual de las briznas. */
+    '#ifdef LIVE',
+    '    float wx = u.x * treeSc;',
+    '    float top = -.22 + (.04 + .16 * noise(vec2(wx * 34., 3.)) + .12 * noise(vec2(wx * 5., 9.))) / treeSc;',
+    '    tr *= smoothstep(top - .05, top + .05, u.y);',
+    '#endif',
     '    if(tp > 0. && !(tGround > 0. && tGround < tp)){',
     '      if(tuv.x > 0. && tuv.x < 1. && tuv.y > 0. && tuv.y < 1.){',
     /* Luz del momento: cálida al atardecer, fría y apagada de noche; algo más honda abajo. */
@@ -1133,12 +1141,21 @@
     /* toca cada rayo el cristal sale de una cuenta directa (SCREEN), la misma que usa la escena. */
     'uniform sampler2D uPoster;',
     'uniform vec3 uPosterMap;',
+    /* La imagen se hizo con el cerezo (y la loma que le hace el terreno) en un sitio fijo, pero */
+    /* en cada ventana el cerezo cae en otro: sin más, el árbol quedaba plantado donde la imagen */
+    /* no tiene loma y el suelo cambiaba de forma al llegar la escena. uWarp: dónde cae el */
+    /* cerezo (x, en alturas de pantalla desde el ordenador) y cuánto hay que correr la imagen */
+    /* para que su loma quede debajo (yz). Se corre entera a la izquierda del cerezo y cada vez */
+    /* menos hasta WARP_X1, antes del ordenador, que no se mueve. */
+    'uniform vec3 uWarp;',
+    'const float WARP_X1 = -.30;',
     'uniform float uFade;',
     'out vec4 fragColor;',
 
     'void main(){',
     '  vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
-    '  vec4 px = texture(uPoster, clamp((uv * uPosterMap.z + uPosterMap.xy) / vec2(textureSize(uPoster, 0)), .001, .999));',
+    '  vec2 puv = uv + uWarp.yz * (1. - smoothstep(uWarp.x, WARP_X1, uv.x));',
+    '  vec4 px = texture(uPoster, clamp((puv * uPosterMap.z + uPosterMap.xy) / vec2(textureSize(uPoster, 0)), .001, .999));',
     '  vec3 col = px.rgb;',
     '#ifdef LIVE',
     '  float base = uBase;',
@@ -1592,6 +1609,8 @@
   const BUDGET = 0.62;
   /* Desde /app/. La imagen (2048x1024) trae dos capas del mismo encuadre, una al lado de la
      otra: a la izquierda la madera y a la derecha las flores. */
+  /* Hasta dónde se corre la imagen de espera: la misma que en el sombreador (WARP_X1 en WAIT). */
+  const WARP_X1 = -0.30;
   const TREE_URL = '../assets/img/sakura.webp';
   /* Briznas de hierba. Se reparten en un abanico delante de la cámara, muchas más cerca que
      lejos (de lejos cada una se ensancha y cubre más). Si el equipo va justo se pinta solo
@@ -1763,6 +1782,29 @@
     return {w, h, fx, fy, tx, ts, tree, base: baseHeight(tree)};
   }
 
+  /* Cuánto hay que correr la imagen de espera para que la loma del cerezo, que en ella está
+     en un sitio fijo, quede bajo el cerezo de esta ventana (uWarp, ver WAIT): dónde cae el pie
+     del árbol en pantalla, en alturas desde el ordenador, aquí y en la imagen. Si el cerezo
+     queda pegado al ordenador (ventanas estrechas) se corre menos, o nada: la imagen no puede
+     estirarse tanto en tan poco sitio. */
+  function posterWarp(place){
+    const foot = (at) => {
+      const ro = [CAM_X, at.base + 0.62, CAM_Z];
+      const fl = Math.hypot(2.2, 0.4, 11.5), fw = [-2.2 / fl, 0.4 / fl, 11.5 / fl];
+      const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
+      const up = [fw[1] * rt[2], fw[2] * rt[0] - fw[0] * rt[2], -fw[1] * rt[0]];
+      const v = [at.tree[0] - ro[0], TREE_H - ro[1], at.tree[1] - ro[2]];
+      const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      return [1.5 * dot(v, rt) / dot(v, fw), 1.5 * dot(v, up) / dot(v, fw)];
+    };
+    const here = foot(place);
+    const there = foot(placeAt(POSTER.w, POSTER.h, POSTER.fx, POSTER.h - POSTER.fy, POSTER.fx + POSTER.tree * POSTER.h, 1));
+    const dx = there[0] - here[0], room = WARP_X1 - here[0];
+    if(room <= 0.02) return [WARP_X1 - 1, 0, 0];
+    const k = Math.min(1, 0.4 * room / Math.max(Math.abs(dx), 1e-6));
+    return [here[0], dx * k, (there[1] - here[1]) * k];
+  }
+
   /* La imagen de espera (ver WAIT y POSTER), de fondo tras el lienzo y colocada con la misma
      cuenta que la escena. La pone src/boot.js desde el primer fotograma; aquí se mantiene al
      día (tamaño de ventana, tema, la tarjeta que aparece). Se queda puesta: es lo que se ve
@@ -1843,7 +1885,7 @@
     function finish(prog){
       if(!prog || !gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
-      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp', 'uBase', 'uFFLit', 'uSharp', 'uGeo', 'uShade', 'uMode', 'uPetal', 'uPetalA', 'uRaw', 'uPoster', 'uPosterMap', 'uWarp', 'uFade', 'uScene', 'uFly', 'uFlyB'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
     /* Lo que se enseña mientras tanto (ver WAIT), en dos programas que se piden antes que nada
@@ -2428,6 +2470,7 @@
       uniforms(p, time);
       gl.uniform1i(p.U.uPoster, 4);
       gl.uniform3f(p.U.uPosterMap, POSTER.fx, POSTER.fy, POSTER.h);
+      gl.uniform3fv(p.U.uWarp, posterWarp(place));
       gl.uniform1f(p.U.uFade, alpha);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, textTex);

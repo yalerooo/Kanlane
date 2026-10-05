@@ -1,10 +1,9 @@
 /* Genera las imágenes de espera de la pantalla de acceso: una foto pequeña de la propia escena
    en 3D, que se ve desenfocada desde el primer fotograma mientras la de verdad se compila
    (auth.css, .auth-scene::before y ::after; las coloca WORKHUB_AUTH.place, en auth-early.js).
-   Por cada tema (light, dark) salen dos archivos en assets/img/:
-
-     auth-poster-<tema>.webp   el paisaje sin el cerezo
-     auth-tree-<tema>.webp     el cerezo, recortado
+   Por cada tema (light, dark) salen dos imágenes pequeñas, que se incrustan en auth.css
+   (variables --sc-poster-<tema> y --sc-tree-<tema>): el paisaje sin el cerezo, y el cerezo
+   recortado.
 
    Van por separado porque en la escena no se mueven igual: el paisaje se ancla al panel de
    cristal de la tarjeta y se escala con el alto de la ventana; el cerezo va pegado al borde
@@ -40,6 +39,10 @@ const POSTER = {
 };
 const H = 900, W = Math.round((POSTER.left + POSTER.right) * H);
 const OUT_H = 384, QUALITY = 0.74;
+/* Las fotos van incrustadas en auth.css (entre las marcas FOTOS), no en archivos: así están en
+   el primer fotograma sin esperar a ninguna descarga. Alto en píxeles: como se enseñan
+   desenfocadas, con poco basta, y son unos pocos KB entre las cuatro. */
+const MINI_H = 96, MINI_QUALITY = 0.6;
 
 /* Una foto de la escena con el punto de fuga a `up` altos del borde de arriba. */
 async function shot(browser, theme, up, tree){
@@ -61,19 +64,23 @@ async function shot(browser, theme, up, tree){
     /* Quieta: siempre el mismo instante, para que las dos fotos del paisaje casen. */
     document.documentElement.setAttribute('data-motion', 'reduced');
     const screen = document.getElementById('authScreen');
+    screen.querySelectorAll('.auth-top, .auth-bottom').forEach((el) => { el.style.display = 'none'; });
+    /* La escena ya tiene apuntado el panel de cristal de verdad (AuthView la arranca al
+       cargar, y solo la primera llamada cuenta), así que se recoloca ese: su centro es el
+       punto de fuga, y el borde izquierdo de su tarjeta decide dónde cae el tronco
+       (tx = borde * 0,36, como en la escena). Los dos, sin tamaño y sin verse. */
+    const focus = document.getElementById('authWindow'), card = focus.parentElement, stage = card.parentElement;
+    stage.style.cssText = 'display:block;position:static;margin:0;padding:0;';
+    card.style.cssText = 'display:block;position:absolute;top:0;width:0;height:0;min-height:0;margin:0;padding:0;border:0;animation:none;transform:none;visibility:hidden;left:' + (tx / 0.36) + 'px';
+    Array.from(card.children).forEach((el) => { if(el !== focus) el.style.display = 'none'; });
+    focus.style.cssText = 'display:block;position:absolute;width:0;height:0;margin:0;padding:0;border:0;left:' + (fx - tx / 0.36) + 'px;top:' + fy + 'px';
+    /* La escena no se prepara hasta que la pantalla de acceso se ve. */
     screen.hidden = false;
-    screen.querySelectorAll('.auth-top, .auth-stage, .auth-bottom').forEach((el) => { el.style.display = 'none'; });
-    /* Un «panel» de mentira: su centro es el punto de fuga; el borde izquierdo de su «tarjeta»
-       decide dónde cae el tronco (tx = borde * 0,36, como en la escena). */
-    const card = document.createElement('div');
-    card.style.cssText = 'position:absolute;top:0;width:0;height:0;left:' + (tx / 0.36) + 'px';
-    const focus = document.createElement('div');
-    focus.style.cssText = 'position:absolute;width:0;height:0;left:' + (fx - tx / 0.36) + 'px;top:' + fy + 'px';
-    card.appendChild(focus);
-    screen.appendChild(card);
     Workhub.views.authScene.start(document.getElementById('authCanvas'), screen, focus);
+    const at = window.WORKHUB_AUTH.layout(screen, focus, screen.clientWidth, screen.clientHeight);
+    if(Math.abs(at.fx - fx) > 1 || Math.abs(at.fy - fy) > 1 || Math.abs(at.tx - tx) > 1) throw new Error('El panel de mentira no ha quedado en su sitio: ' + JSON.stringify(at));
   }, [focusX, up * H, trunk]);
-  await page.waitForFunction(() => { const s = Workhub.views.authScene.state(); return s && !s.software; }, null, {timeout:90000});
+  await page.waitForFunction(() => { const s = Workhub.views.authScene.state(); return s && s.live && !s.software; }, null, {timeout:120000});
   await page.waitForTimeout(tree ? 3500 : 600);
   const data = await page.evaluate(() => {
     const scene = Workhub.views.authScene;
@@ -90,6 +97,7 @@ async function shot(browser, theme, up, tree){
   const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
   const browser = await chromium.launch({headless:true, args:['--use-angle=d3d11', '--enable-gpu'], ...(chrome ? {executablePath:chrome} : {})});
   try{
+    const minis = {};
     for(const theme of ['light', 'dark']){
       const high = await shot(browser, theme, POSTER.up, false);
       const low = await shot(browser, theme, 1 - POSTER.down, false);
@@ -98,7 +106,7 @@ async function shot(browser, theme, up, tree){
       /* El montaje se hace en una página en blanco, con un lienzo 2D. */
       const context = await browser.newContext();
       const page = await context.newPage();
-      const out = await page.evaluate(async ([high, low, treeHigh, treeLow, P, outH, q]) => {
+      const out = await page.evaluate(async ([high, low, treeHigh, treeLow, P, outH, q, miniH, miniQ]) => {
         const load = (src) => new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = src; });
         const a = await load(high), b = await load(low), ta = await load(treeHigh), tb = await load(treeLow);
         const k = outH / (P.up + P.down);   /* píxeles de salida por alto de ventana */
@@ -111,15 +119,25 @@ async function shot(browser, theme, up, tree){
         const part = P.treeW * ta.height;
         tx.drawImage(tb, 0, 0, part, tb.height, 0, (P.up - (1 - P.down)) * k, tc.width, k);
         tx.drawImage(ta, 0, 0, part, ta.height, 0, 0, tc.width, k);
-        return {poster:pc.toDataURL('image/webp', q), tree:tc.toDataURL('image/webp', q)};
-      }, [high, low, treeHigh, treeLow, POSTER, OUT_H, QUALITY]);
+        const mini = (from) => { const [c, x] = canvas(from.width * miniH / from.height, miniH); x.drawImage(from, 0, 0, c.width, c.height); return c.toDataURL('image/webp', miniQ); };
+        return {poster:pc.toDataURL('image/webp', q), tree:tc.toDataURL('image/webp', q), posterMini:mini(pc), treeMini:mini(tc)};
+      }, [high, low, treeHigh, treeLow, POSTER, OUT_H, QUALITY, MINI_H, MINI_QUALITY]);
+      minis[theme] = '--sc-poster-' + theme + ':url(' + out.posterMini + ');--sc-tree-' + theme + ':url(' + out.treeMini + ');';
       await context.close();
-      for(const name of ['poster', 'tree']){
-        const file = path.join(root, 'assets/img/auth-' + name + '-' + theme + '.webp');
-        fs.writeFileSync(file, Buffer.from(out[name].split(',')[1], 'base64'));
-        console.log('OK   ' + path.relative(root, file) + ' (' + Math.round(fs.statSync(file).size / 1024) + ' KB)');
-      }
     }
+    /* A auth.css. */
+    const cssFile = path.join(root, 'assets/css/views/auth.css');
+    const css = fs.readFileSync(cssFile, 'utf8');
+    const eol = css.includes('\r\n') ? '\r\n' : '\n';
+    const block = [
+      '/* FOTOS:inicio (lo escribe scripts/make-auth-posters.js; no tocar a mano) */',
+      '.auth-screen{' + minis.light + minis.dark + '}',
+      '/* FOTOS:fin */'
+    ].join(eol);
+    const marks = /\/\* FOTOS:inicio[\s\S]*?FOTOS:fin \*\//;
+    if(!marks.test(css)) throw new Error('auth.css: no encuentro las marcas FOTOS');
+    fs.writeFileSync(cssFile, css.replace(marks, () => block));
+    console.log('OK   fotos de espera en assets/css/views/auth.css (' + Math.round((minis.light.length + minis.dark.length) / 1024 * 10) / 10 + ' KB)');
   } finally {
     await browser.close();
     server.kill();

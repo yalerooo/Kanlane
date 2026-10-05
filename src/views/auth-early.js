@@ -68,7 +68,7 @@
     }
     var card = focusEl && focusEl.parentElement;
     if(card && card.offsetParent) left = Math.max(offset(card, root).x, 0);
-    return {w:w, h:h, fx:fx, fy:fy, tx:Math.max(left * 0.36, h * 0.05), ts:Math.min(Math.max(w / h * 0.8, 0.6), 1)};
+    return {w:w, h:h, fx:fx, fy:fy, left:left, tx:Math.max(left * 0.36, h * 0.05), ts:Math.min(Math.max(w / h * 0.8, 0.6), 1)};
   };
 
   /* La foto de espera (auth.css, .auth-scene::before y ::after): el paisaje y, aparte, el
@@ -91,6 +91,30 @@
     px('--tl', at.tx - P.treeX * k); px('--tt', base - (P.up + P.treeBase) * k);
     px('--tw', P.treeW * k); px('--th', (P.up + P.down) * k);
   }
+  /* La foto de espera, ya en pantalla: una promesa que se cumple cuando el navegador ha tenido
+     un par de fotogramas (y un respiro) para pintarla. La escena no empieza a compilar hasta
+     entonces: en un equipo modesto compilar ocupa el proceso gráfico del navegador varios
+     segundos, y si empezaba antes la foto no llegaba a verse (lo vio el dueño en su portátil:
+     «tarda en cargar y no sale la foto difuminada»). Nunca se queda esperando: con la pestaña
+     oculta no hay fotogramas, y a los 3 s se da por pintada. */
+  var painted = null;
+  api.painted = function(){
+    if(painted) return painted;
+    painted = new Promise(function(resolve){
+      setTimeout(resolve, 3000);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ setTimeout(resolve, 250); }); });
+    });
+    return painted;
+  };
+
+  /* Lo que la escena (auth-scene.js, POSTER) espera encontrar: la cuenta de dónde va el
+     ordenador y quién mantiene al día el fondo de espera. Las medidas son las de sus propias
+     imágenes de espera en el lienzo, hoy desactivadas (las usa solo su generador, poster()). */
+  window.__authPoster = {
+    w:1952, h:640, fx:1088, fy:301, tree:-1.12,
+    focus: function(root, el, w, h){ return api.layout(root, el, w, h); },
+    paint: place
+  };
   window.addEventListener('resize', place);
   /* La pantalla de acceso aparece con el atributo hidden (aquí o desde AuthView). */
   new MutationObserver(place).observe(screen, {attributes:true, attributeFilter:['hidden']});
@@ -123,6 +147,12 @@
     $('authEmail').autocomplete = 'email';
     $('authPass').autocomplete = 'new-password';
   }
+
+  /* El idioma en uso, marcado ya en su botón (la misma cuenta que boot.js e i18n.js). */
+  var lang = null;
+  try{ lang = localStorage.getItem('workhub_lang'); }catch(e){}
+  if(lang !== 'es' && lang !== 'en') lang = /^es\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
+  screen.querySelectorAll('#authLang button').forEach(function(b){ b.setAttribute('aria-checked', b.getAttribute('data-lang-choice') === lang ? 'true' : 'false'); });
 
   /* Lo pulsado antes de que la app esté lista, en orden. */
   var queue = [];

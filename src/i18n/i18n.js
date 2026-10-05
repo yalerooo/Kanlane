@@ -8,6 +8,12 @@
    (datos del usuario: títulos de tareas, clientes, notas…), ni campos de
    texto, ni el contenido de los plugins (van en su propio marco).
 
+   El diccionario de cada idioma (src/i18n/en.js) se baja solo si hace falta: quien usa Kanlane
+   en español no lo descarga. Lo pide este archivo al cargarse (boot.js ya ha adelantado la
+   descarga) y main.js espera a i18n.ready antes de arrancar la app, así que dentro de la app
+   Workhub.t() siempre lo tiene. Un script que llame a Workhub.t() al cargarse, fuera de una
+   función, se quedaría sin traducir.
+
    Idioma: localStorage 'workhub_lang' (y la cuenta del usuario, ver
    SettingsModel) o, si no hay, el del navegador. Cambiarlo recarga la app.
 
@@ -39,6 +45,8 @@
   const sourceText = new WeakMap();
   const sourceAttrs = new WeakMap();
   let stale = false;
+  /* El último idioma pedido con setLang. */
+  let wanted = lang;
   const dicts = {};
   const patterns = {};
   const missing = new Set();
@@ -46,6 +54,22 @@
   function add(code, exact, pats){
     dicts[code] = Object.assign(dicts[code] || {}, exact || {});
     patterns[code] = (patterns[code] || []).concat(pats || []);
+  }
+
+  /* Baja el diccionario de un idioma, una sola vez. La ruta es relativa a la página (app/).
+     Si la descarga falla, la promesa se cumple igual (la app sigue, en español) y la siguiente
+     llamada lo vuelve a intentar. */
+  const loading = {};
+  function load(code){
+    if(code === 'es' || dicts[code]) return Promise.resolve();
+    if(!loading[code]) loading[code] = new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = '../src/i18n/' + code + '.js';
+      s.onload = resolve;
+      s.onerror = () => { delete loading[code]; resolve(); };
+      document.head.appendChild(s);
+    });
+    return loading[code];
   }
 
   /* Traduce un texto completo (sin espacios alrededor). null si no se conoce. */
@@ -198,29 +222,39 @@
     }
   }
 
-  /* options.live: sin recargar (ver la cabecera). */
+  /* options.live: sin recargar (ver la cabecera). Devuelve una promesa que se cumple con el
+     cambio hecho (true) o sin nada que cambiar (false): el diccionario puede no estar bajado todavía, y si entretanto se elige otro
+     idioma manda el último. */
   function setLang(code, options){
-    if(!LANGS[code]) return;
+    if(!LANGS[code]) return Promise.resolve(false);
     try{ localStorage.setItem(KEY, code); }catch(e){}
-    if(code === lang) return;
-    if(!(options && options.live)){ location.reload(); return; }
-    /* Primero al español de origen y, desde ahí, al idioma nuevo. */
-    restoreTree(document.body);
-    lang = code;
-    stale = true;
-    document.documentElement.lang = lang;
-    if(lang !== 'es'){
-      if(observer){
-        translateTree(document.body);
-        document.title = t(document.title);
-      } else observe();
-    }
+    wanted = code;
+    if(code === lang) return Promise.resolve(false);
+    if(!(options && options.live)){ location.reload(); return Promise.resolve(false); }
+    return load(code).then(() => {
+      if(wanted !== code || code === lang) return false;
+      /* Primero al español de origen y, desde ahí, al idioma nuevo. */
+      restoreTree(document.body);
+      lang = code;
+      stale = true;
+      document.documentElement.lang = lang;
+      if(lang !== 'es'){
+        if(observer){
+          translateTree(document.body);
+          document.title = t(document.title);
+        } else observe();
+      }
+      return true;
+    });
   }
 
   document.documentElement.lang = lang;
+  const ready = load(lang);
 
   Workhub.i18n = {
     LANGS, add, t, setLang, observe, translateTree,
+    /* Se cumple cuando el diccionario del idioma en uso está cargado (al momento, en español). */
+    ready,
     get lang(){ return lang; },
     get locale(){ return LANGS[lang].locale; },
     /* true si el idioma se cambió sin recargar: la app tiene que recargarse antes de usarse. */

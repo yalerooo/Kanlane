@@ -202,7 +202,7 @@
   }
 
   /* En otro idioma, la página está oculta hasta que se traduce (html.i18n-pending): el acceso
-     se enseña en cuanto ha cargado el diccionario, que va entre los primeros scripts. */
+     se enseña en cuanto ha cargado el diccionario, que i18n.js pide al cargarse. */
   if(!document.documentElement.classList.contains('i18n-pending')){ show(); return; }
   document.addEventListener('load', function translated(ev){
     var i18n = window.Workhub && window.Workhub.i18n;

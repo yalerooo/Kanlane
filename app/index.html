@@ -162,6 +162,7 @@
 </div>
 <!-- Sin sesión en este navegador, el acceso se enseña ya, antes que el resto de scripts. -->
 <script src="../src/views/auth-early.js"></script>
+<!-- [paquete aparte] Al publicar, el script anterior va solo: es pequeño y enseña el formulario; la escena pesa mucho más. -->
 <script src="../src/views/auth-scene.js"></script>
 
 <div class="app">
@@ -1658,7 +1659,7 @@
 <script src="../src/core/namespace.js"></script>
 <script src="../src/config/features.js"></script>
 <script src="../src/i18n/i18n.js"></script>
-<script src="../src/i18n/en.js"></script>
+<!-- [paquete aparte] Hasta aquí, un paquete pequeño: en otro idioma, i18n.js pide ya el diccionario y el acceso sale traducido sin esperar al resto. -->
 <script src="../src/core/emitter.js"></script>
 <script src="../src/utils/html.js"></script>
 <script src="../src/utils/dates.js"></script>

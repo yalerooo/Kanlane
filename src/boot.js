@@ -51,8 +51,14 @@
      (src/i18n/i18n.js), para no ver los textos en español un instante. */
   try{
     var lang = localStorage.getItem('workhub_lang');
-    if(!lang) lang = /^es\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
-    if(lang !== 'es') root.classList.add('i18n-pending');
+    if(lang !== 'es' && lang !== 'en') lang = /^es\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || 'es') ? 'es' : 'en';
+    if(lang !== 'es'){
+      root.classList.add('i18n-pending');
+      /* Su diccionario solo se baja en ese caso (lo pide i18n.js); aquí se adelanta la descarga. */
+      var dict = document.createElement('link');
+      dict.rel = 'preload'; dict.as = 'script'; dict.href = '../src/i18n/' + lang + '.js';
+      document.head.appendChild(dict);
+    }
   }catch(e){}
   try{
     var theme = localStorage.getItem('workhub_theme');

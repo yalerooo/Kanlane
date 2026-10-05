@@ -153,7 +153,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 
 ### Publicarlo
 
-`scripts/build-public.js` copia a `dist/` solo lo que forma la web y genera las cabeceras de seguridad; Cloudflare lo publica solo al fusionar en `main`. Para montar tu propia instancia: crea un proyecto de Firebase, copia su configuración en `src/config/firebase-config.js`, publica `firestore.rules` y conecta el repositorio a Cloudflare.
+`scripts/build-public.js` copia a `dist/` solo lo que forma la web, une los scripts y estilos de cada página en unos pocos archivos y genera las cabeceras de seguridad; Cloudflare lo publica solo al fusionar en `main`. Para montar tu propia instancia: crea un proyecto de Firebase, copia su configuración en `src/config/firebase-config.js`, publica `firestore.rules` y conecta el repositorio a Cloudflare.
 
 - [docs/FIREBASE.md](docs/FIREBASE.md): proyecto de Firebase, acceso y reglas.
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): publicación, dominios y redirecciones.
@@ -297,7 +297,7 @@ Every pull request runs all of this in GitHub Actions.
 
 ### Deploying
 
-`scripts/build-public.js` copies only what makes up the site into `dist/` and generates the security headers; Cloudflare publishes it automatically when something is merged into `main`. To run your own instance: create a Firebase project, put its config in `src/config/firebase-config.js`, publish `firestore.rules` and connect the repository to Cloudflare.
+`scripts/build-public.js` copies only what makes up the site into `dist/`, joins each page's scripts and stylesheets into a few files and generates the security headers; Cloudflare publishes it automatically when something is merged into `main`. To run your own instance: create a Firebase project, put its config in `src/config/firebase-config.js`, publish `firestore.rules` and connect the repository to Cloudflare.
 
 - [docs/FIREBASE.md](docs/FIREBASE.md): Firebase project, sign-in and rules.
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): publishing, domains and redirects.

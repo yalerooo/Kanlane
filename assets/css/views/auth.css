@@ -299,6 +299,10 @@ html.auth-gate .app{display:none !important;}
 @media (min-width: 861px){
   body.is-authing .consent{left:auto;right:16px;}
 }
+/* Mientras no se sabe si hay sesión (esqueleto a la vista), el aviso espera. Si la sesión ha
+   caducado se acaba en el acceso, y el aviso, que ya había salido a la izquierda, saltaba a la
+   derecha. Así entra una sola vez, ya en su sitio. */
+html.auth-gate body:not(.is-authing) .consent{display:none;}
 
 /* ---------- Estados: carga, error y correo sin verificar ---------- */
 .auth-loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:13.5px;line-height:1.5;}

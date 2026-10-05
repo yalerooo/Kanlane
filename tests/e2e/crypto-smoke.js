@@ -206,13 +206,15 @@ function assertSealed(res, what){
     const renamed = await page.evaluate(async (id) => {
       const app = Workhub.app, m = app.models, c = app.controllers.clients;
       await m.tasks.update(id, {cliente:'Cliente Reservado'});
-      c.selectedId = m.clients.items.find((x) => x.nombre === 'Cliente Reservado').id;
-      c.rename('Cliente Renombrado');
-      const busy = c.busy;
+      /* Como al guardar el diálogo de editar con otro nombre y el mismo color. */
+      const client = m.clients.items.find((x) => x.nombre === 'Cliente Reservado');
+      c.editingId = client.id;
+      c.saveEdit('Cliente Renombrado', typeof client.color === 'number' ? client.color : null);
+      const busy = c.busy && document.getElementById('btnSaveClient').textContent;
       for(let i = 0; i < 100 && c.busy; i++) await new Promise((r) => setTimeout(r, 50));
       return {busy:busy, after:c.busy, client:m.clients.items.map((x) => x.nombre), task:m.tasks.find(id).cliente};
     }, taskId);
-    assert.deepEqual(renamed, {busy:'Guardando…', after:'', client:['Cliente Renombrado'], task:'Cliente Renombrado'});
+    assert.deepEqual(renamed, {busy:'Guardando…', after:false, client:['Cliente Renombrado'], task:'Cliente Renombrado'});
     assertSealed(await storedWhen(base + '/clients', hasSeal), 'clientes tras renombrar');
     assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas tras renombrar el cliente');
 

@@ -1,7 +1,7 @@
 /* Punto de entrada. Si Kanlane está publicado con Firebase, primero se pide
    iniciar sesión; si no, arranca directamente (modo local o claude.ai). */
-(function(){
-  /* Primero se traduce la página (si el idioma no es español). */
+Workhub.i18n.ready.then(function(){
+  /* Primero se traduce la página (si el idioma no es español; su diccionario ya ha llegado). */
   Workhub.i18n.observe();
   document.documentElement.classList.remove('i18n-pending');
   const app = new Workhub.controllers.AppController();
@@ -11,4 +11,4 @@
   Workhub.services.platform.whenReady(() => {
     auth.gate().then(() => app.start());
   });
-})();
+});

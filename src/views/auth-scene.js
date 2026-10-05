@@ -22,6 +22,8 @@
    acceso está a la vista. Con movimiento reducido se pinta un único fotograma. Si el
    navegador no tiene WebGL 2, queda el degradado de cielo que pone auth.css. */
 (function(){
+  /* Lo que comparte con auth-early.js, que va justo delante en la página. */
+  const EARLY = window.WORKHUB_AUTH;
   const HEAD = '#version 300 es\nprecision highp float;\n';
   const VERT = HEAD + 'layout(location = 0) in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
   const COMMON = [
@@ -97,6 +99,11 @@
     /* La hondonada del lago, al fondo a la derecha. */
     '  vec2 dl = (p - vec2(9., 27.)) * vec2(.75, 1.);',
     '  h -= 2.6 * exp(-dot(dl, dl) / 110.);',
+    /* Cerca de la cámara el suelo no baja nunca del nivel del agua (WATER_Y): en ventanas muy */
+    /* anchas asomaba el lago por la esquina de abajo a la izquierda. Es un mínimo suave, que */
+    /* desaparece hacia el fondo, donde sí está el lago. */
+    '  float lo = mix(-10., .98, smoothstep(16., 5., p.y));',
+    '  h = .5 * (h + lo + sqrt((h - lo) * (h - lo) + .05));',
     /* La loma del cerezo: el terreno sube y se alisa hacia TREE_H al acercarse al árbol. */
     '  vec2 dt = p - gTree;',
     '  float k = exp(-dot(dt, dt) / 14.);',
@@ -1178,6 +1185,9 @@
 
   /* Lado mayor del lienzo, en píxeles: por encima de esto se estira. */
   const MAX_SIDE = 1920;
+  /* Con las briznas ya al mínimo, lo que más pesa es la pasada de la escena, que va por píxel:
+     antes de dejar la imagen quieta se baja la resolución hasta este lado mayor. */
+  const MIN_SIDE = 620;
   const FRAME_MS = 1000 / 30;
   /* Desde /app/. La imagen (2048x1024) trae dos capas del mismo encuadre, una al lado de la
      otra: a la izquierda la madera y a la derecha las flores. */
@@ -1187,17 +1197,23 @@
      una parte: el orden es al azar, así que cualquier tramo inicial cubre toda la colina. */
   const BLADES = 420000;
   const BLADE_LEVELS = [1, 0.55, 0.3, 0.16];
+  /* El abanico de briznas se abre justo lo que se ve en la ventana (ver fan()). Con esta
+     abertura, en radianes, se pintan todas; si la ventana enseña menos, se pintan menos, en
+     proporción: la hierba queda igual de tupida en cualquier pantalla y no se gastan briznas
+     fuera de plano. Solo en ventanas más anchas que esto (más de 32:9) queda algo más rala. */
+  const BLADE_SPREAD = 1.7;
   /* La cámara de la escena, vista desde arriba: dónde está y hacia dónde mira. */
   const CAM_X = 2.2, CAM_Z = -11.5, CAM_YAW = Math.atan2(-2.2, 11.5);
 
-  function blades(){
+  /* from, to: entre qué ángulos (vistos desde arriba, desde la cámara) se reparten. */
+  function blades(from, to){
     const data = new Float32Array(BLADES * 4);
     /* Azar con semilla: la colina es la misma en cada visita. */
     let seed = 20261004;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
     for(let i = 0; i < BLADES; i++){
       const r = 0.7 + 27 * Math.pow(rnd(), 1.32);
-      const a = CAM_YAW + (rnd() - 0.5) * 1.7;
+      const a = from + rnd() * (to - from);
       data[i * 4] = CAM_X + Math.sin(a) * r;
       data[i * 4 + 1] = CAM_Z + Math.cos(a) * r;
       data[i * 4 + 2] = rnd();
@@ -1289,64 +1305,102 @@
     try{ gl = canvas.getContext('webgl2', {antialias:true, alpha:false, depth:true, stencil:false}); }catch(e){}
     if(!gl) return false;
 
-    function program(vsrc, fsrc){
-      const make = (type, src) => {
-        const s = gl.createShader(type);
-        gl.shaderSource(s, src);
-        gl.compileShader(s);
-        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
-      };
-      const vs = make(gl.VERTEX_SHADER, vsrc), fs = make(gl.FRAGMENT_SHADER, fsrc);
-      if(!vs || !fs) return null;
+    /* Los sombreadores se compilan sin parar la página. El de la escena es enorme y, compilado
+       de golpe, dejaba la pestaña congelada varios segundos (en un equipo modesto, muchos más):
+       con KHR_parallel_shader_compile el navegador lo hace por detrás y aquí solo se pregunta de
+       vez en cuando si ha terminado. Sin esa extensión se compilan de uno en uno, en turnos
+       distintos. Nunca se consulta el estado de un sombreador suelto (eso sí espera): si alguno
+       falla, falla el enlace del programa. */
+    const parallel = gl.getExtension('KHR_parallel_shader_compile');
+    const SOURCES = [
+      [VERT, HEAD + COMMON + '\n' + FRAG],
+      [HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG],
+      [HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG],
+      [VERT, HEAD + COMMON + '\n' + OVER]
+    ];
+    function begin(src){
       const prog = gl.createProgram();
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
+      [[gl.VERTEX_SHADER, src[0]], [gl.FRAGMENT_SHADER, src[1]]].forEach((part) => {
+        const sh = gl.createShader(part[0]);
+        gl.shaderSource(sh, part[1]);
+        gl.compileShader(sh);
+        gl.attachShader(prog, sh);
+      });
       gl.linkProgram(prog);
+      return prog;
+    }
+    function finish(prog){
       if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
       const U = {};
       ['uRes', 'uTime', 'uFocus', 'uNight', 'uDay', 'uDawn', 'uMouse', 'uUI', 'uText', 'uTextW', 'uTree', 'uTreeOn', 'uTreeX', 'uTreeS', 'uWide', 'uFF', 'uFFp'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
       return {prog, U};
     }
-    const scene = program(VERT, HEAD + COMMON + '\n' + FRAG);
-    const grass = program(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG);
-    const wood = program(HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG);
-    const over = program(VERT, HEAD + COMMON + '\n' + OVER);
-    if(!scene || !grass || !wood || !over) return false;
+    /* done(programas) o done(null) si alguno no compila o se pierde el contexto. */
+    function compile(done){
+      if(parallel){
+        const progs = SOURCES.map(begin);
+        (function poll(){
+          if(gl.isContextLost()) return done(null);
+          if(!progs.every((pr) => gl.getProgramParameter(pr, parallel.COMPLETION_STATUS_KHR))) return setTimeout(poll, 30);
+          const out = progs.map(finish);
+          done(out.every(Boolean) ? out : null);
+        })();
+        return;
+      }
+      const out = [];
+      (function next(){
+        if(gl.isContextLost()) return done(null);
+        const pr = finish(begin(SOURCES[out.length]));
+        if(!pr) return done(null);
+        out.push(pr);
+        if(out.length < SOURCES.length) setTimeout(next, 0); else done(out);
+      })();
+    }
+    /* Los cuatro programas; hasta que están (y medido el equipo, ver calibrate) no se pinta. */
+    let scene = null, grass = null, wood = null, over = null, live = false;
 
-    /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
-    const fullVao = gl.createVertexArray();
-    gl.bindVertexArray(fullVao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    /* La geometría (calcular 420.000 briznas lleva su rato) se prepara en un turno aparte, para
+       no juntarla con la creación del contexto: mientras, los sombreadores ya se compilan. */
+    let fullVao = null, grassVao = null, woodVao = null, bladeBuf = null;
+    function build(){
+      if(fullVao || gl.isContextLost()) return;
+      /* Un triángulo que cubre la pantalla, para la escena y para lo de delante. */
+      fullVao = gl.createVertexArray();
+      gl.bindVertexArray(fullVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-    /* La brizna: una cinta de cuatro tramos que acaba en punta (lado, altura). */
-    const grassVao = gl.createVertexArray();
-    gl.bindVertexArray(grassVao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 0.3, 1, 0.3, -1, 0.55, 1, 0.55, -1, 0.78, 1, 0.78, 0, 1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, blades(), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(1, 1);
+      /* La brizna: una cinta de cuatro tramos que acaba en punta (lado, altura). */
+      grassVao = gl.createVertexArray();
+      gl.bindVertexArray(grassVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 0.3, 1, 0.3, -1, 0.55, 1, 0.55, -1, 0.78, 1, 0.78, 0, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      /* Las briznas se reparten al conocer el tamaño de la ventana (fan()). */
+      bladeBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(1, 1);
 
-    /* El árbol lejano: un rectángulo (x de -1 a 1, y de 0 a 1). */
-    const woodVao = gl.createVertexArray();
-    gl.bindVertexArray(woodVao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, trees(), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
-    gl.vertexAttribDivisor(1, 1);
-    gl.bindVertexArray(null);
+      /* El árbol lejano: un rectángulo (x de -1 a 1, y de 0 a 1). */
+      woodVao = gl.createVertexArray();
+      gl.bindVertexArray(woodVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, trees(), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribDivisor(1, 1);
+      gl.bindVertexArray(null);
+    }
+    setTimeout(build, 0);
     const ffNow = new Float32Array(FIREFLIES * 4), ffBefore = new Float32Array(FIREFLIES * 4);
 
     /* El cerezo: un modelo 3D renderizado aparte a una imagen con transparencia. Hasta que
@@ -1354,7 +1408,8 @@
     let treeReady = false, treeFade = 0;
     const treeTex = gl.createTexture();
     const treeImg = new Image();
-    treeImg.onload = () => {
+    const treeLoaded = () => {
+      if(gl.isContextLost()) return;
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -1368,7 +1423,9 @@
       wake();
     };
     treeImg.src = TREE_URL;
-    canvas.classList.add('is-on');
+    /* decode() descomprime la imagen (2048x1024) sin parar la página; al subirla ya está lista. */
+    if(treeImg.decode) treeImg.decode().then(treeLoaded, () => {});
+    else treeImg.onload = treeLoaded;
 
     /* Lo que se escribe en el formulario (correo o nombre), como texto para la pantalla del
        ordenador: se pinta en un lienzo aparte y se sube como imagen cada vez que cambia. Si no
@@ -1444,6 +1501,67 @@
     let side = software ? 720 : MAX_SIDE, slow = 0, counted = 0;
     let level = software ? BLADE_LEVELS.length - 1 : (window.matchMedia('(pointer: coarse)').matches ? 2 : (modest ? 1 : 0));
 
+    /* La calidad se elige ANTES de enseñar la escena, midiendo. Antes se empezaba por arriba y
+       se bajaba al ver fotogramas lentos: en un equipo justo eran muchos segundos a tirones, con
+       el formulario sin responder. Ahora, con el lienzo aún invisible, se pinta en la calidad
+       más baja y se sube un escalón cada vez mientras el fotograma quepa en CLIMB_MS; el tope es
+       la calidad de partida de arriba y los escalones, los mismos que baja loop() (menos briznas
+       y menos resolución; con las briznas al mínimo, solo resolución, hasta MIN_SIDE). Si ni la
+       más baja cabe en FREEZE_MS, se deja una imagen quieta. El primer fotograma de cada escalón no
+       se mide ni se espera (fenceSync): incluye preparar la tarjeta y puede tardar. */
+    const CLIMB_MS = 42, FREEZE_MS = 70;
+    /* Lo medido en cada escalón [briznas, lado, ms], para diagnosticar (authScene.state()). */
+    const measured = [];
+    function settled(then){
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      const from = performance.now();
+      (function poll(){
+        if(gl.isContextLost()) return;
+        if(gl.clientWaitSync(sync, 0, 0) === gl.TIMEOUT_EXPIRED && performance.now() - from < 8000) return setTimeout(poll, 8);
+        gl.deleteSync(sync);
+        then();
+      })();
+    }
+    function calibrate(done){
+      resize();
+      if(isStill()) return done();
+      const steps = [[level, side]];
+      for(;;){
+        const top = steps[steps.length - 1];
+        const next = [Math.min(top[0] + 1, BLADE_LEVELS.length - 1), Math.round(top[1] * 0.8)];
+        if(next[0] === top[0] && next[1] < MIN_SIDE) break;
+        steps.push(next);
+      }
+      const px = new Uint8Array(4);
+      let at = steps.length - 1;
+      const use = (i) => { at = i; level = steps[i][0]; side = steps[i][1]; resize(); };
+      /* Un escalón no se descarta por una sola medida: los primeros fotogramas tras compilar
+         salen más lentos de lo que luego son, así que se repite hasta tres veces y vale la mejor. */
+      let tries = 0, best = Infinity;
+      (function measure(){
+        use(at);
+        draw(performance.now());
+        settled(() => {
+          const from = performance.now();
+          draw(from);
+          gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          best = Math.min(best, performance.now() - from);
+          if(best > CLIMB_MS && ++tries < 3) return setTimeout(measure, 0);
+          measured.push([level, side, Math.round(best * 10) / 10]);
+          if(best > CLIMB_MS){
+            if(at < steps.length - 1) use(at + 1);
+            else if(best > FREEZE_MS) frozen = true;
+            return done();
+          }
+          if(at === 0) return done();
+          at--;
+          tries = 0; best = Infinity;
+          setTimeout(measure, 0);
+        });
+      })();
+    }
+
     /* El cursor sobre la escena (en píxeles de pantalla) y con cuánta fuerza aparta la hierba. */
     const mouse = {x:0, y:0, tx:0, ty:0, s:0, inside:false, moved:0};
     /* El formulario, para la pantalla del ordenador (ver signal()). */
@@ -1455,41 +1573,46 @@
       canvas.width = Math.max(2, Math.round(w * scale));
       canvas.height = Math.max(2, Math.round(h * scale));
       gl.viewport(0, 0, canvas.width, canvas.height);
-      if(!place || place.w !== w || place.h !== h) place = layout(w, h);
+      if(!place || place.w !== w || place.h !== h){
+        place = layout(w, h);
+        /* La primera vez, ya; al cambiar el tamaño de la ventana, cuando se deja de arrastrar. */
+        clearTimeout(fanTimer);
+        if(!fanned) fan(); else fanTimer = setTimeout(() => { fan(); last = 0; wake(); }, 180);
+      }
     }
 
-    /* Dónde va cada cosa, en píxeles de pantalla. Se calcula una vez por tamaño de ventana y
-       no en cada fotograma: si siguiera a la tarjeta, la escena entera (y con ella el árbol)
-       daría saltos cada vez que la tarjeta se anima o cambia de alto. Por eso tampoco se usa
-       getBoundingClientRect, que incluye las transformaciones de la animación de entrada.
-       - fx, fy: centro del panel de cristal, donde se coloca el ordenador.
-       - tx: dónde cae el tronco del cerezo, cerca del borde izquierdo.
-       - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas. */
-    let place = null;
-    function offset(el){
-      let x = 0, y = 0;
-      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
-      return {x, y};
+    /* Reparte las briznas en el abanico que de verdad se ve: desde la cámara, entre el rayo del
+       borde izquierdo de la ventana y el del derecho (el punto de fuga no está en el centro),
+       con un margen. Antes el abanico era fijo: en una pantalla normal un tercio de las briznas
+       caía fuera de plano y en una ultrapanorámica la hierba se acababa antes del borde. */
+    let fanned = null, fanTimer = 0, bladeShare = 1;
+    function fan(){
+      if(!bladeBuf || !place || gl.isContextLost()) return;
+      const MARGIN = 0.07;
+      const from = CAM_YAW - Math.atan(place.fx / place.h / 1.5) - MARGIN;
+      const to = CAM_YAW + Math.atan((place.w - place.fx) / place.h / 1.5) + MARGIN;
+      if(fanned && Math.abs(fanned[0] - from) < 0.004 && Math.abs(fanned[1] - to) < 0.004) return;
+      fanned = [from, to];
+      bladeShare = Math.min(1, (to - from) / BLADE_SPREAD);
+      gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, blades(from, to), gl.STATIC_DRAW);
     }
+
+    /* Dónde va cada cosa, en píxeles de pantalla (fx, fy, tx, ts: la cuenta es
+       WORKHUB_AUTH.layout, en auth-early.js, compartida con la foto de espera). Se calcula una
+       vez por tamaño de ventana y no en cada fotograma: si siguiera a la tarjeta, la escena
+       entera (y con ella el árbol) daría saltos cada vez que la tarjeta se anima o cambia de alto. */
+    let place = null;
     function layout(w, h){
-      let fx = w / 2, fy = h * 0.6, left = w * 0.2;
-      if(focusEl && focusEl.offsetParent){
-        const o = offset(focusEl);
-        /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
-           su fondo, y centrado se arrimaba demasiado al formulario. */
-        fx = o.x + focusEl.offsetWidth * 0.575;
-        fy = o.y + focusEl.offsetHeight * 0.585;
-      }
-      const card = focusEl && focusEl.parentElement;
-      if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
-      const tx = Math.max(left * 0.36, h * 0.05);
+      const at = EARLY.layout(screen, focusEl, w, h);
       /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
          sombreador (el rayo que pasa por tx, hasta la distancia TREE_Z). */
       const fl = Math.hypot(2.2, 0.4, 11.5), fw = [-2.2 / fl, 0.4 / fl, 11.5 / fl];
       const rl = Math.hypot(fw[2], fw[0]), rt = [fw[2] / rl, 0, -fw[0] / rl];
-      const k = (tx - fx) / h;
+      const k = (at.tx - at.fx) / h;
       const dx = fw[0] * 1.5 + k * rt[0], dz = fw[2] * 1.5 + k * rt[2];
-      return {w, h, fx, fy, tx, ts: Math.min(Math.max(w / h * 0.8, 0.6), 1), tree: [2.2 + dx * (TREE_Z + 11.5) / dz, TREE_Z]};
+      at.tree = [2.2 + dx * (TREE_Z + 11.5) / dz, TREE_Z];
+      return at;
     }
 
     function uniforms(p, time){
@@ -1508,8 +1631,11 @@
       if(p.U.uFFp) gl.uniform4fv(p.U.uFFp, ffBefore);
     }
 
-    function draw(now){
+    /* only: para medir (bench), pinta solo las pasadas indicadas (1 escena, 2 arbolado, 4 hierba,
+       8 lo de delante). */
+    function draw(now, only){
       const still = isStill();
+      const on = only || 15;
       /* Todo lo que cambia poco a poco avanza según el tiempo pasado, no por fotograma: dura lo
          mismo en un equipo rápido que en uno lento. */
       const dt = prev ? Math.min((now - prev) / 1000, 0.1) : 0;
@@ -1553,7 +1679,7 @@
       treeFade = treeReady ? ease(treeFade, 1, 2.6) : 0;
       gl.uniform1f(scene.U.uTreeOn, treeFade);
       gl.bindVertexArray(fullVao);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if(on & 1) gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       /* 2. El arbolado lejano: con prueba de profundidad (lo tapan las lomas), pero sin
          escribirla, y con los bordes transparentes. */
@@ -1563,7 +1689,7 @@
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       uniforms(wood, time);
       gl.bindVertexArray(woodVao);
-      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, TREES);
+      if(on & 2) gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, TREES);
       gl.disable(gl.BLEND);
       gl.depthMask(true);
 
@@ -1572,7 +1698,7 @@
       const part = BLADE_LEVELS[level];
       gl.uniform1f(grass.U.uWide, 1 / Math.sqrt(part));
       gl.bindVertexArray(grassVao);
-      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 9, Math.round(BLADES * part));
+      if(on & 4) gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 9, Math.round(BLADES * part * bladeShare));
 
       /* 4. Pétalos, pájaros y luciérnagas, por delante de todo. */
       gl.disable(gl.DEPTH_TEST);
@@ -1581,21 +1707,24 @@
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       uniforms(over, time);
       gl.bindVertexArray(fullVao);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if(on & 8) gl.drawArrays(gl.TRIANGLES, 0, 3);
       gl.depthMask(true);
     }
 
     function loop(now){
       raf = 0;
-      if(screen.hidden || document.hidden) return;
+      if(!live || screen.hidden || document.hidden) return;
       if(now - last >= FRAME_MS - 2){
         if(last){
           counted++;
           if(now - last > 70) slow++;
           if(counted >= 18){
             if(slow > 9){
-              if(level < BLADE_LEVELS.length - 1){ level++; side = Math.round(side * 0.8); resize(); }
-              else frozen = true;
+              if(level < BLADE_LEVELS.length - 1 || side * 0.8 >= MIN_SIDE){
+                level = Math.min(level + 1, BLADE_LEVELS.length - 1);
+                side = Math.round(side * 0.8);
+                resize();
+              } else frozen = true;
             }
             counted = 0; slow = 0;
           }
@@ -1606,7 +1735,7 @@
       if(!isStill()) raf = requestAnimationFrame(loop);
     }
     function wake(){
-      if(raf || screen.hidden || document.hidden) return;
+      if(!live || raf || screen.hidden || document.hidden) return;
       resize();
       raf = requestAnimationFrame(loop);
     }
@@ -1632,14 +1761,16 @@
     /* Para las pruebas y para medir: el estado de la calidad, fijar la hora y cuánto tarda de
        verdad un fotograma (readPixels obliga a la tarjeta a terminar antes de seguir). */
     function state(){
-      return {level, side, blades:Math.round(BLADES * BLADE_LEVELS[level]), frozen, software, night, day, dawn, canvas:[canvas.width, canvas.height]};
+      if(!live) return null;
+      return {level, side, blades:Math.round(BLADES * BLADE_LEVELS[level] * bladeShare), frozen, software, night, day, dawn, canvas:[canvas.width, canvas.height], measured};
     }
-    function bench(frames){
+    function bench(frames, only){
+      if(!live) return 0;
       const px = new Uint8Array(4);
       const n = frames || 20;
       const from = performance.now();
       for(let i = 0; i < n; i++){
-        draw(performance.now());
+        draw(performance.now(), only);
         gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
       }
       return (performance.now() - from) / n;
@@ -1648,7 +1779,7 @@
     api.state = state;
     api.bench = bench;
     api.hour = (h) => { hourFixed = h == null ? null : +h; last = 0; wake(); };
-    api.quality = (l) => { level = Math.max(0, Math.min(BLADE_LEVELS.length - 1, l | 0)); side = Math.round(MAX_SIDE * Math.pow(0.8, level)); frozen = false; resize(); last = 0; wake(); };
+    api.quality = (l) => { if(!live) return; level = Math.max(0, Math.min(BLADE_LEVELS.length - 1, l | 0)); side = Math.round(MAX_SIDE * Math.pow(0.8, level)); frozen = false; resize(); last = 0; wake(); };
 
     /* El cursor: solo con ratón (en pantallas táctiles no hay cursor que seguir). */
     if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
@@ -1666,12 +1797,55 @@
     new MutationObserver(wake).observe(screen, {attributes:true, attributeFilter:['hidden']});
     new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
     if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake);
-    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; canvas.classList.remove('is-on'); });
-    wake();
+    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; live = false; canvas.classList.remove('is-on'); });
+    /* Lo que pasó en el formulario antes de arrancar. */
+    early.splice(0).forEach(signal);
+
+    compile((progs) => {
+      if(!progs) return;
+      scene = progs[0]; grass = progs[1]; wood = progs[2]; over = progs[3];
+      build();
+      fan();
+      /* Se mide con la pantalla de acceso a la vista (el lienzo necesita su tamaño). */
+      const shown = new MutationObserver(() => measure());
+      const measure = () => {
+        shown.disconnect();
+        if(screen.hidden){ shown.observe(screen, {attributes:true, attributeFilter:['hidden']}); return; }
+        calibrate(() => {
+          if(gl.isContextLost()) return;
+          live = true;
+          last = 0;
+          prev = 0;
+          /* El lienzo aparece ahora, con una transición (auth.css). */
+          canvas.classList.add('is-on');
+          wake();
+        });
+      };
+      measure();
+    });
     return true;
   }
 
-  /* signal() no hace nada hasta que la escena arranca (o si no hay WebGL). */
-  const api = {start, signal(){}, state(){ return null; }, bench(){ return 0; }, hour(){}, quality(){}};
-  Workhub.views.authScene = api;
+  /* Hasta que la escena arranca, signal() apunta lo que pasa en el formulario (start() lo
+     repasa); state() es null mientras no hay nada que ver (o si no hay WebGL). */
+  const early = [];
+  let started = false;
+  const api = {
+    start(canvas, screen, focusEl){
+      if(started) return true;
+      started = true;
+      return start(canvas, screen, focusEl);
+    },
+    signal(o){ if(early.length < 60) early.push(o); },
+    state(){ return null; }, bench(){ return 0; }, hour(){}, quality(){}
+  };
+  /* Este script va justo detrás de auth-early.js, antes de que exista Workhub: AuthView lo
+     publica después como Workhub.views.authScene. Si el formulario ya está a la vista, la
+     escena se empieza a preparar ya, mientras se cargan los demás scripts: así la compilación
+     de los sombreadores (segundos en una primera visita) corre a la vez que la descarga. */
+  EARLY.scene = api;
+  if(EARLY.shown){
+    const go = () => api.start(document.getElementById('authCanvas'), document.getElementById('authScreen'), document.getElementById('authWindow'));
+    if(window.requestIdleCallback) window.requestIdleCallback(go, {timeout:500}); else setTimeout(go, 60);
+  }
 })();

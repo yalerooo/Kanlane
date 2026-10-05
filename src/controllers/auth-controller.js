@@ -171,7 +171,8 @@
         this.view.hide();
         this.view.showAccount(user);
         if(this.resolveGate) this.resolveGate();
-      });
+        /* Firestore se carga aparte del acceso (firebase.init): si no llegó, se avisa. */
+      }, () => this.view.showLoadError(() => location.reload()));
     }
 
     /* Cuenta de correo sin verificar: no llega a la app hasta que pulse el

@@ -7,9 +7,13 @@
    orderBy, onSnapshot, add, set, update, delete), así que la base de datos se
    entrega casi tal cual, solo acotada a la carpeta del usuario. */
 (function(){
-  const SDK_VERSION = '10.14.1';
-  const SDK_BASE = 'https://www.gstatic.com/firebasejs/' + SDK_VERSION + '/';
-  const SDK_FILES = ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'];
+  /* La lista la da src/boot.js (que adelanta la descarga). OJO: lo de aquí es solo el respaldo
+     para cuando boot.js no se ha cargado (las pruebas sin navegador); la versión debe ser la misma. */
+  const SDK = window.WORKHUB_SDK || {
+    base: 'https://www.gstatic.com/firebasejs/10.14.1/',
+    files: ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'],
+    appCheck: 'firebase-app-check-compat.js'
+  };
 
   /* Imágenes de notas: se guardan comprimidas en Firestore como data: URL (máx. ~1 MiB
      por documento). Las reglas (firestore.rules, colección assets) aceptan como mucho
@@ -24,6 +28,9 @@
   let fb = null;        /* espacio de nombres firebase */
   let auth = null;
   let firestore = null;
+  /* Promesas de init(): el acceso listo (app + auth) y Firestore listo. */
+  let authReady = null;
+  let storeReady = null;
   /* Borrado de la caché local en curso (ver clearLocalCache). */
   let clearing = Promise.resolve();
   /* Acceso pendiente de unir a una cuenta: {credential, email}. Ver rememberPending. */
@@ -55,18 +62,26 @@
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = src;
+      /* Se bajan a la vez, pero se ejecutan en el orden en que se añaden. */
+      s.async = false;
       s.onload = resolve;
       s.onerror = () => reject(new Error('sdk-load'));
       document.head.appendChild(s);
     });
   }
 
-  /* Carga el SDK (en orden: app, auth, firestore) e inicializa el proyecto. */
+  /* Carga el SDK e inicializa el proyecto. La promesa se cumple en cuanto el acceso está listo
+     (app + auth): para saber si hay sesión y enseñar el formulario no hace falta Firestore, que
+     es el archivo más pesado y se sigue cargando a la vez (storeReady). */
   function init(){
-    if(fb) return Promise.resolve();
+    if(authReady) return authReady;
     const c = config();
-    const files = c.appCheckSiteKey && !c.useEmulators ? SDK_FILES.concat('firebase-app-check-compat.js') : SDK_FILES;
-    return files.reduce((p, f) => p.then(() => loadScript(SDK_BASE + f)), Promise.resolve()).then(() => {
+    const check = !!(c.appCheckSiteKey && !c.useEmulators);
+    const load = (f) => loadScript(SDK.base + f);
+    const emulated = c.useEmulators && /^(localhost|127.0.0.1)$/.test(location.hostname);
+    const core = [load(SDK.files[0]), load(SDK.files[1])].concat(check ? [load(SDK.appCheck)] : []);
+    const store = load(SDK.files[2]);
+    authReady = Promise.all(core).then(() => {
       fb = window.firebase;
       fb.initializeApp({
         apiKey: c.apiKey, authDomain: resolveAuthDomain(c, location.host), projectId: c.projectId,
@@ -74,19 +89,22 @@
       });
       /* Antes de inicializar Auth o Firestore: ambos deben incluir App Check
          cuando se active la protección en la consola. Nunca en emuladores. */
-      if(c.appCheckSiteKey && !c.useEmulators){
+      if(check){
         fb.appCheck().activate(new fb.appCheck.ReCaptchaEnterpriseProvider(c.appCheckSiteKey), true);
       }
       auth = fb.auth();
       auth.languageCode = 'es';
+      if(emulated) auth.useEmulator('http://127.0.0.1:' + (c.authEmulatorPort || 9099), {disableWarnings:true});
+    });
+    storeReady = Promise.all([authReady, store]).then(() => {
       firestore = fb.firestore();
       /* Firestore rechaza campos undefined; así se ignoran en vez de fallar. */
       firestore.settings({ignoreUndefinedProperties:true, merge:true});
-      if(c.useEmulators && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
-        auth.useEmulator('http://127.0.0.1:' + (c.authEmulatorPort || 9099), {disableWarnings:true});
-        firestore.useEmulator('127.0.0.1', c.firestoreEmulatorPort || 8080);
-      }
+      if(emulated) firestore.useEmulator('127.0.0.1', c.firestoreEmulatorPort || 8080);
     });
+    /* Si falla, se entera quien lo espera (startSession); aquí solo se evita el aviso de la consola. */
+    storeReady.catch(() => {});
+    return authReady;
   }
 
   /* Sin sesión no debe quedar nada en el dispositivo: se borra la copia local
@@ -95,13 +113,13 @@
      no al cerrar sesión (que recarga la página). Si otra pestaña la tiene
      abierta, falla sin más y se borrará en la próxima carga. */
   function clearLocalCache(){
-    clearing = firestore.clearPersistence().catch(() => {});
+    clearing = storeReady.then(() => firestore.clearPersistence()).catch(() => {});
     return clearing;
   }
 
   /* Al entrar: caché local (carga instantánea y aguanta cortes de conexión). */
   function startSession(){
-    return clearing.then(() => {
+    return clearing.then(() => storeReady).then(() => {
       firestore.enablePersistence({synchronizeTabs:true}).catch(() => {});
     });
   }

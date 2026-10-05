@@ -1564,13 +1564,14 @@
     {side:960, part:0.22, tall:false, fps:30, lit:8, sharp:0},
     {side:800, part:0.14, tall:false, fps:20, lit:0, sharp:0}
   ];
-  /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer, desde /app/. Medidas
-     en píxeles; fx, fy: dónde cae el ordenador (fy, desde abajo); una altura de pantalla son h
-     píxeles; tree: dónde va el tronco del cerezo respecto al ordenador, en alturas (el de una
-     ventana de escritorio corriente; el cerezo no sale en la imagen, pero el terreno le hace
-     una loma). Abarca más ancho que cualquier ventana; lo poco que pueda faltar por arriba es
-     cielo y se estira. Se generan con Workhub.views.authScene.poster(true | false). */
-  const POSTER = {w:1952, h:640, fx:1088, fy:301, tree:-0.94, night:'../assets/img/acceso-noche.webp', dusk:'../assets/img/acceso-tarde.webp'};
+  /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer. Sus medidas y dónde
+     cae en ellas el ordenador están en src/boot.js (window.__authPoster), que es quien las
+     pone de fondo desde el primer fotograma. Abarcan más ancho que cualquier ventana; lo poco
+     que pueda faltar por arriba es cielo y se estira. Se generan con
+     Workhub.views.authScene.poster(true | false). */
+  const POSTER = window.__authPoster;
+  /* La pantalla de acceso no se ve: ni oculta ni enseñada antes de tiempo (auth-early). */
+  const away = (screen) => screen.hidden && !document.documentElement.classList.contains('auth-early');
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
   const BUDGET = 0.62;
@@ -1731,22 +1732,10 @@
      - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas.
      - base: altura del suelo bajo el ordenador (uBase). */
   function layoutOf(screen, focusEl, w, h){
-    const offset = (el) => {
-      let x = 0, y = 0;
-      for(let n = el; n && n !== screen; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
-      return {x, y};
-    };
-    let fx = w / 2, fy = h * 0.6, left = w * 0.2;
-    if(focusEl && focusEl.offsetParent){
-      const o = offset(focusEl);
-      /* Algo a la derecha del centro del panel: el frontal del ordenador queda a la izquierda de
-         su fondo, y centrado se arrimaba demasiado al formulario. */
-      fx = o.x + focusEl.offsetWidth * 0.575;
-      fy = o.y + focusEl.offsetHeight * 0.585;
-    }
-    const card = focusEl && focusEl.parentElement;
-    if(card && card.offsetParent) left = Math.max(offset(card).x, 0);
-    return placeAt(w, h, fx, fy, Math.max(left * 0.36, h * 0.05), Math.min(Math.max(w / h * 0.8, 0.6), 1));
+    /* Dónde va el ordenador y dónde empieza la tarjeta: la cuenta es de src/boot.js, que la
+       necesita antes para colocar la imagen de espera. */
+    const at = POSTER.focus(screen, focusEl, w, h);
+    return placeAt(w, h, at.fx, at.fy, Math.max(at.left * 0.36, h * 0.05), Math.min(Math.max(w / h * 0.8, 0.6), 1));
   }
   function placeAt(w, h, fx, fy, tx, ts){
     /* Dónde queda plantado el cerezo en la escena: la misma cuenta que setupTree() en el
@@ -1760,28 +1749,14 @@
   }
 
   /* La imagen de espera (ver WAIT y POSTER), de fondo tras el lienzo y colocada con la misma
-     cuenta que la escena. Se pone nada más verse la pantalla de acceso, antes de tocar la
-     tarjeta gráfica, y se queda: es lo que se ve hasta que el lienzo pinta (entra sobre ella
-     con el fundido de auth.css, porque a la imagen le falta el revelado final) y lo que queda
-     si no hay WebGL o el lienzo se pierde. */
-  function backdrop(canvas, screen, focusEl){
-    const el = canvas.parentElement;
+     cuenta que la escena. La pone src/boot.js desde el primer fotograma; aquí se mantiene al
+     día (tamaño de ventana, tema, la tarjeta que aparece). Se queda puesta: es lo que se ve
+     hasta que el lienzo pinta (entra sobre ella con el fundido de auth.css, porque a la imagen
+     le falta el revelado final) y lo que queda si no hay WebGL o el lienzo se pierde. */
+  function backdrop(screen){
     const root = document.documentElement;
     const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    let done = '';
-    const paint = () => {
-      if(screen.hidden) return;
-      const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
-      const at = layoutOf(screen, focusEl, w, h), k = h / POSTER.h;
-      const theme = root.getAttribute('data-theme');
-      const now = [(theme ? theme === 'dark' : darkQuery.matches) ? POSTER.night : POSTER.dusk, Math.round(POSTER.w * k), Math.round(POSTER.h * k), Math.round(at.fx - POSTER.fx * k), Math.round(at.fy - (POSTER.h - POSTER.fy) * k)];
-      if(now.join() === done) return;
-      done = now.join();
-      el.style.backgroundImage = 'url("' + now[0] + '")';
-      el.style.backgroundRepeat = 'no-repeat';
-      el.style.backgroundSize = now[1] + 'px ' + now[2] + 'px';
-      el.style.backgroundPosition = now[3] + 'px ' + now[4] + 'px';
-    };
+    const paint = () => { POSTER.paint(); };
     paint();
     window.addEventListener('resize', paint);
     new MutationObserver(paint).observe(screen, {attributes:true, attributeFilter:['hidden']});
@@ -1794,14 +1769,16 @@
   function start(canvas, screen, focusEl){
     let done = false;
     const go = () => {
+      /* Hasta que la tarjeta se ve de verdad, no: con la pantalla enseñada a medias (auth-early)
+         basta la imagen de fondo, y arrancar antes retrasaba medio segundo el formulario. */
       if(done || screen.hidden || document.hidden) return;
       done = true;
       watch.disconnect();
       document.removeEventListener('visibilitychange', go);
-      /* Primero la imagen de espera, que no cuesta nada; lo demás, cuando ya se ha pintado. */
-      backdrop(canvas, screen, focusEl);
       requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0));
     };
+    /* La imagen de fondo sí, desde ya: no cuesta nada. */
+    backdrop(screen);
     const watch = new MutationObserver(go);
     watch.observe(screen, {attributes:true, attributeFilter:['hidden']});
     document.addEventListener('visibilitychange', go);
@@ -2179,7 +2156,12 @@
       const cw = Math.max(2, Math.round(w * scale)), ch = Math.max(2, Math.round(h * scale));
       if(canvas.width !== cw || canvas.height !== ch){ canvas.width = cw; canvas.height = ch; stale = true; }
       gl.viewport(0, 0, cw, ch);
-      if(!place || place.w !== w || place.h !== h){ place = layout(w, h); stale = true; }
+      if(!place || relayout || place.w !== w || place.h !== h){
+        const at = layout(w, h);
+        /* Solo se rehace lo que no cambia si de verdad se ha movido algo. */
+        if(!place || at.w !== place.w || at.h !== place.h || at.fx !== place.fx || at.fy !== place.fy || at.tx !== place.tx){ place = at; stale = true; }
+        relayout = false;
+      }
     }
     function setLevel(l){
       level = Math.max(0, Math.min(LEVELS.length - 1, l | 0));
@@ -2190,7 +2172,9 @@
       resize();
     }
 
-    let place = null;
+    /* relayout: la tarjeta acaba de aparecer (la escena puede arrancar antes, con la pantalla
+       de acceso enseñada a medias, ver auth-early): hay que volver a mirar dónde ha quedado. */
+    let place = null, relayout = false;
     const layout = (w, h) => layoutOf(screen, focusEl, w, h);
 
     function uniforms(p, time){
@@ -2591,7 +2575,7 @@
     }
     function loop(now){
       raf = 0;
-      if(screen.hidden || document.hidden || measuring) return;
+      if(away(screen) || document.hidden || measuring) return;
       /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
       if(!live){
         loadPoster();
@@ -2646,7 +2630,7 @@
       if(!isStill()) raf = requestAnimationFrame(loop);
     }
     function wake(){
-      if(raf || measuring || screen.hidden || document.hidden) return;
+      if(raf || measuring || away(screen) || document.hidden) return;
       resize();
       /* Tras una pausa (pestaña oculta, escena quieta) el primer fotograma no cuenta como pesado. */
       last = 0;
@@ -2705,7 +2689,7 @@
     window.addEventListener('resize', () => { resize(); wake(); });
     document.addEventListener('visibilitychange', wake);
     /* La pantalla de acceso aparece y desaparece con el atributo hidden; el tema, con data-theme. */
-    new MutationObserver(wake).observe(screen, {attributes:true, attributeFilter:['hidden']});
+    new MutationObserver(() => { relayout = true; resize(); wake(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
     new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
     if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake);
     canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; mark = null; canvas.classList.remove('is-on'); });

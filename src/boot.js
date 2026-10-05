@@ -34,21 +34,12 @@
     /* El SDK de Firebase se empieza a bajar ya, a la vez que los scripts de la app, en lugar de
        después de todos ellos. Un invitado no contacta con nada. */
     if(!guest && !window.claude){
-      var hint = function(rel, href, as){
+      var hint = function(rel, href){
         var l = document.createElement('link');
         l.rel = rel; l.href = href;
-        if(rel === 'preload') l.as = as || 'script';
+        if(rel === 'preload') l.as = 'script';
         document.head.appendChild(l);
       };
-      /* Lo primero, la foto de fondo del acceso (auth.css, --sc-poster y --sc-tree), la del tema que toca:
-         así el fondo está ya en el primer fotograma. */
-      if(window.__authFirst){
-        var saved = null;
-        try{ saved = localStorage.getItem('workhub_theme'); }catch(e){}
-        var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        hint('preload', '../assets/img/auth-poster-' + (dark ? 'dark' : 'light') + '.webp', 'image');
-        hint('preload', '../assets/img/auth-tree-' + (dark ? 'dark' : 'light') + '.webp', 'image');
-      }
       hint('preconnect', 'https://www.gstatic.com');
       SDK.files.concat(c.appCheckSiteKey && !c.useEmulators ? [SDK.appCheck] : []).forEach(function(f){ hint('preload', SDK.base + f); });
     }

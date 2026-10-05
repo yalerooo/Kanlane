@@ -91,31 +91,18 @@
     px('--tl', at.tx - P.treeX * k); px('--tt', base - (P.up + P.treeBase) * k);
     px('--tw', P.treeW * k); px('--th', (P.up + P.down) * k);
   }
-  /* La foto de espera, ya en pantalla: una promesa que se cumple cuando sus dos imágenes están
-     descomprimidas y el navegador ha tenido un par de fotogramas (y un respiro) para pintarlas.
-     La escena no empieza a compilar hasta entonces: en un equipo modesto compilar ocupa el
-     proceso gráfico del navegador varios segundos, y si empezaba antes la foto no llegaba a
-     verse (lo vio el dueño en su portátil: «tarda en cargar y no sale la foto difuminada»).
-     Nunca se queda esperando: a los 3 s se da por pintada. */
+  /* La foto de espera, ya en pantalla: una promesa que se cumple cuando el navegador ha tenido
+     un par de fotogramas (y un respiro) para pintarla. La escena no empieza a compilar hasta
+     entonces: en un equipo modesto compilar ocupa el proceso gráfico del navegador varios
+     segundos, y si empezaba antes la foto no llegaba a verse (lo vio el dueño en su portátil:
+     «tarda en cargar y no sale la foto difuminada»). Nunca se queda esperando: con la pestaña
+     oculta no hay fotogramas, y a los 3 s se da por pintada. */
   var painted = null;
   api.painted = function(){
     if(painted) return painted;
     painted = new Promise(function(resolve){
-      var done = false, left = 2;
-      var end = function(){ if(!done){ done = true; resolve(); } };
-      var shown = function(){
-        if(--left > 0) return;
-        requestAnimationFrame(function(){ requestAnimationFrame(function(){ setTimeout(end, 250); }); });
-      };
-      setTimeout(end, 3000);
-      var set = document.documentElement.getAttribute('data-theme');
-      var dark = set ? set === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-      ['poster', 'tree'].forEach(function(name){
-        var img = new Image();
-        img.src = '../assets/img/auth-' + name + '-' + (dark ? 'dark' : 'light') + '.webp';
-        if(img.decode) img.decode().then(shown, shown);
-        else { img.onload = shown; img.onerror = shown; }
-      });
+      setTimeout(resolve, 3000);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ setTimeout(resolve, 250); }); });
     });
     return painted;
   };

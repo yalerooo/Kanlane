@@ -1,10 +1,9 @@
 /* Genera las imágenes de espera de la pantalla de acceso: una foto pequeña de la propia escena
    en 3D, que se ve desenfocada desde el primer fotograma mientras la de verdad se compila
    (auth.css, .auth-scene::before y ::after; las coloca WORKHUB_AUTH.place, en auth-early.js).
-   Por cada tema (light, dark) salen dos archivos en assets/img/:
-
-     auth-poster-<tema>.webp   el paisaje sin el cerezo
-     auth-tree-<tema>.webp     el cerezo, recortado
+   Por cada tema (light, dark) salen dos imágenes pequeñas, que se incrustan en auth.css
+   (variables --sc-poster-<tema> y --sc-tree-<tema>): el paisaje sin el cerezo, y el cerezo
+   recortado.
 
    Van por separado porque en la escena no se mueven igual: el paisaje se ancla al panel de
    cristal de la tarjeta y se escala con el alto de la ventana; el cerezo va pegado al borde
@@ -40,10 +39,10 @@ const POSTER = {
 };
 const H = 900, W = Math.round((POSTER.left + POSTER.right) * H);
 const OUT_H = 384, QUALITY = 0.74;
-/* Miniaturas: van incrustadas en auth.css (entre las marcas MINIATURAS) y se ven debajo de las
-   fotos hasta que estas se descargan, para que haya paisaje desde el primer fotograma. Alto en
-   píxeles: como se enseñan desenfocadas, con muy poco basta, y son unos cientos de bytes. */
-const MINI_H = 36, MINI_QUALITY = 0.5;
+/* Las fotos van incrustadas en auth.css (entre las marcas FOTOS), no en archivos: así están en
+   el primer fotograma sin esperar a ninguna descarga. Alto en píxeles: como se enseñan
+   desenfocadas, con poco basta, y son unos pocos KB entre las cuatro. */
+const MINI_H = 96, MINI_QUALITY = 0.6;
 
 /* Una foto de la escena con el punto de fuga a `up` altos del borde de arriba. */
 async function shot(browser, theme, up, tree){
@@ -123,29 +122,22 @@ async function shot(browser, theme, up, tree){
         const mini = (from) => { const [c, x] = canvas(from.width * miniH / from.height, miniH); x.drawImage(from, 0, 0, c.width, c.height); return c.toDataURL('image/webp', miniQ); };
         return {poster:pc.toDataURL('image/webp', q), tree:tc.toDataURL('image/webp', q), posterMini:mini(pc), treeMini:mini(tc)};
       }, [high, low, treeHigh, treeLow, POSTER, OUT_H, QUALITY, MINI_H, MINI_QUALITY]);
-      minis[theme] = '--sc-poster-mini:url(' + out.posterMini + ');--sc-tree-mini:url(' + out.treeMini + ');';
+      minis[theme] = '--sc-poster-' + theme + ':url(' + out.posterMini + ');--sc-tree-' + theme + ':url(' + out.treeMini + ');';
       await context.close();
-      for(const name of ['poster', 'tree']){
-        const file = path.join(root, 'assets/img/auth-' + name + '-' + theme + '.webp');
-        fs.writeFileSync(file, Buffer.from(out[name].split(',')[1], 'base64'));
-        console.log('OK   ' + path.relative(root, file) + ' (' + Math.round(fs.statSync(file).size / 1024) + ' KB)');
-      }
     }
-    /* Las miniaturas, a auth.css. */
+    /* A auth.css. */
     const cssFile = path.join(root, 'assets/css/views/auth.css');
     const css = fs.readFileSync(cssFile, 'utf8');
     const eol = css.includes('\r\n') ? '\r\n' : '\n';
     const block = [
-      '/* MINIATURAS:inicio (lo escribe scripts/make-auth-posters.js; no tocar a mano) */',
-      '.auth-screen{' + minis.light + '}',
-      ':root[data-theme="dark"] .auth-screen{' + minis.dark + '}',
-      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .auth-screen{' + minis.dark + '}}',
-      '/* MINIATURAS:fin */'
+      '/* FOTOS:inicio (lo escribe scripts/make-auth-posters.js; no tocar a mano) */',
+      '.auth-screen{' + minis.light + minis.dark + '}',
+      '/* FOTOS:fin */'
     ].join(eol);
-    const marks = /\/\* MINIATURAS:inicio[\s\S]*?MINIATURAS:fin \*\//;
-    if(!marks.test(css)) throw new Error('auth.css: no encuentro las marcas MINIATURAS');
+    const marks = /\/\* FOTOS:inicio[\s\S]*?FOTOS:fin \*\//;
+    if(!marks.test(css)) throw new Error('auth.css: no encuentro las marcas FOTOS');
     fs.writeFileSync(cssFile, css.replace(marks, () => block));
-    console.log('OK   miniaturas en assets/css/views/auth.css (' + Math.round((minis.light.length + minis.dark.length * 2) / 1024 * 10) / 10 + ' KB)');
+    console.log('OK   fotos de espera en assets/css/views/auth.css (' + Math.round((minis.light.length + minis.dark.length) / 1024 * 10) / 10 + ' KB)');
   } finally {
     await browser.close();
     server.kill();

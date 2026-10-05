@@ -46,55 +46,6 @@
   var screen = $('authScreen'), panel = $('authPanel');
   if(!screen || !panel) return;
 
-  /* Dónde va cada cosa de la escena, en píxeles de pantalla. La usan la escena (auth-scene.js)
-     y la foto de espera, para que coincidan en cualquier tamaño de ventana. No se usa
-     getBoundingClientRect, que incluye las transformaciones de la animación de entrada.
-     - fx, fy: el punto de fuga: el centro del panel de cristal, donde se coloca el ordenador
-       (algo a la derecha: su frontal queda a la izquierda de su fondo, y centrado se arrimaba
-       demasiado al formulario).
-     - tx: dónde cae el tronco del cerezo, cerca del borde izquierdo.
-     - ts: tamaño del cerezo; entero en horizontal, más pequeño en pantallas estrechas. */
-  function offset(el, root){
-    var x = 0, y = 0;
-    for(var n = el; n && n !== root; n = n.offsetParent){ x += n.offsetLeft; y += n.offsetTop; }
-    return {x:x, y:y};
-  }
-  api.layout = function(root, focusEl, w, h){
-    var fx = w / 2, fy = h * 0.6, left = w * 0.2;
-    if(focusEl && focusEl.offsetParent){
-      var o = offset(focusEl, root);
-      fx = o.x + focusEl.offsetWidth * 0.575;
-      fy = o.y + focusEl.offsetHeight * 0.585;
-    }
-    var card = focusEl && focusEl.parentElement;
-    if(card && card.offsetParent) left = Math.max(offset(card, root).x, 0);
-    return {w:w, h:h, fx:fx, fy:fy, tx:Math.max(left * 0.36, h * 0.05), ts:Math.min(Math.max(w / h * 0.8, 0.6), 1)};
-  };
-
-  /* La foto de espera (auth.css, .auth-scene::before y ::after): el paisaje y, aparte, el
-     cerezo, colocados y escalados como los pinta la escena. Las medidas van en altos de
-     ventana desde el punto de fuga y son las de scripts/make-auth-posters.js (POSTER), que
-     genera las imágenes; treeBase es dónde pisa el tronco, bajo el punto de fuga. */
-  var POSTER = {left:1.75, right:1.45, up:0.64, down:0.56, treeX:0.40, treeW:1.20, treeBase:0.126};
-  var backdrop = screen.querySelector('.auth-scene');
-  function place(){
-    if(!backdrop || screen.hidden) return;
-    var w = backdrop.clientWidth, h = backdrop.clientHeight;
-    if(!w || !h) return;
-    var at = api.layout(screen, $('authWindow'), w, h), P = POSTER, st = backdrop.style;
-    var px = function(name, v){ st.setProperty(name, Math.round(v) + 'px'); };
-    px('--pl', at.fx - P.left * h); px('--pt', at.fy - P.up * h);
-    px('--pw', (P.left + P.right) * h); px('--ph', (P.up + P.down) * h);
-    st.setProperty('--ps', '100% 100%');
-    /* El cerezo se escala desde donde pisa el tronco. */
-    var k = h * at.ts, base = at.fy + P.treeBase * h;
-    px('--tl', at.tx - P.treeX * k); px('--tt', base - (P.up + P.treeBase) * k);
-    px('--tw', P.treeW * k); px('--th', (P.up + P.down) * k);
-  }
-  window.addEventListener('resize', place);
-  /* La pantalla de acceso aparece con el atributo hidden (aquí o desde AuthView). */
-  new MutationObserver(place).observe(screen, {attributes:true, attributeFilter:['hidden']});
-
   if(!window.__authFirst) return;
 
   var c = window.WORKHUB_FIREBASE || {};
@@ -164,7 +115,6 @@
     screen.hidden = false;
     panel.hidden = false;
     document.body.classList.add('is-authing');
-    place();
     /* El cursor, en el primer campo (no en pantallas táctiles: abriría el teclado). */
     if(hasPassword && window.matchMedia('(hover: hover) and (pointer: fine)').matches){
       try{ $(mode === 'signup' ? 'authName' : 'authEmail').focus({preventScroll:true}); }catch(e){}

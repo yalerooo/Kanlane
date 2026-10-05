@@ -1946,7 +1946,21 @@
     /* El viento las mece: el pie quieto y la flor, arriba, de un lado a otro; unas van del */
     /* derecho y otras del revés, para que no sean todas la misma. */
     '  float sway = sin(uTime * 1.3 + r0.x * .9 + r0.y * .6) * .055 + sin(uTime * 2.9 + r0.x * 2.3 + rnd * 9.) * .02;',
-    '  vec3 p = root + side * (aQuad.x * .5 + sway * aQuad.y * aQuad.y) * h + vec3(0., aQuad.y * h, 0.);',
+    /* El cursor: las flores de su alrededor se apartan con la hierba, como si pasara una mano */
+    /* (la misma cuenta que en GRASS_SIM): se tumban hacia fuera y bajan un poco. */
+    '  vec2 bend = vec2(0.);',
+    '  if(uMouse.z > .002){',
+    '    vec3 v0 = root - ro;',
+    '    float z0 = max(dot(v0, fw), .3);',
+    '    vec2 f0 = uFocus + uRes.y * 1.5 * vec2(dot(v0, rt), dot(v0, up)) / z0;',
+    '    vec2 md = (f0 - uMouse.xy) / uRes.y * z0 / 1.5;',
+    '    md.y *= 2.4;',
+    '    float push = exp(-dot(md, md) / .62) * uMouse.z;',
+    '    bend = normalize(rt.xz * md.x + normalize(fw.xz) * md.y + 1e-4) * push * .85;',
+    '    h *= 1. - .30 * push;',
+    '  }',
+    '  float k = aQuad.y * aQuad.y;',
+    '  vec3 p = root + side * (aQuad.x * .5 + sway * k) * h + vec3(bend.x * k * h, aQuad.y * h, bend.y * k * h);',
     '  float flip = step(.5, fract(rnd * 7.3)) * 2. - 1.;',
     '  vUv = vec2((kind + .5 + aQuad.x * .5 * flip) / uCells, aQuad.y);',
     /* La luz, una por flor: la del suelo, con las manchas de sombra de las nubes. */

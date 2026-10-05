@@ -61,19 +61,23 @@ async function shot(browser, theme, up, tree){
     /* Quieta: siempre el mismo instante, para que las dos fotos del paisaje casen. */
     document.documentElement.setAttribute('data-motion', 'reduced');
     const screen = document.getElementById('authScreen');
+    screen.querySelectorAll('.auth-top, .auth-bottom').forEach((el) => { el.style.display = 'none'; });
+    /* La escena ya tiene apuntado el panel de cristal de verdad (AuthView la arranca al
+       cargar, y solo la primera llamada cuenta), así que se recoloca ese: su centro es el
+       punto de fuga, y el borde izquierdo de su tarjeta decide dónde cae el tronco
+       (tx = borde * 0,36, como en la escena). Los dos, sin tamaño y sin verse. */
+    const focus = document.getElementById('authWindow'), card = focus.parentElement, stage = card.parentElement;
+    stage.style.cssText = 'display:block;position:static;margin:0;padding:0;';
+    card.style.cssText = 'display:block;position:absolute;top:0;width:0;height:0;min-height:0;margin:0;padding:0;border:0;animation:none;transform:none;visibility:hidden;left:' + (tx / 0.36) + 'px';
+    Array.from(card.children).forEach((el) => { if(el !== focus) el.style.display = 'none'; });
+    focus.style.cssText = 'display:block;position:absolute;width:0;height:0;margin:0;padding:0;border:0;left:' + (fx - tx / 0.36) + 'px;top:' + fy + 'px';
+    /* La escena no se prepara hasta que la pantalla de acceso se ve. */
     screen.hidden = false;
-    screen.querySelectorAll('.auth-top, .auth-stage, .auth-bottom').forEach((el) => { el.style.display = 'none'; });
-    /* Un «panel» de mentira: su centro es el punto de fuga; el borde izquierdo de su «tarjeta»
-       decide dónde cae el tronco (tx = borde * 0,36, como en la escena). */
-    const card = document.createElement('div');
-    card.style.cssText = 'position:absolute;top:0;width:0;height:0;left:' + (tx / 0.36) + 'px';
-    const focus = document.createElement('div');
-    focus.style.cssText = 'position:absolute;width:0;height:0;left:' + (fx - tx / 0.36) + 'px;top:' + fy + 'px';
-    card.appendChild(focus);
-    screen.appendChild(card);
     Workhub.views.authScene.start(document.getElementById('authCanvas'), screen, focus);
+    const at = window.WORKHUB_AUTH.layout(screen, focus, screen.clientWidth, screen.clientHeight);
+    if(Math.abs(at.fx - fx) > 1 || Math.abs(at.fy - fy) > 1 || Math.abs(at.tx - tx) > 1) throw new Error('El panel de mentira no ha quedado en su sitio: ' + JSON.stringify(at));
   }, [focusX, up * H, trunk]);
-  await page.waitForFunction(() => { const s = Workhub.views.authScene.state(); return s && !s.software; }, null, {timeout:90000});
+  await page.waitForFunction(() => { const s = Workhub.views.authScene.state(); return s && s.live && !s.software; }, null, {timeout:120000});
   await page.waitForTimeout(tree ? 3500 : 600);
   const data = await page.evaluate(() => {
     const scene = Workhub.views.authScene;

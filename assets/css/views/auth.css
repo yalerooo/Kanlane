@@ -375,6 +375,14 @@ html.auth-gate .app{display:none !important;}
 .auth-scene canvas.is-on{opacity:1;}
 /* Con la escena ya encima, la foto deja de pintarse. */
 .auth-scene:has(canvas.is-on)::before,.auth-scene:has(canvas.is-on)::after{visibility:hidden;transition:visibility 0s .8s;}
+/* Equipo modesto (html.scene-lite, lo marca la escena al elegir un escalón bajo): los cristales
+   de esta pantalla dejan de desenfocar lo que tienen detrás. Con la escena moviéndose debajo,
+   el navegador rehace ese desenfoque en cada fotograma y a una gráfica integrada le cuesta
+   mucho. La ventana del panel casi no desenfocaba (1,5 px) y se queda igual a la vista; la
+   pastilla de idioma y tema y el aviso de cookies pasan a un fondo casi opaco. */
+html.scene-lite .auth-aside{-webkit-backdrop-filter:none;backdrop-filter:none;}
+html.scene-lite .auth-tools{-webkit-backdrop-filter:none;backdrop-filter:none;background:color-mix(in srgb, var(--surface-solid) 82%, transparent);}
+html.scene-lite body.is-authing .consent-card{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface-solid, #fff);}
 
 /* Cuenta en la barra lateral */
 .account{display:flex;align-items:center;gap:9px;padding:6px 2px 6px 8px;margin:0 0 4px;border-radius:var(--r-md);}

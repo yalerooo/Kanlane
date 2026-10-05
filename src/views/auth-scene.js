@@ -184,7 +184,8 @@
     '  return max(sdBox(q - vec3(0., 1.16, -.57), vec3(.62, .46, .07)) - .01, length(q - vec3(0., 1.16, 5.37)) - 6.);',
     '}',
     /* Invierno: una capa de nieve encima del monitor (sobre el marco y, más atrás, siguiendo */
-    /* la caída de la carcasa) y carámbanos colgando del alero de nieve, por delante. */
+    /* la caída de la carcasa) y carámbanos colgando por debajo, del canto inferior del marco */
+    /* y de los lados de la carcasa, sobre el pie. */
     '#if SEASON == 3',
     'float snowCap(vec3 q){',
     '  float lump = (noise(q.xz * 6.) - .5) * .05 + (noise(q.xz * 15. + 3.) - .5) * .02;',
@@ -195,13 +196,14 @@
     '  return smin(front, back, .08) * .7;',
     '}',
     'float icicles(vec3 q){',
-    '  float cell = .150;',
+    '  float cell = .140;',
     '  float id = clamp(floor(q.x / cell + .5), -5., 5.);',
     '  float h = hash(vec2(id, 7.));',
-    '  float len = .06 + .24 * h * h;',
-    '  vec3 c = q - vec3(id * cell + (hash(vec2(id, 3.)) - .5) * .05, 1.78, -.835);',
+    /* Más cortos en el centro, donde está el pie debajo; más largos hacia las esquinas. */
+    '  float len = (.05 + .16 * h * h) * mix(.55, 1.25, smoothstep(.30, .70, abs(id * cell)));',
+    '  vec3 c = q - vec3(id * cell + (hash(vec2(id, 3.)) - .5) * .05, .345, -.70);',
     '  float t = clamp(-c.y / len, 0., 1.);',
-    '  return (length(vec3(c.x, c.y + t * len, c.z)) - mix(.030, .003, t)) * .75;',
+    '  return (length(vec3(c.x, c.y + t * len, c.z)) - mix(.028, .003, t)) * .75;',
     '}',
     '#endif',
     'float computer(vec3 q){',
@@ -916,13 +918,15 @@
     '      }',
     '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
-    /* El cursor deja un surco en la nieve: hundido y en sombra por dentro, con la pared que */
-    /* mira al sol encendida y un reborde de nieve apartada. Se mide en pantalla, llevado a */
-    /* medidas de la escena a la distancia de este punto (como el cursor en la hierba). */
+    /* El cursor deja un surco en la nieve. No es una mancha pintada: se calcula el relieve */
+    /* (un canal de fondo redondeado y, a los lados, la nieve apartada en un reborde irregular) */
+    /* y con su pendiente se vuelve a iluminar el punto igual que el resto del suelo, así que la */
+    /* pared que mira al sol se enciende y la otra queda en sombra. Se mide en pantalla, llevado */
+    /* a medidas de la escena a la distancia de este punto (como el cursor en la hierba). */
     '#if SEASON == 3',
     '    {',
     '      float kpx = max(dot(p - ro, fw), .3) / (1.5 * uRes.y);',
-    '      float dent = 0., rim = 0.;',
+    '      float dMin = 9.;',
     '      vec2 toMid = vec2(0.);',
     '      for(int i = 1; i < TRAIL_N; i++){',
     '        vec3 A = uTrail[i - 1], B = uTrail[i];',
@@ -933,18 +937,40 @@
     '        a.y *= 2.4; b.y *= 2.4;',
     '        vec2 ab = b - a;',
     '        vec2 c = a + ab * clamp(-dot(a, ab) / max(dot(ab, ab), 1e-6), 0., 1.);',
-    '        float d = length(c) / .24;',
-    '        float w = s * (1. - smoothstep(.45, 1., d));',
-    '        if(w > dent){ dent = w; toMid = c; }',
-    '        rim = max(rim, s * smoothstep(.80, 1.08, d) * (1. - smoothstep(1.08, 1.7, d)));',
+    /* Una huella que se está tapando cuenta como si quedara más lejos: se estrecha y se va. */
+    '        float d = length(c) / .20 + (1. - s) * 1.6;',
+    '        if(d < dMin){ dMin = d; toMid = c; }',
     '      }',
-    '      if(dent + rim > .001){',
+    '      if(dMin < 2.4){',
+    /* El borde no es una línea limpia: la nieve se rompe a trozos. */
+    '        float rough = noise(p.xz * 11.) * .6 + noise(p.xz * 31.) * .4;',
+    '        float d = dMin + (rough - .5) * .42;',
+    /* Altura del relieve a esta distancia del eje del surco y un poco más allá. */
+    '        float e = .06;',
+    /* Fondo plano y paredes cortas: como una mano o una bota arrastrada, no una cuneta. */
+    '        float h0 = -(1. - smoothstep(.50, 1., d)) + .11 * exp(-pow((d - 1.16) / .15, 2.)) * (.3 + 1.4 * rough);',
+    '        float d1 = d + e;',
+    '        float h1 = -(1. - smoothstep(.50, 1., d1)) + .11 * exp(-pow((d1 - 1.16) / .15, 2.)) * (.3 + 1.4 * rough);',
+    '        float slope = (h1 - h0) / e;',
     '        vec2 w2 = normalize(rt.xz * toMid.x + normalize(fw.xz) * toMid.y + 1e-5);',
-    '        float wall = dent * (1. - dent) * 4.;',
-    '        gcol *= 1. - .22 * dent;',
-    '        gcol += alb * sunCol * dot(w2, normalize(L.xz)) * wall * .9 * sh;',
-    '        gcol += alb * (ambient + skyLight) * rim * (1. - dent) * .40;',
-    '        gcol = max(gcol, vec3(0.));',
+    /* Hacia el eje la distancia baja: la normal se inclina según sube o baja el relieve. */
+    '        vec3 n2 = normalize(n + vec3(w2.x, 0., w2.y) * slope * .80);',
+    /* El sol está bajo y al fondo: la pared de ese lado tapa la luz y deja en sombra el fondo */
+    /* del surco, casi hasta la pared de este lado, que es la que se enciende. */
+    '        float side = d * sign(dot(w2, normalize(L.xz)));',
+    '        float lee = (1. - smoothstep(.48, .70, side)) * (1. - smoothstep(.88, 1.04, d));',
+    /* La pared de este lado, de cara al sol: un filo de luz en el labio del surco. */
+    '        float lip = smoothstep(.55, .82, side) * (1. - smoothstep(.98, 1.22, d));',
+    '        float trough = 1. - smoothstep(.50, 1., d);',
+    '        float dif2 = clamp((dot(n2, L) + .30) / 1.30, 0., 1.);',
+    '        float ao2 = ao * (1. - .14 * trough);',
+    /* La nieve pisada es más densa: algo más oscura y azulada. */
+    '        vec3 alb2 = alb * mix(vec3(1.), vec3(.93, .95, .99), trough + .5 * (rough - .5) * trough);',
+    '        float sh2 = sh * (1. - .88 * lee * mix(1., .45, uNight));',
+    '        vec3 relit = alb2 * (ambient * 1.5 * ao2 + skyLight * 2.2 * ao2 + sunCol * dif2 * 2.4 * ao2 * sh2);',
+    '        relit += alb2 * sunCol * pow(clamp(1. - n2.y, 0., 1.), .7) * max(dot(n2, L), 0.) * 1.5 * sh2 * mix(1., .25, uNight);',
+    '        relit += (alb * sunCol * lip * 1.05 * sh + alb * skyLight * lip * .6) * mix(1., .22, uNight);',
+    '        gcol = mix(gcol, relit, 1. - smoothstep(1.5, 2.0, d));',
     '      }',
     '    }',
     '#endif',

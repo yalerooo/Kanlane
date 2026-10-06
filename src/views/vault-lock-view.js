@@ -8,6 +8,14 @@
   const paintMeter = (meter, result) => Workhub.views.shared.privacy.paintMeter(meter, result);
   const $ = (id) => document.getElementById(id);
 
+  const RECOVERY_TEXT = {
+    'new': {title:'Guarda tu clave de recuperación', desc:'Es la única forma de recuperar el acceso si olvidas tu contraseña maestra. Guárdala en un lugar seguro — no la compartas ni la subas a ningún sitio. Quien la tenga, junto con acceso a este tablero, podría leer las contraseñas guardadas.'},
+    'reset': {title:'Nueva clave de recuperación', desc:'Tu contraseña se ha restablecido. La clave de recuperación anterior ya no sirve — guarda esta nueva en un lugar seguro.'},
+    'totp-on': {title:'Verificación en dos pasos activada', desc:'Tu clave de recuperación ha cambiado: la anterior ya no sirve. Desde ahora, para restablecer la contraseña maestra con esta clave hará falta además un código de la aplicación o uno de respaldo.'},
+    'totp-off': {title:'Verificación en dos pasos desactivada', desc:'Tu clave de recuperación ha cambiado: la anterior ya no sirve. Esta vuelve a bastar ella sola para restablecer la contraseña maestra, así que guárdala bien.'},
+    'codes': {title:'Códigos de respaldo nuevos', desc:'Los códigos anteriores ya no sirven. Tu clave de recuperación no cambia.'}
+  };
+
   const EYE = '<svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
     '<svg class="ic-eye-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.5 6.6C3.7 8.5 2 12 2 12s3.6 7 10 7a10.6 10.6 0 0 0 5.4-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 
@@ -53,7 +61,7 @@
        además un bloque .pass-tools (data-for: el campo; data-repeat: el de repetirla) con el
        medidor, «Generar una segura» y «Copiar». */
     _bindPasswordFields(){
-      this.passFields = [this.masterPass, this.masterPass2, this.newPass1, this.newPass2, this.vtPass];
+      this.passFields = [this.masterPass, this.masterPass2, this.newPass1, this.newPass2, this.vtPass, this.vpCurrent, this.vpNew, this.vpNew2];
       this.passFields.forEach((input) => {
         const wrap = document.createElement('div');
         wrap.className = 'auth-pass';
@@ -67,7 +75,7 @@
         btn.addEventListener('click', () => this._showPassword(input, input.type === 'password'));
         this._showPassword(input, false);
       });
-      this.passTools = Array.from(document.querySelectorAll('#viewVault .pass-tools')).map((box) => {
+      this.passTools = Array.from(document.querySelectorAll('.pass-tools')).map((box) => {
         const t = {
           box: box, input: $(box.getAttribute('data-for')), repeat: $(box.getAttribute('data-repeat')),
           meter: box.querySelector('.pw-meter'), gen: box.querySelector('[data-act="gen"]'),
@@ -86,6 +94,9 @@
           this._showPassword(t.repeat, true);
           this._setGenerated(t, true);
           this._paintTools(t);
+          /* Un «no coinciden» o «demasiado corta» de antes ya no viene a cuento. */
+          const error = box.closest('form').querySelector('.lock-error');
+          if(error) error.hidden = true;
         });
         t.copy.addEventListener('click', () => copyWithFeedback(t.copy, t.input.value));
         return t;
@@ -126,11 +137,47 @@
       });
     },
 
+    /* ---------- Contraseña maestra débil y cambiarla ---------- */
+
+    setWeak(on){ this.weakNote.hidden = !on; },
+
+    openPass(){
+      this.vpError.hidden = true;
+      this._clearPass();
+      this.setPassBusy(false);
+      this.passDlg.showModal();
+    },
+
+    showPassError(msg){ showMessage(this.vpError, msg); },
+
+    setPassBusy(busy){
+      this.vpSubmit.disabled = busy;
+      this.vpSubmit.textContent = busy ? 'Comprobando…' : 'Cambiar contraseña';
+    },
+
+    closePass(){
+      this._clearPass();
+      this.passDlg.close();
+    },
+
+    _clearPass(){ this._resetPasswordFields([this.vpCurrent, this.vpNew, this.vpNew2]); },
+
+    /* handlers: {open(), submit(actual, nueva, repetida)} */
+    bindPass(handlers){
+      this.btnVaultPass.addEventListener('click', () => handlers.open());
+      this.btnVaultWeak.addEventListener('click', () => handlers.open());
+      this.vpForm.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        this.vpError.hidden = true;
+        handlers.submit(this.vpCurrent.value, this.vpNew.value, this.vpNew2.value);
+      });
+    },
+
     /* ---------- Segundo paso ---------- */
 
     showTotpStep(){
       this.lockTitle.textContent = 'Verificación en dos pasos';
-      this.lockDesc.textContent = 'La contraseña maestra es correcta. Escribe ahora el código de tu aplicación de autenticación. Si no la tienes a mano, puedes entrar con tu clave de recuperación.';
+      this.lockDesc.textContent = 'La contraseña maestra es correcta. Escribe ahora el código de tu aplicación de autenticación o, si no tienes el teléfono, uno de tus códigos de respaldo.';
       this.unlockForm.hidden = true;
       this.recoverForm.hidden = true;
       this.totpError.hidden = true;
@@ -169,8 +216,9 @@
       this.btnVaultTotp.textContent = enabled ? 'Verificación en dos pasos activada' : 'Activar verificación en dos pasos';
     },
 
-    /* setup: {secret, uri} para activarla; sin setup, el diálogo es el de desactivarla. */
-    openTotp(setup){
+    /* setup: {secret, uri} para activarla; sin setup, el diálogo es el de desactivarla o pedir
+       códigos de respaldo nuevos, y left dice cuántos quedan sin usar. */
+    openTotp(setup, left){
       this.vtError.hidden = true;
       this.vtSetup.hidden = !setup;
       this.vtSecret.textContent = setup ? setup.secret : '';
@@ -180,7 +228,11 @@
       this.vtOpen.setAttribute('href', setup ? setup.uri : '#');
       this.vtLead.textContent = setup
         ? 'Además de la contraseña maestra, al desbloquear se pedirá un código de tu aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Escanea este código con la aplicación y escribe abajo el código de 6 cifras que te dé.'
-        : 'Para desactivarla escribe tu contraseña maestra y un código de la aplicación. Después, al desbloquear solo se pedirá la contraseña maestra.';
+        : 'Para desactivarla, o para cambiar tus códigos de respaldo por otros nuevos, escribe tu contraseña maestra y un código de la aplicación o de respaldo.';
+      this.vtLeft.hidden = !!setup || typeof left !== 'number';
+      this.vtLeft.textContent = this.vtLeft.hidden ? '' : 'Códigos de respaldo sin usar: ' + left + '.';
+      this.vtCodeLabel.textContent = setup ? 'Código de verificación' : 'Código de verificación o de respaldo';
+      this.vtCodes.hidden = !!setup;
       this.totpMode = setup ? 'on' : 'off';
       this._resetPasswordFields([this.vtPass]);
       this.vtCode.value = '';
@@ -192,6 +244,7 @@
 
     setTotpBusy(busy){
       this.vtSubmit.disabled = busy;
+      this.vtCodes.disabled = busy;
       this.vtSubmit.textContent = busy ? 'Comprobando…' : (this.totpMode === 'off' ? 'Desactivar' : 'Activar');
     },
 
@@ -209,9 +262,13 @@
       this.vtCode.value = '';
     },
 
-    /* handlers: {open(), submit(contraseña, código)} */
+    /* handlers: {open(), submit(contraseña, código), codes(contraseña, código)} */
     bindTotp(handlers){
       this.btnVaultTotp.addEventListener('click', () => handlers.open());
+      this.vtCodes.addEventListener('click', () => {
+        this.vtError.hidden = true;
+        handlers.codes(this.vtPass.value, this.vtCode.value);
+      });
       this.vtForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         this.vtError.hidden = true;
@@ -243,10 +300,18 @@
       this.recoverError.hidden = true;
       this.recoveryInput.value = '';
       this._resetPasswordFields([this.newPass1, this.newPass2]);
+      this.recoverCodeWrap.hidden = true;
+      this.recoverCode.value = '';
       this.unlockForm.hidden = true;
       this.totpForm.hidden = true;
       this.forgotLinkWrap.hidden = true;
       this.recoverForm.hidden = false;
+    },
+
+    /* La clave de recuperación es buena, pero el cofre tiene verificación en dos pasos. */
+    showRecoverCode(){
+      this.recoverCodeWrap.hidden = false;
+      this.recoverCode.focus();
     },
 
     showRecoverError(msg){ showMessage(this.recoverError, msg); },
@@ -256,20 +321,49 @@
       this.btnRecover.textContent = busy ? 'Restableciendo…' : 'Restablecer con la clave';
     },
 
-    presentRecoveryKey(formattedKey, isReset){
-      this.recoveryKeyBox.textContent = formattedKey;
-      const titleEl = this.recoveryReveal.querySelector('h2');
-      if(titleEl) titleEl.textContent = isReset ? 'Nueva clave de recuperación' : 'Guarda tu clave de recuperación';
-      const descEl = this.recoveryReveal.querySelector('.lock-desc');
-      if(descEl && isReset){
-        descEl.textContent = 'Tu contraseña se ha restablecido. La clave de recuperación anterior ya no sirve — guarda esta nueva en un lugar seguro.';
-      }
+    /* kind: 'new' (cofre recién creado), 'reset' (restablecido con la clave anterior), 'totp-on' o
+       'totp-off' (al cambiar la verificación en dos pasos la clave también cambia) y 'codes'
+       (solo códigos de respaldo nuevos: formattedKey va vacío).
+       codes: códigos de respaldo que enseñar, si los hay. */
+    presentRecoveryKey(formattedKey, kind, codes){
+      const text = RECOVERY_TEXT[kind] || RECOVERY_TEXT['new'];
+      const hasKey = !!formattedKey;
+      this.recoveryKeyBox.textContent = formattedKey || '';
+      this.recoveryKeyBox.hidden = !hasKey;
+      this.recoveryCheckWrap.hidden = !hasKey;
+      this.recoveryWarning.hidden = !hasKey;
+      this.recoveryReveal.querySelector('h2').textContent = text.title;
+      this.recoveryReveal.querySelector('.lock-desc').textContent = text.desc;
+      this.backupCodes = codes && codes.length ? codes.slice() : null;
+      this.backupCodesWrap.hidden = !this.backupCodes;
+      this.backupCodesBox.textContent = this.backupCodes ? this.backupCodes.join('\n') : '';
+      /* Hay que escribir un grupo de la clave elegido al azar: marcar una casilla no prueba nada. */
+      const groups = hasKey ? formattedKey.split('-') : [];
+      const n = 1 + Math.floor(Math.random() * groups.length);
+      this.recoveryGroup = hasKey ? groups[n - 1] : null;
+      this.recoveryCheckN.textContent = String(n);
+      this.recoveryCheck.value = '';
       this.recoverForm.hidden = true;
       this.recoveryConfirmChk.checked = false;
-      this.btnRecoveryContinue.disabled = true;
+      this._paintRecoveryContinue();
       this.clearPasswords();
       this._resetPasswordFields([this.newPass1, this.newPass2]);
+      this.recoverCode.value = '';
       this.showScreen('recovery');
+    },
+
+    _paintRecoveryContinue(){
+      const typed = this.recoveryCheck.value.toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1');
+      this.btnRecoveryContinue.disabled = !this.recoveryConfirmChk.checked || (!!this.recoveryGroup && typed !== this.recoveryGroup);
+    },
+
+    /* Al seguir no quedan en la página ni la clave ni los códigos. */
+    clearRecoveryKey(){
+      this.recoveryKeyBox.textContent = '';
+      this.backupCodesBox.textContent = '';
+      this.backupCodes = null;
+      this.recoveryGroup = null;
+      this.recoveryCheck.value = '';
     },
 
     /* ---------- Eventos hacia el controlador ---------- */
@@ -286,17 +380,18 @@
       this.recoverForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         this.recoverError.hidden = true;
-        handler(this.recoveryInput.value, this.newPass1.value, this.newPass2.value);
+        handler(this.recoveryInput.value, this.newPass1.value, this.newPass2.value, this.recoverCodeWrap.hidden ? '' : this.recoverCode.value);
       });
     },
 
     bindRecoveryActions(handlers){
       this.btnRecoveryContinue.addEventListener('click', handlers.continue);
       this.btnCopyRecovery.addEventListener('click', () => {
-        copyWithFeedback(this.btnCopyRecovery, this.recoveryKeyBox.textContent);
+        const parts = [this.recoveryKeyBox.textContent, this.backupCodes ? this.backupCodes.join('\n') : ''];
+        copyWithFeedback(this.btnCopyRecovery, parts.filter(Boolean).join('\n\n'));
       });
       this.btnDownloadRecovery.addEventListener('click', () => {
-        handlers.download(this.recoveryKeyBox.textContent).then(() => {
+        handlers.download(this.recoveryKeyBox.textContent, this.backupCodes).then(() => {
           flashLabel(this.btnDownloadRecovery, 'Descargado');
         }).catch(() => {});
       });

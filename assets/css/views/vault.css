@@ -45,12 +45,24 @@
 .lock-forgot a:hover{color:var(--ink);}
 /* Contraseñas con el botón de ver/ocultar (el de la pantalla de acceso, auth.css) y, al crear
    una nueva, el medidor con «Generar una segura» y «Copiar». */
-#viewVault .auth-pass input,#dlgVaultTotp .auth-pass input{width:100%;padding-right:44px;}
+#viewVault .auth-pass input,#dlgVaultTotp .auth-pass input,#dlgVaultPass .auth-pass input{width:100%;padding-right:44px;}
 .pass-tools .pw-meter{margin-top:2px;}
 .pass-tools .field-help{margin:6px 0 0;}
 .pass-gen{display:flex;gap:8px;margin-top:10px;}
 #totpForm{margin-top:4px;}
-#totpCode,#vtCode{font-family:var(--mono);font-size:15px;letter-spacing:.3em;text-align:center;}
+/* Caben las 6 cifras de la aplicación o un código de respaldo (XXXX-XXXX-XXXX-XXXX). */
+#totpCode,#vtCode,#recoverCode,#recoveryCheck{font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-align:center;}
+/* Pantalla de la clave: códigos de respaldo, aviso de que no hay vuelta atrás y comprobación. */
+.recovery-sub{font-size:14px;font-weight:600;margin:18px 0 4px;}
+.recovery-sub + .lock-desc{margin-bottom:8px;}
+.backup-codes{columns:2;column-gap:12px;white-space:pre-line;text-align:center;font-size:13px;line-height:1.9;-webkit-user-select:text;user-select:text;}
+.recovery-warning{margin:16px 0 14px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);background:var(--danger-bg);border-radius:var(--r-lg);}
+.recovery-warning b{color:var(--danger);font-weight:600;}
+#recoveryCheckWrap label b{color:var(--ink);font-weight:650;}
+#recoveryReveal .recovery-confirm{margin-top:4px;}
+/* Aviso de contraseña maestra débil: no bloquea, solo avisa. */
+.vault-note.vault-weak{border-color:transparent;background:var(--danger-bg);}
+.vault-note.vault-weak b{color:var(--danger);}
 /* El QR va siempre en negro sobre blanco, también con el tema oscuro: si no, no se lee. */
 .totp-qr{width:184px;margin:0 auto 12px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);line-height:0;}
 .totp-qr svg{display:block;width:100%;height:auto;}

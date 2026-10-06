@@ -90,6 +90,16 @@
     });
   }
 
+  /* Clave AES a partir de un código aleatorio largo (los códigos de respaldo: 80 bits). Con esa
+     entropía no hace falta una derivación lenta como la de las contraseñas. */
+  function codeKey(bytes){
+    const prefix = new TextEncoder().encode('kanlane-vault-backup-v1|');
+    const data = new Uint8Array(prefix.length + bytes.length);
+    data.set(prefix);
+    data.set(bytes, prefix.length);
+    return crypto.subtle.digest('SHA-256', data).then((hash) => importAesKeyRaw(new Uint8Array(hash)));
+  }
+
   function importAesKeyRaw(bytes){
     return crypto.subtle.importKey('raw', bytes, {name:'AES-GCM'}, false, ['encrypt', 'decrypt']);
   }
@@ -110,6 +120,6 @@
 
   Workhub.services.crypto = {
     isAvailable, randomBytes, b64encode, b64decode, base32Decode, formatRecoveryKey, generatePassword,
-    deriveKey, importAesKeyRaw, encryptJSON, decryptJSON
+    deriveKey, codeKey, importAesKeyRaw, encryptJSON, decryptJSON
   };
 })();

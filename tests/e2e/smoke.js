@@ -94,14 +94,76 @@ async function newProject(page, name){
     await page.locator('#masterPass2').fill('prueba-segura-123');
     await page.locator('#btnUnlock').click();
     await page.locator('#recoveryReveal').waitFor({state:'visible'});
+    /* Marcar la casilla no basta: hay que escribir el grupo de la clave que se pide. */
     await page.locator('#recoveryConfirmChk').check();
+    assert.equal(await page.locator('#btnRecoveryContinue').isDisabled(), true, 'sin escribir el grupo de la clave no se sigue');
+    await page.locator('#recoveryCheck').fill('ZZZZ');
+    assert.equal(await page.locator('#btnRecoveryContinue').isDisabled(), true, 'un grupo que no es no vale');
+    await page.locator('#recoveryCheck').fill((await page.locator('#recoveryKeyBox').textContent()).trim().split('-')[+(await page.locator('#recoveryCheckN').textContent()) - 1].toLowerCase());
     await page.locator('#btnRecoveryContinue').click();
     await page.locator('#vaultContent').waitFor({state:'visible'});
     await page.locator('#btnLock').click();
     await page.locator('#masterPass2Wrap').waitFor({state:'hidden'});
+    /* Cinco contraseñas mal: la quinta abre una espera, y durante ella ni la buena entra. */
+    for(let i = 0; i < 5; i++){
+      await page.locator('#masterPass').fill('no-es-la-maestra-' + i);
+      await page.locator('#btnUnlock').click();
+      await page.locator('#lockError', {hasText:i < 4 ? 'incorrecta' : 'Demasiados intentos fallidos'}).waitFor();
+      await page.locator('#btnUnlock:not([disabled])').waitFor();
+    }
     await page.locator('#masterPass').fill('prueba-segura-123');
     await page.locator('#btnUnlock').click();
+    await page.locator('#lockError', {hasText:'Demasiados intentos fallidos'}).waitFor();
+    assert.equal(await page.locator('#vaultContent').isVisible(), false, 'durante la espera no se abre');
+    /* Pasada la espera (aquí, borrándola) entra, y sin aviso de contraseña débil. */
+    await page.evaluate(() => Workhub.app.controllers.vault.clearAttempts());
+    await page.locator('#btnUnlock').click();
     await page.locator('#vaultContent').waitFor({state:'visible'});
+    assert.equal(await page.locator('#vaultWeakNote').isVisible(), false);
+
+    /* Cambiar la contraseña maestra: aplica las reglas nuevas y la anterior deja de valer. */
+    await page.locator('#btnVaultPass').click();
+    await page.locator('#dlgVaultPass').waitFor({state:'visible'});
+    await page.locator('#vpCurrent').fill('prueba-segura-123');
+    await page.locator('#vpNew').fill('12345678');
+    await page.locator('#vpNew2').fill('87654321');
+    await page.locator('#vpSubmit').click();
+    await page.locator('#vpError', {hasText:'no coinciden'}).waitFor();
+    /* El generador rellena los dos campos y quita el aviso de «no coinciden». */
+    await page.locator('#dlgVaultPass [data-act="gen"]').click();
+    assert.equal(await page.locator('#vpError').isVisible(), false, 'tras generar no queda el aviso anterior');
+    assert.equal(await page.locator('#vpNew').inputValue(), await page.locator('#vpNew2').inputValue());
+    await page.locator('#vpNew').fill('12345678');
+    await page.locator('#vpNew2').fill('12345678');
+    await page.locator('#vpSubmit').click();
+    await page.locator('#vpError', {hasText:'mínimo 12'}).waitFor();
+    await page.locator('#vpNew').fill('otra-maestra-456');
+    await page.locator('#vpNew2').fill('otra-maestra-456');
+    await page.locator('#vpSubmit').click();
+    await page.locator('#dlgVaultPass').waitFor({state:'hidden'});
+    await page.locator('#btnLock').click();
+    await page.locator('#masterPass').fill('prueba-segura-123');
+    await page.locator('#btnUnlock').click();
+    await page.locator('#lockError', {hasText:'incorrecta'}).waitFor();
+    await page.locator('#btnUnlock:not([disabled])').waitFor();
+    await page.locator('#masterPass').fill('otra-maestra-456');
+    await page.locator('#btnUnlock').click();
+    await page.locator('#vaultContent').waitFor({state:'visible'});
+
+    /* Un cofre antiguo con una contraseña de las que ya no se aceptan: entra, pero con aviso. */
+    await page.evaluate(() => Workhub.app.models.vault.changePassword('otra-maestra-456', '12345678'));
+    await page.locator('#btnLock').click();
+    await page.locator('#masterPass').fill('12345678');
+    await page.locator('#btnUnlock').click();
+    await page.locator('#vaultContent').waitFor({state:'visible'});
+    await page.locator('#vaultWeakNote').waitFor({state:'visible'});
+    await page.locator('#btnVaultWeak').click();
+    await page.locator('#vpCurrent').fill('12345678');
+    await page.locator('#vpNew').fill('prueba-segura-123');
+    await page.locator('#vpNew2').fill('prueba-segura-123');
+    await page.locator('#vpSubmit').click();
+    await page.locator('#dlgVaultPass').waitFor({state:'hidden'});
+    await page.locator('#vaultWeakNote').waitFor({state:'hidden'});
 
     await page.locator('#btnProject').click();
     await page.locator('[data-menu="new"]').click();

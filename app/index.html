@@ -417,9 +417,9 @@
 
         <form id="totpForm" hidden>
           <div class="field">
-            <label for="totpCode">Código de verificación</label>
-            <input id="totpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required>
-            <p class="field-help">El código de 6 cifras de tu aplicación de autenticación.</p>
+            <label for="totpCode">Código de verificación o de respaldo</label>
+            <input id="totpCode" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="000000" required>
+            <p class="field-help">El código de 6 cifras de tu aplicación de autenticación. Si no tienes el teléfono, uno de tus códigos de respaldo.</p>
           </div>
           <p class="lock-error" id="totpError" hidden></p>
           <button type="submit" class="btn btn-primary" id="btnTotp" style="width:100%">Verificar</button>
@@ -450,6 +450,11 @@
             <label for="newPass2">Repite la nueva contraseña maestra</label>
             <input id="newPass2" type="password" autocomplete="off" required>
           </div>
+          <div class="field" id="recoverCodeWrap" hidden>
+            <label for="recoverCode">Código de verificación o de respaldo</label>
+            <input id="recoverCode" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="000000">
+            <p class="field-help">Estas contraseñas tienen verificación en dos pasos: la clave de recuperación sola no basta. Escribe un código de tu aplicación de autenticación o uno de tus códigos de respaldo.</p>
+          </div>
           <p class="lock-error" id="recoverError" hidden></p>
           <button type="submit" class="btn btn-primary" id="btnRecover" style="width:100%">Restablecer con la clave</button>
           <p class="lock-forgot"><a href="#" id="linkCancelRecover">Volver</a></p>
@@ -461,23 +466,38 @@
       <div class="lock-card" style="width:min(480px,100%)">
         <h2>Guarda tu clave de recuperación</h2>
         <p class="lock-desc">Es la única forma de recuperar el acceso si olvidas tu contraseña maestra. Guárdala en un lugar seguro — no la compartas ni la subas a ningún sitio. Quien la tenga, junto con acceso a este tablero, podría leer las contraseñas guardadas.</p>
-        <div class="recovery-key-box" id="recoveryKeyBox"></div>
+        <div class="recovery-key-box" id="recoveryKeyBox" translate="no"></div>
+        <div id="backupCodesWrap" hidden>
+          <h3 class="recovery-sub">Códigos de respaldo</h3>
+          <p class="lock-desc">Si pierdes el teléfono, cada uno de estos códigos sirve una vez en lugar del código de la aplicación. Guárdalos con la clave de recuperación.</p>
+          <div class="recovery-key-box backup-codes" id="backupCodesBox" translate="no"></div>
+        </div>
         <div class="recovery-actions">
           <button type="button" class="btn btn-ghost" id="btnCopyRecovery">Copiar</button>
           <button type="button" class="btn btn-ghost" id="btnDownloadRecovery">Descargar .txt</button>
         </div>
+        <p class="recovery-warning" id="recoveryWarning"><b>Nadie puede recuperarlas por ti.</b> Si pierdes la contraseña maestra y también esta clave, las contraseñas guardadas se pierden para siempre: Kanlane no las tiene ni puede restablecerlas.</p>
+        <div class="field" id="recoveryCheckWrap">
+          <label for="recoveryCheck">Para confirmar que la has guardado, escribe el grupo número <b id="recoveryCheckN">1</b> de la clave</label>
+          <input id="recoveryCheck" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="XXXX">
+        </div>
         <label class="recovery-confirm">
           <input type="checkbox" id="recoveryConfirmChk">
-          Ya he guardado esta clave en un lugar seguro
+          La he guardado en un lugar seguro y entiendo que sin ella no hay forma de recuperar los datos
         </label>
         <button type="button" class="btn btn-primary" id="btnRecoveryContinue" style="width:100%;margin-top:10px" disabled>Continuar</button>
       </div>
     </div>
 
     <div id="vaultContent" hidden>
+      <div class="vault-note vault-weak" id="vaultWeakNote" hidden>
+        <span><b>Tu contraseña maestra es débil.</b> Es corta o fácil de adivinar para lo que protege. Cámbiala por una más segura cuando puedas.</span>
+        <button class="btn btn-primary btn-sm" id="btnVaultWeak" type="button">Cambiar contraseña maestra</button>
+      </div>
       <div class="vault-note">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
         <span><b>Desbloqueado.</b> Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</span>
+        <button class="btn btn-ghost btn-sm" id="btnVaultPass" type="button">Cambiar contraseña maestra</button>
         <button class="btn btn-ghost btn-sm" id="btnVaultTotp" type="button" hidden>Activar verificación en dos pasos</button>
         <button class="btn btn-ghost btn-sm" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear ahora</button>
       </div>
@@ -1787,10 +1807,46 @@
   </div>
 </dialog>
 
+<dialog id="dlgVaultPass" aria-labelledby="vpTitle">
+  <form class="dlg-inner" id="vpForm" method="dialog">
+    <h2 id="vpTitle">Cambiar contraseña maestra</h2>
+    <p class="dlg-lead">Las contraseñas guardadas no cambian y tu clave de recuperación sigue siendo la misma.</p>
+    <div class="field">
+      <label for="vpCurrent">Contraseña maestra actual</label>
+      <input id="vpCurrent" type="password" autocomplete="off" required>
+    </div>
+    <div class="field">
+      <label for="vpNew">Nueva contraseña maestra</label>
+      <input id="vpNew" type="password" autocomplete="off" required>
+      <div class="pass-tools" data-for="vpNew" data-repeat="vpNew2">
+        <div class="pw-meter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+        <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+        <div class="pass-gen">
+          <button type="button" class="btn btn-ghost btn-sm" data-act="gen">Generar una segura</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="copy" hidden>Copiar</button>
+        </div>
+        <p class="field-help pass-gen-note" hidden>Guárdala en un lugar seguro antes de continuar: Kanlane no la guarda ni puede enviártela.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label for="vpNew2">Repite la nueva contraseña maestra</label>
+      <input id="vpNew2" type="password" autocomplete="off" required>
+    </div>
+    <p class="lock-error" id="vpError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="vpCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="vpSubmit">Cambiar contraseña</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgVaultTotp" aria-labelledby="vtTitle">
   <form class="dlg-inner" id="vtForm" method="dialog">
     <h2 id="vtTitle">Verificación en dos pasos</h2>
     <p class="dlg-lead" id="vtLead"></p>
+    <p class="type-note" id="vtLeft" hidden></p>
     <div id="vtSetup">
       <div class="totp-qr" id="vtQr" aria-label="Código QR para la aplicación de autenticación"></div>
       <p class="field-help totp-manual">Si no puedes escanearlo, escribe esta clave en la aplicación:</p>
@@ -1799,18 +1855,19 @@
         <button type="button" class="btn btn-ghost" id="vtCopy">Copiar</button>
         <a class="btn btn-ghost" id="vtOpen" href="#">Abrir en la aplicación</a>
       </div>
-      <p class="type-note">Si pierdes la aplicación de autenticación solo podrás entrar con tu clave de recuperación: comprueba que la tienes guardada antes de activar esto.</p>
+      <p class="type-note">Al activarla te daremos diez códigos de respaldo y una clave de recuperación nueva (la actual dejará de servir). Si pierdes el teléfono y también los códigos de respaldo no habrá forma de entrar, ni siquiera con la clave de recuperación.</p>
     </div>
     <div class="field">
       <label for="vtPass">Contraseña maestra</label>
       <input id="vtPass" type="password" autocomplete="off" required>
     </div>
     <div class="field">
-      <label for="vtCode">Código de verificación</label>
-      <input id="vtCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required>
+      <label for="vtCode" id="vtCodeLabel">Código de verificación</label>
+      <input id="vtCode" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="000000" required>
     </div>
     <p class="lock-error" id="vtError" hidden></p>
     <div class="dlg-actions">
+      <div><button type="button" class="btn btn-ghost" id="vtCodes" hidden>Códigos de respaldo nuevos</button></div>
       <div class="right">
         <button type="button" class="btn btn-ghost" id="vtCancel">Cancelar</button>
         <button type="submit" class="btn btn-primary" id="vtSubmit">Activar</button>

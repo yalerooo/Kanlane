@@ -121,6 +121,9 @@ async function t(name, fn){
     await t('bob no lee la clave de alice', () => assertFails(col(bob, 'vault_keys').doc('alice').get()));
     await t('nadie lista las claves de los demás', () => assertFails(col(alice, 'vault_keys').get()));
     await t('dave (no miembro) no guarda una clave', () => assertFails(col(dave, 'vault_keys').doc('dave').set(vkey())));
+    await t('bob guarda sus códigos de respaldo de la verificación en dos pasos', () => assertSucceeds(col(bob, 'vault_keys').doc('bob').set(vkey({backup: 'aXY=:Y2lwaGVy.aXY=:Y2lwaGVy'}))));
+    await t('unos códigos de respaldo enormes se rechazan', () => assertFails(col(bob, 'vault_keys').doc('bob').set(vkey({backup: 'x'.repeat(2049)}))));
+    await t('los códigos de respaldo tienen que ser texto', () => assertFails(col(bob, 'vault_keys').doc('bob').set(vkey({backup: ['a']}))));
     await t('una clave con campos de más se rechaza', () => assertFails(col(bob, 'vault_keys').doc('bob').set(vkey({dek: 'en claro'}))));
 
     await t('bob (editor) guarda una credencial', () => assertSucceeds(col(bob, 'vault').doc('v1').set(ventry())));

@@ -60,6 +60,23 @@
     return groups.join('-');
   }
 
+  /* Contraseña aleatoria para usar de contraseña maestra: cuatro grupos de cinco letras y cifras
+     (unos 116 bits), sin los caracteres que se confunden al copiarla a mano (0/O, 1/l/I). */
+  const PASSWORD_CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function generatePassword(){
+    const n = PASSWORD_CHARS.length;
+    const limit = 256 - (256 % n);
+    let out = '';
+    while(out.length < 20){
+      const bytes = randomBytes(32);
+      for(let i = 0; i < bytes.length && out.length < 20; i++){
+        /* Los bytes que sobran se descartan: si no, unas letras saldrían más que otras. */
+        if(bytes[i] < limit) out += PASSWORD_CHARS[bytes[i] % n];
+      }
+    }
+    return out.match(/.{5}/g).join('-');
+  }
+
   function deriveKey(password, saltBytes){
     const enc = new TextEncoder();
     return crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveKey']).then((baseKey) => {
@@ -92,7 +109,7 @@
   }
 
   Workhub.services.crypto = {
-    isAvailable, randomBytes, b64encode, b64decode, base32Decode, formatRecoveryKey,
+    isAvailable, randomBytes, b64encode, b64decode, base32Decode, formatRecoveryKey, generatePassword,
     deriveKey, importAesKeyRaw, encryptJSON, decryptJSON
   };
 })();

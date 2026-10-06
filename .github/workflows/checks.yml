@@ -25,6 +25,7 @@ jobs:
           node tests/settings/settings.test.js
           node tests/vault/vault.test.js
           node tests/vault/team-vault.test.js
+          node tests/vault/vault-totp.test.js
           node tests/crypto/project-crypto.test.js
           node tests/crypto/keystore.test.js
           node tests/crypto/schema-rules.test.js
@@ -40,6 +41,7 @@ jobs:
           node tests/season/season.test.js
           node tests/worker/rate-limit.test.js
           node tests/worker/kms.test.js
+          node tests/worker/totp.test.js
           node tests/worker/domains.test.js
           node tests/e2e/hreflang-check.js
           node tests/e2e/sitemap-check.js

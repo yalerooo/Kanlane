@@ -13,7 +13,8 @@
 
    Solo se reenvían las rutas de Firebase indicadas; no es un proxy abierto.
 
-   Además atiende /__/kms/v1/kek: la clave de los proyectos «Gestionado por Kanlane». */
+   Además atiende /__/kms/v1/kek: la clave de los proyectos «Gestionado por Kanlane», y
+   /__/kms/v1/totp: la verificación en dos pasos del gestor de contraseñas. */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -59,6 +60,27 @@ const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken
 const KMS_PID = /^[A-Za-z0-9_-]{22}$/;
 const KMS_KID = /^[A-Za-z0-9_-]{11}$/;
 const CLOCK_SKEW = 300;
+
+/* ---------- Verificación en dos pasos del gestor de contraseñas (docs/SEGURIDAD.md) ----------
+   POST /__/kms/v1/totp con el mismo «Authorization» que la ruta anterior. Con el segundo paso
+   activado, la clave del cofre va envuelta dos veces: con la contraseña maestra (en el navegador) y
+   con una clave que solo sale de aquí tras un código TOTP válido (RFC 6238: SHA-1, 30 s, 6 cifras).
+   Así la contraseña maestra y una copia de la base de datos no bastan para abrir el cofre.
+     {op:'enroll', secret, code} → {token, share}   secret: los 20 bytes del autenticador, en base64url
+     {op:'verify', token, code}  → {token, share}
+   No se guarda nada: «token» es el secreto del autenticador cifrado con una clave derivada de
+   KMS_MASTER_V1 y atado a la cuenta (AES-GCM, datos asociados «u:{uid}»); lo conserva el navegador
+   dentro del envoltorio de la contraseña maestra. «share» = HKDF-SHA256(secreto, sal
+   «kanlane-vault-totp-v1», info «share|u:{uid}|{token}»).
+   Un código son 6 cifras: lo que impide probarlos todos es TOTP_RATE_LIMIT (por cuenta). Sin ese
+   límite configurado la ruta no responde. Perder KMS_MASTER_V1 obliga a entrar con la clave de
+   recuperación del cofre, que no pasa por aquí. */
+const TOTP_PATH = '/__/kms/v1/totp';
+const TOTP_SALT = 'kanlane-vault-totp-v1';
+const TOTP_STEP = 30;
+const TOTP_SECRET_BYTES = 20;
+const TOTP_CODE = /^[0-9]{6}$/;
+const TOTP_TOKEN = /^[A-Za-z0-9_-]{64}$/;
 
 const text = new TextEncoder();
 let jwks = {keys: null, until: 0};
@@ -131,42 +153,126 @@ async function verifiedUid(token) {
   return claims.sub;
 }
 
-async function kms(request, env, url) {
-  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+/* Lo que comparten las rutas de /__/kms/: solo POST, solo desde la propia web, con el secreto
+   configurado y con un ID token válido. Devuelve {uid, master} o {error: Response}. */
+async function kmsCaller(request, env, url) {
+  if (request.method !== 'POST') return {error: json(405, {error: 'method'}, {Allow: 'POST'})};
   /* Solo la propia web: una página de otro origen no puede pedir claves. */
   const origin = request.headers.get('Origin');
-  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+  if (origin && origin !== url.origin) return {error: json(403, {error: 'origin'})};
 
   if (env.AUTH_RATE_LIMIT) {
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
     const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
-    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+    if (!success) return {error: json(429, {error: 'rate'}, {'Retry-After': '60'})};
   }
 
   let master;
   try { master = fromB64(env.KMS_MASTER_V1 || ''); } catch (e) { master = new Uint8Array(0); }
-  if (master.length < 32) return json(503, {error: 'not-configured'});
+  if (master.length < 32) return {error: json(503, {error: 'not-configured'})};
 
   const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
   let uid = null;
   try {
     uid = auth ? await verifiedUid(auth[1]) : null;
   } catch (e) {
-    return json(503, {error: 'unavailable'});
+    return {error: json(503, {error: 'unavailable'})};
   }
-  if (!uid) return json(401, {error: 'auth'});
+  if (!uid) return {error: json(401, {error: 'auth'})};
+  return {uid, master};
+}
 
-  let body = null;
+async function jsonBody(request) {
   try {
     const raw = await request.text();
-    if (raw.length <= 512) body = JSON.parse(raw);
+    if (raw.length <= 512) {
+      const body = JSON.parse(raw);
+      if (body && typeof body === 'object') return body;
+    }
   } catch (e) { /* cuerpo no válido */ }
-  if (!body || typeof body !== 'object' || typeof body.pid !== 'string' || typeof body.kid !== 'string' || !KMS_PID.test(body.pid) || !KMS_KID.test(body.kid)) return json(400, {error: 'request'});
+  return null;
+}
 
-  const ikm = await crypto.subtle.importKey('raw', master, 'HKDF', false, ['deriveBits']);
+async function kms(request, env, url) {
+  const who = await kmsCaller(request, env, url);
+  if (who.error) return who.error;
+
+  const body = await jsonBody(request);
+  if (!body || typeof body.pid !== 'string' || typeof body.kid !== 'string' || !KMS_PID.test(body.pid) || !KMS_KID.test(body.kid)) return json(400, {error: 'request'});
+
+  const ikm = await crypto.subtle.importKey('raw', who.master, 'HKDF', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({name: 'HKDF', hash: 'SHA-256', salt: text.encode(KMS_SALT),
-    info: text.encode('u:' + uid + '|' + body.pid + '|' + body.kid)}, ikm, 256);
+    info: text.encode('u:' + who.uid + '|' + body.pid + '|' + body.kid)}, ikm, 256);
   return json(200, {v: 1, kmsv: KMS_VERSION, kek: toB64url(new Uint8Array(bits))});
+}
+
+/* Código TOTP de un secreto para un contador (RFC 4226, 6 cifras). */
+async function totpCode(secret, counter) {
+  const key = await crypto.subtle.importKey('raw', secret, {name: 'HMAC', hash: 'SHA-1'}, false, ['sign']);
+  const msg = new Uint8Array(8);
+  new DataView(msg.buffer).setUint32(4, counter);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, msg));
+  const at = mac[19] & 15;
+  const num = ((mac[at] & 127) << 24) | (mac[at + 1] << 16) | (mac[at + 2] << 8) | mac[at + 3];
+  return String(num % 1000000).padStart(6, '0');
+}
+
+/* Vale el código de ahora y los de 30 s antes y después (relojes algo desajustados). */
+async function totpMatches(secret, code) {
+  const now = Math.floor(Date.now() / 1000 / TOTP_STEP);
+  let ok = false;
+  for (let d = -1; d <= 1; d++) {
+    if (await totpCode(secret, now + d) === code) ok = true;
+  }
+  return ok;
+}
+
+async function totp(request, env, url) {
+  const who = await kmsCaller(request, env, url);
+  if (who.error) return who.error;
+  /* Sin límite por cuenta, seis cifras se adivinan probando: mejor no responder. */
+  if (!env.TOTP_RATE_LIMIT) return json(503, {error: 'not-configured'});
+
+  const body = await jsonBody(request);
+  const enroll = !!body && body.op === 'enroll';
+  if (!body || (!enroll && body.op !== 'verify') || typeof body.code !== 'string' || !TOTP_CODE.test(body.code)) return json(400, {error: 'request'});
+  if (enroll ? typeof body.secret !== 'string' || body.secret.length > 64 : typeof body.token !== 'string' || !TOTP_TOKEN.test(body.token)) return json(400, {error: 'request'});
+
+  const {success} = await env.TOTP_RATE_LIMIT.limit({key: 'totp:' + who.uid});
+  if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+
+  const ikm = await crypto.subtle.importKey('raw', who.master, 'HKDF', false, ['deriveBits', 'deriveKey']);
+  const tokenKey = await crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: text.encode(TOTP_SALT), info: text.encode('token')},
+    ikm, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
+  const bound = text.encode('u:' + who.uid);
+
+  let secret, token;
+  if (enroll) {
+    try { secret = fromB64(body.secret); } catch (e) { secret = new Uint8Array(0); }
+    if (secret.length !== TOTP_SECRET_BYTES) return json(400, {error: 'request'});
+  } else {
+    /* Un token de otra cuenta, o manipulado, no se abre. */
+    try {
+      const raw = fromB64(body.token);
+      secret = new Uint8Array(await crypto.subtle.decrypt({name: 'AES-GCM', iv: raw.slice(0, 12), additionalData: bound}, tokenKey, raw.slice(12)));
+    } catch (e) {
+      return json(400, {error: 'token'});
+    }
+    token = body.token;
+  }
+  if (!await totpMatches(secret, body.code)) return json(403, {error: 'code'});
+
+  if (enroll) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const sealed = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv, additionalData: bound}, tokenKey, secret));
+    const raw = new Uint8Array(12 + sealed.length);
+    raw.set(iv);
+    raw.set(sealed, 12);
+    token = toB64url(raw);
+  }
+  const share = await crypto.subtle.deriveBits({name: 'HKDF', hash: 'SHA-256', salt: text.encode(TOTP_SALT),
+    info: text.encode('share|u:' + who.uid + '|' + token)}, ikm, 256);
+  return json(200, {v: 1, token, share: toB64url(new Uint8Array(share))});
 }
 
 export default {
@@ -200,6 +306,7 @@ export default {
 
     /* Modo gestionado: la clave que envuelve la del proyecto (ver más abajo). */
     if (url.pathname === KMS_PATH) return kms(request, env, url);
+    if (url.pathname === TOTP_PATH) return totp(request, env, url);
 
     if (METHODS.indexOf(request.method) === -1) {
       return new Response('Método no permitido', {status: 405});

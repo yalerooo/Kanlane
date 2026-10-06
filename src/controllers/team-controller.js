@@ -23,6 +23,7 @@
   /* Errores al abrir el cofre con la contraseña maestra (TeamVault). */
   const VAULT_ERRORS = {
     'bad-pass': 'Contraseña maestra incorrecta.',
+    'totp': 'Tus contraseñas tienen la verificación en dos pasos activada. Desactívala en la sección Contraseñas para hacer esto y vuelve a activarla después.',
     'no-access': 'Todavía no tienes acceso a las contraseñas de este equipo.',
     'no-vault': 'Este equipo todavía no tiene contraseñas compartidas.',
     'needs-vault-pass': 'Escribe la contraseña maestra de las contraseñas de este proyecto.',

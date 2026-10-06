@@ -8,7 +8,11 @@
    - En un proyecto de equipo (this.team) el cofre es de todos, pero cada persona guarda la DEK
      envuelta con su propia contraseña maestra en 'vault_keys/{uid}' y 'vault_meta/check' solo marca
      que el cofre existe (ver team-vault.js). Quien aún no tiene la DEK la recibe con un código de
-     acceso de un solo uso (redeem). */
+     acceso de un solo uso (redeem).
+   - Con la verificación en dos pasos, el envoltorio de la contraseña no guarda {dek} sino
+     {totp, iv, cipher}: la DEK cifrada con una clave que el servidor solo entrega tras un código
+     válido (services/vault-totp.js), más el token que hay que presentarle. Los nombres de los
+     campos del documento no cambian. La clave de recuperación no pasa por el segundo paso. */
 (function(){
   const cryptoSvc = Workhub.services.crypto;
   const META_PATH = 'vault_meta/check';
@@ -27,6 +31,10 @@
       this.metaState = null;
       /* Proyecto de equipo abierto: {tid, uid, email, owner, teams} (lo fija AppController). */
       this.team = null;
+      /* Verificación en dos pasos: si este cofre la tiene (se sabe al abrirlo) y, entre la
+         contraseña y el código, lo que falta por abrir: {token, iv, cipher}. */
+      this.totp = false;
+      this.pendingTotp = null;
       /* Contraseñas ya descifradas y cuáles se están mostrando. */
       this.revealed = {};
       this.visible = {};
@@ -109,10 +117,13 @@
       return VaultModel.wrapDek(password, dekB64, createdAt).then((w) => this.setMeta(w.meta).then(() => w.recoveryKey));
     }
 
+    /* Los envoltorios que escriben create, redeem, recover y la migración no llevan segundo paso. */
     _setUnlocked(key){
       this.key = key;
       this.metaState = 'current';
       this.unlocked = true;
+      this.totp = false;
+      this.pendingTotp = null;
       this.revealed = {};
       this.visible = {};
     }
@@ -188,7 +199,10 @@
       });
     }
 
+    /* Con verificación en dos pasos rechaza con 'totp-required' y deja en pendingTotp lo que falta:
+       se termina con unlockWithShare(). */
     unlock(password){
+      this.pendingTotp = null;
       return this.getMeta().then((snap) => {
         if(!snap.exists){
           return this._stateWithoutKey().then((state) => {
@@ -200,13 +214,92 @@
         return cryptoSvc.deriveKey(password, cryptoSvc.b64decode(data.saltPassword)).then((kek) => {
           return cryptoSvc.decryptJSON(kek, data.ivPassword, data.cipherPassword);
         }).then((obj) => {
+          if(obj && obj.totp && obj.cipher){
+            this.pendingTotp = {token:obj.totp, iv:obj.iv, cipher:obj.cipher};
+            throw new Error('totp-required');
+          }
           if(!obj || !obj.dek) throw new Error('bad-pass');
           return cryptoSvc.importAesKeyRaw(cryptoSvc.b64decode(obj.dek));
         });
       }).then((key) => {
         this.key = key;
         this.unlocked = true;
+        this.totp = false;
       });
+    }
+
+    /* Segundo paso: la clave que ha dado el servidor (bytes) abre lo que dejó unlock(). */
+    unlockWithShare(share){
+      const pending = this.pendingTotp;
+      if(!pending) return Promise.reject(new Error('no-pending'));
+      return cryptoSvc.importAesKeyRaw(share).then((key) => cryptoSvc.decryptJSON(key, pending.iv, pending.cipher)).then((obj) => {
+        if(!obj || !obj.dek) throw new Error('bad-share');
+        return cryptoSvc.importAesKeyRaw(cryptoSvc.b64decode(obj.dek));
+      }).then((key) => {
+        this.key = key;
+        this.unlocked = true;
+        this.totp = true;
+        this.pendingTotp = null;
+      });
+    }
+
+    /* Lo que hay dentro del envoltorio de la contraseña: {data, obj}. 'bad-pass' si no es esa. */
+    _openPasswordWrap(password){
+      return this.getMeta(true).then((snap) => {
+        if(!snap.exists || !(snap.data() || {}).saltPassword) throw new Error('no-check');
+        const data = snap.data();
+        return cryptoSvc.deriveKey(password, cryptoSvc.b64decode(data.saltPassword))
+          .then((kek) => cryptoSvc.decryptJSON(kek, data.ivPassword, data.cipherPassword))
+          .then((obj) => obj, () => null)
+          .then((obj) => {
+            if(!obj || (!obj.dek && !obj.totp)) throw new Error('bad-pass');
+            return {data:data, obj:obj};
+          });
+      });
+    }
+
+    /* Vuelve a escribir solo el envoltorio de la contraseña; el de recuperación no se toca. */
+    _rewrapPassword(password, data, inner){
+      const saltPassword = cryptoSvc.randomBytes(16);
+      return cryptoSvc.deriveKey(password, saltPassword).then((kek) => cryptoSvc.encryptJSON(kek, inner)).then((wrap) => {
+        return this.setMeta(Object.assign({}, data, {
+          saltPassword: cryptoSvc.b64encode(saltPassword),
+          ivPassword: wrap.iv, cipherPassword: wrap.cipher,
+          updatedAt: Date.now()
+        }));
+      });
+    }
+
+    /* Activa la verificación en dos pasos. enroll() → Promise<{token, share}>: el alta en el
+       servidor, que solo se pide si la contraseña es la buena.
+       Errores: 'bad-pass', 'totp-on' (ya estaba activada) y los de enroll(). */
+    enableTotp(password, enroll){
+      let opened;
+      return this._openPasswordWrap(password).then((o) => {
+        if(!o.obj.dek) throw new Error('totp-on');
+        opened = o;
+        return enroll();
+      }).then((made) => {
+        return cryptoSvc.importAesKeyRaw(made.share)
+          .then((key) => cryptoSvc.encryptJSON(key, {dek:opened.obj.dek}))
+          .then((enc) => this._rewrapPassword(password, opened.data, {totp:made.token, iv:enc.iv, cipher:enc.cipher}));
+      }).then(() => { this.totp = true; });
+    }
+
+    /* La desactiva. verify(token) → Promise<bytes>: la clave del servidor para ese token.
+       Errores: 'bad-pass', 'totp-off' (no estaba activada) y los de verify(). */
+    disableTotp(password, verify){
+      let opened;
+      return this._openPasswordWrap(password).then((o) => {
+        if(!o.obj.totp) throw new Error('totp-off');
+        opened = o;
+        return verify(o.obj.totp);
+      }).then((share) => cryptoSvc.importAesKeyRaw(share))
+        .then((key) => cryptoSvc.decryptJSON(key, opened.obj.iv, opened.obj.cipher))
+        .then((inner) => {
+          if(!inner || !inner.dek) throw new Error('bad-share');
+          return this._rewrapPassword(password, opened.data, {dek:inner.dek});
+        }).then(() => { this.totp = false; });
     }
 
     /* La migración conserva iv/cipher antiguos. Solo después de guardar todas
@@ -283,6 +376,8 @@
     lock(){
       this.key = null;
       this.unlocked = false;
+      this.totp = false;
+      this.pendingTotp = null;
       this.revealed = {};
       this.visible = {};
     }

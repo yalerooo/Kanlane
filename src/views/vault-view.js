@@ -60,6 +60,29 @@
       this.btnUnlock = $('btnUnlock');
       this.forgotLinkWrap = $('forgotLinkWrap');
       this.linkForgot = $('linkForgot');
+      this.masterPassTools = $('masterPassTools');
+
+      /* Segundo paso (código de la aplicación de autenticación) */
+      this.totpForm = $('totpForm');
+      this.totpCode = $('totpCode');
+      this.totpError = $('totpError');
+      this.btnTotp = $('btnTotp');
+      this.linkTotpBack = $('linkTotpBack');
+
+      /* Activar o desactivar la verificación en dos pasos */
+      this.btnVaultTotp = $('btnVaultTotp');
+      this.totpDlg = $('dlgVaultTotp');
+      this.vtForm = $('vtForm');
+      this.vtLead = $('vtLead');
+      this.vtSetup = $('vtSetup');
+      this.vtSecret = $('vtSecret');
+      this.vtCopy = $('vtCopy');
+      this.vtOpen = $('vtOpen');
+      this.vtPass = $('vtPass');
+      this.vtCode = $('vtCode');
+      this.vtError = $('vtError');
+      this.vtCancel = $('vtCancel');
+      this.vtSubmit = $('vtSubmit');
 
       /* Recuperación */
       this.recoverForm = $('recoverForm');
@@ -126,10 +149,13 @@
       });
       this.linkCancelRecover.addEventListener('click', (ev) => {
         ev.preventDefault();
-        this.recoverForm.hidden = true;
-        this.unlockForm.hidden = false;
-        this.forgotLinkWrap.hidden = false;
+        this.setLockMode(this.lockMode);
       });
+      this._bindPasswordFields();
+      this.vtCancel.addEventListener('click', () => this.closeTotp());
+      this.vtCopy.addEventListener('click', () => copyWithFeedback(this.vtCopy, this.vtSecret.textContent.replace(/\s/g, '')));
+      /* También al cerrarlo con Escape. */
+      this.totpDlg.addEventListener('close', () => this._clearTotp());
       this.recoveryConfirmChk.addEventListener('change', () => {
         this.btnRecoveryContinue.disabled = !this.recoveryConfirmChk.checked;
       });

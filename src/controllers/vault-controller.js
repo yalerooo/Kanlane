@@ -3,10 +3,24 @@
   const cryptoSvc = Workhub.services.crypto;
   const platform = Workhub.services.platform;
   const toast = Workhub.views.toast;
-  const MIN_PASSWORD_LENGTH = 8;
   const RECOVERY_KEY_BYTES = 32;
   const TeamVault = Workhub.models.TeamVault;
   const P = Workhub.models.ProjectModel;
+  const Totp = Workhub.services.vaultTotp;
+
+  /* Errores de la verificación en dos pasos (services/vault-totp.js y VaultModel). */
+  const TOTP_ERRORS = {
+    'totp-code': 'El código no es correcto. Comprueba que es el de Kanlane y que la hora del teléfono está bien.',
+    'totp-rate': 'Demasiados intentos. Espera un minuto y vuelve a probar.',
+    'totp-auth': 'El servidor no ha aceptado tu sesión. Cierra sesión, vuelve a entrar e inténtalo de nuevo.',
+    'totp-network': 'No se pudo contactar con el servidor para comprobar el código. Revisa la conexión e inténtalo de nuevo.',
+    'totp-unavailable': 'La verificación en dos pasos no está disponible ahora. Inténtalo de nuevo en unos minutos.',
+    'bad-pass': 'Contraseña maestra incorrecta.',
+    'bad-share': 'El servidor ha dado una clave que no abre estas contraseñas. Entra con tu clave de recuperación.',
+    'totp-on': 'La verificación en dos pasos ya estaba activada. Bloquea y vuelve a desbloquear.',
+    'totp-off': 'La verificación en dos pasos ya estaba desactivada. Bloquea y vuelve a desbloquear.'
+  };
+  const totpMessage = (err) => TOTP_ERRORS[err && (err.code || err.message)] || TOTP_ERRORS['totp-unavailable'];
 
   function recoveryFileText(key){
     const when = new Date().toLocaleString(Workhub.i18n.locale);
@@ -59,6 +73,20 @@
       });
 
       this.view.bindUnlock((pass, pass2, code) => this.unlock(pass, pass2, code));
+      this.view.bindPasswordCheck((pass) => this.checkPassword(pass));
+      this.view.bindTotpStep({
+        verify: (code) => this.verifyTotp(code),
+        back: () => {
+          this.vault.pendingTotp = null;
+          this.setLockMode(this.vault.metaState);
+        }
+      });
+      /* Clave del autenticador que se está dando de alta (solo mientras el diálogo está abierto). */
+      this.totpSecret = null;
+      this.view.bindTotp({
+        open: () => this.openTotp(),
+        submit: (pass, code) => this.submitTotp(pass, code)
+      });
       /* Enlace de acceso a las contraseñas de un equipo: en cuanto soy miembro, se abre ese proyecto
          por la sección de contraseñas. */
       this.linkFollowed = false;
@@ -110,6 +138,7 @@
         this.view.showScreen('recovery');
       } else if(this.vault.unlocked){
         this.view.showScreen('content');
+        this.view.setTotpState(Totp.available(this.app.rootDb), this.vault.totp);
         this.render();
       } else {
         this.view.showScreen('lock');
@@ -171,6 +200,7 @@
 
     showContent(){
       this.view.showScreen('content');
+      this.view.setTotpState(Totp.available(this.app.rootDb), this.vault.totp);
       this.render();
       this.maybeReturnToTask();
     }
@@ -195,6 +225,23 @@
       this.view.presentRecoveryKey(key, isReset);
     }
 
+    /* ---------- Contraseña maestra nueva ---------- */
+
+    /* Resultado de passwordCheck() para una contraseña maestra (lo pinta el medidor). */
+    checkPassword(pass){
+      const me = this.app.rootDb && this.app.rootDb.me;
+      const project = this.app.models.projects.get(this.app.projectId);
+      return Workhub.services.projectCrypto.passwordCheck(pass, {email:me ? me.email : '', projectName:project ? project.nombre : ''});
+    }
+
+    /* Por qué no vale como contraseña maestra nueva, o '' si vale. Las cortas y las fáciles de
+       adivinar («123456789012», «contraseña123») no se aceptan; las que ya existen siguen abriendo.
+       Que contenga el correo o el nombre del proyecto solo lo avisa el medidor. */
+    passwordProblem(pass){
+      const r = this.checkPassword(pass);
+      return r.reason === 'short' || r.reason === 'common' ? r.message : '';
+    }
+
     /* ---------- Desbloqueo ---------- */
 
     unlock(pass, pass2, code){
@@ -207,7 +254,7 @@
         const clean = TeamVault.parseCode(code);
         if(!clean){ this.view.showLockError('Pega el enlace o el código de acceso que te ha dado el propietario.'); done(); return; }
         if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
-        if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
+        if(this.passwordProblem(pass)){ this.view.showLockError(this.passwordProblem(pass)); done(); return; }
         this.vault.redeem(clean, pass).then((key) => {
           TeamVault.clearLink();
           this.presentRecoveryKey(key, false);
@@ -222,7 +269,7 @@
 
       if(state === 'none'){
         if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
-        if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
+        if(this.passwordProblem(pass)){ this.view.showLockError(this.passwordProblem(pass)); done(); return; }
         this.vault.create(pass).then((key) => this.presentRecoveryKey(key, false)).catch((err) => {
           if(err && err.message === 'vault-exists') this.setLockMode(this.vault.metaState);
           this.view.showLockError('No se pudo crear la contraseña maestra. Comprueba la conexión y vuelve a intentarlo.');
@@ -236,10 +283,65 @@
           this.view.clearPasswords();
           this.showContent();
         }).catch((err) => {
-          if(err && err.message === 'no-check') this.setLockMode(this.vault.metaState || 'none');
+          if(err && err.message === 'totp-required'){
+            this.view.clearPasswords();
+            this.view.showTotpStep();
+          } else if(err && err.message === 'no-check') this.setLockMode(this.vault.metaState || 'none');
           else this.view.showLockError('Contraseña maestra incorrecta.');
         }).finally(done);
       }
+    }
+
+    /* Segundo paso del desbloqueo: el servidor comprueba el código y da la clave que falta. */
+    verifyTotp(code){
+      const pending = this.vault.pendingTotp;
+      if(!pending){ this.setLockMode(this.vault.metaState); return; }
+      const rootDb = this.app.rootDb;
+      if(!rootDb || typeof rootDb.idToken !== 'function'){
+        this.view.showTotpStepError('Estas contraseñas tienen verificación en dos pasos y aquí no hay una cuenta con la que comprobar el código. Entra con tu clave de recuperación.');
+        return;
+      }
+      if(Totp.cleanCode(code).length !== 6){ this.view.showTotpStepError('Escribe las 6 cifras del código.'); return; }
+      this.view.setTotpChecking(true);
+      Totp.verify(rootDb, pending.token, code).then((share) => this.vault.unlockWithShare(share)).then(() => {
+        this.view.clearPasswords();
+        this.showContent();
+      }).catch((err) => {
+        this.view.showTotpStepError(totpMessage(err));
+      }).finally(() => this.view.setTotpChecking(false));
+    }
+
+    /* ---------- Activar o desactivar la verificación en dos pasos ---------- */
+
+    openTotp(){
+      if(!this.vault.unlocked) return;
+      if(this.vault.totp){
+        this.totpSecret = null;
+        this.view.openTotp(null);
+        return;
+      }
+      const me = this.app.rootDb && this.app.rootDb.me;
+      this.totpSecret = Totp.newSecret();
+      this.view.openTotp({secret:Totp.formatSecret(this.totpSecret), uri:Totp.uri(this.totpSecret, me ? me.email : '')});
+    }
+
+    submitTotp(pass, code){
+      if(!this.vault.unlocked || !this.vault.isReady()) return;
+      if(Totp.cleanCode(code).length !== 6){ this.view.showTotpError('Escribe las 6 cifras del código.'); return; }
+      const rootDb = this.app.rootDb;
+      const enabling = !this.vault.totp;
+      this.view.setTotpBusy(true);
+      (enabling
+        ? this.vault.enableTotp(pass, () => Totp.enroll(rootDb, this.totpSecret, code))
+        : this.vault.disableTotp(pass, (token) => Totp.verify(rootDb, token, code))
+      ).then(() => {
+        this.totpSecret = null;
+        this.view.closeTotp();
+        this.view.setTotpState(Totp.available(rootDb), this.vault.totp);
+        toast.success(enabling ? 'Verificación en dos pasos activada' : 'Verificación en dos pasos desactivada');
+      }).catch((err) => {
+        this.view.showTotpError(totpMessage(err));
+      }).finally(() => this.view.setTotpBusy(false));
     }
 
     recover(keyText, newPass, newPass2){
@@ -250,7 +352,7 @@
         return;
       }
       if(newPass !== newPass2){ this.view.showRecoverError('Las dos contraseñas nuevas no coinciden.'); return; }
-      if(newPass.length < MIN_PASSWORD_LENGTH){ this.view.showRecoverError('Usa al menos 8 caracteres.'); return; }
+      if(this.passwordProblem(newPass)){ this.view.showRecoverError(this.passwordProblem(newPass)); return; }
 
       this.view.setRecovering(true);
       this.vault.recover(keyBytes, newPass).then((key) => this.presentRecoveryKey(key, true)).catch((err) => {

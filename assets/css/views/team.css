@@ -3,11 +3,10 @@
 /* Lo que solo tiene sentido en un proyecto de equipo (ShellView.setTeamMode). */
 .team-off{display:none !important;}
 
-/* En un equipo todavía no hay gestor de contraseñas. */
-body.team-project #tabVault{display:none;}
-
 /* Rol de lector: solo lectura. */
 body.is-readonly #btnNew,
+body.is-readonly #btnNewVault,
+body.is-readonly #btnVvEdit,
 body.is-readonly .col-add,
 body.is-readonly .col-new,
 body.is-readonly #btnTvDone,

@@ -258,6 +258,13 @@
         openBytes: (id, doc) => cipher.openBytes('assets', id, doc)
       } : null;
       const db = P.scope(this.rootDb, this.projectId);
+      /* En un equipo el cofre es compartido y cada persona guarda su propia clave (ver team-vault.js). */
+      const me = this.rootDb.me, pid = this.projectId, projects = this.models.projects;
+      this.models.vault.team = P.isTeam(pid) && me ? {
+        tid:P.teamId(pid), uid:me.uid, email:me.email, teams:this.rootDb.teams,
+        /* Mi rol puede llegar después de conectar: se mira cada vez. */
+        get owner(){ const p = projects.get(pid); return !!p && p.role === 'owner'; }
+      } : null;
       PROJECT_MODELS.forEach((name) => this.models[name].connect(db, cipher));
       this.models.plugins.connect(db, this.projectId === P.MAIN_ID);
       /* La sección de copias cambia con el cifrado (exportar cifrado o no). */

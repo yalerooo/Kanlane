@@ -11,8 +11,10 @@ rules_version = '2';
 // 3. Proyectos de equipo: viven en teams/{id}. Solo entran los miembros
 //    (memberIds), con un rol: owner (todo), editor (datos del proyecto) o
 //    viewer (solo lectura). Se entra por invitación (invites/{id}), dirigida
-//    a un correo verificado. Las contraseñas del gestor no se comparten
-//    todavía, así que vault y vault_meta no están permitidos en equipos.
+//    a un correo verificado. Las contraseñas del gestor se comparten cifradas
+//    en el navegador: las credenciales van en vault y la clave del cofre la
+//    guarda cada miembro envuelta con su contraseña maestra (vault_keys); a
+//    quien entra se le deja envuelta con un código de un solo uso (vault_grants).
 // 4. Cifrado por proyecto (docs/CIFRADO-PROYECTOS.md). Un proyecto puede
 //    llevar el campo 'enc' (solo al crearse): sus documentos de datos se
 //    guardan sellados (campos 'e', 'ev' y 'kid') y las reglas no dejan
@@ -41,9 +43,10 @@ service cloud.firestore {
             || request.auth.token.email_verified == true);
     }
 
-    // Colecciones de datos de un proyecto de equipo (sin el gestor de contraseñas).
+    // Colecciones de datos de un proyecto de equipo. Las claves del cofre van aparte
+    // (vault_meta, vault_keys y vault_grants, más abajo).
     function isTeamCollection(col) {
-      return col in ['tasks', 'clients', 'contacts', 'meetings', 'plugin_data', 'assets'];
+      return col in ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'plugin_data', 'assets'];
     }
 
     function team(tid) {
@@ -460,6 +463,62 @@ service cloud.firestore {
         && (isSealed(request.resource.data) || !teamEnc(tid))
         && teamKid(tid);
       allow update: if canEdit(tid) && validWrite('notes') && teamKid(tid);
+    }
+
+    // ---------- Contraseñas compartidas de un equipo ----------
+    // Marca de que el cofre existe: la crea el propietario una sola vez y no cambia.
+    match /teams/{tid}/vault_meta/{docId} {
+      allow read: if isMember(tid);
+      allow create: if docId == 'check' && isOwner(tid)
+        && request.resource.data.keys().hasOnly(['v', 'pid', 'kid', 'iv', 'cipher', 'createdBy', 'createdAt'])
+        && request.resource.data.keys().hasAll(['v', 'pid', 'kid', 'iv', 'cipher', 'createdBy'])
+        && request.resource.data.v == 1
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.pid is string && request.resource.data.pid.size() >= 16 && request.resource.data.pid.size() <= 32
+        && request.resource.data.kid is string && request.resource.data.kid.size() >= 8 && request.resource.data.kid.size() <= 32
+        && request.resource.data.iv is string && request.resource.data.iv.size() <= 32
+        && request.resource.data.cipher is string && request.resource.data.cipher.size() <= 256;
+      allow update: if false;
+      allow delete: if isOwner(tid);
+    }
+
+    // La clave del cofre de cada miembro, envuelta con su contraseña maestra y su clave de
+    // recuperación: solo la lee y la escribe él. El propietario puede borrar las de otros.
+    match /teams/{tid}/vault_keys/{who} {
+      allow read: if verified() && who == request.auth.uid && isMember(tid);
+      allow create, update: if verified() && who == request.auth.uid && isMember(tid)
+        && request.resource.data.keys().hasOnly(['saltPassword', 'ivPassword', 'cipherPassword', 'ivRecovery', 'cipherRecovery', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['saltPassword', 'ivPassword', 'cipherPassword', 'ivRecovery', 'cipherRecovery'])
+        && request.resource.data.saltPassword is string && request.resource.data.saltPassword.size() <= 64
+        && request.resource.data.ivPassword is string && request.resource.data.ivPassword.size() <= 32
+        && request.resource.data.cipherPassword is string && request.resource.data.cipherPassword.size() <= 512
+        && request.resource.data.ivRecovery is string && request.resource.data.ivRecovery.size() <= 32
+        && request.resource.data.cipherRecovery is string && request.resource.data.cipherRecovery.size() <= 512;
+      allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
+    }
+
+    // Acceso de un solo uso: la clave del cofre envuelta con un código, para un correo. Lo crea el
+    // propietario; lo lee solo esa persona y solo durante 24 h desde que el servidor lo creó; al
+    // usarlo lo borra. No se puede sobrescribir.
+    match /teams/{tid}/vault_grants/{email} {
+      allow read: if isOwner(tid)
+        || (verified() && request.auth.token.email_verified == true
+            && request.auth.token.email.lower() == email
+            && request.time < resource.data.createdAt + duration.value(24, 'h'));
+      allow create: if isOwner(tid) && email == email.lower()
+        && request.resource.data.keys().hasOnly(['salt', 'iter', 'iv', 'ct', 'by', 'createdAt'])
+        && request.resource.data.keys().hasAll(['salt', 'iter', 'iv', 'ct', 'by', 'createdAt'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.iter is int && request.resource.data.iter >= 100000
+        && request.resource.data.iter <= 10000000
+        && request.resource.data.salt is string && request.resource.data.salt.size() <= 64
+        && request.resource.data.iv is string && request.resource.data.iv.size() <= 32
+        && request.resource.data.ct is string && request.resource.data.ct.size() <= 256;
+      allow update: if false;
+      allow delete: if isOwner(tid)
+        || (verified() && request.auth.token.email_verified == true
+            && request.auth.token.email.lower() == email);
     }
 
     // Envoltorio de la clave del proyecto de cada miembro: lo lee y escribe cada uno; el propietario puede borrar los de otros.

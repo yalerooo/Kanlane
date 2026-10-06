@@ -23,6 +23,7 @@ jobs:
           node tests/consent/consent.test.js
           node tests/settings/settings.test.js
           node tests/vault/vault.test.js
+          node tests/vault/team-vault.test.js
           node tests/crypto/project-crypto.test.js
           node tests/crypto/keystore.test.js
           node tests/crypto/schema-rules.test.js
@@ -89,6 +90,8 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-smoke.js"
       - name: Equipo con cifrado total en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-team.js"
+      - name: Contraseñas compartidas de un equipo en Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/team-vault.js"
       - name: Cambio de clave de un proyecto cifrado en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-rotate.js"
       - name: Convertir un proyecto a cifrado total en Firebase emulado

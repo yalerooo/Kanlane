@@ -18,7 +18,16 @@
     'already-member': 'Esa persona ya está en el equipo.'
   };
   const P = Workhub.models.ProjectModel;
+  const TeamVault = Workhub.models.TeamVault;
   const BAD_PASSWORD = 'Contraseña incorrecta.';
+  /* Errores al abrir el cofre con la contraseña maestra (TeamVault). */
+  const VAULT_ERRORS = {
+    'bad-pass': 'Contraseña maestra incorrecta.',
+    'no-access': 'Todavía no tienes acceso a las contraseñas de este equipo.',
+    'no-vault': 'Este equipo todavía no tiene contraseñas compartidas.',
+    'needs-vault-pass': 'Escribe la contraseña maestra de las contraseñas de este proyecto.',
+    'legacy': 'Las contraseñas de este proyecto tienen el formato antiguo. Abre la sección Contraseñas y desbloquéalas para actualizarlas antes de compartir el proyecto.'
+  };
   const isBadPassword = (err) => Workhub.services.projectCrypto.isError(err, 'bad-password');
 
   class TeamController {
@@ -30,12 +39,13 @@
       this.shareId = null;
 
       this.view.bind({
-        invite: (email, role, password) => this.invite(email, role, password),
+        invite: (email, role, password, master) => this.invite(email, role, password, master),
+        grant: (uid, master) => this.grantVault(uid, master),
         revoke: (id) => this.run(this.team.revoke(id), 'No se pudo cancelar la invitación.'),
         setRole: (uid, role) => this.run(this.team.setRole(this.current(), uid, role), 'No se pudo cambiar el rol.'),
         remove: (uid) => this.removeMember(uid),
         leave: () => this.leave(),
-        convert: (password) => this.convert(password),
+        convert: (password, vaultPassword) => this.convert(password, vaultPassword),
         convertConfirm: () => this.convertConfirm(),
         codeDone: () => { this.view.hideCode(); this.refresh(); },
         download: (text) => { const p = this.current(); return this.app.controllers.crypto.download(text, p ? p.nombre : ''); },
@@ -43,6 +53,8 @@
       });
       /* Huellas de las claves públicas de los miembros de un equipo cifrado: {uid: huella}. */
       this.fps = null;
+      /* El equipo del diálogo tiene contraseñas compartidas. */
+      this.hasVault = false;
       /* Conversión de un proyecto cifrado a la espera de que se confirme la clave de recuperación. */
       this.prepared = null;
 
@@ -72,6 +84,7 @@
       if(!p) return;
       this.shareId = p.id;
       this.fps = null;
+      this.hasVault = false;
       this.team.stopSent();
       if(p.team && P.isEncrypted(p)) this.loadFingerprints(p.id);
       if(p.team){
@@ -80,6 +93,24 @@
       } else {
         this.view.openPersonal(p);
       }
+      this.loadVault(p);
+    }
+
+    get rootDb(){
+      return this.projects.rootDb;
+    }
+
+    /* Equipo: ¿tiene contraseñas compartidas? Personal: ¿tiene contraseñas que llevarse al equipo? */
+    loadVault(p){
+      const id = p.id;
+      const src = P.scope(this.rootDb, id);
+      const has = p.team ? TeamVault.exists(this.rootDb, p.teamId)
+        : Promise.all([src.doc(TeamVault.CHECK).get(), src.collection('vault').get()]).then((s) => s[0].exists && s[1].docs.length > 0);
+      has.then((on) => {
+        if(this.shareId !== id || !this.view.isOpen()) return;
+        if(p.team){ this.hasVault = !!on; this.refresh(); }
+        else this.view.setVaultMove(!!on);
+      }, () => {});
     }
 
     loadFingerprints(id){
@@ -100,6 +131,7 @@
         pending: p.role === 'owner' ? this.team.sent.items.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)) : [],
         isOwner: p.role === 'owner',
         fps: this.fps,
+        vault: this.hasVault,
         meUid: this.app.models.projects.rootDb.me.uid
       };
     }
@@ -132,28 +164,57 @@
       });
     }
 
-    /* password: la contraseña de cifrado de quien invita, solo en equipos con cifrado total. */
-    invite(email, role, password){
+    /* password: la contraseña de cifrado de quien invita, solo en equipos con cifrado total.
+       master: mi contraseña maestra, si además se le da acceso a las contraseñas del equipo. */
+    invite(email, role, password, master){
       const p = this.current();
       if(!p) return;
       const encrypted = P.isEncrypted(p);
+      const tid = p.teamId;
+      const to = String(email || '').trim().toLowerCase();
       let promise;
       try{
         this.team.checkInvite(p, email, role);
         if(encrypted && !password) throw new Error('no-password');
-        /* Equipo cifrado: código de acceso nuevo y la clave del proyecto envuelta con él. */
-        promise = encrypted
-          ? this.app.controllers.teamCrypto.prepareInvite(p, password).then((made) => this.team.invite(p, email, role, made.secret).then(() => made.code))
-          : this.team.invite(p, email, role).then(() => '');
+        /* La contraseña maestra se comprueba antes de invitar: si es mala, no se envía nada. */
+        promise = (master && this.hasVault ? TeamVault.unlock(this.rootDb, tid, master) : Promise.resolve(null)).then((opened) => {
+          /* Equipo cifrado: código de acceso nuevo y la clave del proyecto envuelta con él. */
+          const sent = encrypted
+            ? this.app.controllers.teamCrypto.prepareInvite(p, password).then((made) => this.team.invite(p, email, role, made.secret).then(() => made.code))
+            : this.team.invite(p, email, role).then(() => '');
+          return sent.then((code) => {
+            if(!opened) return {code:code, link:''};
+            return TeamVault.grant(this.rootDb, tid, to, opened).then((vc) => ({code:code, link:TeamVault.linkFor(tid, vc)}), () => {
+              toast.error(Workhub.t('La invitación se ha enviado, pero no se pudo crear el enlace de las contraseñas. Dale acceso cuando entre, desde la lista de miembros.'));
+              return {code:code, link:''};
+            });
+          });
+        });
       }catch(e){ promise = Promise.reject(e); }
       this.view.setBusy(true);
-      promise.then((code) => {
+      promise.then((res) => {
         this.view.email.value = '';
-        toast.success(Workhub.t('Invitación enviada a {email}', {email:email.toLowerCase()}), {important:true});
-        if(code) this.view.showCode(email.trim().toLowerCase(), code);
+        toast.success(Workhub.t('Invitación enviada a {email}', {email:to}), {important:true});
+        if(res.code || res.link) this.view.showCode(to, res.code, res.link);
       }, (err) => {
-        this.view.showError(ERRORS[err && err.message] || (err && err.message === 'no-password' ? 'Escribe tu contraseña de cifrado.'
+        this.view.showError(ERRORS[err && err.message] || VAULT_ERRORS[err && err.code] || (err && err.message === 'no-password' ? 'Escribe tu contraseña de cifrado.'
           : isBadPassword(err) ? BAD_PASSWORD : 'No se pudo enviar la invitación. Inténtalo de nuevo.'));
+      }).then(() => this.view.setBusy(false));
+    }
+
+    /* Enlace de acceso a las contraseñas para alguien que ya es miembro (no lo recibió al entrar, lo
+       dejó caducar o perdió su contraseña maestra y su clave de recuperación). */
+    grantVault(uid, master){
+      const p = this.current();
+      const m = p && this.projects.membersOf(p).find((x) => x.uid === uid);
+      if(!m || !m.email) return;
+      if(!master){ this.view.showError('Escribe tu contraseña maestra para dar acceso a las contraseñas.'); return; }
+      const tid = p.teamId;
+      this.view.setBusy(true);
+      TeamVault.unlock(this.rootDb, tid, master).then((opened) => TeamVault.grant(this.rootDb, tid, m.email, opened)).then((code) => {
+        this.view.showCode(m.email, '', TeamVault.linkFor(tid, code));
+      }, (err) => {
+        this.view.showError(VAULT_ERRORS[err && err.code] || 'No se pudo crear el enlace de acceso. Inténtalo de nuevo.');
       }).then(() => this.view.setBusy(false));
     }
 
@@ -164,7 +225,8 @@
       const text = P.isEncrypted(p)
         ? Workhub.t('{nombre} dejará de poder abrir el proyecto, pero lo que ya haya visto o descargado no se le puede quitar. Después conviene cambiar la clave del proyecto para que la que tenía deje de servir.', {nombre:m.name})
         : Workhub.t('«{name}» dejará de ver este proyecto.', {name:m.name});
-      this.confirm(Workhub.t('Quitar del equipo'), text, Workhub.t('Quitar'))
+      const vaultText = this.hasVault ? ' ' + Workhub.t('Si tenía acceso a las contraseñas, pudo copiarlas: conviene cambiar las más importantes.') : '';
+      this.confirm(Workhub.t('Quitar del equipo'), text + vaultText, Workhub.t('Quitar'))
         .then((ok) => {
           if(!ok) return;
           this.run(this.team.removeMember(p, uid), 'No se pudo quitar a esa persona.').then((done) => {
@@ -197,25 +259,34 @@
       return this.app.controllers.tasks.columns.confirm(title, text, label);
     }
 
-    /* Proyecto personal → equipo. Crea una copia compartida y la abre.
-       Con cifrado total (10.2) primero se comprueba la contraseña del proyecto y se enseña la clave
-       de recuperación del equipo; la copia empieza al confirmarla (convertConfirm). */
-    convert(password){
+    /* Proyecto personal → equipo. El proyecto se MUEVE: se crea el equipo con todo lo que tiene y,
+       si todo llegó, el personal se elimina (no quedan dos proyectos con el mismo nombre).
+       Si tiene contraseñas guardadas se pide la contraseña maestra (vaultPassword) y el cofre pasa
+       al equipo. Con cifrado total (10.2) se comprueba además la contraseña del proyecto y se enseña
+       la clave de recuperación del equipo; la copia empieza al confirmarla (convertConfirm). */
+    convert(password, vaultPassword){
       const p = this.current();
       if(!p || p.team) return;
       if(P.isManaged(p)){ this.view.showError('Los proyectos gestionados por Kanlane todavía no se pueden compartir.'); return; }
-      if(!P.isEncrypted(p)){ this.runConvert(p, null); return; }
-      if(this.app.projectId !== p.id || !this.app.cipher){ this.view.showError('Abre y desbloquea este proyecto para poder compartirlo.'); return; }
-      if(!password){ this.view.showError('Escribe la contraseña de cifrado del proyecto.'); return; }
+      const encrypted = P.isEncrypted(p);
+      if(encrypted){
+        if(this.app.projectId !== p.id || !this.app.cipher){ this.view.showError('Abre y desbloquea este proyecto para poder compartirlo.'); return; }
+        if(!password){ this.view.showError('Escribe la contraseña de cifrado del proyecto.'); return; }
+      }
       this.view.setBusy(true);
-      this.app.controllers.teamCrypto.prepareConvert(p, password).then((prepared) => {
-        if(this.current() !== p && this.shareId !== p.id) return;
-        this.prepared = prepared;
-        this.view.showConvertKey(prepared.recovery);
+      /* Antes de crear nada: la contraseña maestra abre el cofre (o no hay nada que llevarse). */
+      TeamVault.prepareMove(P.scope(this.rootDb, p.id), this.rootDb.me.uid, vaultPassword).then((vault) => {
+        if(!encrypted){ this.runConvert(p, null, vault); return null; }
+        return this.app.controllers.teamCrypto.prepareConvert(p, password).then((prepared) => {
+          if(this.current() !== p && this.shareId !== p.id) return;
+          prepared.vault = vault;
+          this.prepared = prepared;
+          this.view.showConvertKey(prepared.recovery);
+          this.view.setBusy(false);
+        });
+      }).catch((err) => {
         this.view.setBusy(false);
-      }, (err) => {
-        this.view.setBusy(false);
-        this.view.showError(isBadPassword(err) ? BAD_PASSWORD : 'No se pudo comprobar la contraseña. Comprueba la conexión e inténtalo de nuevo.');
+        this.view.showError(VAULT_ERRORS[err && err.code] || (isBadPassword(err) ? BAD_PASSWORD : 'No se pudo comprobar la contraseña. Comprueba la conexión e inténtalo de nuevo.'));
       });
     }
 
@@ -224,28 +295,45 @@
       const prepared = this.prepared;
       if(!p || p.team || !prepared) return;
       this.prepared = null;
-      this.runConvert(p, prepared);
+      this.runConvert(p, prepared, prepared.vault);
     }
 
-    /* prepared: lo que devuelve TeamCryptoController.prepareConvert (null en un proyecto sin cifrar). */
-    runConvert(p, prepared){
+    /* El proyecto personal ya está entero en el equipo: se elimina. Sus imágenes son las de la
+       cuenta, sea cual sea el proyecto abierto ahora (las del equipo tienen el mismo id). */
+    removeOriginal(p){
+      const rootDb = this.rootDb;
+      const assets = {delete:(id) => rootDb.collection('assets').doc(id).delete()};
+      return this.projects.removeProject(p.id, rootDb, assets).then(() => {
+        toast.success(Workhub.t('«{name}» ya es un proyecto de equipo.', {name:p.nombre}), {important:true});
+      }, () => {
+        toast.error(Workhub.t('«{name}» ya es un proyecto de equipo, pero no se pudo eliminar el proyecto personal original. Elimínalo desde el menú de proyectos.', {name:p.nombre}));
+      });
+    }
+
+    /* prepared: lo que devuelve TeamCryptoController.prepareConvert (null en un proyecto sin cifrar).
+       vault: lo que devuelve TeamVault.prepareMove (null si no hay contraseñas que llevarse). */
+    runConvert(p, prepared, vault){
       const tc = this.app.controllers.teamCrypto;
       this.view.setBusy(true);
       this.view.setProgress('Preparando…');
       /* La clave del equipo va a este navegador antes de crearlo: así se abre sin pedir la contraseña. */
       (prepared ? tc.keepConverted(prepared) : Promise.resolve()).then(() =>
-        this.team.convert(p, (text) => this.view.setProgress(text), prepared ? prepared.secret : null)
+        this.team.convert(p, (text) => this.view.setProgress(text), prepared ? prepared.secret : null, vault)
       ).then((t) => {
         this.view.setProgress('');
         this.view.close();
         const pc = this.app.controllers.projects;
         pc.justCreated = t.id;
-        /* El enlace con GitHub pasa al equipo: el original deja de sincronizar el mismo tablero. */
-        if(p.github) this.projects.patch(p.id, {github:null}).catch(() => {});
         this.app.rememberProject({id:t.id, nombre:p.nombre, color:p.color, tipo:p.tipo, stages:p.stages, clients:p.clients, labels:p.labels, enc:prepared ? true : undefined});
         this.app.switchProject(t.id);
-        toast.success(Workhub.t('«{name}» ya es un proyecto de equipo. El original sigue como estaba.', {name:p.nombre}), {important:true});
-        if(t.skipped) toast.error(Workhub.t('{n} elementos no se pudieron descifrar y no se han copiado al equipo.', {n:t.skipped}));
+        if(t.skipped){
+          /* Algo no se pudo leer: el original se queda, para no perderlo. El enlace con GitHub pasa
+             al equipo y el original deja de sincronizar el mismo tablero. */
+          if(p.github) this.projects.patch(p.id, {github:null}).catch(() => {});
+          toast.error(Workhub.t('{n} elementos no se pudieron descifrar y no se han copiado al equipo. El proyecto personal se conserva para que no los pierdas.', {n:t.skipped}));
+        } else {
+          this.removeOriginal(p);
+        }
         this.pendingOpen = t.id;
         this.refresh();
       }).catch((err) => {

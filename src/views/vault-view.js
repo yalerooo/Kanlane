@@ -22,6 +22,18 @@
       title: 'Desbloquear contraseñas',
       desc: 'Introduce tu contraseña maestra. Se usa solo en tu navegador para cifrar y descifrar — nunca se guarda ni se envía a ningún sitio.',
       button: 'Desbloquear'
+    },
+    /* Proyecto de equipo: el cofre existe y todavía no tengo mi clave. */
+    grant: {
+      title: 'Entra en las contraseñas del equipo',
+      desc: 'Pega el enlace o el código de acceso que te ha dado el propietario y crea tu propia contraseña maestra: solo la conoces tú. El enlace sirve una sola vez y caduca en 24 horas.',
+      button: 'Crear y desbloquear'
+    },
+    /* Proyecto de equipo sin cofre: solo lo crea el propietario. */
+    absent: {
+      title: 'Todavía no hay contraseñas compartidas',
+      desc: 'El propietario del proyecto aún no ha creado el gestor de contraseñas de este equipo.',
+      button: 'Desbloquear'
     }
   };
 

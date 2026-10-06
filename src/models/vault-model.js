@@ -4,10 +4,15 @@
    - La DEK se guarda envuelta dos veces en 'vault_meta/check': con la contraseña
      maestra (PBKDF2) y con la clave de recuperación.
    - Los tableros antiguos ('legacy') cifraban directamente con la contraseña;
-     al desbloquearlos se migran al esquema actual. */
+     al desbloquearlos se migran al esquema actual.
+   - En un proyecto de equipo (this.team) el cofre es de todos, pero cada persona guarda la DEK
+     envuelta con su propia contraseña maestra en 'vault_keys/{uid}' y 'vault_meta/check' solo marca
+     que el cofre existe (ver team-vault.js). Quien aún no tiene la DEK la recibe con un código de
+     acceso de un solo uso (redeem). */
 (function(){
   const cryptoSvc = Workhub.services.crypto;
   const META_PATH = 'vault_meta/check';
+  const TeamVault = () => Workhub.models.TeamVault;
 
   const TYPE_LABELS = {correo:'Correo / Web', usuario:'Usuario / Web', servidor:'Servidor', rdp:'RDP', vpn:'VPN'};
 
@@ -16,8 +21,12 @@
       super('vault');
       this.key = null;
       this.unlocked = false;
-      /* null (sin comprobar) | 'none' | 'legacy' | 'current' */
+      /* null (sin comprobar) | 'none' | 'legacy' | 'current'. En un equipo, además: 'grant' (el cofre
+         existe y me falta mi clave: hace falta un código de acceso) y 'absent' (no hay cofre y solo
+         el propietario puede crearlo). */
       this.metaState = null;
+      /* Proyecto de equipo abierto: {tid, uid, email, owner, teams} (lo fija AppController). */
+      this.team = null;
       /* Contraseñas ya descifradas y cuáles se están mostrando. */
       this.revealed = {};
       this.visible = {};
@@ -39,14 +48,25 @@
 
     /* ---------- Metadatos y claves ---------- */
 
+    /* Dónde está mi envoltorio de la DEK. */
+    metaPath(){
+      return this.team ? TeamVault().keyPath(this.team.uid) : META_PATH;
+    }
+
     getMeta(requireServer){
-      const ref = this.db.doc(META_PATH);
+      const ref = this.db.doc(this.metaPath());
       return requireServer && Workhub.services.platform.mode() === 'firebase'
         ? ref.get({source:'server'}) : ref.get();
     }
 
     setMeta(data){
-      return this.db.doc(META_PATH).set(data);
+      return this.db.doc(this.metaPath()).set(data);
+    }
+
+    /* Sin mi envoltorio: en un equipo depende de si el cofre ya existe y de si puedo crearlo. */
+    _stateWithoutKey(){
+      if(!this.team) return Promise.resolve('none');
+      return this.db.doc(META_PATH).get().then((snap) => (snap.exists ? 'grant' : (this.team.owner ? 'none' : 'absent')));
     }
 
     checkMeta(){
@@ -55,15 +75,17 @@
         if(!snap.exists && Workhub.services.platform.mode() === 'firebase') return this.getMeta(true);
         return snap;
       }).then((snap) => {
-        if(!snap.exists) this.metaState = 'none';
-        else this.metaState = (snap.data() || {}).saltPassword ? 'current' : 'legacy';
-        return this.metaState;
+        if(snap.exists) return (snap.data() || {}).saltPassword ? 'current' : 'legacy';
+        return this._stateWithoutKey();
+      }).then((state) => {
+        this.metaState = state;
+        return state;
       });
     }
 
-    /* Envuelve la DEK con la contraseña y con una clave de recuperación nueva,
-       guarda los metadatos y devuelve la clave de recuperación formateada. */
-    _writeWrappedDek(password, dekB64, createdAt){
+    /* Envuelve la DEK con la contraseña y con una clave de recuperación nueva.
+       Devuelve {meta, recoveryKey}: el documento a guardar y la clave de recuperación formateada. */
+    static wrapDek(password, dekB64, createdAt){
       const saltPassword = cryptoSvc.randomBytes(16);
       const recoveryBytes = cryptoSvc.randomBytes(32);
       return Promise.all([cryptoSvc.deriveKey(password, saltPassword), cryptoSvc.importAesKeyRaw(recoveryBytes)]).then((keys) => {
@@ -71,14 +93,20 @@
           cryptoSvc.encryptJSON(keys[0], {dek:dekB64}),
           cryptoSvc.encryptJSON(keys[1], {dek:dekB64})
         ]);
-      }).then((wraps) => {
-        return this.setMeta({
+      }).then((wraps) => ({
+        meta: {
           saltPassword: cryptoSvc.b64encode(saltPassword),
           ivPassword: wraps[0].iv, cipherPassword: wraps[0].cipher,
           ivRecovery: wraps[1].iv, cipherRecovery: wraps[1].cipher,
           createdAt: createdAt || Date.now(), updatedAt: Date.now()
-        });
-      }).then(() => cryptoSvc.formatRecoveryKey(recoveryBytes));
+        },
+        recoveryKey: cryptoSvc.formatRecoveryKey(recoveryBytes)
+      }));
+    }
+
+    /* Envuelve la DEK, guarda los metadatos y devuelve la clave de recuperación formateada. */
+    _writeWrappedDek(password, dekB64, createdAt){
+      return VaultModel.wrapDek(password, dekB64, createdAt).then((w) => this.setMeta(w.meta).then(() => w.recoveryKey));
     }
 
     _setUnlocked(key){
@@ -89,8 +117,60 @@
       this.visible = {};
     }
 
+    /* Cofre nuevo de un equipo: la marca del cofre y mi envoltorio se escriben a la vez, para que
+       no pueda quedar un cofre del que nadie tiene la clave. */
+    _createShared(password){
+      const dek = cryptoSvc.randomBytes(32);
+      const t = this.team;
+      let recoveryKey;
+      return this.db.doc(META_PATH).get().then((snap) => {
+        if(snap.exists){
+          this.metaState = 'grant';
+          throw new Error('vault-exists');
+        }
+        return Promise.all([TeamVault().newCheck(dek, t.uid), VaultModel.wrapDek(password, cryptoSvc.b64encode(dek))]);
+      }).then((made) => {
+        recoveryKey = made[1].recoveryKey;
+        const batch = t.teams.batch();
+        batch.set(this.db.doc(META_PATH), made[0]);
+        batch.set(this.db.doc(this.metaPath()), made[1].meta);
+        return batch.commit();
+      }).then(() => cryptoSvc.importAesKeyRaw(dek)).then((key) => {
+        this._setUnlocked(key);
+        return recoveryKey;
+      });
+    }
+
+    /* Equipo: entro en el cofre con el código de acceso que me han dado y creo mi contraseña
+       maestra. El acceso se borra: no sirve dos veces. Devuelve mi clave de recuperación.
+       Errores (.code): 'bad-code', 'no-grant' (no hay acceso para mi correo o ha caducado). */
+    redeem(code, password){
+      const t = this.team;
+      const PC = Workhub.services.projectCrypto;
+      const fail = (c) => { const err = new Error(c); err.code = c; return err; };
+      if(!t) return Promise.reject(fail('no-team'));
+      const grantRef = this.db.doc(TeamVault().grantPath(t.email));
+      let dek;
+      return Promise.all([this.db.doc(META_PATH).get(), grantRef.get().catch(() => null)]).then((snaps) => {
+        if(!snaps[0].exists || !snaps[1] || !snaps[1].exists) throw fail('no-grant');
+        const check = snaps[0].data(), grant = snaps[1].data();
+        return PC.unwrapCode(grant, code, {pid:check.pid, kid:check.kid, uid:grant.by}, true)
+          .then((key) => crypto.subtle.exportKey('raw', key), () => { throw fail('bad-code'); })
+          .then((raw) => {
+            dek = new Uint8Array(raw);
+            return TeamVault().matches(check, dek);
+          }).then((ok) => { if(!ok) throw fail('bad-code'); });
+      }).then(() => this._writeWrappedDek(password, cryptoSvc.b64encode(dek))).then((recoveryKey) => {
+        return grantRef.delete().catch(() => null).then(() => cryptoSvc.importAesKeyRaw(dek)).then((key) => {
+          this._setUnlocked(key);
+          return recoveryKey;
+        });
+      });
+    }
+
     /* Primera vez: crea la contraseña maestra. Devuelve la clave de recuperación. */
     create(password){
+      if(this.team) return this._createShared(password);
       const dek = cryptoSvc.randomBytes(32);
       let recoveryKey;
       return this.getMeta(true).then((snap) => {
@@ -111,8 +191,10 @@
     unlock(password){
       return this.getMeta().then((snap) => {
         if(!snap.exists){
-          this.metaState = 'none';
-          throw new Error('no-check');
+          return this._stateWithoutKey().then((state) => {
+            this.metaState = state;
+            throw new Error('no-check');
+          });
         }
         const data = snap.data();
         return cryptoSvc.deriveKey(password, cryptoSvc.b64decode(data.saltPassword)).then((kek) => {

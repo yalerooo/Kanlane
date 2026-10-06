@@ -9,8 +9,10 @@
   const PM = Workhub.models.ProjectModel;
   const ROLES = ['owner', 'editor', 'viewer'];
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  /* Datos que se copian al convertir un proyecto personal (sin el gestor de contraseñas). */
+  /* Datos que se copian al convertir un proyecto personal. Las contraseñas ('vault') van aparte:
+     solo si se ha abierto el cofre con la contraseña maestra (ver convert). */
   const COPY_COLLECTIONS = ['clients', 'contacts', 'meetings', 'plugin_data', 'tasks'];
+  const TeamVault = () => Workhub.models.TeamVault;
   /* 'github' lleva el enlace con el GitHub Project (sin ningún token): cada miembro conecta su cuenta. */
   const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels', 'github'];
   /* Escrituras a la vez al copiar. No se usan lotes (batch): las reglas consultan el
@@ -135,7 +137,9 @@
       const teams = this.db.teams;
       const inv = typeof invite === 'string' ? (this.sent.find(invite) || this.incoming.find(invite) || {id:invite}) : invite;
       const key = inv.enc ? teams.inviteKey(inv.id).delete().catch(() => null) : Promise.resolve();
-      return key.then(() => teams.invite(inv.id).delete());
+      /* Con la invitación se va el acceso a las contraseñas que se le hubiera preparado. */
+      const grant = inv.teamId && inv.email ? TeamVault().revoke(this.db, inv.teamId, inv.email) : Promise.resolve();
+      return Promise.all([key, grant]).then(() => teams.invite(inv.id).delete());
     }
 
     /* Clave del proyecto envuelta con el código de acceso. Pasadas 24 h las reglas no dejan leerla. */
@@ -191,7 +195,11 @@
     removeMember(project, uid){
       const teams = this.db.teams;
       const FV = teams.FieldValue;
-      return teams.doc(project.teamId).update({memberIds: FV.arrayRemove(uid), ['members.' + uid]: FV.delete()}).then(() => {
+      const member = this.projects.membersOf(project).find((m) => m.uid === uid);
+      /* Su clave del cofre se borra antes de salir: después ya no sería miembro para borrarla él. */
+      return TeamVault().forgetMember(this.db, project.teamId, uid, member ? member.email : '').then(() =>
+        teams.doc(project.teamId).update({memberIds: FV.arrayRemove(uid), ['members.' + uid]: FV.delete()})
+      ).then(() => {
         if(!PM.isEncrypted(project)) return null;
         /* Con su clave envuelta se van su clave pública y la clave nueva que tuviera pendiente (PR10). */
         const team = this.db.team(project.teamId);
@@ -217,14 +225,17 @@
 
     /* Crea un equipo con la configuración del proyecto y una copia de sus
        tareas (con notas e imágenes), clientes, contactos, reuniones y datos de
-       plugins. No copia las contraseñas guardadas (todavía no se comparten) y
-       el proyecto original se queda como está. Devuelve {id} del equipo.
+       plugins. Aquí no se toca el proyecto original: quien llama lo elimina
+       después si todo se copió (TeamController.runConvert). Devuelve {id} del equipo.
+
+       vault = {check, key} (TeamVault.prepareMove): el cofre pasa al equipo con sus credenciales.
+       Sin él, las contraseñas no se copian y las tareas pierden sus vínculos con ellas.
 
        Proyecto con cifrado total (docs/CIFRADO-PROYECTOS.md, 10.2): secret = {tid, enc, crypto, src, dst}.
        El equipo tiene su propia clave: cada documento se lee con el cifrador del original (src) y se
        vuelve a cifrar con el del equipo (dst); enc es el campo del equipo y crypto mi clave envuelta.
        Lo que no se pueda descifrar no se copia (el resultado dice cuántos en .skipped). */
-    convert(project, onProgress, secret){
+    convert(project, onProgress, secret, vault){
       const db = this.db;
       const src = PM.scope(db, project.id);
       const encrypted = PM.isEncrypted(project);
@@ -267,17 +278,21 @@
         phase = 'guardar la clave del equipo';
         return db.teams.cryptoDoc(tid, db.me.uid).set(secret.crypto);
       }).then(() => {
+        if(!vault) return null;
+        phase = 'guardar la clave de las contraseñas';
+        return dst.doc(TeamVault().CHECK).set(vault.check).then(() => dst.doc(TeamVault().keyPath(db.me.uid)).set(vault.key));
+      }).then(() => {
         phase = 'leer los datos del proyecto';
         step('Leyendo los datos…');
-        return Promise.all(COPY_COLLECTIONS.map((name) => src.collection(name).get().then((snap) => ({name:name, docs:snap.docs}))));
+        return Promise.all(COPY_COLLECTIONS.concat(vault ? ['vault'] : []).map((name) => src.collection(name).get().then((snap) => ({name:name, docs:snap.docs}))));
       }).then((groups) => {
         const assetIds = {};
         const notesJobs = [];
         groups.forEach((g) => g.docs.forEach((d) => {
           const data = d.data() || {};
-          /* Las contraseñas vinculadas no viajan: en el equipo no hay gestor. */
           if(g.name === 'tasks'){
-            delete data.linkedVault;
+            /* Sin el cofre, las contraseñas vinculadas no viajan. */
+            if(!vault) delete data.linkedVault;
             notesJobs.push(src.collection('tasks/' + d.id + '/notes').get().then((notes) => {
               notes.docs.forEach((n) => {
                 const nd = n.data() || {};

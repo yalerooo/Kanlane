@@ -41,8 +41,7 @@
       const db = this.db;
       const jobs = [];
       const assetIds = {};
-      const names = COLLECTIONS.filter((n) => !(this.team && n === 'vault'));
-      return Promise.all(names.map((name) => db.collection(name).get().then((snap) => {
+      return Promise.all(COLLECTIONS.map((name) => db.collection(name).get().then((snap) => {
         const more = [];
         snap.docs.forEach((d) => {
           jobs.push({ref:db.collection(name).doc(d.id), path:name, id:d.id, kind:'doc', raw:d.data() || {}});

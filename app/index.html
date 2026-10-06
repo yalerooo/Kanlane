@@ -100,8 +100,12 @@
           <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
           <div class="auth-notice" id="authNotice" role="status" hidden></div>
           <div class="auth-notice auth-migrate" id="authMigrate" role="status" hidden>
-            <p>Al entrar o crear tu cuenta, copiaremos a ella los datos que tienes como invitado en este navegador.</p>
+            <p>Crea tu cuenta y copiaremos a ella los datos que tienes como invitado en este navegador. Tiene que ser una cuenta nueva.</p>
             <button type="button" class="auth-link" id="authMigrateCancel">Seguir como invitado</button>
+          </div>
+          <div class="auth-notice auth-migrate" id="authResume" role="status" hidden>
+            <p>Hay datos de invitado guardados en este navegador.</p>
+            <div class="auth-resume-list" id="authResumeList"></div>
           </div>
           <form id="authEmailForm" class="auth-form" novalidate>
             <div class="field" id="authNameField" hidden>

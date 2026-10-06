@@ -204,6 +204,7 @@ html.auth-gate .app{display:none !important;}
 /* Paso «correo enviado»: solo el aviso y sus botones. */
 #authPanel.is-sent #authNotice,
 #authPanel.is-sent #authMigrate,
+#authPanel.is-sent #authResume,
 #authPanel.is-sent #authEmailForm,
 #authPanel.is-sent #authDivider,
 #authPanel.is-sent #authAlt,
@@ -227,7 +228,8 @@ html.auth-gate .app{display:none !important;}
 .auth-migrate{display:flex;flex-direction:column;align-items:flex-start;}
 .auth-migrate[hidden]{display:none;}
 .auth-migrate p{margin:0 0 4px;}
-.auth-migrate .auth-link{align-self:flex-start;margin:0;padding:2px 0;}
+.auth-migrate .auth-link{align-self:flex-start;margin:0;padding:2px 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.auth-resume-list{display:flex;flex-direction:column;align-items:flex-start;gap:2px;max-width:100%;min-width:0;}
 .auth-notice-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;color:var(--ink);}
 .auth-notice-head strong{font-size:13px;font-weight:600;letter-spacing:-0.01em;}
 .auth-notice-ic{
@@ -280,6 +282,7 @@ html.auth-gate .app{display:none !important;}
 /* Paso «invitado»: solo el nombre y sus botones, sin el resto del acceso. */
 #authPanel.is-guest #authNotice,
 #authPanel.is-guest #authMigrate,
+#authPanel.is-guest #authResume,
 #authPanel.is-guest #authProviders,
 #authPanel.is-guest #authDivider,
 #authPanel.is-guest #authEmailForm,

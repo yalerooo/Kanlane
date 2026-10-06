@@ -77,7 +77,10 @@ function assets(){
   /* ---------- Lo pendiente, en el navegador ---------- */
   assert.equal(migration.pending(), null);
   assert.equal(migration.request('Lola', 'p2', 'abc123xyz'), true);
-  assert.deepEqual(migration.pending(), {name:'Lola', id:'abc123xyz', open:'p2'});
+  const asked = migration.pending();
+  assert.ok(Math.abs(asked.at - Date.now()) < 5000, 'se apunta cuándo se pidió: solo vale una cuenta creada después');
+  delete asked.at;
+  assert.deepEqual(asked, {name:'Lola', id:'abc123xyz', open:'p2'});
   assert.equal(migration.request('De antes', 'main'), true);
   assert.equal(migration.pending().id, '', 'sin id: la base de datos de siempre');
   migration.clear();
@@ -88,8 +91,12 @@ function assets(){
   {
     const from = guest(), to = fakeDb(), imgs = assets();
     const state = {name:'Lola', open:'p2'};
-    const res = await migration.run({from, to, assets:imgs, state, save:() => {}});
+    let planned = null, writesAtPlan = -1;
+    const res = await migration.run({from, to, assets:imgs, state, save:() => {}, onPlan:(p) => { planned = p; writesAtPlan = to.log.writes.length; }});
     const mainId = state.ids.main, p2Id = state.ids.p2;
+    assert.equal(writesAtPlan, 0, 'el plan se da antes de escribir nada');
+    assert.deepEqual(planned.projects.map((p) => p.id), [mainId, p2Id]);
+    assert.equal(planned.open.id, p2Id, 'ya se sabe qué proyecto se abrirá, por si la copia tarda');
     assert.ok(mainId && p2Id && mainId !== 'main' && mainId !== p2Id, 'cada proyecto del invitado es uno nuevo en la cuenta');
     assert.deepEqual(res.counts, {projects:2, tasks:3});
     assert.equal(res.skipped, 0);
@@ -193,6 +200,12 @@ function assets(){
     await migration.run({from:legacy, to:to2, state:state2, save:() => {}});
     assert.equal(to2.raw('projects', state2.ids.main).nombre, 'Proyecto principal', 'el principal sin documento también cuenta');
     assert.equal(to2.raw('projects/' + state2.ids.main + '/tasks', 't').title, 'De antes de haber proyectos');
+
+    /* Una copia que se cortó en una cuenta vacía, y la persona creó su principal antes de repetirla. */
+    const late = fakeDb(), state3 = {blank:true};
+    late.put('projects', 'main', {nombre:'El que creé mientras', createdAt:0});
+    await migration.run({from:legacy, to:late, state:state3, save:() => {}});
+    assert.deepEqual(late.raw('projects', 'main'), {nombre:'El que creé mientras', createdAt:0}, 'no se esconde un principal que ya existe');
 
     const nothing = await migration.run({from:fakeDb(), to:fakeDb(), state:{}, save:() => {}});
     assert.deepEqual(nothing, {projects:[], open:null, counts:{projects:0, tasks:0}, skipped:0});

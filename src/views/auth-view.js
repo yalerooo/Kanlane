@@ -66,6 +66,7 @@
       this.guestMsg = $('authGuestMsg');
       this.migrate = $('authMigrate');
       this.guestPrev = $('authGuestPrev');
+      this.resume = $('authResume');
       /* La portada enlaza a /app/?registro para abrir directamente «Crear cuenta». */
       this.registroRequested = /[?&]registro(=|&|$)/.test(location.search);
       this.mode = 'signin';
@@ -179,11 +180,13 @@
 
     /* handler(nombre, id): sin id es alguien nuevo; con id, un invitado de antes que vuelve. */
     bindGuest(handler){
-      this.guestPrev.addEventListener('click', (ev) => {
+      const back = (ev) => {
         const btn = ev.target.closest('[data-guest]');
         const g = btn && (this.guests || [])[+btn.getAttribute('data-guest')];
         if(g) handler(g.name || Workhub.t('Invitado'), g.id);
-      });
+      };
+      this.guestPrev.addEventListener('click', back);
+      this.resume.addEventListener('click', back);
       this.guestForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         this.guestMsg.hidden = true;
@@ -387,6 +390,7 @@
        a la cuenta que entre, con la vuelta atrás. El nombre del invitado ya va puesto. */
     showMigrate(name){
       this.migrate.hidden = false;
+      this.resume.hidden = true;
       if(name && !this.name.value) this.name.value = name;
     }
 
@@ -444,14 +448,20 @@
     }
 
     /* Invitados de antes con datos en este navegador ([{id, name}]): cada uno puede volver a lo
-       suyo; quien escribe un nombre entra como alguien nuevo, sin ver lo de los demás. */
+       suyo; quien escribe un nombre entra como alguien nuevo, sin ver lo de los demás. Se ofrecen
+       en el paso «invitado» y, para que nadie dé su trabajo por perdido al encontrarse con el
+       acceso (una recarga, la sesión de invitado borrada), también en la primera pantalla. */
     showGuests(list){
       this.guests = list || [];
       const t = Workhub.t;
+      const label = (g) => esc(g.name ? t('Continuar como {name}', {name:g.name}) : t('Continuar con los datos de invitado de este navegador'));
       this.guestPrev.hidden = !this.guests.length;
+      /* Con el aviso de «Crear cuenta y llevarme mis datos» ya hay vuelta atrás: no se repite. */
+      this.resume.hidden = !this.guests.length || !this.migrate.hidden;
+      $('authResumeList').innerHTML = this.guests.map((g, i) =>
+        '<button type="button" class="auth-link" data-guest="' + i + '" translate="no">' + label(g) + '</button>').join('');
       this.guestPrev.innerHTML = this.guests.map((g, i) =>
-        '<button type="button" class="btn btn-ghost auth-guest-back" data-guest="' + i + '" translate="no">' +
-          esc(g.name ? t('Continuar como {name}', {name:g.name}) : t('Continuar con los datos de invitado de este navegador')) + '</button>').join('') +
+        '<button type="button" class="btn btn-ghost auth-guest-back" data-guest="' + i + '" translate="no">' + label(g) + '</button>').join('') +
         '<p class="auth-guest-or">' + esc(t('O entra como alguien nuevo, con un espacio vacío:')) + '</p>';
     }
 

@@ -138,6 +138,87 @@ async function isolated(browser){
   await page.locator('#authGuestPrev [data-guest]').click();
   await page.locator('.card').filter({hasText:'Preparar equipación nueva'}).waitFor({timeout:30000});
   assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Futbolge']);
+
+  /* Ana pide llevarse sus datos, pero entra con una cuenta que ya existía (la de Berto): no se
+     copia nada, se avisa, y sus datos siguen en el navegador. */
+  await page.locator('#btnGuestUpgradeSide').click();
+  await page.locator('#authMigrate').waitFor({state:'visible', timeout:30000});
+  assert.equal(await page.locator('#authResume').isVisible(), false, 'con el aviso de la copia no se repite la vuelta atrás');
+  await page.locator('#authTitle', {hasText:'Crea tu cuenta'}).waitFor({state:'visible'});
+  await page.locator('#authSwitchLink').click();
+  await page.locator('#authEmail').fill(email);
+  await page.locator('#authPass').fill('contraseña-prueba-123');
+  await page.locator('#authSubmit').click();
+  await page.locator('.card').filter({hasText:'Tarea de Berto'}).waitFor({timeout:30000});
+  await page.locator('.toast').filter({hasText:'Esta cuenta ya existía'}).waitFor();
+  assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Mejoras Kanlane'], 'una cuenta que ya existía no recibe los datos del invitado');
+  assert.ok(await page.evaluate(() => localStorage.getItem('workhub_guest_migrate')), 'lo pendiente sigue apuntado');
+
+  /* Sale y crea una cuenta nueva: ahora sí. */
+  await page.locator('#btnSignOut').click();
+  await page.locator('#authMigrate').waitFor({state:'visible', timeout:30000});
+  await page.locator('#authPass').waitFor({state:'visible'});
+  if(await page.locator('#authTitle').textContent() !== 'Crea tu cuenta') await page.locator('#authSwitchLink').click();
+  const emailAna = 'ana-' + Date.now() + '@example.test';
+  await page.locator('#authEmail').fill(emailAna);
+  await page.locator('#authPass').fill('contraseña-prueba-123');
+  await page.locator('#authSubmit').click();
+  await page.locator('.auth-loading.is-verify').waitFor({state:'visible'});
+  await verify(emailAna);
+  await page.getByRole('button', {name:'Ya lo he verificado'}).click();
+  await page.locator('.card').filter({hasText:'Preparar equipación nueva'}).waitFor({timeout:30000});
+  await page.locator('.toast').filter({hasText:'Tus datos de invitado ya están en tu cuenta.'}).waitFor();
+  assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Futbolge']);
+  assert.deepEqual(errors, [], 'sin excepciones JavaScript');
+  await context.close();
+}
+
+/* Firestore no contesta mientras se copian los datos: la pantalla de la copia no se queda para
+   siempre. Pasado un rato se entra en la app con la copia en marcha y, cuando vuelve la conexión,
+   termina sola y sin duplicados. */
+async function slow(browser){
+  const context = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES'});
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+  await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+  await page.evaluate(() => { const b = document.querySelector('.consent [data-act="reject"]'); if(b) b.click(); });
+  await enterGuest(page, 'Carla');
+  await firstProject(page, 'Con mala conexión');
+  await newTask(page, 'Tarea que tarda en llegar');
+  await page.locator('#btnGuestUpgradeSide').click();
+  await page.locator('#authMigrate').waitFor({state:'visible', timeout:30000});
+  const email = 'carla-' + Date.now() + '@example.test';
+  await page.locator('#authEmail').fill(email);
+  await page.locator('#authPass').fill('contraseña-prueba-123');
+  await page.locator('#authSubmit').click();
+  await page.locator('.auth-loading.is-verify').waitFor({state:'visible'});
+  await verify(email);
+  const cut = (route) => route.abort();
+  await context.route('**://127.0.0.1:8187/**', cut);
+  await page.getByRole('button', {name:'Ya lo he verificado'}).click();
+  await page.locator('.auth-verify-title', {hasText:'Llevando tus datos a tu cuenta'}).waitFor({state:'visible', timeout:30000});
+  /* Sin servidor, la pantalla cede el paso a la app, que avisa de que la copia sigue. */
+  await page.locator('.toast').filter({hasText:'se están terminando de copiar'}).waitFor({timeout:40000});
+  assert.equal(await page.locator('#authScreen').isVisible(), false, 'la pantalla de la copia no se queda bloqueada');
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('#dlgProject').isVisible(), false, 'no pide crear el primer proyecto mientras llegan los datos');
+  assert.ok(await page.evaluate(() => localStorage.getItem('workhub_guest_migrate')), 'lo pendiente sigue apuntado hasta que termine');
+  /* Vuelve la conexión: la copia termina por detrás. */
+  await context.unroute('**://127.0.0.1:8187/**', cut);
+  await page.locator('.toast').filter({hasText:'Tus datos de invitado ya están en tu cuenta.'}).waitFor({timeout:90000});
+  await page.locator('.card').filter({hasText:'Tarea que tarda en llegar'}).waitFor({timeout:30000});
+  const after = await page.evaluate(async () => ({
+    names: Workhub.app.models.projects.list().map((p) => p.nombre),
+    cards: document.querySelectorAll('.card').length,
+    pending: localStorage.getItem('workhub_guest_migrate'),
+    local: (await window.__localStore.db.collection('projects').get()).size
+  }));
+  assert.deepEqual(after.names, ['Con mala conexión'], 'un solo proyecto: sin duplicados');
+  assert.equal(after.cards, 1);
+  assert.equal(after.pending, null);
+  assert.equal(after.local, 0);
   assert.deepEqual(errors, [], 'sin excepciones JavaScript');
   await context.close();
 }
@@ -172,6 +253,18 @@ async function isolated(browser){
       const ref = await app.models.projects.create('Segundo proyecto', 3, {});
       await app.rootDb.collection('projects').doc(ref.id).collection('tasks').add({title:'Tarea del segundo', status:'todo', order:1, createdAt:Date.now(), updatedAt:Date.now()});
     }, PIXEL);
+
+    /* Recargar no saca del modo invitado. */
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('.card').filter({hasText:'Tarea de invitada'}).waitFor({timeout:30000});
+    assert.equal(await page.locator('#accountMail').textContent(), 'Invitado');
+    /* Y si la sesión de invitado se pierde, el acceso ofrece volver a sus datos en la primera pantalla. */
+    await page.evaluate(() => { localStorage.removeItem('workhub_guest'); });
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('#authResume').waitFor({state:'visible', timeout:30000});
+    await page.locator('#authResume [data-guest]').filter({hasText:'Continuar como Lola Invitada'}).click();
+    await page.locator('.card').filter({hasText:'Tarea de invitada'}).waitFor({timeout:30000});
+    assert.equal(await page.evaluate(() => Workhub.app.models.projects.list().length), 2, 'con sus dos proyectos');
 
     /* En Ajustes, junto a «Salir del modo invitado». */
     assert.equal(await page.locator('#btnGuestUpgradeSide').isVisible(), true, 'el acceso directo de la barra lateral');
@@ -244,7 +337,9 @@ async function isolated(browser){
     await context.close();
     console.log('OK   Firebase emulado: un invitado crea su cuenta y se lleva sus datos');
     await isolated(browser);
-    console.log('OK   Firebase emulado: dos invitados seguidos no comparten datos ni se los llevan');
+    console.log('OK   Firebase emulado: dos invitados seguidos no comparten datos, y solo una cuenta nueva los recibe');
+    await slow(browser);
+    console.log('OK   Firebase emulado: con el servidor sin contestar, la copia no bloquea la entrada y termina después');
   }finally{
     await browser.close();
   }

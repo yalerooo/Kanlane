@@ -19,7 +19,7 @@ const out = path.join(root, 'dist');
 /* Páginas de captación e idiomas: toda carpeta de primer nivel con index.html que no sea app, demo,
    legal o un directorio de recursos (ver scripts/site-pages.js). Añadir una página = crear su carpeta. */
 const PAGES = pageDirs(root);
-const INCLUDE = ['index.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'llms.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
+const INCLUDE = ['index.html', '404.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'llms.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -139,7 +139,8 @@ function listFiles(dir, base){
     return d.isDirectory() ? listFiles(path.join(dir, d.name), rel) : [rel];
   });
 }
-const files = listFiles(out, '').filter((f) => f !== '/_headers' && f !== '/sw.js').sort();
+/* Las páginas 404 no se guardan: sin conexión no hacen falta y, si su descarga fallara, no se instalaría la versión. */
+const files = listFiles(out, '').filter((f) => f !== '/_headers' && f !== '/sw.js' && !/\/404\.html$/.test(f)).sort();
 const hash = require('crypto').createHash('sha1');
 files.forEach((f) => { hash.update(f); hash.update(fs.readFileSync(path.join(out, f))); });
 const build = hash.digest('hex').slice(0, 10);

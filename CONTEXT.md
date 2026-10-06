@@ -59,7 +59,7 @@ Plan: **`docs/CIFRADO-PROYECTOS.md`** (apartados 15 «Desglose en PR», 20 «Dec
 
 **Pendiente, de Claude (en este orden de retorno)**
 1. Más páginas de captación, cada una con «En resumen», «para quién NO es» y solo funciones verificadas en el código: `app de tareas sin conexión`, `tablero kanban`, alternativas a Monday, ClickUp y Todoist, `gestor de tareas para autónomos`, plugins (`/plugins/` y la guía de plugins en inglés). La de GitHub Projects solo tras probarla con GitHub real. Cada una en ES y EN y con hreflang recíproco.
-2. Imágenes para compartir propias de cada página, una página 404 de verdad, y la demo en inglés (las páginas en inglés incrustan `/demo/`, que va en español).
+2. Imágenes para compartir propias de cada página y la demo en inglés (las páginas en inglés incrustan `/demo/`, que va en español).
 3. Idiomas nuevos: primero el diccionario de la app, después la portada y tres páginas; nunca una página de idioma cuya app no esté traducida. Orden propuesto (a validar con datos de búsqueda): portugués de Brasil, francés, alemán, italiano.
 4. **Analítica:** la web promete «sin analítica de terceros». No añadir Cloudflare Web Analytics ni similares sin actualizar la CSP, `legal/privacidad`, `legal/cookies` y `legal-config.js`; alternativas: las analíticas de zona de Cloudflare o contar visitas desde el Worker, sin cookies ni IP.
 5. Medir GEO a mano cada 2–4 semanas: unas 12 preguntas fijas, en español e inglés, a ChatGPT con búsqueda, Perplexity, Gemini, Claude y Copilot, apuntando si mencionan Kanlane.

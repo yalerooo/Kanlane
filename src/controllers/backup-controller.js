@@ -132,7 +132,7 @@
 
     forgetCloudKey(){
       const context = this.cloudContext();
-      if(!context || !confirm('¿Dejar de guardar copias automáticas en la nube en este navegador? Las versiones ya guardadas seguirán en tu cuenta.')) return;
+      if(!context || !confirm(Workhub.t('¿Dejar de guardar copias automáticas en la nube en este navegador? Las versiones ya guardadas seguirán en tu cuenta.'))) return;
       cloud.forgetKey(context.uid);
       this.view.cloudKeyWrap.hidden = true;
       this.view.cloudKey.value = '';
@@ -173,14 +173,14 @@
       if(!context) return;
       const key = cloud.getKey(context.uid);
       if(action === 'delete'){
-        if(!confirm('¿Borrar esta copia cifrada de tu cuenta?')) return;
+        if(!confirm(Workhub.t('¿Borrar esta copia cifrada de tu cuenta?'))) return;
         cloud.remove(context.db, id).then(() => this.refreshCloud()).catch(() => this.view.showError('No se pudo borrar la copia cifrada.'));
         return;
       }
       const entry = this.cloudEntries?.find((item) => item.id === id);
       if(!entry) return;
       if(action === 'restore' && entry.projectId !== context.projectId &&
-          !confirm('Esta copia pertenece a otro proyecto. ¿Importar sus datos en el proyecto abierto?')) return;
+          !confirm(Workhub.t('Esta copia pertenece a otro proyecto. ¿Importar sus datos en el proyecto abierto?'))) return;
       cloud.get(context.db, id, entry.projectId, key).then((data) => {
         if(this.cloudContext()?.projectId !== context.projectId) return;
         if(action === 'restore') this.importData(data);
@@ -288,7 +288,7 @@
     }
 
     exportPlain(){
-      if(this.sealsCopies() && !confirm('El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.')) return;
+      if(this.sealsCopies() && !confirm(Workhub.t('El archivo tendrá todo el proyecto sin cifrar. Guárdalo en un lugar seguro y bórralo cuando no lo necesites.'))) return;
       this.exportData(true);
     }
 

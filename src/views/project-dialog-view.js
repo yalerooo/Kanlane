@@ -231,7 +231,7 @@
         const c = PT.colorOf(st.color);
         return '<div class="stage-row" data-i="' + i + '">' +
           '<button type="button" class="stage-color" data-act="color" style="--c:' + c.dot + '" title="Color: ' + esc(c.name) + '" aria-label="Cambiar color (' + esc(c.name) + ')"></button>' +
-          '<input class="stage-name" maxlength="40" value="' + esc(st.label) + '" placeholder="Nombre de la etapa" aria-label="Nombre de la etapa ' + (i + 1) + '" autocomplete="off" translate="no">' +
+          '<input class="stage-name" maxlength="40" value="' + esc(PT.stageText(st)) + '" placeholder="Nombre de la etapa" aria-label="Nombre de la etapa ' + (i + 1) + '" autocomplete="off" translate="no">' +
           '<label class="stage-done" title="Las tareas de esta etapa cuentan como terminadas"><input type="radio" name="pDone"' + (st.done ? ' checked' : '') + ' aria-label="Etapa final (tareas terminadas)"><span>Final</span></label>' +
           '<button type="button" class="icon-only stage-btn" data-act="up"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir etapa" title="Subir">' + ARROW_UP + '</button>' +
           '<button type="button" class="icon-only stage-btn" data-act="down"' + (i === n - 1 ? ' disabled' : '') + ' aria-label="Bajar etapa" title="Bajar">' + ARROW_DOWN + '</button>' +

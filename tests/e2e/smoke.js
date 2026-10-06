@@ -273,6 +273,26 @@ async function newProject(page, name){
     await small.setViewportSize({width:320,height:640});
     assert.equal(await small.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'plugins sin desbordamiento a 320 px');
     await mobile.close();
+
+    /* En inglés: columnas, copias y fechas en el idioma de la app, y nada en español a la vista. */
+    const english = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES', timezoneId:'Europe/Madrid'});
+    await english.addInitScript(() => localStorage.setItem('workhub_lang', 'en'));
+    const en = await english.newPage();
+    await en.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+    await en.locator('#dlgProject').waitFor({state:'visible'});
+    await en.locator('#pNombre').fill('English board');
+    await en.locator('#pTypes [data-type="kanban"]').click();
+    await en.locator('#btnSaveProject').click();
+    await en.locator('#dlgProject').waitFor({state:'hidden', timeout:10000});
+    assert.deepEqual(await en.locator('.col-label').allInnerTexts(), ['Backlog', 'In progress', 'In review', 'Done']);
+    await en.locator('#tabData').click();
+    assert.deepEqual(await en.locator('#viewData .backup-tile h3').allInnerTexts(), ['Export', 'Import']);
+    await en.locator('#btnSaveBackupVersion').click();
+    await en.locator('.backup-version').first().waitFor();
+    assert.match(await en.locator('.backup-version-info strong').first().innerText(), /^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}\s[AP]M$/, 'fecha de la copia en inglés aunque el navegador esté en español');
+    assert.deepEqual(await en.locator('.backup-version-actions button').allInnerTexts(), ['Download', 'Import', 'Delete']);
+    assert.deepEqual(await en.evaluate(() => Workhub.i18n.missing().filter((text) => /[áéíóúñ¿¡]/i.test(text))), [], 'sin textos en español sin traducir');
+    await english.close();
     console.log('OK   navegador: proyectos, tareas, teclado, copia, cofre, filtros, lista, navegación y móvil');
   }finally{
     await browser.close();

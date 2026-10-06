@@ -2,6 +2,17 @@
 (function(){
   const $ = (id) => document.getElementById(id);
 
+  /* Fecha y hora de una copia, en el idioma de la app (no en el del navegador). */
+  function versionDate(ts){
+    return new Date(ts).toLocaleString(Workhub.i18n.locale, {dateStyle:'medium', timeStyle:'short'});
+  }
+
+  /* Qué lleva una copia: «3 tareas · 1 contacto · 2 credenciales cifradas». */
+  function countsText(c){
+    const n = (value, one, many) => (value || 0) + ' ' + (value === 1 ? one : many);
+    return n(c.tasks, 'tarea', 'tareas') + ' · ' + n(c.contacts, 'contacto', 'contactos') + ' · ' + n(c.vault, 'credencial cifrada', 'credenciales cifradas');
+  }
+
   /* Icono de cada versión guardada (un reloj: es una copia de un momento). */
   function versionIcon(){
     const ic = document.createElement('span');
@@ -136,11 +147,11 @@
         const info = document.createElement('div');
         info.className = 'backup-version-info';
         const title = document.createElement('strong');
-        title.textContent = new Date(entry.createdAt).toLocaleString() +
+        title.textContent = versionDate(entry.createdAt) +
           (entry.projectId === currentProjectId ? '' : ' · Otro proyecto');
         const detail = document.createElement('span');
         const c = entry.counts || {};
-        detail.textContent = (c.tasks || 0) + ' tareas · ' + (c.contacts || 0) + ' contactos · ' + (c.vault || 0) + ' credenciales cifradas';
+        detail.textContent = countsText(c);
         info.append(title, detail);
         const actions = document.createElement('div');
         actions.className = 'backup-version-actions';
@@ -177,10 +188,10 @@
         const info = document.createElement('div');
         info.className = 'backup-version-info';
         const title = document.createElement('strong');
-        title.textContent = new Date(entry.createdAt).toLocaleString();
+        title.textContent = versionDate(entry.createdAt);
         const detail = document.createElement('span');
         const c = entry.counts || {};
-        detail.textContent = (c.tasks || 0) + ' tareas · ' + (c.contacts || 0) + ' contactos · ' + (c.vault || 0) + ' credenciales cifradas';
+        detail.textContent = countsText(c);
         info.append(title, detail);
         const actions = document.createElement('div');
         actions.className = 'backup-version-actions';

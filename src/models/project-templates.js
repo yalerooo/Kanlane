@@ -70,6 +70,11 @@
     }
   ];
 
+  /* Nombre que cada plantilla da a sus etapas, por clave. */
+  const DEFAULT_LABELS = {};
+  TEMPLATES.forEach((t) => t.stages.forEach((s) => { DEFAULT_LABELS[s.key] = s.label; }));
+  const tr = (text) => (Workhub.t ? Workhub.t(text) : text);
+
   const copyStages = (list) => list.map((s) => ({key:s.key, label:s.label, color:s.color, done:!!s.done}));
 
   const ProjectTemplates = {
@@ -93,17 +98,26 @@
       return copyStages(ProjectTemplates.template(key).stages);
     },
 
+    /* Nombre de una etapa para enseñarlo: las de las plantillas salen en el idioma de la app
+       mientras conserven su nombre; las que ha escrito el usuario, tal cual. */
+    stageText(s){
+      return s && DEFAULT_LABELS[s.key] === s.label ? tr(s.label) : String((s && s.label) || '');
+    },
+
     /* Limpia lo que escribe el usuario: etiquetas recortadas, claves únicas,
        color válido y al menos una etapa que cuente como terminada. */
     normalizeStages(list){
       const seen = {};
       const out = [];
       (Array.isArray(list) ? list : []).slice(0, MAX_STAGES).forEach((s, i) => {
-        const label = String((s && s.label) || '').trim().slice(0, 40);
+        let label = String((s && s.label) || '').trim().slice(0, 40);
         if(!label) return;
         let key = String((s && s.key) || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || ('e' + Date.now().toString(36) + i);
         while(seen[key]) key += 'x';
         seen[key] = true;
+        /* El nombre de plantilla escrito en otro idioma se guarda en español, para que cada
+           persona del equipo lo siga viendo en el suyo. */
+        if(DEFAULT_LABELS[key] && label === tr(DEFAULT_LABELS[key])) label = DEFAULT_LABELS[key];
         const color = COLORS.some((c) => c.key === s.color) ? s.color : 'gray';
         const stage = {key:key, label:label, color:color, done:!!s.done};
         /* Límite de tarjetas de la columna: entero de 1 a 999; sin él, sin límite. */

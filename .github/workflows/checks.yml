@@ -23,6 +23,7 @@ jobs:
           node tests/guest/guest-migration.test.js
           node tests/consent/consent.test.js
           node tests/settings/settings.test.js
+          node tests/i18n/stages.test.js
           node tests/vault/vault.test.js
           node tests/vault/team-vault.test.js
           node tests/vault/vault-totp.test.js

@@ -45,7 +45,8 @@
       .then((obj) => !!obj && obj.check === 'OK', () => false);
   }
 
-  /* DEK (bytes) de un envoltorio, con la contraseña maestra. Errores: 'no-vault', 'legacy', 'bad-pass'. */
+  /* DEK (bytes) de un envoltorio, con la contraseña maestra. Errores: 'no-vault', 'legacy', 'bad-pass'
+     y 'totp' (el cofre pide además un código: aquí no se puede abrir). */
   function openWithPassword(meta, password){
     if(!meta) return Promise.reject(fail('no-vault'));
     if(!meta.saltPassword) return Promise.reject(fail('legacy'));
@@ -53,6 +54,7 @@
       .then((kek) => cs.decryptJSON(kek, meta.ivPassword, meta.cipherPassword))
       .then((obj) => obj, () => null)
       .then((obj) => {
+        if(obj && obj.totp) throw fail('totp');
         if(!obj || !obj.dek) throw fail('bad-pass');
         return cs.b64decode(obj.dek);
       });

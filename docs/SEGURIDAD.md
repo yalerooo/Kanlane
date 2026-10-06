@@ -15,7 +15,8 @@ Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus 
 | Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Kanlane y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
 | Nombre o foto del perfil de Google/GitHub manipulados | El nombre se pinta como texto y la foto solo se acepta si es `https:`. |
 | Conexión sin cifrar | HTTPS obligatorio (`Strict-Transport-Security`). |
-| Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas y para la contraseña maestra de las contraseñas. |
+| Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas. La contraseña maestra de las contraseñas pide 12 o más y rechaza las fáciles de adivinar (muy comunes, secuencias y repeticiones); el campo lleva un medidor, que avisa además si contiene tu correo o el nombre del proyecto, y un generador. Las contraseñas maestras creadas antes de este cambio siguen valiendo. |
+| Alguien averigua tu contraseña maestra | Verificación en dos pasos opcional (TOTP) para abrir las contraseñas. Ver más abajo. |
 | Adivinar si un correo tiene cuenta | "Recuperar contraseña" responde lo mismo exista o no la cuenta. |
 | Fuerza bruta contra el inicio de sesión | Firebase bloquea temporalmente tras muchos intentos (`auth/too-many-requests`). |
 | Token de GitHub (integración con GitHub Projects) | Se guarda solo en el navegador (`localStorage`), nunca en Firestore ni en el repositorio, tanto si se pega como si se obtiene con «Conectar con GitHub» (que usa el inicio de sesión de GitHub y no toca tu cuenta). Ver [GITHUB.md](GITHUB.md#seguridad). |
@@ -37,6 +38,17 @@ Al crear un proyecto (con cuenta) el asistente pregunta la privacidad. En «Cifr
 - **Apagar la opción:** `Workhub.features.encryptedProjects = false` en `src/config/features.js` retira el cifrado total del asistente. Los proyectos cifrados que ya existan se siguen abriendo. No se debe revertir el código de cifrado si ya hay proyectos cifrados.
 
 Detalle completo: `docs/CIFRADO-PROYECTOS.md`.
+
+## Verificación en dos pasos de las contraseñas
+
+Con las contraseñas desbloqueadas, «Activar verificación en dos pasos» enseña una clave para añadir en una aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Desde entonces, abrir las contraseñas pide la contraseña maestra **y** un código de 6 cifras.
+
+- **Lo comprueba el servidor, no el navegador.** La clave del cofre queda envuelta dos veces: con la contraseña maestra y con una clave que el Worker (`/__/kms/v1/totp`) solo entrega tras un código válido. Quien tenga la contraseña maestra y una copia de la base de datos no puede abrir el cofre sin el código.
+- **Qué no protege:** la clave de recuperación entra sin código (y al usarla se desactiva el segundo paso), así que hay que guardarla igual de bien. Un código son 6 cifras: lo que impide probarlos es un límite de 3 intentos por minuto y cuenta (`TOTP_RATE_LIMIT`), que frena pero no hace imposible un ataque de días de alguien que ya tiene tu sesión y tu contraseña maestra. Tampoco protege frente a un dispositivo comprometido mientras el cofre está abierto.
+- **Kanlane no guarda el secreto del autenticador**: va cifrado, dentro del envoltorio de tu contraseña maestra, con una clave derivada de `KMS_MASTER_V1`. Si ese secreto del Worker se perdiera, esos cofres solo se abrirían con la clave de recuperación.
+- **Solo con cuenta.** En modo local no hay servidor que compruebe el código y la opción no aparece. Una copia de seguridad con el segundo paso activado, importada en otra cuenta, solo se abre con la clave de recuperación.
+- **Equipos:** para dar acceso a las contraseñas de un equipo, o llevar las de un proyecto a un equipo, hay que desactivarla antes (esas acciones abren la clave solo con la contraseña maestra).
+- **Despliegue:** hace falta desplegar el Worker con el límite `TOTP_RATE_LIMIT` de `wrangler.jsonc` (sin él la ruta responde 503) y tener `KMS_MASTER_V1` (ver [CLOUDFLARE.md](CLOUDFLARE.md)). Para retirarla: `Workhub.features.vaultTotp = false`; los cofres que ya la tengan siguen pidiendo el código.
 
 ## Lo que tienes que hacer en la consola (una vez)
 

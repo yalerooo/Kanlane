@@ -102,6 +102,8 @@ Mientras el secreto no esté puesto, el Worker responde 503 y crear un proyecto 
 
 La ruta solo acepta `POST` del propio dominio con un ID token de Firebase válido (firma, proyecto, caducidad y correo verificado), comparte el límite de peticiones `AUTH_RATE_LIMIT` y no guarda nada. No se debe poner nunca el secreto en `vars`, en el código ni en un PR.
 
+El mismo secreto sirve a la **verificación en dos pasos de las contraseñas** (`POST /__/kms/v1/totp`, ver [SEGURIDAD.md](SEGURIDAD.md#verificación-en-dos-pasos-de-las-contraseñas)). Esa ruta necesita además el límite `TOTP_RATE_LIMIT` de `wrangler.jsonc` (3 intentos por minuto y cuenta), que se crea al desplegar; sin él responde 503. Para retirar la opción: `vaultTotp: false` en `src/config/features.js`.
+
 ## 6. Recomendado en el panel de Cloudflare
 
 Todo esto es gratis y opcional:

@@ -397,6 +397,15 @@
           <div class="field">
             <label for="masterPass">Contraseña maestra</label>
             <input id="masterPass" type="password" autocomplete="off" required>
+            <div class="pass-tools" id="masterPassTools" data-for="masterPass" data-repeat="masterPass2" hidden>
+              <div class="pw-meter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+              <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+              <div class="pass-gen">
+                <button type="button" class="btn btn-ghost btn-sm" data-act="gen">Generar una segura</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-act="copy" hidden>Copiar</button>
+              </div>
+              <p class="field-help pass-gen-note" hidden>Guárdala en un lugar seguro antes de continuar: Kanlane no la guarda ni puede enviártela.</p>
+            </div>
           </div>
           <div class="field" id="masterPass2Wrap" hidden>
             <label for="masterPass2">Repite la contraseña maestra</label>
@@ -404,6 +413,17 @@
           </div>
           <p class="lock-error" id="lockError" hidden></p>
           <button type="submit" class="btn btn-primary" id="btnUnlock" style="width:100%">Desbloquear</button>
+        </form>
+
+        <form id="totpForm" hidden>
+          <div class="field">
+            <label for="totpCode">Código de verificación</label>
+            <input id="totpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required>
+            <p class="field-help">El código de 6 cifras de tu aplicación de autenticación.</p>
+          </div>
+          <p class="lock-error" id="totpError" hidden></p>
+          <button type="submit" class="btn btn-primary" id="btnTotp" style="width:100%">Verificar</button>
+          <p class="lock-forgot"><a href="#" id="linkTotpBack">Volver</a></p>
         </form>
         <p class="lock-forgot" id="forgotLinkWrap" hidden><a href="#" id="linkForgot">¿Has olvidado tu contraseña maestra?</a></p>
 
@@ -416,6 +436,15 @@
           <div class="field">
             <label for="newPass1">Nueva contraseña maestra</label>
             <input id="newPass1" type="password" autocomplete="off" required>
+            <div class="pass-tools" data-for="newPass1" data-repeat="newPass2">
+              <div class="pw-meter" role="status" aria-live="polite"><span class="pw-meter-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="pw-meter-text"></span></div>
+              <p class="field-help">Mínimo 12 caracteres. Mejor una frase de varias palabras.</p>
+              <div class="pass-gen">
+                <button type="button" class="btn btn-ghost btn-sm" data-act="gen">Generar una segura</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-act="copy" hidden>Copiar</button>
+              </div>
+              <p class="field-help pass-gen-note" hidden>Guárdala en un lugar seguro antes de continuar: Kanlane no la guarda ni puede enviártela.</p>
+            </div>
           </div>
           <div class="field">
             <label for="newPass2">Repite la nueva contraseña maestra</label>
@@ -449,6 +478,7 @@
       <div class="vault-note">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
         <span><b>Desbloqueado.</b> Las contraseñas y notas se cifran en tu navegador (AES-256) antes de guardarse. Sin tu contraseña maestra o tu clave de recuperación, no se pueden leer.</span>
+        <button class="btn btn-ghost btn-sm" id="btnVaultTotp" type="button" hidden>Activar verificación en dos pasos</button>
         <button class="btn btn-ghost btn-sm" id="btnLock" type="button"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Bloquear ahora</button>
       </div>
       <div id="vaultWrap">
@@ -1757,6 +1787,36 @@
   </div>
 </dialog>
 
+<dialog id="dlgVaultTotp" aria-labelledby="vtTitle">
+  <form class="dlg-inner" id="vtForm" method="dialog">
+    <h2 id="vtTitle">Verificación en dos pasos</h2>
+    <p class="dlg-lead" id="vtLead"></p>
+    <div id="vtSetup">
+      <div class="recovery-key-box" id="vtSecret" translate="no"></div>
+      <div class="recovery-actions">
+        <button type="button" class="btn btn-ghost" id="vtCopy">Copiar</button>
+        <a class="btn btn-ghost" id="vtOpen" href="#">Abrir en la aplicación</a>
+      </div>
+      <p class="type-note">Si pierdes la aplicación de autenticación solo podrás entrar con tu clave de recuperación: comprueba que la tienes guardada antes de activar esto.</p>
+    </div>
+    <div class="field">
+      <label for="vtPass">Contraseña maestra</label>
+      <input id="vtPass" type="password" autocomplete="off" required>
+    </div>
+    <div class="field">
+      <label for="vtCode">Código de verificación</label>
+      <input id="vtCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required>
+    </div>
+    <p class="lock-error" id="vtError" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="vtCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="vtSubmit">Activar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgVaultView">
   <div class="dlg-inner">
     <div class="cat"><span id="vvCliente" translate="no"></span><span class="type-badge" id="vvTipo"></span></div>
@@ -1802,6 +1862,7 @@
 <script src="../src/services/backup-history.js"></script>
 <script src="../src/services/cloud-backup.js"></script>
 <script src="../src/services/crypto.js"></script>
+<script src="../src/services/vault-totp.js"></script>
 <script src="../src/services/project-crypto.js"></script>
 <script src="../src/services/keystore.js"></script>
 <script src="../src/services/firebase-backend.js"></script>

@@ -43,6 +43,18 @@
 .lock-forgot{text-align:center;margin:14px 0 0;}
 .lock-forgot a{font-size:12.5px;font-weight:500;color:var(--ink-soft);text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px;}
 .lock-forgot a:hover{color:var(--ink);}
+/* Contraseñas con el botón de ver/ocultar (el de la pantalla de acceso, auth.css) y, al crear
+   una nueva, el medidor con «Generar una segura» y «Copiar». */
+#viewVault .auth-pass input,#dlgVaultTotp .auth-pass input{width:100%;padding-right:44px;}
+.pass-tools .pw-meter{margin-top:2px;}
+.pass-tools .field-help{margin:6px 0 0;}
+.pass-gen{display:flex;gap:8px;margin-top:10px;}
+#totpForm{margin-top:4px;}
+#totpCode,#vtCode{font-family:var(--mono);font-size:15px;letter-spacing:.3em;text-align:center;}
+#dlgVaultTotp .recovery-key-box{font-size:13px;}
+#dlgVaultTotp .recovery-actions{margin-bottom:14px;}
+#dlgVaultTotp .recovery-actions a.btn{text-decoration:none;justify-content:center;}
+.vault-note .btn:not([hidden]) + .btn{margin-left:0;}
 #recoverForm{margin-top:18px;padding-top:18px;border-top:1px solid var(--line);}
 #recoverForm textarea{font-family:var(--mono);font-size:12.5px;width:100%;}
 .recovery-key-box{

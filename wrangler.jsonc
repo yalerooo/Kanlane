@@ -52,6 +52,13 @@
     "name": "AUTH_RATE_LIMIT",
     "namespace_id": "73001",
     "simple": { "limit": 240, "period": 60 }
+  }, {
+    // Códigos de la verificación en dos pasos del gestor de contraseñas (/__/kms/v1/totp),
+    // por cuenta: un código son 6 cifras y este límite es lo que impide probarlos todos.
+    // Sin este límite la ruta responde 503.
+    "name": "TOTP_RATE_LIMIT",
+    "namespace_id": "73002",
+    "simple": { "limit": 3, "period": 60 }
   }],
 
   // Registros, trazas e incidencias del Worker (el reenvío del login). Es lo

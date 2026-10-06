@@ -166,7 +166,8 @@
   </div>
 
   <footer class="auth-bottom">
-    <p class="auth-foot auth-foot-crypto">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+    <p class="auth-foot auth-foot-crypto" id="authFootCrypto">Tus contraseñas guardadas se cifran en tu navegador antes de subirse.</p>
+    <p class="auth-foot auth-foot-crypto" id="authFootGuest" hidden>Como invitado, tus datos se guardan solo en este navegador y se pierden si borras los datos del navegador. Al crear una cuenta se sincronizan, y las contraseñas se cifran antes de subirse.</p>
     <p class="auth-foot auth-legal">Al continuar aceptas los <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</p>
   </footer>
 </div>
@@ -872,7 +873,7 @@
     <input type="hidden" id="taskId">
     <div class="field">
       <label for="fTitle">Título</label>
-      <input id="fTitle" required maxlength="140" placeholder="p. ej. Activar Shibboleth">
+      <input id="fTitle" required maxlength="140" placeholder="p. ej. Preparar la presentación">
     </div>
     <div class="field">
       <label for="fDesc">Descripción / notas</label>
@@ -1773,7 +1774,7 @@
     <input type="hidden" id="mId">
     <div class="field">
       <label for="mTitle">Título</label>
-      <input id="mTitle" required maxlength="140" placeholder="p. ej. Seguimiento semanal con Finba">
+      <input id="mTitle" required maxlength="140" placeholder="p. ej. Seguimiento semanal con el cliente">
     </div>
     <div class="row2">
       <div class="field needs-clients">

@@ -470,6 +470,9 @@
       this.panel.classList.toggle('is-guest', on);
       this.guestForm.hidden = !on;
       this.guestMsg.hidden = true;
+      /* El pie del invitado no habla de subir nada: sus datos no salen del navegador. */
+      $('authFootCrypto').hidden = on;
+      $('authFootGuest').hidden = !on;
       if(on){
         this.setSent(false);
         this.sub.hidden = false;

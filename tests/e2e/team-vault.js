@@ -168,6 +168,28 @@ async function closeShare(page){
 
     /* La propietaria entra con su contraseña maestra de siempre. */
     assert.equal(await page.locator('#tabVault').isVisible(), true, 'un equipo tiene sección de contraseñas');
+    /* También en el móvil: la barra inferior de un equipo lleva las mismas secciones que la de un
+       proyecto personal, dentro de la pantalla. Clientes solo falta si el proyecto no usa clientes
+       (este es de tipo «desarrollo»); al activarlos, aparece. */
+    const desktop = page.viewportSize();
+    await page.setViewportSize({width:375, height:812});
+    const bar = await page.evaluate(() => Array.from(document.querySelectorAll('.tabs .tab')).map((t) => {
+      const r = t.getBoundingClientRect();
+      return {id:t.id, shown:r.width > 30 && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight};
+    }));
+    assert.deepEqual(bar.filter((t) => t.shown).map((t) => t.id), ['tabTasks', 'tabCalendar', 'tabVault', 'tabPlugins', 'tabData', 'tabSettings'], 'la barra inferior de un equipo sin clientes');
+    const withClients = await page.evaluate(() => {
+      const shell = Workhub.app.shell;
+      shell.setClientsEnabled(true);
+      const shown = Array.from(document.querySelectorAll('.tabs .tab')).filter((t) => {
+        const r = t.getBoundingClientRect();
+        return r.width > 30 && r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight;
+      }).map((t) => t.id);
+      shell.setClientsEnabled(false);
+      return shown;
+    });
+    assert.deepEqual(withClients, ['tabTasks', 'tabCalendar', 'tabVault', 'tabClients', 'tabPlugins', 'tabData', 'tabSettings'], 'y con clientes, las siete');
+    await page.setViewportSize(desktop);
     await page.locator('#tabVault').click();
     await page.locator('#lockTitle').getByText('Desbloquear contraseñas').waitFor({timeout:15000});
     await page.locator('#masterPass').fill(MASTER);

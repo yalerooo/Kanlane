@@ -94,7 +94,9 @@
 
 /* ---------- Móvil y tablet vertical ---------- */
 @media (max-width:900px){
-  :root{--nav-h:calc(58px + env(safe-area-inset-bottom, 0px));}
+  /* --nav-h: lo que ocupa abajo la navegación flotante (su alto, su separación del borde y la
+     zona segura del teléfono); lo usan el margen del contenido, los avisos y la lista de plugins. */
+  :root{--nav-gap:10px;--nav-h:calc(58px + var(--nav-gap) + env(safe-area-inset-bottom, 0px));}
   .app{display:block;padding:0;}
 
   /* Barra superior: proyecto y buscar. */
@@ -127,22 +129,27 @@
   .search-trigger span,.search-trigger .kbd{display:none;}
   .nav-label,.sidebar-foot{display:none;}
 
-  /* Navegación inferior, como en una app: de cristal. */
+  /* Navegación inferior, como en una app: una barra flotante de cristal, igual que los paneles de
+     la web (borde claro, sombra suave y desenfoque de lo que pasa por debajo). Lleva algo más de
+     relleno que --glass porque el contenido se desplaza por detrás y las etiquetas tienen que leerse. */
   .tabs{
     position:fixed;
-    left:0;
-    right:0;
-    bottom:0;
+    left:var(--nav-gap);
+    right:var(--nav-gap);
+    bottom:calc(var(--nav-gap) + env(safe-area-inset-bottom, 0px));
     z-index:40;
     display:grid;
     grid-template-columns:repeat(7, minmax(0, 1fr));
     gap:0;
-    height:var(--nav-h);
-    padding:4px 4px env(safe-area-inset-bottom, 0px);
+    height:58px;
+    padding:4px;
+    border:1px solid var(--glass-line);
+    border-radius:var(--r-sheet);
     background:var(--sheet);
+    background:color-mix(in srgb, var(--surface-solid) 66%, transparent);
     backdrop-filter:var(--glass-blur);
     -webkit-backdrop-filter:var(--glass-blur);
-    border-top:1px solid var(--line);
+    box-shadow:var(--glass-shadow), 0 0 0 1px var(--line);
   }
   body.no-clients .tabs{grid-template-columns:repeat(6, minmax(0, 1fr));}
   .tab{
@@ -151,9 +158,9 @@
     justify-content:center;
     gap:3px;
     width:auto;
-    height:50px;
+    height:48px;
     padding:0 2px;
-    border-radius:var(--r-lg);
+    border-radius:calc(var(--r-sheet) - 5px);
     font-size:10.5px;
     font-weight:500;
     color:var(--ink-faint);
@@ -174,8 +181,9 @@
   .plugin-bar-text strong,.plugin-bar-text span{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;}
   .plugin-hero-text h3 span{overflow-wrap:anywhere;}
   .tab:hover{background:transparent;}
-  /* Sección activa: el icono y el texto en el color del texto, con más peso. */
-  .tab.active{background:transparent;color:var(--ink);font-weight:600;}
+  /* Sección activa: fondo suave de acento, con el icono y el texto en el color del texto. */
+  .tab{transition:background .16s ease, color .16s ease;}
+  .tab.active{background:var(--accent-soft);color:var(--ink);font-weight:600;}
   .tab-count{
     position:absolute;
     top:3px;

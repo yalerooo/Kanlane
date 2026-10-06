@@ -112,7 +112,8 @@ html.boot-session .app-skel,html.skel-on .app-skel{display:grid;}
 
 @media (max-width:900px){
   .app-skel{grid-template-columns:minmax(0, 1fr);grid-template-rows:minmax(0, 1fr) auto;gap:0;padding:0;}
-  .ask-tabbar{display:flex;justify-content:space-around;align-items:center;height:62px;padding:0 8px;background:var(--sidebar);border-top:1px solid var(--line);}
+  /* Como la navegación inferior real: flotante, con su borde y sus esquinas. */
+  .ask-tabbar{display:flex;justify-content:space-around;align-items:center;height:58px;margin:0 10px calc(10px + env(safe-area-inset-bottom, 0px));padding:0 8px;background:var(--sheet);border:1px solid var(--glass-line);border-radius:var(--r-sheet);box-shadow:var(--glass-shadow), 0 0 0 1px var(--line);}
   .ask-tab{display:grid;justify-items:center;gap:6px;}
   .ask-tab .ic{width:20px;height:20px;border-radius:6px;}
   .ask-tab .tx{width:34px;height:8px;}

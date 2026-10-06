@@ -186,7 +186,7 @@
       if(p.tipo) data.tipo = p.tipo;
       if(Array.isArray(p.stages)) data.stages = p.stages;
       if(typeof p.clients === 'boolean') data.clients = p.clients;
-      if(Array.isArray(p.labels)) data.labels = p.labels.slice(0, 60);
+      if(Array.isArray(p.labels)) data.labels = p.labels.slice(0, 1000);
       /* Cifrado total: para no conectar los datos antes de tener la clave. */
       if(M.ProjectModel.isEncrypted(p) || p.enc === true) data.enc = true;
       prefs.write(PROJECT_PREF, JSON.stringify(data));

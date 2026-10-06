@@ -92,8 +92,8 @@ service cloud.firestore {
           && textWithin(data, 'desc', 20000)
           && textWithin(data, 'cliente', 200)
           && textWithin(data, 'dueTime', 5)
-          && listWithin(data, 'labels', 60)
-          && listWithin(data, 'checklist', 100)
+          && listWithin(data, 'labels', 1000)
+          && listWithin(data, 'checklist', 200)
           && listWithin(data, 'assignees', 50)))
         && (col != 'clients' || (data.keys().hasOnly(['nombre', 'color', 'createdAt'])
           && textWithin(data, 'nombre', 200)))
@@ -113,7 +113,7 @@ service cloud.firestore {
         && (col != 'assets' || (data.keys().hasOnly(['data', 'contentType', 'createdAt'])
           && textWithin(data, 'data', 900000)))
         && (col != 'projects' || (textWithin(data, 'nombre', 200)
-          && listWithin(data, 'stages', 8) && listWithin(data, 'labels', 60)))
+          && listWithin(data, 'stages', 500) && listWithin(data, 'labels', 1000)))
         && (col != 'notes' || (data.keys().hasOnly([
             'text', 'imageAssetId', 'createdAt', 'kind', 'actorUid', 'actorName'
           ]) && textWithin(data, 'text', 20000)

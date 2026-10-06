@@ -4,6 +4,8 @@
   const {esc, closest, initials} = Workhub.utils.html;
   const PT = Workhub.models.ProjectTemplates;
   const GITHUB_TYPE = 'github';   /* solo en el diálogo: crea el proyecto desde GitHub */
+  const TEMPLATE_TYPE = 'plantilla';   /* solo en el diálogo: proyecto ya montado (ProjectGallery) */
+  const TRELLO_TYPE = 'trello';   /* solo en el diálogo: importa un tablero de Trello (TrelloImport) */
   const $ = (id) => document.getElementById(id);
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
 
@@ -80,6 +82,22 @@
       this.oauthHandler = null;
       $('pGhOauth').addEventListener('click', () => { if(this.oauthHandler) this.oauthHandler(); });
       this.githubHandler = null;
+      this.galleryEl = $('pGallery');
+      this.galleryList = $('pGalleryList');
+      this.galleryKey = null;
+      this.trelloEl = $('pTrello');
+      this.trelloFile = $('pTrelloFile');
+      this.trelloName = $('pTrelloName');
+      this.trelloSummary = $('pTrelloSummary');
+      this.trelloSeed = null;
+      this.galleryList.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-gallery]');
+        if(!b) return;
+        this.galleryKey = b.getAttribute('data-gallery');
+        this.error.hidden = true;
+        this._renderGallery();
+      });
+      this.trelloFile.addEventListener('change', () => this._readTrello(this.trelloFile.files[0]));
 
       this.tipo = PT.DEFAULT_TYPE;
       this.stages = [];
@@ -301,7 +319,7 @@
   ProjectView.markHtml = markHtml;
   /* Lo que comparten los archivos que completan esta vista. */
   Workhub.views.shared = Workhub.views.shared || {};
-  Workhub.views.shared.project = {PT, GITHUB_TYPE, CHECK_SMALL, ARROW_UP, ARROW_DOWN, TRASH};
+  Workhub.views.shared.project = {PT, GITHUB_TYPE, TEMPLATE_TYPE, TRELLO_TYPE, CHECK_SMALL, ARROW_UP, ARROW_DOWN, TRASH};
 
   Workhub.views.ProjectView = ProjectView;
 })();

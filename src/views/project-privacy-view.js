@@ -118,7 +118,7 @@
           this._goStep(3);
           this.encPass.focus();
         } else if(this.privacy === 'C' && this.managedOn && !this.pending.github){
-          this.enc.create({nombre:this.pending.nombre, color:this.pending.color, config:this.pending.config, managed:true});
+          this.enc.create({nombre:this.pending.nombre, color:this.pending.color, config:this.pending.config, seed:this.pending.seed || null, managed:true});
         } else {
           this._dispatch(this.pending);
         }
@@ -136,7 +136,7 @@
       }
       if(this.step === 4 && this.encKey.isSaved()){
         this.enc.create({
-          nombre:this.pending.nombre, color:this.pending.color, config:this.pending.config,
+          nombre:this.pending.nombre, color:this.pending.color, config:this.pending.config, seed:this.pending.seed || null,
           password:this.encPass.value, trusted:this.encTrusted.checked
         });
       }

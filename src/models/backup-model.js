@@ -107,7 +107,7 @@
           status: t.status || '',
           contacto: t.contacto || '',
           dueDate: t.dueDate || '',
-          labels: Array.isArray(t.labels) ? t.labels.filter((n) => typeof n === 'string').slice(0, 30) : [],
+          labels: Array.isArray(t.labels) ? t.labels.filter((n) => typeof n === 'string').slice(0, 1000) : [],
           order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()

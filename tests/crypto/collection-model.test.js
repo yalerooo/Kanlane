@@ -278,7 +278,7 @@ const stripId = (x) => { const c = Object.assign({}, x); delete c.id; return c; 
   /* ---------- límites y campos de GitHub ---------- */
   {
     await assert.rejects(tasks.update(id, {title:'x'.repeat(501)}), code('too-large'));
-    await assert.rejects(tasks.update(id, {labels:new Array(61).fill('a')}), code('too-large'));
+    await assert.rejects(tasks.update(id, {labels:new Array(1001).fill('a')}), code('too-large'));
     await assert.rejects(tasks.add({title:'x', desc:'d'.repeat(20001), status:'pendiente'}), code('too-large'));
     await assert.rejects(tasks.update(id, {ghItemId:'PVTI_1'}), code('github-field'));
     await assert.rejects(tasks.saveSynced(id, {title:'x'}), code('encrypted'));

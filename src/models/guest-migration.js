@@ -30,8 +30,8 @@
   /* No van a salir bien por mucho que se repitan: se saltan en vez de cortar la copia. */
   const PERMANENT = ['permission-denied', 'invalid-argument', 'image-too-large', 'image-unreadable'];
   /* Límites de firestore.rules para el documento de un proyecto. */
-  const MAX_STAGES = 8;
-  const MAX_LABELS = 60;
+  const MAX_STAGES = 500;
+  const MAX_LABELS = 1000;
 
   /* ---------- Lo pendiente, en este navegador ---------- */
 

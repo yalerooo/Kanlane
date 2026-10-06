@@ -138,6 +138,10 @@
 .type-chip i{width:6px;height:6px;border-radius:50%;flex:none;}
 .type-chip.is-plain{background:none;padding-left:0;color:var(--ink-faint);}
 .type-note{margin:-4px 0 12px;font-size:12.5px;color:var(--ink-soft);}
+/* Importar de Trello: botón del archivo, su nombre y el resumen de lo que trae */
+.trello-file{display:flex;align-items:center;gap:10px;min-width:0;}
+.trello-file-name{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.trello-summary{margin:2px 0 0;}
 
 .stage-editor{display:grid;gap:6px;}
 .stage-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto auto;gap:6px;align-items:center;}

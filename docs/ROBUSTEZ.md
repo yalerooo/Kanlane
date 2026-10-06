@@ -7,6 +7,10 @@
 - La API de reCAPTCHA Enterprise se habilitó y se creó una clave de puntuación limitada a `workhub.yalero.net`, `workhub-26f50.web.app` y `workhub-project.netlify.app`. La app web está registrada en Firebase App Check con esa clave. **La clave no incluye `kanlane.com` ni `kanlane.yalero.net`** (se creó antes del cambio de nombre): en esos dominios la consola del navegador muestra `AppCheck: ReCAPTCHA error (appCheck/recaptcha-error)` en cada carga. Mientras App Check no sea obligatorio es solo ruido, pero **hay que añadir los dominios a la clave antes de activarlo** (Google Cloud → Seguridad → reCAPTCHA → la clave → Editar → Dominios), o se cortaría el acceso a todo el mundo. **App Check todavía no es obligatorio** para Authentication ni Firestore: activarlo antes de publicar y observar el cliente nuevo cortaría el acceso a usuarios reales.
 - Las reglas de Firestore validan campos y tamaños de datos habituales y restringen las copias cifradas a su propietario. **Publicar `firestore.rules` al fusionar el PR**; sin ello las copias en la cuenta mostrarán un error de permisos. `npm test --prefix tests/rules` comprueba permisos y límites en el emulador.
 
+### «AppCheck: Requests throttled due to 403 error» (ventana de 24 h)
+
+No es un límite de uso ni tiene que ver con cuántas subidas o escrituras se hagan. Es la consecuencia del punto anterior: en un dominio que la clave de reCAPTCHA no incluye, el intercambio del token de App Check devuelve 403 y el SDK deja de pedirlo durante un día en ese navegador (`appCheck/throttled`, «Attempts allowed again after 01d:00m:00s»). Solo afecta a la petición del token. Mientras App Check no sea obligatorio, Authentication y Firestore siguen atendiendo sin él, así que la app funciona igual. Se arregla añadiendo los dominios a la clave; con App Check obligatorio y la clave sin corregir, nadie podría entrar.
+
 ## Activación gradual de App Check
 
 1. Fusionar y publicar el cliente con `appCheckSiteKey` y la CSP actualizada. Probar acceso real con Google, GitHub y correo en la web principal, Firebase Hosting y el antiguo dominio de Netlify si sigue operativo. El emulador local no usa App Check.

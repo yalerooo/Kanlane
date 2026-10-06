@@ -14,8 +14,8 @@
 .md li{margin:.2em 0;}
 .md li > ul,.md li > ol{margin:.2em 0 0;}
 /* Casillas: la casilla ocupa el sitio de la viñeta. */
-.md li.md-task{list-style:none;position:relative;}
-.md li.md-task > input{position:absolute;left:-1.5em;top:.22em;margin:0;}
+.md li.md-task{list-style:none;position:relative;margin-left:.3em;}
+.md li.md-task > input{position:absolute;left:-1.8em;top:.22em;margin:0;}
 .md li.md-task.is-done > span{color:var(--ink-faint);text-decoration:line-through;}
 .md li.md-task > input:disabled{opacity:.75;cursor:default;}
 .md code{font-family:var(--mono);font-size:.88em;padding:.1em .38em;border-radius:5px;background:var(--hover);border:1px solid var(--line);}
@@ -25,6 +25,15 @@
 .md blockquote{margin:0 0 .65em;padding:8px 12px;border-radius:var(--r-md);background:var(--accent-soft);color:var(--ink-soft);}
 .md hr{border:0;border-top:1px solid var(--line-strong);margin:1em 0;}
 .md del{color:var(--ink-faint);}
+/* Tabla: si no cabe, se desplaza ella y no la ficha. */
+.md .md-table{margin:0 0 .65em;overflow-x:auto;border:1px solid var(--line-strong);border-radius:var(--r-md);}
+.md table{width:100%;border-collapse:collapse;font-size:.94em;}
+.md th,.md td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line);}
+.md th + th,.md td + td{border-left:1px solid var(--line);}
+.md th{font-weight:600;color:var(--ink);background:var(--hover);white-space:nowrap;}
+.md tbody tr:last-child td{border-bottom:0;}
+.md .md-center{text-align:center;}
+.md .md-right{text-align:right;}
 
 /* ---------- Adjuntos de una nota ---------- */
 .att-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}

@@ -362,6 +362,28 @@
         actorName:team.name(team.meUid()), createdAt:Date.now()});
     }
 
+    /* Marca o desmarca la casilla número n (- [ ] en Markdown) del texto de una nota. En un proyecto
+       cifrado la nota se abre, se cambia y se vuelve a sellar entera. */
+    toggleNoteTask(taskId, noteId, n, checked){
+      const ref = this.notes(taskId).doc(noteId);
+      const toggle = (text) => Workhub.utils.markdown.toggleTask(text || '', n, checked);
+      return ref.get().then((snap) => {
+        const raw = (snap && snap.exists !== false && snap.data && snap.data()) || null;
+        if(!raw) return null;
+        const cipher = this.cipher;
+        if(!cipher || !cipher.isSealed(raw)){
+          const text = toggle(raw.text);
+          return text === (raw.text || '') ? null : ref.update({text:text});
+        }
+        const path = this.notesPath(taskId);
+        return cipher.open(path, noteId, raw).then((r) => {
+          const text = toggle(r.plain.text);
+          if(text === (r.plain.text || '')) return null;
+          return cipher.seal(path, noteId, Object.assign({}, cipher.clearOf('notes', raw), r.plain, {text:text})).then((doc) => ref.set(doc));
+        });
+      });
+    }
+
     /* Elimina la nota y devuelve los documentos de `assets` que enlazaba con `assetIds`, para
        que se borren también. La imagen de una nota antigua (imageAssetId) se deja: una copia
        importada puede enlazar la misma. */

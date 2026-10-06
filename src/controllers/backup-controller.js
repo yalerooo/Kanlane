@@ -33,7 +33,9 @@
 
     scope(){
       if(!this.app.rootDb || !this.app.projectId) return '';
-      const account = this.app.rootDb.me && this.app.rootDb.me.uid || 'local';
+      /* Cada invitado tiene sus versiones (su base de datos es suya; ver local-storage-shim.js). */
+      const guest = window.__localStore && window.__localStore.guestId;
+      const account = this.app.rootDb.me && this.app.rootDb.me.uid || (guest ? 'guest-' + guest : 'local');
       return Workhub.services.platform.mode() + ':' + account + ':' + this.app.projectId;
     }
 

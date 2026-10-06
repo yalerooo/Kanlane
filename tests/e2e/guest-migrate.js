@@ -49,6 +49,99 @@ async function newTask(page, title){
   await page.locator('.card').filter({hasText:title}).waitFor();
 }
 
+async function enterGuest(page, name){
+  await page.locator('#authGuestBtn').click();
+  await page.locator('#authGuestName').fill(name);
+  await page.locator('#authGuestForm button[type="submit"]').click();
+}
+
+async function firstProject(page, name){
+  await page.locator('#dlgProject').waitFor({state:'visible', timeout:30000});
+  await page.locator('#pNombre').fill(name);
+  await page.locator('#pTypes [data-type="desarrollo"]').click();
+  await page.locator('#btnSaveProject').click();
+  await page.locator('#dlgProject').waitFor({state:'hidden'});
+}
+
+/* Dos invitados seguidos en el mismo navegador: el segundo empieza de cero, su cuenta recibe solo
+   lo suyo, y el primero sigue teniendo sus datos, también los de antes de haber una base por
+   invitado (la de siempre). */
+async function isolated(browser){
+  const context = await browser.newContext({viewport:{width:1280,height:850}, locale:'es-ES'});
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(url, {waitUntil:'domcontentloaded', timeout:15000});
+  await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+  await page.evaluate(() => { const b = document.querySelector('.consent [data-act="reject"]'); if(b) b.click(); });
+
+  /* Un invitado de antes de este cambio: sin id, con sus datos en la base de siempre, y que salió
+     sin quedar apuntado en ninguna lista. */
+  await page.evaluate(() => { localStorage.setItem('workhub_guest', JSON.stringify({name:'Ana'})); });
+  await page.reload({waitUntil:'domcontentloaded'});
+  await firstProject(page, 'Futbolge');
+  await newTask(page, 'Preparar equipación nueva');
+  await page.evaluate(() => { localStorage.removeItem('workhub_guest'); localStorage.removeItem('workhub_project'); localStorage.removeItem('workhub_guests'); });
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+
+  /* Otra persona entra como invitada: se le ofrece seguir con lo que había, pero con su nombre
+     estrena un espacio vacío (asistente de primer proyecto, sin «Futbolge»). */
+  await page.locator('#authGuestBtn').click();
+  await page.locator('#authGuestPrev [data-guest]').waitFor({state:'visible'});
+  assert.equal(await page.locator('#authGuestPrev [data-guest]').textContent(), 'Continuar con los datos de invitado de este navegador');
+  await page.locator('#authGuestName').fill('Berto');
+  await page.locator('#authGuestForm button[type="submit"]').click();
+  await firstProject(page, 'Mejoras Kanlane');
+  await newTask(page, 'Tarea de Berto');
+  assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Mejoras Kanlane'], 'no hereda el proyecto del invitado anterior');
+  assert.equal(await page.locator('.card').count(), 1);
+
+  /* Berto sale y vuelve: sus datos siguen, con «Continuar como Berto». */
+  await page.locator('#btnSignOut').click();
+  await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+  await page.locator('#authGuestBtn').click();
+  await page.locator('#authGuestPrev [data-guest]').filter({hasText:'Continuar como Berto'}).click();
+  await page.locator('.card').filter({hasText:'Tarea de Berto'}).waitFor({timeout:30000});
+
+  /* Crea su cuenta: recibe solo lo suyo. */
+  await page.locator('#btnGuestUpgradeSide').click();
+  await page.locator('#authMigrate').waitFor({state:'visible', timeout:30000});
+  const email = 'berto-' + Date.now() + '@example.test';
+  await page.locator('#authEmail').fill(email);
+  await page.locator('#authPass').fill('contraseña-prueba-123');
+  await page.locator('#authSubmit').click();
+  await page.locator('.auth-loading.is-verify').waitFor({state:'visible'});
+  await verify(email);
+  await page.getByRole('button', {name:'Ya lo he verificado'}).click();
+  await page.locator('.card').filter({hasText:'Tarea de Berto'}).waitFor({timeout:30000});
+  await page.locator('.toast').filter({hasText:'Tus datos de invitado ya están en tu cuenta.'}).waitFor();
+  const cloud = await page.evaluate(async () => {
+    const app = Workhub.app;
+    const all = [];
+    for(const p of app.models.projects.list()){
+      const snap = await Workhub.models.ProjectModel.scope(app.rootDb, p.id).collection('tasks').get();
+      snap.docs.forEach((d) => all.push(d.data().title));
+    }
+    return {mode:Workhub.services.platform.mode(), names:app.models.projects.list().map((p) => p.nombre), tasks:all};
+  });
+  assert.equal(cloud.mode, 'firebase');
+  assert.deepEqual(cloud.names, ['Mejoras Kanlane'], 'la cuenta no recibe el proyecto de otro invitado');
+  assert.deepEqual(cloud.tasks, ['Tarea de Berto'], 'ni sus tareas');
+
+  /* Y lo de Ana sigue en el navegador, sin tocar; Berto ya no se ofrece (sus datos están en su cuenta). */
+  await page.locator('#btnSignOut').click();
+  await page.locator('#authPanel').waitFor({state:'visible', timeout:30000});
+  await page.locator('#authGuestBtn').click();
+  await page.locator('#authGuestPrev [data-guest]').first().waitFor({state:'visible'});
+  assert.equal(await page.locator('#authGuestPrev [data-guest]').count(), 1);
+  await page.locator('#authGuestPrev [data-guest]').click();
+  await page.locator('.card').filter({hasText:'Preparar equipación nueva'}).waitFor({timeout:30000});
+  assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Futbolge']);
+  assert.deepEqual(errors, [], 'sin excepciones JavaScript');
+  await context.close();
+}
+
 (async () => {
   await ready();
   const browser = await chromium.launch({headless:true, ...(chrome ? {executablePath:chrome} : {})});
@@ -150,6 +243,8 @@ async function newTask(page, title){
     assert.deepEqual(errors, [], 'sin excepciones JavaScript');
     await context.close();
     console.log('OK   Firebase emulado: un invitado crea su cuenta y se lleva sus datos');
+    await isolated(browser);
+    console.log('OK   Firebase emulado: dos invitados seguidos no comparten datos ni se los llevan');
   }finally{
     await browser.close();
   }

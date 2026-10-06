@@ -65,6 +65,7 @@
       this.guestName = $('authGuestName');
       this.guestMsg = $('authGuestMsg');
       this.migrate = $('authMigrate');
+      this.guestPrev = $('authGuestPrev');
       /* La portada enlaza a /app/?registro para abrir directamente «Crear cuenta». */
       this.registroRequested = /[?&]registro(=|&|$)/.test(location.search);
       this.mode = 'signin';
@@ -176,8 +177,13 @@
       });
     }
 
-    /* handler(nombre) */
+    /* handler(nombre, id): sin id es alguien nuevo; con id, un invitado de antes que vuelve. */
     bindGuest(handler){
+      this.guestPrev.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-guest]');
+        const g = btn && (this.guests || [])[+btn.getAttribute('data-guest')];
+        if(g) handler(g.name || Workhub.t('Invitado'), g.id);
+      });
       this.guestForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         this.guestMsg.hidden = true;
@@ -312,6 +318,7 @@
       const guest = this.panel.classList.contains('is-guest');
       const shown = this.pass.type === 'text';
       this.paintProviders();
+      this.showGuests(this.guests);
       if(guest) this.setGuestStep(true); else this.setMode(this.mode);
       this.setPassVisible(shown);
       this.panel.classList.remove('is-swap');
@@ -434,6 +441,18 @@
       this.verifyRun = null;
       this.stopTimers();
       this.scene({reset:true});
+    }
+
+    /* Invitados de antes con datos en este navegador ([{id, name}]): cada uno puede volver a lo
+       suyo; quien escribe un nombre entra como alguien nuevo, sin ver lo de los demás. */
+    showGuests(list){
+      this.guests = list || [];
+      const t = Workhub.t;
+      this.guestPrev.hidden = !this.guests.length;
+      this.guestPrev.innerHTML = this.guests.map((g, i) =>
+        '<button type="button" class="btn btn-ghost auth-guest-back" data-guest="' + i + '" translate="no">' +
+          esc(g.name ? t('Continuar como {name}', {name:g.name}) : t('Continuar con los datos de invitado de este navegador')) + '</button>').join('') +
+        '<p class="auth-guest-or">' + esc(t('O entra como alguien nuevo, con un espacio vacío:')) + '</p>';
     }
 
     /* Paso «invitado»: solo el nombre; sustituye al resto del formulario de acceso. */

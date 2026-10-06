@@ -35,7 +35,7 @@
 
   /* ---------- Lo pendiente, en este navegador ---------- */
 
-  /* null, o {name, open, ids, done, assets, blank}. */
+  /* null, o {name, id, open, ids, done, assets, blank}. */
   function pending(){
     try{
       const s = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null');
@@ -47,9 +47,10 @@
     try{ localStorage.setItem(PENDING_KEY, JSON.stringify(state)); return true; }catch(e){ return false; }
   }
 
-  /* name: nombre del invitado; open: proyecto que tenía abierto. false si no se pudo apuntar. */
-  function request(name, open){
-    return save({name:String(name || ''), open:String(open || '')});
+  /* name e id: el invitado (el id dice cuál es su base de datos; '' = la de siempre); open: proyecto
+     que tenía abierto. false si no se pudo apuntar. */
+  function request(name, open, id){
+    return save({name:String(name || ''), id:String(id || ''), open:String(open || '')});
   }
 
   function clear(){

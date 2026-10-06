@@ -959,6 +959,7 @@
     'El archivo no tiene el formato esperado.':'The file doesn\'t have the expected format.',
     'Hubo un problema importando el archivo — puede que solo se haya importado una parte.':'There was a problem importing the file — only part of it may have been imported.',
     'Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.':'The file\'s passwords weren\'t imported because this board already has its own master password.',
+    'Las contraseñas del archivo no se importaron porque los proyectos de equipo no tienen gestor de contraseñas.':'The file\'s passwords weren\'t imported because team projects don\'t have a password manager.',
     'El archivo no es un JSON válido.':'The file isn\'t valid JSON.',
     'No se pudo leer el archivo.':'Couldn\'t read the file.',
 

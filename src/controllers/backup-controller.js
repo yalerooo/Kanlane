@@ -337,6 +337,9 @@
         if(result.vaultOutcome === 'skipped'){
           msg += ' Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.';
         }
+        if(result.vaultOutcome === 'team'){
+          msg += ' Las contraseñas del archivo no se importaron porque los proyectos de equipo no tienen gestor de contraseñas.';
+        }
         this.view.showStatus(msg);
         toast.success('Copia importada');
         if(result.vaultOutcome === 'imported') this.app.controllers.vault.onImported();

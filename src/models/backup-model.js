@@ -36,12 +36,23 @@
       return m.tasks.isReady() && m.contacts.isReady() && m.vault.isReady() && m.clients.isReady() && m.meetings.isReady();
     }
 
+    /* Un proyecto de equipo no tiene gestor de contraseñas: las reglas no dejan ni leer
+       vault_meta, así que pedirlo haría fallar la copia entera. */
+    inTeam(){
+      const team = Workhub.views && Workhub.views.team;
+      return !!team && team.enabled();
+    }
+
+    vaultMeta(){
+      return this.inTeam() ? Promise.resolve({exists:false}) : this.models.vault.getMeta();
+    }
+
     /* Devuelve {filename, json, counts}. projectName: proyecto abierto (se
        guarda en el archivo y en su nombre). */
     build(projectName){
       const m = this.models;
       return m.tasks.withNotes().then((tasksWithNotes) => {
-        return m.vault.getMeta().then((metaSnap) => {
+        return this.vaultMeta().then((metaSnap) => {
           const data = {
             exportedAt: new Date().toISOString(),
             formatVersion: FORMAT_VERSION,
@@ -70,7 +81,7 @@
       });
     }
 
-    /* Devuelve {counts, vaultOutcome: 'none' | 'skipped' | 'imported'}. */
+    /* Devuelve {counts, vaultOutcome: 'none' | 'skipped' | 'team' | 'imported'}. */
     import(data){
       const m = this.models;
       const counts = {clients:0, tasks:0, notes:0, meetings:0, contacts:0, vault:0};
@@ -151,11 +162,12 @@
       });
 
       return Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises)).then(() => {
-        return m.vault.getMeta();
+        return this.vaultMeta();
       }).then((metaSnap) => {
         const vaultData = data.vault || {};
         const entries = list(vaultData.entries);
         if(!entries.length){ vaultOutcome = 'none'; return; }
+        if(this.inTeam()){ vaultOutcome = 'team'; return; }
         /* Las contraseñas solo se pueden leer con la contraseña maestra con la
            que se cifraron: si este tablero ya tiene la suya, se omiten. */
         if(metaSnap.exists || !vaultData.meta){ vaultOutcome = 'skipped'; return; }

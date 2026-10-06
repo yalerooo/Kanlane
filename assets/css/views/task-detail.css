@@ -239,6 +239,11 @@
 .tv-comment-box:focus-within{border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
 .tv-comment-box textarea{flex:1;min-width:0;min-height:28px;max-height:140px;resize:none;border:0 !important;background:transparent !important;box-shadow:none !important;padding:4px 0;color:var(--ink);font:inherit;line-height:1.45;}
 .tv-comment-box .btn{flex:none;}
+.tv-comment-box .icon-only{flex:none;}
+/* Imagen que se va a adjuntar a la nota. */
+.tv-comment-image{display:flex;align-items:center;gap:10px;margin:0 0 8px;}
+.tv-comment-image[hidden]{display:none;}
+.tv-comment-image img{width:56px;height:56px;object-fit:cover;border-radius:var(--r-md, 8px);border:1px solid var(--line);}
 
 .tv-links{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--surface);}
 .tv-link{display:flex;align-items:center;gap:10px;padding:8px 10px;}

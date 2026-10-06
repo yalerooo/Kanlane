@@ -265,7 +265,7 @@
           });
         });
         if(JSON.stringify(catalog) === JSON.stringify(current.labels || [])) return null;
-        return this.projects.patch(this.app.projectId, {labels:catalog.slice(0, 200)}).catch(() => null);
+        return this.projects.patch(this.app.projectId, {labels:catalog.slice(0, 1000)}).catch(() => null);
       });
     }
 

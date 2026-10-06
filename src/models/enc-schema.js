@@ -38,7 +38,7 @@
     vault: {label: 500}
   };
   const LIST_MAX = {
-    tasks: {labels: 60, checklist: 100, assignees: 50}
+    tasks: {labels: 1000, checklist: 200, assignees: 50}
   };
 
   function has(col){

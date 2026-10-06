@@ -2,10 +2,13 @@
    Se añade a ProjectView (ver project-view.js). */
 (function(){
   const {esc, closest} = Workhub.utils.html;
-  const {PT, GITHUB_TYPE, CHECK_SMALL, ARROW_UP, ARROW_DOWN, TRASH} = Workhub.views.shared.project;
+  const {PT, GITHUB_TYPE, TEMPLATE_TYPE, TRELLO_TYPE, CHECK_SMALL, ARROW_UP, ARROW_DOWN, TRASH} = Workhub.views.shared.project;
+  /* Tipos que crean el proyecto con contenido (una semilla, ver project-seed.js). */
+  const isSeeded = (tipo) => tipo === TEMPLATE_TYPE || tipo === TRELLO_TYPE;
 
   Object.assign(Workhub.views.ProjectView.prototype, {
-    /* handler(id|null, nombre, color|null, config): config son los campos del tipo de proyecto. */
+    /* handler(id|null, nombre, color|null, config, seed): config son los campos del tipo de proyecto;
+       seed, las tareas con las que nace (plantilla o tablero de Trello), si las hay. */
     bindSubmit(handler){
       this.submitHandler = handler;
       /* El botón principal avanza por los pasos del asistente (ver project-privacy-view.js). */
@@ -16,7 +19,8 @@
     },
 
     /* Valida el primer paso y devuelve lo que hay que crear o guardar (null si falta algo):
-       {id, nombre, color, config}, o {github:{nombre, url, token}} para «Desde GitHub». */
+       {id, nombre, color, config}, con seed si nace con tareas (plantilla o Trello), o
+       {github:{nombre, url, token}} para «Desde GitHub». */
     _collect(){
       const nombre = this.nameInput.value.trim();
       if(this.tipo === GITHUB_TYPE){
@@ -25,6 +29,19 @@
         if(!Workhub.services.github.token() && !this.ghToken.value.trim()){ this.ghToken.focus(); this.showError('Pega un token de GitHub.'); return null; }
         this.error.hidden = true;
         return {nombre:nombre, github:{nombre:nombre, url:url, token:this.ghToken.value.trim()}};
+      }
+      if(isSeeded(this.tipo)){
+        const trello = this.tipo === TRELLO_TYPE;
+        const seed = trello ? this.trelloSeed : Workhub.models.ProjectGallery.seed(this.galleryKey);
+        if(!seed){
+          if(trello) this.showError('Elige el archivo JSON que exportaste de Trello.');
+          else this.showError('Elige una plantilla.');
+          return null;
+        }
+        this.error.hidden = true;
+        /* Sin nombre, el del tablero o el de la plantilla. */
+        const name = nombre || seed.nombre || Workhub.t('Proyecto importado');
+        return {id:null, nombre:name, color:this.color, config:Workhub.models.ProjectSeed.config(seed), seed:seed};
       }
       if(!nombre){ this.nameInput.focus(); return null; }
       if(!this.tipo){ this.showError('Elige un tipo de proyecto.'); return null; }
@@ -44,7 +61,7 @@
         if(this.githubHandler) this.githubHandler(p.github);
         return;
       }
-      this.submitHandler(p.id, p.nombre, p.color, p.config);
+      this.submitHandler(p.id, p.nombre, p.color, p.config, p.seed || null);
     },
 
     /* «Conectar con GitHub» (sin token) en el tipo «Desde GitHub». */
@@ -121,6 +138,8 @@
       this.tipo = this.onboarding ? null : cfg.tipo;
       this.ghUrl.value = '';
       this.ghToken.value = '';
+      this.galleryKey = null;
+      this._clearTrello();
       this.stages = cfg.stages.map((st) => Object.assign({}, st));
       this.clients = cfg.clients;
       this.typeNote.hidden = !id;
@@ -169,7 +188,7 @@
       if(tipo === this.tipo) return;
       /* Al pasar un proyecto que ya existe a "personalizado" se parte de sus
          etapas actuales; uno nuevo empieza con las de la plantilla. */
-      if(tipo === PT.CUSTOM_TYPE && this.tipo !== PT.CUSTOM_TYPE && this.tipo !== GITHUB_TYPE){
+      if(tipo === PT.CUSTOM_TYPE && this.tipo !== PT.CUSTOM_TYPE && this.tipo !== GITHUB_TYPE && !isSeeded(this.tipo)){
         const from = this.idInput.value ? this.tipo : PT.CUSTOM_TYPE;
         this.stages = PT.stagesOf(from);
         this.clients = PT.template(from).clients;
@@ -189,6 +208,16 @@
         '<span class="type-body"><span class="type-name">Desde GitHub</span>' +
         '<span class="type-desc">' + (noGh ? 'No se puede sincronizar con GitHub un proyecto con cifrado total.' : 'Crea el proyecto con las columnas y los elementos de un GitHub Project y los mantiene sincronizados.') + '</span>' +
         '<span class="type-chips"><span class="type-chip is-plain">Sincronizado con GitHub</span></span></span></button>';
+      /* Solo al crear: un proyecto que ya existe no se rellena con una plantilla ni con un tablero. */
+      const extra = (tipo, name, desc, chip) =>
+        '<button type="button" class="type-option' + (this.tipo === tipo ? ' is-selected' : '') + '" role="radio" aria-checked="' + (this.tipo === tipo) + '" data-type="' + tipo + '">' +
+        '<span class="type-radio" aria-hidden="true"></span>' +
+        '<span class="type-body"><span class="type-name">' + name + '</span>' +
+        '<span class="type-desc">' + desc + '</span>' +
+        '<span class="type-chips"><span class="type-chip is-plain">' + chip + '</span></span></span></button>';
+      const seeded = this.idInput.value ? '' :
+        extra(TEMPLATE_TYPE, 'Desde una plantilla', 'Un tablero ya montado para lanzamientos, contenidos, ventas, altas de cliente o sprints.', 'Con tareas de ejemplo') +
+        extra(TRELLO_TYPE, 'Importar de Trello', 'Trae un tablero de Trello con sus listas, tarjetas, etiquetas, checklists y comentarios.', 'Desde un archivo JSON');
       this.typesEl.innerHTML = PT.TEMPLATES.map((t) => {
         const on = t.key === this.tipo;
         const chips = t.key === PT.CUSTOM_TYPE
@@ -200,7 +229,59 @@
           '<span class="type-body"><span class="type-name">' + esc(t.name) + '</span>' +
           '<span class="type-desc">' + esc(t.desc) + '</span>' +
           '<span class="type-chips">' + chips + '</span></span></button>';
-      }).join('') + github;
+      }).join('') + seeded + github;
+    },
+
+    /* ---------- Plantillas y Trello ---------- */
+
+    _renderGallery(){
+      this.galleryList.innerHTML = Workhub.models.ProjectGallery.list().map((t) => {
+        const on = t.key === this.galleryKey;
+        return '<button type="button" class="type-option' + (on ? ' is-selected' : '') + '" role="radio" aria-checked="' + on + '" data-gallery="' + t.key + '">' +
+          '<span class="type-radio" aria-hidden="true"></span>' +
+          '<span class="type-body"><span class="type-name">' + esc(t.name) + '</span>' +
+          '<span class="type-desc">' + esc(t.desc) + '</span>' +
+          '<span class="type-chips">' + t.stages.map((st) => '<span class="type-chip"><i style="background:' + PT.colorOf(st.color).dot + '"></i>' + esc(st.label) + '</span>').join('') +
+          '<span class="type-chip is-plain">' + (t.clients ? 'Con clientes' : 'Sin clientes') + '</span></span></span></button>';
+      }).join('');
+    },
+
+    _clearTrello(){
+      this.trelloSeed = null;
+      this.trelloFile.value = '';
+      this.trelloName.textContent = '';
+      this.trelloSummary.hidden = true;
+    },
+
+    /* Lee el archivo elegido y enseña qué trae antes de crear nada. */
+    _readTrello(file){
+      this.trelloSeed = null;
+      this.trelloSummary.hidden = true;
+      this.error.hidden = true;
+      if(!file){ this.trelloName.textContent = ''; return; }
+      this.trelloName.textContent = file.name;
+      file.text().then((text) => {
+        /* Entre tanto se ha elegido otro archivo. */
+        if(this.trelloFile.files[0] !== file) return;
+        const TI = Workhub.models.TrelloImport;
+        let seed;
+        try{ seed = TI.parse(text); }catch(err){
+          this._clearTrello();
+          if(err && err.code === 'few-lists') this.showError('Ese tablero tiene menos de dos listas abiertas: no hay etapas que importar.');
+          else this.showError('Ese archivo no es un tablero exportado de Trello en JSON.');
+          return;
+        }
+        this.trelloSeed = seed;
+        this.trelloSummary.textContent = TI.summary(seed);
+        this.trelloSummary.hidden = false;
+        if(!this.nameInput.value.trim() && seed.nombre){
+          this.nameInput.value = seed.nombre;
+          if(this.color === null) this._renderColors();
+        }
+      }, () => {
+        this._clearTrello();
+        this.showError('No se pudo leer el archivo.');
+      });
     },
 
     _renderCustom(){
@@ -215,9 +296,16 @@
           : 'Se usará el token de GitHub guardado en este navegador.');
         this.ghOauthBox.hidden = has || !Workhub.services.github.canOAuth();
         this.nameInput.placeholder = 'Por defecto, el nombre del proyecto de GitHub';
+      } else if(this.tipo === TRELLO_TYPE){
+        this.nameInput.placeholder = 'Por defecto, el nombre del tablero de Trello';
+      } else if(this.tipo === TEMPLATE_TYPE){
+        this.nameInput.placeholder = 'Por defecto, el nombre de la plantilla';
       } else {
         this.nameInput.placeholder = 'Por ejemplo: Agencia, Freelance, Personal…';
       }
+      this.galleryEl.hidden = this.tipo !== TEMPLATE_TYPE;
+      if(this.tipo === TEMPLATE_TYPE) this._renderGallery();
+      this.trelloEl.hidden = this.tipo !== TRELLO_TYPE;
       const custom = this.tipo === PT.CUSTOM_TYPE;
       this.customEl.hidden = !custom;
       if(!custom) return;

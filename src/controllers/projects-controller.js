@@ -35,7 +35,7 @@
         accept: (id) => this.acceptInvite(id),
         decline: (id) => this.declineInvite(id)
       });
-      this.view.bindSubmit((id, nombre, color, config) => this.save(id, nombre, color, config));
+      this.view.bindSubmit((id, nombre, color, config, seed) => this.save(id, nombre, color, config, seed));
       this.view.bindDelete((id) => this.remove(id));
       /* Cifrado total: pasos de privacidad del asistente y ajustes de privacidad al editar. */
       const crypto = app.controllers.crypto;
@@ -239,7 +239,7 @@
       if(!p || !this.projects.isReady()) return Promise.resolve(false);
       const list = this.labels();
       if(list.some((l) => l.name.toLowerCase() === name.toLowerCase())) return Promise.resolve(true);
-      return this.projects.patch(p.id, {labels:list.concat({name:name, color:color}).slice(0, 200)}).then(() => true, () => false);
+      return this.projects.patch(p.id, {labels:list.concat({name:name, color:color}).slice(0, 1000)}).then(() => true, () => false);
     }
 
     /* Cambia las etapas del proyecto abierto desde el tablero (renombrar, color,
@@ -287,9 +287,14 @@
     createEncrypted(d){
       if(!this.projects.isReady()) return;
       const first = this.firstRun;
+      /* Las tareas con las que nace (plantilla o Trello) se escriben después, ya con el cifrado puesto. */
+      const seed = d.seed || null;
+      d = Object.assign({}, d);
+      delete d.seed;
       this.view.setEncBusy(true);
       if(first) this.firstRunSaving = true;
       this.app.controllers.crypto.create(Object.assign({id:first ? ProjectModel.MAIN_ID : null}, d)).then((id) => {
+        this.seedProject(id, seed, true);
         if(first){
           setTimeout(() => { this.firstRunSaving = false; }, 1500);
           this.finishFirstRun();
@@ -320,7 +325,40 @@
       });
     }
 
-    save(id, nombre, color, config){
+    /* Rellena un proyecto recién creado con las tareas de su semilla (plantilla o tablero de Trello;
+       ver project-seed.js). Espera a que el tablero esté conectado a ese proyecto, con su cifrado si
+       lo tiene, y deja de escribir si se abre otro. */
+    seedProject(id, seed, encrypted){
+      if(!seed || !Array.isArray(seed.tasks) || !seed.tasks.length) return Promise.resolve();
+      const tasks = this.app.models.tasks;
+      const total = seed.tasks.length;
+      const here = () => this.app.projectId === id && tasks.isReady() && !!tasks.cipher === !!encrypted;
+      const ready = new Promise((resolve, reject) => {
+        const until = Date.now() + 60000;
+        const tick = () => {
+          if(here()) resolve();
+          else if(Date.now() > until) reject(new Error('timeout'));
+          else setTimeout(tick, 100);
+        };
+        tick();
+      });
+      return ready.then(() => {
+        const col = tasks.col;
+        return Workhub.models.ProjectSeed.write(tasks, seed, {alive:() => this.app.projectId === id && tasks.col === col});
+      }).then((res) => {
+        if(res.failed){
+          toast.error(Workhub.t('Solo se crearon {done} de {total} tareas. El resto no se pudo guardar.', {done:res.tasks, total:total}), {important:true});
+        } else if(seed.source === 'trello'){
+          toast.success(Workhub.t('Tablero de Trello importado: {n} tareas', {n:res.tasks}), {important:true});
+        }
+        return res;
+      }, () => {
+        toast.error('No se pudieron crear las tareas del proyecto.', {important:true});
+        return null;
+      });
+    }
+
+    save(id, nombre, color, config, seed){
       if(!this.projects.isReady()) return;
       this.view.setBusy(true);
       if(!id && this.firstRun){
@@ -331,6 +369,7 @@
           this.finishFirstRun();
           this.render();
           toast.success('Proyecto «' + nombre + '» creado');
+          this.seedProject(ProjectModel.MAIN_ID, seed, false);
         }).catch(() => {
           this.firstRunSaving = false;
           this.view.setBusy(false);
@@ -339,9 +378,10 @@
         return;
       }
       if(!id){
-        this.createAndOpen(nombre, color, config).then(() => {
+        this.createAndOpen(nombre, color, config).then((ref) => {
           this.view.closeDialog();
           toast.success('Proyecto «' + nombre + '» creado');
+          this.seedProject(ref.id, seed, false);
         }).catch(() => {
           this.view.setBusy(false);
           this.view.showError('No se pudo crear el proyecto. Inténtalo de nuevo.');

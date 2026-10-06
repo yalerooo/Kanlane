@@ -1118,6 +1118,22 @@
       <p class="field-help">Se crea un proyecto nuevo con las columnas y los elementos de ese GitHub Project, y se mantiene sincronizado. Si dejas el nombre vacío se usa el del proyecto de GitHub.</p>
       <p class="gh-note is-warn gh-privacy" id="pGhPrivacy">Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.</p>
     </div>
+    <div class="field" id="pGallery" hidden>
+      <span class="field-label" id="pGalleryLabel">Plantilla</span>
+      <div class="type-picker" id="pGalleryList" role="radiogroup" aria-labelledby="pGalleryLabel"></div>
+      <p class="field-help">El proyecto se crea con las etapas, las etiquetas y unas tareas de ejemplo de la plantilla. Después puedes cambiarlo todo.</p>
+    </div>
+    <div class="field" id="pTrello" hidden>
+      <span class="field-label">Tablero de Trello</span>
+      <div class="trello-file">
+        <label class="btn btn-ghost" for="pTrelloFile">Elegir archivo JSON</label>
+        <input type="file" id="pTrelloFile" accept="application/json,.json" hidden>
+        <span class="trello-file-name" id="pTrelloName" translate="no"></span>
+      </div>
+      <p class="field-help">En Trello, abre el menú del tablero, entra en «Imprimir, exportar y compartir» y elige «Exportar como JSON». El archivo se lee en este navegador; no se envía a Trello ni a ningún otro sitio.</p>
+      <p class="field-help">Se importan las listas como etapas y las tarjetas con su descripción, fecha límite, etiquetas, checklists y comentarios. Los adjuntos, los miembros y las tarjetas archivadas no se importan todavía.</p>
+      <p class="type-note trello-summary" id="pTrelloSummary" translate="no" hidden></p>
+    </div>
     <p class="type-note" id="pTypeNote" hidden>Las tareas cuya etapa ya no exista pasarán a la primera columna. No se pierde ninguna.</p>
     <div class="project-delete-note" id="pDeleteNote" role="alert" hidden>
       <strong>Se borrará todo lo que hay dentro</strong>: tareas y notas, reuniones, contactos, contraseñas y clientes de este proyecto. No se puede deshacer; si quieres conservarlo, exporta antes una copia de seguridad desde el proyecto.
@@ -1964,6 +1980,9 @@
 <script src="../src/models/settings-model.js"></script>
 <script src="../src/models/backup-model.js"></script>
 <script src="../src/models/project-model.js"></script>
+<script src="../src/models/project-seed.js"></script>
+<script src="../src/models/project-gallery.js"></script>
+<script src="../src/models/trello-import.js"></script>
 <script src="../src/models/guest-migration.js"></script>
 <script src="../src/models/account-model.js"></script>
 <script src="../src/models/plugin-model.js"></script>

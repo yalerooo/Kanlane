@@ -7,7 +7,8 @@
   const DEFAULT_TYPE = 'soporte';
   const CUSTOM_TYPE = 'personalizado';
   const MIN_STAGES = 2;
-  const MAX_STAGES = 8;
+  /* El mismo tope que listWithin(data, 'stages', …) de firestore.rules y que guest-migration.js. */
+  const MAX_STAGES = 500;   /* las listas abiertas que admite un tablero de Trello */
 
   /* Colores de etapa: nombre → variables del tema (ya tienen versión oscura). */
   const COLORS = [

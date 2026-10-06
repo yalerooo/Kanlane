@@ -200,6 +200,15 @@
       });
     }
 
+    /* Casillas del texto de una nota. handler(noteId, n, checked). */
+    bindNoteTasks(handler){
+      this.notesList.addEventListener('change', (ev) => {
+        const box = closest(ev.target, 'input[data-md-task]');
+        const note = box && closest(box, '.note-item[data-id]');
+        if(note) handler(note.getAttribute('data-id'), +box.getAttribute('data-md-task'), box.checked);
+      });
+    }
+
     bindDeleteNote(handler){
       this.notesList.addEventListener('click', (ev) => {
         const btn = closest(ev.target, 'button[data-action="delnote"]');
@@ -522,7 +531,7 @@
     return '<div class="note-item" data-id="' + esc(d.id) + '">' +
       (n.kind === 'activity' ? '' : '<button type="button" class="note-del" data-action="delnote" data-id="' + esc(d.id) + '">Eliminar</button>') +
       '<div class="note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (text ? '<div class="note-text' + (n._undecryptable || n.kind === 'activity' ? (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) : ' md" translate="no">' + md.render(text)) + '</div>' : '') +
+      (text ? '<div class="note-text' + (n._undecryptable || n.kind === 'activity' ? (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) : ' md" translate="no">' + md.render(text, {tasks:Workhub.views.team.canEdit() ? 'interactive' : 'static'})) + '</div>' : '') +
       attachments.html(n) +
       '</div>';
   }

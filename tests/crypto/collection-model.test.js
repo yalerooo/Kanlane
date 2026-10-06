@@ -14,7 +14,7 @@ const Workhub = {
   services:{}, models:{}, utils:{}, t:(s) => s, i18n:{locale:'es-ES'},
   views:{team:{enabled:() => false, meUid:() => '', name:() => '', assigned:() => []}}
 };
-['src/core/emitter.js', 'src/utils/dates.js', 'src/utils/pool.js', 'src/services/crypto.js',
+['src/core/emitter.js', 'src/utils/dates.js', 'src/utils/pool.js', 'src/utils/markdown.js', 'src/services/crypto.js',
   'src/services/project-crypto.js', 'src/models/enc-schema.js', 'src/models/project-cipher.js',
   'src/models/collection-model.js', 'src/models/project-templates.js', 'src/models/task-model.js'
 ].forEach((rel) => new Function('Workhub', 'window', 'crypto', read(rel))(Workhub, {crypto:globalThis.crypto}, globalThis.crypto));
@@ -386,6 +386,18 @@ const stripId = (x) => { const c = Object.assign({}, x); delete c.id; return c; 
     assert.ok(mine.notes.every((n) => n.e === undefined), 'la copia no lleva el blob');
     assert.equal(mine.notes.filter((n) => n._undecryptable).length, 1);
     await tasks.removeNote(id, 'movida');
+    /* Casilla de una nota con adjuntos: cambia el texto y la nota sigue sellada, con sus ids en claro. */
+    const listRef = await tasks.addNote(id, 'Lista\n- [ ] uno\n- [ ] dos', [{name:'a.pdf', type:'application/pdf', size:3, image:false, parts:['p1', 'p2']}]);
+    await tasks.toggleNoteTask(id, listRef.id, 1, true);
+    const listRaw = db.rawAll('tasks/' + id + '/notes').get(listRef.id);
+    Object.keys(listRaw).forEach((k) => assert.ok(EncSchema.sealedFields('notes').indexOf(k) !== -1, 'campo de nota permitido: ' + k));
+    assert.deepEqual(listRaw.assetIds, ['p1', 'p2']);
+    assert.ok(JSON.stringify(listRaw).indexOf('Lista') === -1 && JSON.stringify(listRaw).indexOf('a.pdf') === -1);
+    const listOpen = (await tasks.withNotes()).find((t) => t.id === id).notes.find((n) => n.id === listRef.id);
+    assert.equal(listOpen.text, 'Lista\n- [ ] uno\n- [x] dos');
+    assert.deepEqual(listOpen.attachments, [{name:'a.pdf', type:'application/pdf', size:3, image:false, parts:['p1', 'p2']}]);
+    assert.equal(listOpen.kind, 'comment');
+    await tasks.removeNote(id, listRef.id);
     Workhub.views.team = {enabled:() => false, meUid:() => '', name:() => '', assigned:() => []};
     ok('las notas se guardan selladas y llegan a las vistas como {id, data()} en claro');
   }

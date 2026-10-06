@@ -2,7 +2,7 @@
    Todo el texto se escapa antes de dar formato, así que nada de lo escrito llega como etiqueta.
    Admite títulos (#), negrita, cursiva, tachado, código en línea y en bloque (```), enlaces
    (solo http, https y mailto), listas con viñetas y numeradas (anidadas), casillas (- [ ] y
-   - [x]), citas (>) y líneas (---). Un salto de línea suelto se conserva, como en el texto plano.
+   - [x]), citas (>), líneas (---) y tablas (| a | b | con su fila de guiones). Un salto de línea suelto se conserva, como en el texto plano.
    Las imágenes ![alt](url) salen como enlace: no se carga nada de fuera. */
 (function(){
   const ESCAPES = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'};
@@ -14,6 +14,8 @@
   const HEADING = /^(#{1,6})\s+(.+?)\s*#*\s*$/;
   const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
   const QUOTE = /^\s*>\s?(.*)$/;
+  /* Fila de guiones de una tabla: | --- | :---: | ---: | */
+  const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
   const SAFE_URL = /^(https?:\/\/|mailto:)[^\s"<>]+$/i;
   /* Marca de un trozo ya convertido (código, enlaces): no se vuelve a tocar. */
   const MARK = '\u0000';
@@ -42,6 +44,23 @@
       .replace(/(^|[^\w])_(?![\s_])([^\n_]+?)_(?!\w)/g, '$1<em>$2</em>')
       .replace(/~~(?!\s)([^\n]+?)~~/g, '<del>$1</del>');
     return s.replace(new RegExp(MARK + '(\\d+)' + MARK, 'g'), (m, i) => kept[+i]);
+  }
+
+  /* Celdas de una fila de tabla («\|» es una barra escrita, no un corte). */
+  function cells(line){
+    const row = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+    return row.split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
+  }
+
+  const isTableStart = (lines, i) => lines[i].indexOf('|') !== -1 && i + 1 < lines.length &&
+    lines[i + 1].indexOf('-') !== -1 && lines[i + 1].indexOf('|') !== -1 && TABLE_RULE.test(lines[i + 1]) &&
+    cells(lines[i]).length === cells(lines[i + 1]).length;
+
+  /* head y rows: listas de celdas; align: 'left' | 'center' | 'right' | '' por columna. */
+  function tableHtml(head, align, rows){
+    const cell = (tag, text, i) => '<' + tag + (align[i] ? ' class="md-' + align[i] + '"' : '') + '>' + inline(text || '') + '</' + tag + '>';
+    return '<div class="md-table"><table><thead><tr>' + head.map((c, i) => cell('th', c, i)).join('') + '</tr></thead><tbody>' +
+      rows.map((r) => '<tr>' + head.map((c, i) => cell('td', r[i], i)).join('') + '</tr>').join('') + '</tbody></table></div>';
   }
 
   /* items: [{level, ordered, text, task}] → listas anidadas. */
@@ -90,6 +109,16 @@
         continue;
       }
       if(!line.trim()){ flush(); continue; }
+      if(isTableStart(lines, i)){
+        flush();
+        const head = cells(line);
+        const align = cells(lines[i + 1]).map((c) => (/^:-+:$/.test(c) ? 'center' : /-:$/.test(c) ? 'right' : /^:-/.test(c) ? 'left' : ''));
+        const rows = [];
+        for(i += 2; i < lines.length && lines[i].trim() && lines[i].indexOf('|') !== -1; i++) rows.push(cells(lines[i]));
+        i--;
+        out.push(tableHtml(head, align, rows));
+        continue;
+      }
       const item = ITEM.exec(line);
       if(item && !RULE.test(line)){
         if(para.length || quote.length) flush();
@@ -144,7 +173,8 @@
 
   /* Texto sin marcas, para los resúmenes (la tarjeta del tablero). */
   function plain(src){
-    return clean(src).split('\n').filter((l) => !FENCE.test(l) && !RULE.test(l)).map((l) => l
+    return clean(src).split('\n').filter((l) => !FENCE.test(l) && !RULE.test(l) && !(l.indexOf('|') !== -1 && TABLE_RULE.test(l))).map((l) => l
+      .replace(/^\s*\|(.*)\|\s*$/, (m, row) => row.split('|').map((c) => c.trim()).join(' · '))
       .replace(/^\s*#{1,6}\s+/, '')
       .replace(/^\s*>\s?/, '')
       .replace(/^(\s*)(?:[-*+]|\d{1,9}[.)])\s+(?:\[([ xX])\]\s+)?/, (m, pad, box) => pad + (box === undefined ? '· ' : box === ' ' ? '☐ ' : '☑ '))

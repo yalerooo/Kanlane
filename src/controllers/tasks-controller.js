@@ -65,6 +65,13 @@
         /* Con la nota se van sus archivos adjuntos. */
         if(this.currentId) this.tasks.removeNote(this.currentId, noteId).then((ids) => platform.deleteAssets(ids)).catch(() => {});
       });
+      /* Casillas de una nota: marcar una reescribe su «- [ ]» en el texto de la nota. */
+      const toggleNoteTask = (taskId, noteId, n, checked) => {
+        if(!taskId || !Workhub.views.team.canEdit()) return;
+        this.tasks.toggleNoteTask(taskId, noteId, n, checked).catch(() => toast.error('No se pudo guardar el cambio.'));
+      };
+      this.dialog.bindNoteTasks((noteId, n, checked) => toggleNoteTask(this.currentId, noteId, n, checked));
+      this.detail.bindNoteTasks(toggleNoteTask);
       this.dialog.bindLinkPickers(
         (id) => this.link('contacts', id),
         (id) => this.link('vault', id)

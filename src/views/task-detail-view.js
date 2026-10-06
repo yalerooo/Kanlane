@@ -145,6 +145,15 @@
       });
     }
 
+    /* Casillas del texto de una nota. handler(taskId, noteId, n, checked). */
+    bindNoteTasks(handler){
+      this.notes.addEventListener('change', (ev) => {
+        const box = closest(ev.target, 'input[data-md-task]');
+        const note = box && closest(box, '[data-note-id]');
+        if(note && this.taskId) handler(this.taskId, note.getAttribute('data-note-id'), +box.getAttribute('data-md-task'), box.checked);
+      });
+    }
+
     /* handler(taskId, itemId, done) */
     bindChecklist(handler){
       this.checks.addEventListener('change', (ev) => {
@@ -500,9 +509,9 @@
     const mark = n.actorName
       ? '<span class="avatar is-mini tv-note-avatar" style="--h:' + hueFor(n.actorUid || n.actorName) + '" aria-hidden="true" translate="no">' + esc(initials(n.actorName)) + '</span>'
       : '';
-    return '<article class="tv-note' + (mark ? ' has-author' : '') + '">' + mark +
+    return '<article class="tv-note' + (mark ? ' has-author' : '') + '" data-note-id="' + esc(d.id) + '">' + mark +
       '<div class="tv-note-body"><div class="tv-note-meta">' + actor + when + '</div>' +
-      (text || files ? '<div class="tv-bubble">' + (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable">' + esc(text) : ' md" translate="no">' + md.render(text)) + '</div>' : '') + files + '</div>' : '') +
+      (text || files ? '<div class="tv-bubble">' + (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable">' + esc(text) : ' md" translate="no">' + md.render(text, {tasks:Workhub.views.team.canEdit() ? 'interactive' : 'static'})) + '</div>' : '') + files + '</div>' : '') +
       '</div></article>';
   }
 

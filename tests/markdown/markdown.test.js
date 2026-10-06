@@ -97,7 +97,25 @@ test('toggleTask cambia solo la casilla pedida y se salta el código', () => {
   assert.match(md.render(md.toggleTask(src, 2, true), {tasks:'interactive'}), /data-md-task="2" checked/);
 });
 
+test('tablas con alineación, formato dentro y barras escapadas', () => {
+  assert.equal(md.render('| Nombre | Precio |\n|:--|--:|\n| **Uno** | 10 |\n| a \\| b | <b> |\n\nfin'),
+    '<div class="md-table"><table><thead><tr><th class="md-left">Nombre</th><th class="md-right">Precio</th></tr></thead><tbody>' +
+    '<tr><td class="md-left"><strong>Uno</strong></td><td class="md-right">10</td></tr>' +
+    '<tr><td class="md-left">a | b</td><td class="md-right">&lt;b&gt;</td></tr></tbody></table></div><p>fin</p>');
+  /* Sin barras en los bordes, y con una fila corta y otra larga. */
+  assert.equal(md.render('uno|dos\n:-:|---\n1|\n1|2|3'),
+    '<div class="md-table"><table><thead><tr><th class="md-center">uno</th><th>dos</th></tr></thead><tbody>' +
+    '<tr><td class="md-center">1</td><td></td></tr><tr><td class="md-center">1</td><td>2</td></tr></tbody></table></div>');
+});
+
+test('una barra suelta o una línea de guiones no hacen una tabla', () => {
+  assert.equal(md.render('a | b sin tabla\notra'), '<p>a | b sin tabla<br>otra</p>');
+  assert.equal(md.render('texto | más\n---'), '<p>texto | más</p><hr>');
+  assert.equal(md.render('| a | b |\n|---|'), '<p>| a | b |<br>|---|</p>');
+});
+
 test('plain quita las marcas para los resúmenes', () => {
+  assert.equal(md.plain('| A | B |\n|---|---|\n| 1 | 2 |'), 'A · B\n1 · 2');
   assert.equal(md.plain('# Título\n**negrita** y [enlace](https://a.com)\n- [ ] pendiente\n- [x] hecha\n- viñeta\n```\ncódigo\n```'),
     'Título\nnegrita y enlace\n☐ pendiente\n☑ hecha\n· viñeta\ncódigo');
   assert.equal(md.plain('texto normal_con_guiones'), 'texto normal_con_guiones');

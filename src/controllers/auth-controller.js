@@ -340,6 +340,8 @@
         /* Sesión caducada o cerrada desde otra pestaña: fuera las claves de cifrado que no sean de confianza. */
         this.purgeKeys();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
+        /* Se acaba de eliminar la cuenta desde Ajustes: se confirma aquí, ya sin sesión. */
+        if(Workhub.controllers.AccountController.takeDeleted()) this.view.showMessage(Workhub.t('Tu cuenta y todo tu contenido se han eliminado.'), true);
         this.previousGuests().then((list) => this.view.showGuests(list));
         /* Viene de «Crear cuenta y llevarme mis datos»: se avisa de que se copiarán al entrar. */
         const move = migration.pending();

@@ -737,6 +737,40 @@
                 </div>
               </div>
             </div>
+            <div class="settings-row is-stack" id="accountCard" hidden>
+              <div>
+                <h3>Tu cuenta</h3>
+                <p>Tu nombre y tu foto. La foto que subas la ves solo tú; en los equipos aparece la de tu proveedor de acceso o tus iniciales.</p>
+              </div>
+              <form class="account-profile" id="accountProfile" novalidate>
+                <span class="avatar account-photo" id="accountPhoto" aria-hidden="true"></span>
+                <div class="account-photo-actions">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnAccountPhoto">Cambiar foto</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnAccountPhotoRemove" hidden>Quitar foto</button>
+                  <input type="file" id="accountPhotoFile" accept="image/*" hidden>
+                </div>
+                <div class="field account-name">
+                  <label for="accountNameInput">Nombre</label>
+                  <input id="accountNameInput" maxlength="80" autocomplete="name">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" id="btnAccountName">Guardar nombre</button>
+                <p class="account-msg" id="accountProfileMsg" role="status" hidden></p>
+              </form>
+              <div class="account-line">
+                <div>
+                  <h3>Contraseña</h3>
+                  <p id="accountPasswordDesc"></p>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btnAccountPassword">Cambiar contraseña</button>
+              </div>
+              <div class="account-line">
+                <div>
+                  <h3>Eliminar cuenta</h3>
+                  <p>Borra tu cuenta y todo tu contenido de forma definitiva. Si quieres conservar algo, descarga antes una copia de cada proyecto en «Copia de seguridad».</p>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm" id="btnAccountDelete">Eliminar mi cuenta</button>
+              </div>
+            </div>
             <div class="settings-row" id="installRow" hidden>
               <div>
                 <h3>Aplicación</h3>
@@ -769,7 +803,7 @@
               </div>
               <div class="privacy-links">
                 <p class="privacy-note"><a href="/legal/privacidad/" target="_blank" rel="noopener">Política de privacidad</a> · <a href="/legal/terminos/" target="_blank" rel="noopener">Términos y condiciones</a> · <a href="/legal/cookies/" target="_blank" rel="noopener">Política de cookies</a></p>
-                <p class="privacy-note">Para ejercer tus derechos de protección de datos o cerrar tu cuenta, escribe al correo de contacto que figura en la política de privacidad.</p>
+                <p class="privacy-note">Tu nombre, tu foto y tu contraseña se cambian en «Cuenta y datos», y ahí mismo puedes eliminar tu cuenta con todo su contenido. Para ejercer el resto de tus derechos de protección de datos, escribe al correo de contacto que figura en la política de privacidad.</p>
               </div>
             </div>
           </div>
@@ -1333,6 +1367,58 @@
   </form>
 </dialog>
 
+<dialog id="dlgAccountPassword" aria-labelledby="apTitle">
+  <form class="dlg-inner" id="apForm" novalidate>
+    <h2 id="apTitle">Cambiar contraseña</h2>
+    <p class="dlg-lead">Es la contraseña con la que entras en Kanlane. No cambia la contraseña maestra del gestor de contraseñas ni la de cifrado de un proyecto.</p>
+    <div class="field">
+      <label for="apCurrent">Contraseña actual</label>
+      <input id="apCurrent" type="password" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label for="apNew">Contraseña nueva</label>
+      <input id="apNew" type="password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <div class="field">
+      <label for="apRepeat">Repite la contraseña nueva</label>
+      <input id="apRepeat" type="password" autocomplete="new-password" minlength="8" required>
+    </div>
+    <p class="lock-error" id="apError" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="apCancel" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="apSubmit">Cambiar contraseña</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgAccountDelete" aria-labelledby="adTitle">
+  <form class="dlg-inner" id="adForm" novalidate>
+    <h2 id="adTitle">Eliminar tu cuenta</h2>
+    <p class="dlg-lead">Esto no se puede deshacer. Se borrará para siempre:</p>
+    <ul class="account-delete-list" id="adSummary"></ul>
+    <p class="type-note">Lo que hayas enviado a GitHub sigue en GitHub: para quitarlo, bórralo allí.</p>
+    <div class="field" id="adPassField">
+      <label for="adPass">Tu contraseña</label>
+      <input id="adPass" type="password" autocomplete="current-password">
+    </div>
+    <p class="type-note" id="adProvider" hidden></p>
+    <div class="field">
+      <label for="adWord">Escribe ELIMINAR para confirmar</label>
+      <input id="adWord" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+    <p class="lock-error" id="adError" role="alert" hidden></p>
+    <p class="account-progress" id="adProgress" role="status" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="adCancel" data-dismiss>Cancelar</button>
+        <button type="submit" class="btn btn-danger" id="adSubmit" disabled>Eliminar cuenta y datos</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgConfirm" aria-labelledby="confirmTitle">
   <div class="dlg-inner">
     <h2 id="confirmTitle">¿Seguro?</h2>
@@ -1737,6 +1823,7 @@
 <script src="../src/models/backup-model.js"></script>
 <script src="../src/models/project-model.js"></script>
 <script src="../src/models/guest-migration.js"></script>
+<script src="../src/models/account-model.js"></script>
 <script src="../src/models/plugin-model.js"></script>
 <script src="../src/models/github-sync.js"></script>
 <script src="../src/models/team-model.js"></script>
@@ -1765,6 +1852,7 @@
 <script src="../src/views/toast-view.js"></script>
 <script src="../src/views/command-palette-view.js"></script>
 <script src="../src/views/auth-view.js"></script>
+<script src="../src/views/account-view.js"></script>
 <script src="../src/views/project-view.js"></script>
 <script src="../src/views/project-dialog-view.js"></script>
 <script src="../src/views/project-lock-view.js"></script>
@@ -1796,6 +1884,7 @@
 <script src="../src/controllers/project-convert-controller.js"></script>
 <script src="../src/controllers/team-controller.js"></script>
 <script src="../src/controllers/command-controller.js"></script>
+<script src="../src/controllers/account-controller.js"></script>
 <script src="../src/controllers/auth-controller.js"></script>
 <script src="../src/controllers/app-controller.js"></script>
 

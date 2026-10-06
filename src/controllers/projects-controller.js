@@ -80,6 +80,8 @@
       if(!this.projects.loaded || !this.app.rootDb || this.firstRun || this.firstRunSaving) return;
       /* Se están copiando a la cuenta los proyectos del modo invitado (AuthController): ya llegan. */
       if(this.app.controllers.auth && this.app.controllers.auth.migrating) return;
+      /* Se está eliminando la cuenta (AccountController): los proyectos desaparecen a propósito. */
+      if(this.app.closingAccount) return;
       /* Se eliminó el último proyecto: hay que crear uno nuevo. */
       if(!this.projects.list().length){ this.startFirstRun(); return; }
       if(this.firstRunChecked) return;

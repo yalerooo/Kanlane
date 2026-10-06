@@ -5,7 +5,11 @@
    así que si alguien cambia un texto de la interfaz la traducción se pierde sin
    avisar. Este script lo detecta:
    - textos y atributos (placeholder, title, aria-label, alt) de app/index.html;
-   - los textos literales que se pasan a Workhub.t('…') en src/.
+   - los textos literales que se pasan a Workhub.t('…') en src/;
+   - los textos literales que src/ pinta sin pasar por Workhub.t (los traduce el observador de
+     la página): textContent = '…', showError('…'), showStatus('…'), toast.error('…')…
+   Las palabras sueltas también cuentan: «Exportar» o «Hecho» se quedaban sin traducir porque
+   se tomaban por nombres propios. Los que de verdad no se traducen van en IGNORE.
    Un texto cuenta como traducido si está en el diccionario o encaja con algún patrón.
 
    Uso:  node scripts/check-i18n.js           lista lo que falta
@@ -37,14 +41,13 @@ function translated(text){
 }
 
 /* Ejemplos de campos, nombres propios o del sistema: no se traducen. */
-const IGNORE = new Set(['XXXX-XXXX-XXXX-…', 'ghp_…', 'Español', 'start-workhub.bat']);
+const IGNORE = new Set(['XXXX-XXXX-XXXX-…', 'XXXX', 'ghp_…', 'project', 'read:project', 'Español', 'English', 'start-workhub.bat']);
 
 function needsTranslation(text){
   if(IGNORE.has(text)) return false;
   if(!/[a-záéíóúñü]{3,}/i.test(text)) return false;
   if(/^[\w.+-]+@[\w.-]+$/.test(text)) return false;       /* correos */
   if(/^https?:\/\//.test(text)) return false;
-  if(/^[A-Z]\w*$/.test(text)) return false;                /* nombres propios de una palabra */
   return true;
 }
 
@@ -57,8 +60,11 @@ function clean(t){ return t.replace(/\s+/g, ' ').trim(); }
 function note(text, where){
   const parts = text.split(SEP);
   const whole = clean(parts.join(''));
-  /* Con etiquetas en línea vale la frase entera o cada trozo por separado. */
-  if(parts.length > 1 && (translated(whole) || parts.every((p) => { const t = clean(p); return !needsTranslation(t) || translated(t); }))) return;
+  /* Con etiquetas en línea cada trozo es un texto aparte en la página: tiene que estar cada uno. */
+  if(parts.length > 1){
+    parts.forEach((p) => { if(clean(p)) note(clean(p), where); });
+    return;
+  }
   if(!whole || !needsTranslation(whole) || translated(whole) || found.has(whole)) return;
   found.set(whole, where);
 }
@@ -93,6 +99,9 @@ walk(path.join(root, 'src'), []).forEach((file) => {
     const text = (c[1] != null ? c[1] : c[2]).replace(/\\(.)/g, '$1');
     note(text, path.relative(root, file));
   }
+  /* Textos completos (no trozos que se unen con +) que se pintan tal cual. */
+  const sink = /(?:\.textContent\s*=|\b(?:showError|showStatus|showLockError|showSecretError|confirm|toast\.\w+)\()\s*'((?:[^'\\\n]|\\.)*)'\s*[;),]/g;
+  while((c = sink.exec(src))) note(c[1].replace(/\\(.)/g, '$1'), path.relative(root, file));
 });
 
 /* ---------- Resultado ---------- */

@@ -620,7 +620,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Idioma inicial:** el del navegador (si es español, español; si no, inglés).
 - **Guardado:** en `localStorage['workhub_lang']` y en la cuenta (campo `lang` de settings). Cambiarlo recarga la app.
 - **Selectores:** en Ajustes (`#langSegment`) y en la pantalla de login (`#authLang`).
-- **Fechas:** usan `Workhub.i18n.locale` (`es-ES` / `en-US`).
+- **Fechas:** usan `Workhub.i18n.locale` (`es-ES` / `en-US`). Nunca `toLocaleString()` sin idioma: saldría en el del navegador, no en el de la app.
+- **Columnas por idioma:** las etapas de las plantillas se guardan en español y se enseñan traducidas mientras conserven su clave y su nombre (`ProjectTemplates.stageText`); una columna renombrada es dato del usuario y sale tal cual. `TaskModel.STATUS[i].label` es el nombre para enseñar y `.raw` el guardado. Al guardar, `normalizeStages` devuelve al español el nombre de plantilla escrito en otro idioma, para que cada persona del equipo lo vea en el suyo.
 - **Para añadir un idioma:**
   1. Crea `src/i18n/xx.js` con `Workhub.i18n.add('xx', {...}, [...])`.
   2. Añádelo a `LANGS` en `i18n.js`.
@@ -628,7 +629,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   4. Añade un botón en el selector de Ajustes.
 - **Nota:** los textos con datos se traducen con claves con marcadores (`Workhub.t('hace {n} min', {n})` necesita esa clave exacta en `en.js`) o con patrones regex al final de `en.js`. En `en.js` las barras invertidas de los patrones deben escaparse bien al generarlos con scripts.
 - **Pendiente:** comprobar en producción el selector de idioma de la pantalla de login (no se probó con Firebase real).
-- **Comprobar que no falta ninguna traducción:** `node scripts/check-i18n.js` (con `--strict` sale con error si falta alguna). Revisa `index.html` y los `Workhub.t('…')` de `src/` contra `en.js`. Ejecútalo después de cambiar un texto de la interfaz: si se cambia el español, la traducción exacta se pierde sin avisar.
+- **Comprobar que no falta ninguna traducción:** `node scripts/check-i18n.js` (con `--strict` sale con error si falta alguna). Revisa `index.html`, los `Workhub.t('…')` de `src/` y los textos completos que se pintan sin `Workhub.t` (`textContent = '…'`, `showError('…')`, `toast.error('…')`, `confirm('…')`) contra `en.js`; las palabras sueltas también cuentan y cada trozo de una frase partida por `<b>` o `<code>` tiene que estar por separado. Un `confirm()` nativo no lo ve el observador: va siempre con `Workhub.t`. Ejecútalo después de cambiar un texto de la interfaz: si se cambia el español, la traducción exacta se pierde sin avisar.
 
 ## 8. Historial de pull requests (fusionados hasta el #83)
 

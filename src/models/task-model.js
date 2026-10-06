@@ -8,7 +8,8 @@
 
   const stageView = (s) => {
     const c = Workhub.models.ProjectTemplates.colorOf(s.color);
-    return {key:s.key, label:s.label, done:!!s.done, limit:s.limit || 0, color:c.key, dot:c.dot, bg:c.bg, fg:c.fg};
+    /* label: el nombre para enseñar (ver ProjectTemplates.stageText); raw: el guardado. */
+    return {key:s.key, label:Workhub.models.ProjectTemplates.stageText(s), raw:s.label, done:!!s.done, limit:s.limit || 0, color:c.key, dot:c.dot, bg:c.bg, fg:c.fg};
   };
 
   const ORDER_STEP = 1024;

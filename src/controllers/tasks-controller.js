@@ -112,7 +112,7 @@
       const before = this.tasks.find(id);
       const oldStatus = before && before.status;
       this.tasks.move(id, status, beforeId);
-      if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).label + '»');
+      if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).raw + '»');
     }
 
     /* image: archivo de imagen adjunto (opcional); se sube antes de guardar la nota. */

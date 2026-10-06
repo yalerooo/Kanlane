@@ -281,6 +281,53 @@
     return auth.signOut();
   }
 
+  /* ---------- Gestión de la cuenta (Ajustes → «Tu cuenta») ---------- */
+
+  const PROVIDER_KEYS = {'google.com':'google', 'github.com':'github', 'microsoft.com':'microsoft', 'apple.com':'apple'};
+
+  function gone(){
+    const err = new Error('no-user');
+    err.code = 'auth/no-current-user';
+    return Promise.reject(err);
+  }
+
+  /* ¿La cuenta tiene contraseña propia? (las que solo entran con Google, GitHub… no) */
+  function hasPassword(user){
+    return ((user || auth.currentUser || {}).providerData || []).some((p) => p.providerId === 'password');
+  }
+
+  function updateName(name){
+    return auth.currentUser ? auth.currentUser.updateProfile({displayName:name}) : gone();
+  }
+
+  /* Cambiar la contraseña o eliminar la cuenta exigen haber demostrado hace poco que la cuenta es
+     tuya: con la contraseña si la tiene, o con la ventana de su proveedor de acceso. */
+  function reauthenticate(password){
+    const user = auth.currentUser;
+    if(!user) return gone();
+    if(hasPassword(user)){
+      if(!password){
+        const err = new Error('missing-password');
+        err.code = 'auth/missing-password';
+        return Promise.reject(err);
+      }
+      return user.reauthenticateWithCredential(fb.auth.EmailAuthProvider.credential(user.email, password));
+    }
+    const key = (user.providerData || []).map((p) => PROVIDER_KEYS[p.providerId]).filter(Boolean)[0];
+    if(!key) return gone();
+    return user.reauthenticateWithPopup(providerFor(key));
+  }
+
+  function changePassword(current, next){
+    return reauthenticate(current).then(() => auth.currentUser.updatePassword(next));
+  }
+
+  /* Elimina la cuenta de Firebase Authentication. Su contenido se borra antes (AccountModel.wipe):
+     sin cuenta ya no habría permiso para hacerlo. */
+  function deleteUser(){
+    return auth.currentUser ? auth.currentUser.delete() : gone();
+  }
+
   /* ---------- Interfaz que usa la app (window.claude) ---------- */
 
   /* Base de datos acotada a un documento: db.collection('tasks'),
@@ -500,7 +547,7 @@
 
   Workhub.services.firebase = {
     isEnabled, init, githubToken, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
-    resetPassword, signOut, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
+    resetPassword, signOut, hasPassword, updateName, reauthenticate, changePassword, deleteUser, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
     currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),
     /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */

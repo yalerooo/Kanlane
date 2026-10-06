@@ -57,6 +57,7 @@
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
       this.controllers.reminders = new C.RemindersController(this, new V.RemindersView());
+      this.controllers.account = new C.AccountController(this, new V.AccountView());
       this.controllers.projects.render();
 
       /* Contadores de la barra lateral. */
@@ -152,7 +153,7 @@
       prefs.write(TAB_PREF, view);
       const c = this.controllers;
       if(view === 'tasks') c.tasks.board.fitHeight();
-      if(view === 'settings') c.settings.render();
+      if(view === 'settings'){ c.settings.render(); c.account.render(); }
       if(view === 'calendar') c.calendar.render();
       if(view === 'clients') c.clients.render();
       if(view === 'vault') c.vault.onShow();
@@ -378,6 +379,7 @@
         this.models.team.connect();
         this.connectProject();
         this.controllers.backup.scheduleAuto();
+        this.controllers.account.start();
 
         /* "Contactos" ahora está dentro de "Clientes". */
         let savedTab = prefs.read(TAB_PREF, null);

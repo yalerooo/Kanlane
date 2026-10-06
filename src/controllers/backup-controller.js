@@ -206,7 +206,7 @@
     }
 
     autoSave(){
-      if(document.hidden || !this.backup.isReady()) return;
+      if(document.hidden || !this.backup.isReady() || this.app.closingAccount) return;
       if(this.app.controllers.projects.firstRun ||
           !this.app.models.projects.list().some((project) => project.id === this.app.projectId)) return;
       this.autoCloudSave();

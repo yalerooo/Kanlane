@@ -79,6 +79,14 @@
       });
     }
 
+    /* Deja de sincronizar con la cuenta (al eliminarla: si no, al ver que las preferencias ya no
+       están, las volvería a subir). Lo elegido sigue valiendo en este navegador. */
+    disconnect(){
+      if(typeof this.stop === 'function') this.stop();
+      this.stop = null;
+      this.ref = null;
+    }
+
     /* Idioma de la cuenta: en un dispositivo nuevo se adopta al entrar
        (recargando una sola vez); después, cada dispositivo lo cambia al guardar. */
     adoptLang(data){

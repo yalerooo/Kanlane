@@ -87,6 +87,8 @@ jobs:
         run: npm ci --prefix tests/rules --no-audit --no-fund
       - name: Alta y cofre con Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
+      - name: Nombre, foto, contraseña y eliminación de la cuenta, con Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/account.js"
       - name: Un invitado crea su cuenta y se lleva sus datos, con Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/guest-migrate.js"
       - name: Proyecto con cifrado total en Firebase emulado

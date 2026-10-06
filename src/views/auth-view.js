@@ -666,16 +666,20 @@
       $('btnGuestUpgradeSide').hidden = false;
     }
 
-    showAccount(user){
+    /* ownPhoto: la foto que la persona ha subido en Ajustes (data: URL), si tiene; manda sobre la
+       del proveedor de acceso. */
+    showAccount(user, ownPhoto){
       const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario');
       this.accountBox.hidden = false;
       this.accountName.textContent = name;
       this.accountMail.textContent = user.email || '';
       /* La foto viene del proveedor (Google, GitHub): solo se acepta https. */
-      const photo = Workhub.utils.urls.safeUrl(user.photoURL);
+      const fromProvider = Workhub.utils.urls.safeUrl(user.photoURL);
+      const own = Workhub.models.AccountModel.isPhoto(ownPhoto) ? ownPhoto : '';
+      const photo = own || (fromProvider && fromProvider.indexOf('https:') === 0 ? fromProvider : '');
       this.accountAvatar.style.setProperty('--h', hueFor(user.uid));
       this.accountAvatar.textContent = '';
-      if(photo && photo.indexOf('https:') === 0){
+      if(photo){
         const img = document.createElement('img');
         img.alt = '';
         img.referrerPolicy = 'no-referrer';

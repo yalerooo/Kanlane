@@ -14,6 +14,9 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
+    // Una dirección que no existe responde 404 con la página 404.html más cercana
+    // (en/404.html para /en/…, 404.html para el resto). Sin esto el 404 va vacío.
+    "not_found_handling": "404-page",
     // Solo las páginas pasan antes por el Worker (redirecciones entre dominios y
     // cabecera noindex del espejo). Los scripts, estilos e imágenes se sirven
     // directamente, sin gastar peticiones del Worker (100 000 al día en el plan gratuito).

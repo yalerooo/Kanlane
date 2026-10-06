@@ -28,6 +28,16 @@ const path = require('node:path');
 
   /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
   const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
+
+  /* Una dirección que no existe: 404 con página propia (y con enlace al inicio), no un cuerpo vacío. */
+  assert.match(wrangler, /"not_found_handling":\s*"404-page"/);
+  for(const [file, home] of [['404.html', '/'], ['en/404.html', '/en/']]){
+    const html = fs.readFileSync(path.join(__dirname, '../..', file), 'utf8');
+    assert.ok(html.includes('<a class="nf-btn is-primary" href="' + home + '">'), file + ' enlaza al inicio');
+    assert.match(html, /<meta name="robots" content="noindex/, file + ' no se indexa');
+    assert.ok(!/(?:href|src)="(?!\/|https?:)/.test(html), file + ' solo usa rutas absolutas');
+  }
+  ok('las direcciones que no existen tienen página 404 propia');
   for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm', 'en/client-password-manager']){
     const top = landing.split('/')[0];
     assert.ok(wrangler.includes('"/' + top + '"'), top + ' sin barra final pasa por el Worker');

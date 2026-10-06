@@ -1,0 +1,25 @@
+/* ---------- Página no encontrada (404.html y en/404.html) ----------
+   Un mensaje centrado con el camino de vuelta. Usa los mismos tokens que la app. */
+body.not-found{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:32px 20px;}
+.nf{width:100%;max-width:460px;text-align:center;}
+.nf-brand{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);text-decoration:none;}
+.nf-brand img{display:block;border-radius:8px;}
+.nf-code{margin:36px 0 0;font-size:84px;font-weight:600;letter-spacing:-0.05em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+.nf h1{margin:14px 0 10px;font-size:26px;font-weight:600;letter-spacing:-0.03em;line-height:1.2;text-wrap:balance;}
+.nf-lead{margin:0 0 26px;font-size:15px;line-height:1.65;color:var(--ink-soft);text-wrap:pretty;}
+.nf-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.nf-btn{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font-size:14.5px;font-weight:500;line-height:1;text-decoration:none;white-space:nowrap;transition:background .15s ease, opacity .15s ease, transform .15s ease;}
+.nf-btn:hover{background:var(--hover);}
+.nf-btn.is-primary{border-color:transparent;background:var(--accent-solid);color:var(--accent-ink);font-weight:550;}
+.nf-btn.is-primary:hover{background:var(--accent-solid);opacity:.88;}
+.nf-btn:active{transform:translateY(1px);}
+.nf-alt{margin:30px 0 0;font-size:13px;}
+.nf-alt a{color:var(--ink-faint);text-decoration:none;}
+.nf-alt a:hover{color:var(--accent);text-decoration:underline;}
+.nf a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--r-md);}
+
+@media (max-width:480px){
+  .nf-code{font-size:64px;}
+  .nf h1{font-size:22px;}
+  .nf-actions .nf-btn{flex:1 1 100%;}
+}

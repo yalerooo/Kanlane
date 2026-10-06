@@ -26,7 +26,7 @@ const ROOT = path.resolve(__dirname, '..');
 /* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
 /* Las páginas de captación e idiomas se detectan igual que en el build (scripts/site-pages.js).
    sitemap.xml no se sirve aquí: solo existe generado en dist/ (node scripts/build-public.js). */
-const SERVED = ['index.html', 'app', 'demo'].concat(pageDirs(ROOT), ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
+const SERVED = ['index.html', '404.html', 'app', 'demo'].concat(pageDirs(ROOT), ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
@@ -110,8 +110,10 @@ const server = http.createServer((req, res) => {
   const first = url.split('/')[1];
   const file = path.join(ROOT, url);
   if(SERVED.indexOf(first) === -1 || !file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()){
-    res.statusCode = 404;
-    return res.end('No encontrado: ' + url);
+    /* Como en producción: 404 con la página 404.html más cercana (en/404.html para /en/…). */
+    const page = path.join(ROOT, first === 'en' ? 'en/404.html' : '404.html');
+    res.writeHead(404, {'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store'});
+    return res.end(fs.readFileSync(page, 'utf8'));
   }
 
   const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';

@@ -1483,6 +1483,26 @@
   </div>
 </dialog>
 
+<dialog id="dlgGhConsent" aria-labelledby="ghConsentTitle">
+  <div class="dlg-inner">
+    <h2 id="ghConsentTitle">Antes de sincronizar con GitHub</h2>
+    <ul class="gh-points gh-consent-points">
+      <li id="ghConsentColumns">Importar desde GitHub reemplaza las columnas actuales del tablero por las del proyecto de GitHub.</li>
+      <li>El título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto. Las contraseñas no se envían.</li>
+    </ul>
+    <label class="check-row gh-consent-check"><input type="checkbox" id="ghConsentCheck">
+      <span id="ghConsentLabelBoth">Entiendo que los datos se envían sin cifrar y que importar reemplaza las columnas</span>
+      <span id="ghConsentLabelSend" hidden>Entiendo que los datos se envían sin cifrar</span>
+    </label>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnGhConsentCancel" data-dismiss>Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnGhConsentOk" disabled>Activar sincronización</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlgPluginForm" aria-labelledby="pfTitle">
   <form class="dlg-inner" id="formPluginForm" method="dialog" novalidate>
     <div class="pf-who" id="pfWho"></div>

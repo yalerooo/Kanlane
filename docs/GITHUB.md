@@ -57,6 +57,8 @@ Es lo que dicen la [política de privacidad](../legal/privacidad/index.html) («
 
 Texto del aviso en la app (`app/index.html` `#pGhPrivacy` y `src/views/github-view.js` `PRIVACY`, traducido en `src/i18n/en.js`): «Al sincronizar, el título, la descripción, la columna y las etiquetas de las tareas se envían a GitHub sin cifrar y se quedan allí aunque desvincules el proyecto.» Si cambia lo que se sincroniza, hay que cambiar a la vez este apartado, el aviso y la política.
 
+**Aviso antes de activar** (`app/index.html` `#dlgGhConsent`, `GithubView.consent`): al pulsar *Enlazar proyecto* o al crear un proyecto *Desde GitHub* se abre un diálogo que repite lo anterior y, si el destino es un proyecto que ya existe, que sus columnas se sustituyen. El botón *Activar sincronización* solo se habilita al marcar la casilla; *Cancelar* cierra sin guardar el token ni llamar a GitHub. Se muestra cada vez que se enlaza, no al sincronizar un proyecto ya enlazado. Prueba: `node tests/e2e/github-consent.js` (con GitHub interceptado).
+
 Se sincroniza al abrir el proyecto, al volver a la pestaña, cada 2 minutos y unos segundos después de cambiar algo en Kanlane. También con el botón **GitHub** de la barra de Tareas o **Sincronizar ahora** en Ajustes.
 
 ## En un proyecto de equipo

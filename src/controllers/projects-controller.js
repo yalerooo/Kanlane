@@ -67,6 +67,8 @@
           this.view.closeDialog();
         }).catch((err) => {
           this.view.setBusy(false);
+          /* Aviso de GitHub cancelado: se vuelve al formulario sin error. */
+          if(err && err.code === 'cancelled') return;
           this.view.showError((err && err.message) || 'No se pudo conectar con GitHub.');
         });
       });

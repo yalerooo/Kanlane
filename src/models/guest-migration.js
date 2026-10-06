@@ -35,7 +35,7 @@
 
   /* ---------- Lo pendiente, en este navegador ---------- */
 
-  /* null, o {name, id, open, ids, done, assets, blank}. */
+  /* null, o {name, id, open, at, ids, done, assets, blank}. */
   function pending(){
     try{
       const s = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null');
@@ -48,9 +48,10 @@
   }
 
   /* name e id: el invitado (el id dice cuál es su base de datos; '' = la de siempre); open: proyecto
-     que tenía abierto. false si no se pudo apuntar. */
+     que tenía abierto. Se apunta cuándo se pidió (at): los datos solo van a una cuenta creada
+     después (AuthController). false si no se pudo apuntar. */
   function request(name, open, id){
-    return save({name:String(name || ''), id:String(id || ''), open:String(open || '')});
+    return save({name:String(name || ''), id:String(id || ''), open:String(open || ''), at:Date.now()});
   }
 
   function clear(){
@@ -91,10 +92,12 @@
     return data;
   }
 
-  /* o: {from, to, assets, state, save}
+  /* o: {from, to, assets, state, save, onPlan}
      - from / to: base de datos del invitado y de la cuenta (sin acotar a ningún proyecto).
      - assets: {read(id) → Promise<Blob|null>, upload(blob) → Promise<{id}>}: imágenes de las notas.
      - state: lo pendiente (pending()); save(state) lo guarda tras cada paso.
+     - onPlan({projects, open}): antes de escribir nada, qué proyectos va a tener la cuenta (ya con
+       su id) y cuál se abrirá; sirve para entrar en la app si la copia tarda.
      Devuelve {projects:[{id, nombre, …}], open, counts:{projects, tasks}, skipped}: `open` es el
      proyecto de la cuenta que corresponde al que el invitado tenía abierto. Se rechaza ante un
      fallo pasajero, con lo ya hecho apuntado en state. */
@@ -171,14 +174,28 @@
       return ref.get().then((snap) => (snap.exists ? null : put(ref, data)));
     };
 
+    /* El id de cada proyecto en la cuenta se decide (y se apunta) antes de escribir nada. */
+    const plan = (list) => {
+      list.forEach((g) => {
+        if(!state.ids[g.id]) state.ids[g.id] = to.collection('projects').doc().id;
+        g.data = projectDoc(g.doc);
+        out.push(Object.assign({id:state.ids[g.id], from:g.id}, g.data));
+      });
+      keep();
+      if(o.onPlan) o.onPlan({projects:out, open:opened()});
+    };
+    const opened = () => out.find((p) => p.from === state.open) || out[0] || null;
+
+    /* La cuenta estaba vacía: su proyecto principal, que quedaría vacío, no se enseña. Salvo que
+       entre medias se haya creado (una copia que se cortó y la persona siguió por su cuenta). */
+    const hideEmptyMain = () => {
+      const ref = to.collection('projects').doc(P.MAIN_ID);
+      return ref.get().then((snap) => (snap.exists ? null : put(ref, {deleted:true, createdAt:0})));
+    };
+
     const copyProject = (g) => {
-      if(!state.ids[g.id]){
-        state.ids[g.id] = to.collection('projects').doc().id;
-        keep();
-      }
       const id = state.ids[g.id];
-      const data = projectDoc(g.doc);
-      out.push(Object.assign({id:id, from:g.id}, data));
+      const data = g.data;
       if(state.done[g.id]) return Promise.resolve();
       const src = P.scope(from, g.id);
       const dst = P.scope(to, id);
@@ -201,6 +218,7 @@
 
     return guestProjects(from).then((list) => {
       if(!list.length) return null;
+      plan(list);
       const blank = typeof state.blank === 'boolean' ? Promise.resolve(state.blank)
         : Promise.all([isEmpty(to, ['projects']), isEmpty(to, ROOT_DATA)]).then((flags) => {
           state.blank = flags.every(Boolean);
@@ -211,10 +229,9 @@
         .then(() => from.collection('settings').get())
         .then((snap) => pool.run(snap.docs.filter((d) => d.id.indexOf(USER_VALUES) === 0), LIMIT,
           (d) => userValues(d.id.slice(USER_VALUES.length), d.data() || {})))
-        .then(() => (state.blank ? put(to.collection('projects').doc(P.MAIN_ID), {deleted:true, createdAt:0}) : null));
+        .then(() => (state.blank ? hideEmptyMain() : null));
     }).then(() => {
-      const open = out.find((p) => p.from === state.open) || out[0] || null;
-      return {projects:out, open:open, counts:counts, skipped:skipped};
+      return {projects:out, open:opened(), counts:counts, skipped:skipped};
     });
   }
 

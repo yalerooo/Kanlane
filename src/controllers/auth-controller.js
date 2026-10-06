@@ -53,6 +53,23 @@
     saveGuests(knownGuests().filter((g) => g.id !== id));
   }
 
+  /* Los datos de invitado solo se llevan a una cuenta NUEVA, nunca a una que ya existía. Lo es si
+     no ha vuelto a iniciar sesión desde que se creó (alta y último acceso coinciden: las dos fechas
+     las pone el servidor), o si se creó después de pedir la copia (`at`, cuando se pulsó «Crear
+     cuenta y llevarme mis datos»): cubre a quien crea la cuenta, sale y vuelve a entrar. */
+  const SAME_SIGN_IN = 1000;
+  function isNewAccount(user, at){
+    const meta = (user && user.metadata) || {};
+    const created = Date.parse(meta.creationTime || '');
+    const last = Date.parse(meta.lastSignInTime || '');
+    if(!isFinite(created)) return false;
+    return (isFinite(last) && Math.abs(last - created) < SAME_SIGN_IN) || (!!at && created >= at);
+  }
+  /* Lo que se espera a la copia con su pantalla delante. Si tarda más (conexión lenta o cortada: las
+     escrituras de Firestore no terminan hasta que el servidor contesta), se entra en la app y la
+     copia sigue por detrás. */
+  const MIGRATE_WAIT = 15000;
+
   function newGuestId(){
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
@@ -186,13 +203,22 @@
 
     /* Con una cuenta ya dentro: copia a ella los datos del modo invitado, si se pidió. Va antes de
        arrancar la app, así al abrirse ya están. Nunca se rechaza: si algo falla se entra igual, los
-       datos siguen en este navegador y se vuelve a intentar en la siguiente carga. */
-    bringGuestData(){
+       datos siguen en este navegador y se vuelve a intentar en la siguiente carga.
+       Solo a una cuenta nueva: si la que entra ya existía no se copia nada (lo pendiente sigue
+       apuntado, por si después se crea una). Y no se espera sin fin: pasado MIGRATE_WAIT se entra
+       en la app y la copia termina por detrás (ver enterWhileCopying). */
+    bringGuestData(user){
       const local = window.__localStore;
       /* Solo los datos del invitado que lo pidió: la base abierta tiene que ser la suya. */
       const mine = (state) => !!state && !!local && (state.id || '') === local.guestId;
-      if(!mine(migration.pending())) return Promise.resolve();
+      const pending = migration.pending();
+      if(!mine(pending)) return Promise.resolve();
+      if(!isNewAccount(user, pending.at)){
+        this.migrated = {existing:true};
+        return Promise.resolve();
+      }
       this.view.showMigrating();
+      this.migrating = true;
       /* De una en una: con la app en dos pestañas (p. ej. al volver del correo de verificación) la
          segunda espera, y si la primera ya lo ha hecho no queda nada pendiente. */
       const copy = () => {
@@ -200,23 +226,60 @@
         if(!mine(state)) return Promise.resolve(null);
         return Promise.all([platform.connectDb(), platform.connectAssets()]).then((r) => migration.run({
           from: local.db, to: r[0], state: state, save: migration.save,
-          assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)}
+          assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)},
+          onPlan: (plan) => { this.copyPlan = plan; }
         })).then((res) => this.afterCopy(res, state, local));
       };
       const locks = navigator.locks;
-      return (locks && locks.request ? locks.request('workhub-guest-migrate', copy) : copy())
-        .catch(() => { this.migrated = {failed:true}; }).then(() => this.view.showAppSkeleton());
+      const done = (locks && locks.request ? locks.request('workhub-guest-migrate', copy) : copy())
+        .catch(() => { this.migrated = {failed:true}; }).then(() => {
+          this.migrating = false;
+          if(!this.copyingBehind) return;
+          /* Ya dentro de la app: se avisa ahora, y se comprueba lo que se dejó para después. */
+          this.copyingBehind = false;
+          this.reportMigration();
+          this.app.controllers.projects.checkFirstRun();
+        });
+      const wait = new Promise((resolve) => setTimeout(resolve, MIGRATE_WAIT));
+      return Promise.race([done, wait]).then(() => {
+        if(this.migrating) this.enterWhileCopying();
+        this.view.showAppSkeleton();
+      });
+    }
+
+    /* La copia tarda: se entra en la app con ella en marcha. Lo ya escrito se ve (Firestore lo
+       enseña desde su copia local aunque el servidor no haya contestado) y el resto va llegando.
+       Mientras, no se ofrece crear el primer proyecto (ProjectsController.checkFirstRun) y lo
+       pendiente sigue apuntado: si se recarga, la copia se retoma sin duplicar nada. */
+    enterWhileCopying(){
+      this.copyingBehind = true;
+      this.migrated = {slow:true};
+      const open = this.copyPlan && this.copyPlan.open;
+      if(open) this.openMigrated(open);
+    }
+
+    /* Abre el proyecto de la cuenta que corresponde al que el invitado tenía abierto. */
+    openMigrated(project){
+      const projects = this.app.controllers.projects;
+      if(!this.app.rootDb){
+        /* La app aún no ha arrancado: empieza ya en él. */
+        this.app.projectId = project.id;
+        this.app.rememberProject(project);
+        /* Puede no estar todavía en la lista: que no se cambie a otro mientras llega. */
+        projects.justCreated = project.id;
+      }else if(this.app.projectId !== project.id){
+        projects.pendingSwitch = project.id;
+        projects.onProjectsChange();
+      }
     }
 
     /* La copia ha terminado: nada pendiente, y se abre el proyecto que el invitado tenía abierto. */
     afterCopy(res, state, local){
+      if(!res) return null;
       migration.clear();
       /* «?registro» ya cumplió: fuera de la dirección, para que recargar no lo repita. */
       try{ history.replaceState(null, '', location.pathname); }catch(e){}
-      if(res.open){
-        this.app.projectId = res.open.id;
-        this.app.rememberProject(res.open);
-      }
+      if(res.open) this.openMigrated(res.open);
       this.migrated = res;
       /* Todo está en la cuenta: no se deja una copia en este navegador, y ese invitado deja de
          ofrecerse en el acceso. Si algo no se pudo copiar, se queda aquí para no perderlo (se ve
@@ -233,7 +296,9 @@
       this.migrated = null;
       const toast = Workhub.views.toast;
       const t = Workhub.t;
-      if(res.failed) toast.error(t('No se pudieron copiar tus datos de invitado. Siguen en este navegador: recarga la página para volver a intentarlo.'), {important:true});
+      if(res.existing) toast.error(t('Esta cuenta ya existía, así que no hemos copiado tus datos de invitado: solo se llevan a una cuenta nueva. Siguen en este navegador; cierra sesión y crea una cuenta nueva, o continúa como invitado.'), {important:true});
+      else if(res.slow) toast.success(t('Tus datos de invitado se están terminando de copiar a tu cuenta. No cierres esta pestaña.'), {important:true});
+      else if(res.failed) toast.error(t('No se pudieron copiar tus datos de invitado. Siguen en este navegador: recarga la página para volver a intentarlo.'), {important:true});
       else if(res.skipped) toast.error(t('Tus datos de invitado ya están en tu cuenta, salvo {n} elementos que no se pudieron copiar. Esos siguen en este navegador, en el modo invitado.', {n:res.skipped}), {important:true});
       else if(res.projects.length) toast.success(t('Tus datos de invitado ya están en tu cuenta.'), {important:true});
     }
@@ -300,7 +365,7 @@
       Promise.all([firebase.startSession(), beat]).then(() => {
         if(beat) this.view.showAppSkeleton();
         firebase.install(user);
-        this.bringGuestData().then(() => {
+        this.bringGuestData(user).then(() => {
           this.view.hide();
           this.view.showAccount(user);
           if(this.resolveGate) this.resolveGate();

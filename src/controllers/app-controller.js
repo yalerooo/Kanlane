@@ -58,6 +58,7 @@
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
       this.controllers.reminders = new C.RemindersController(this, new V.RemindersView());
+      this.controllers.automations = new C.AutomationsController(this, new V.AutomationsView());
       this.controllers.account = new C.AccountController(this, new V.AccountView());
       this.controllers.projects.render();
 

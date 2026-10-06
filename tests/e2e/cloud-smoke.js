@@ -163,9 +163,44 @@ async function verify(email){
     assert.equal(await second.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false,
       'copias cifradas sin desbordamiento horizontal en móvil');
     await secondContext.close();
+    /* ---------- automatizaciones: se guardan con el proyecto, se ejecutan una vez y dejan registro ---------- */
+    await page.locator('#tabTasks').click();
+    const auto = await page.evaluate(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const app = Workhub.app, c = app.controllers.automations, tasks = app.models.tasks, A = Workhub.models.Automations;
+      const stages = c.ctx().stages;
+      await c.load(true);
+      c.rules = A.normalizeAll([{name:'Prueba de regla', trigger:{type:'moved', stage:stages[1].key}, actions:[{type:'subtask', text:'Revisar'}, {type:'due', days:3}]}]);
+      await c.saveRules();
+      const ref = await tasks.save(null, {title:'Tarea automática', desc:'', status:stages[0].key, cliente:'', contacto:'', dueDate:'', labels:[], checklist:[]});
+      await sleep(600);
+      tasks.move(ref.id, stages[1].key);
+      await sleep(2500);
+      /* Ir y volver a la misma columna no la ejecuta otra vez: no cambiaría nada. */
+      tasks.move(ref.id, stages[0].key);
+      await sleep(600);
+      tasks.move(ref.id, stages[1].key);
+      await sleep(2500);
+      const task = tasks.find(ref.id);
+      const notes = await tasks.notes(ref.id).get();
+      /* Como al abrir en otro dispositivo: lo guardado vuelve del servidor. */
+      c.rules = [];
+      await c.load(true);
+      return {uid:app.rootDb.me.uid, checklist:(task.checklist || []).map((x) => x.text), due:!!task.dueDate,
+        log:notes.docs.map((d) => d.data().kind + ':' + d.data().text), saved:c.rules.map((r) => r.name), canManage:c.canManage()};
+    });
+    assert.equal(auto.canManage, true);
+    assert.deepEqual(auto.checklist, ['Revisar'], 'la regla añade su subtarea una sola vez');
+    assert.equal(auto.due, true, 'y pone la fecha límite');
+    assert.equal(auto.log.length, 1, 'una sola línea en la actividad: ' + JSON.stringify(auto.log));
+    assert.match(auto.log[0], /^activity:Automatización «Prueba de regla»: añadió la subtarea «Revisar», puso la fecha límite el /);
+    assert.deepEqual(auto.saved, ['Prueba de regla'], 'las reglas sobreviven a volver a cargarlas');
+    await page.locator('#btnAutomations').click();
+    await page.locator('#autoBody .auto-rule').filter({hasText:'Prueba de regla'}).waitFor();
+    await page.locator('#btnAutoClose').click();
     assert.deepEqual(errors, [], 'sin excepciones JavaScript');
     await context.close();
-    console.log('OK   Firebase emulado: alta, verificación, proyecto y cofre');
+    console.log('OK   Firebase emulado: alta, verificación, proyecto, cofre y automatizaciones');
   }finally{
     await browser.close();
   }

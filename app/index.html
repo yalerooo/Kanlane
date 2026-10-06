@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="../assets/css/views/board.css">
   <link rel="stylesheet" href="../assets/css/views/task-detail.css">
   <link rel="stylesheet" href="../assets/css/components/rich.css">
+  <link rel="stylesheet" href="../assets/css/views/automations.css">
   <link rel="stylesheet" href="../assets/css/views/calendar.css">
   <link rel="stylesheet" href="../assets/css/views/vault.css">
   <link rel="stylesheet" href="../assets/css/views/clients.css">
@@ -250,6 +251,7 @@
           <button type="button" class="btn btn-ghost btn-sm" id="btnTaskFilterClear">Quitar filtros</button>
         </div>
       </div>
+      <button type="button" class="icon-only" id="btnAutomations" aria-label="Automatizaciones" title="Automatizaciones" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
       <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
     </div>
     <div class="bar-tools" data-bar="calendar" hidden>
@@ -1265,6 +1267,18 @@
   </form>
 </dialog>
 
+<dialog id="dlgAutomations" aria-labelledby="autoTitle">
+  <div class="dlg-inner">
+    <h2 id="autoTitle">Automatizaciones</h2>
+    <p class="dlg-lead">Cuando pasa algo en una tarea, Kanlane hace el resto.</p>
+    <div id="autoBody"></div>
+    <div class="dlg-actions" id="autoFoot">
+      <button type="button" class="btn btn-ghost" id="btnAutoClose" data-dismiss>Cerrar</button>
+      <button type="button" class="btn btn-primary" id="btnAutoNew">Nueva automatización</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="dlgShare" aria-labelledby="shTitle">
   <div class="dlg-inner">
     <h2 id="shTitle">Compartir proyecto</h2>
@@ -1990,6 +2004,7 @@
 <script src="../src/models/guest-migration.js"></script>
 <script src="../src/models/account-model.js"></script>
 <script src="../src/models/plugin-model.js"></script>
+<script src="../src/models/automation-model.js"></script>
 <script src="../src/models/github-sync.js"></script>
 <script src="../src/models/team-model.js"></script>
 <script src="../src/models/project-reseal.js"></script>
@@ -2030,6 +2045,7 @@
 <script src="../src/views/share-view.js"></script>
 <script src="../src/views/join-view.js"></script>
 <script src="../src/views/reminders-view.js"></script>
+<script src="../src/views/automations-view.js"></script>
 
 <!-- Controladores: eventos y coordinación -->
 <script src="../src/controllers/settings-controller.js"></script>
@@ -2045,6 +2061,7 @@
 <script src="../src/controllers/plugins-controller.js"></script>
 <script src="../src/controllers/plugins-data-api.js"></script>
 <script src="../src/controllers/reminders-controller.js"></script>
+<script src="../src/controllers/automations-controller.js"></script>
 <script src="../src/controllers/github-controller.js"></script>
 <script src="../src/controllers/team-crypto-controller.js"></script>
 <script src="../src/controllers/key-rotation-controller.js"></script>

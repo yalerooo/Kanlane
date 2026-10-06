@@ -147,9 +147,11 @@
       if(!id) return this._create(body);
       const before = this.find(id);
       const wasDone = before ? TaskModel.isDone(before) : false;
+      const from = before ? TaskModel.stageKey(before) : '';
       return this.update(id, body).then((res) => {
         const now = Object.assign({}, before, body, {id:id});
         if(!wasDone && TaskModel.isDone(now)) this.spawnNext(now);
+        if(before && body.status && TaskModel.stageKey(now) !== from) this.emit('auto', {type:'moved', id:id, from:from, to:TaskModel.stageKey(now)});
         return res;
       });
     }
@@ -189,7 +191,12 @@
       const column = this.inStatus(body.status);
       const last = column[column.length - 1];
       body.order = Math.max(body.createdAt, last ? TaskModel.orderOf(last) + ORDER_STEP : 0);
-      return this.add(body);
+      /* 'auto': cambios hechos por una persona (crear, mover) que pueden disparar una automatización.
+         Lo que llega de otro dispositivo, de GitHub o de una importación no pasa por aquí. */
+      return this.add(body).then((ref) => {
+        if(ref && ref.id) this.emit('auto', {type:'created', id:ref.id, to:TaskModel.stageKey(body)});
+        return ref;
+      });
     }
 
     /* Escritura que viene de la sincronización con GitHub: la tarea queda
@@ -236,6 +243,8 @@
       else order = Date.now();
 
       const wasDone = TaskModel.isDone(t);
+      const from = TaskModel.stageKey(t);
+      const moved = () => { if(from !== status) this.emit('auto', {type:'moved', id:id, from:from, to:status}); };
       /* Vecinas con el mismo orden (o casi): no hay hueco, se renumera la columna. */
       if(prev && next && !(order > TaskModel.orderOf(prev) && order < TaskModel.orderOf(next))){
         const list = column.slice();
@@ -248,12 +257,14 @@
         });
         this.emit('change');
         if(!wasDone && TaskModel.isDone(t)) this.spawnNext(t);
+        moved();
         return;
       }
 
       this.patchLocal(id, {status:status, order:order});
       this.update(id, {status:status, order:order, updatedAt:Date.now()}).catch(() => {});
       if(!wasDone && TaskModel.isDone(t)) this.spawnNext(t);
+      moved();
     }
 
     reschedule(id, dueDate){

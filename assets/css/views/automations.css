@@ -1,0 +1,40 @@
+/* ---------- Automatizaciones (diálogo del proyecto) ---------- */
+#dlgAutomations{width:min(620px, calc(100vw - 32px));}
+.auto-rules,.auto-templates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.auto-rule{display:flex;align-items:flex-start;gap:12px;padding:11px 12px;border:1px solid var(--line-strong);border-radius:var(--r-lg);background:var(--surface);}
+.auto-rule > input[type="checkbox"]{flex:none;margin:2px 0 0;}
+.auto-rule-main{flex:1;min-width:0;}
+.auto-rule-main b{display:block;font-size:13.5px;font-weight:550;color:var(--ink);overflow-wrap:anywhere;}
+.auto-rule-main p{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-soft);overflow-wrap:anywhere;}
+.auto-rule.is-off .auto-rule-main b,.auto-rule.is-off .auto-rule-main p{color:var(--ink-faint);}
+.auto-rule-main p.auto-broken{color:var(--late);font-weight:500;}
+.auto-rule-actions{flex:none;display:flex;gap:4px;}
+.auto-empty{margin:0;padding:18px 16px;text-align:center;font-size:13px;color:var(--ink-faint);border:1px dashed var(--line-strong);border-radius:var(--r-lg);}
+.auto-note{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--ink-faint);}
+.auto-sub{margin:18px 0 8px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);}
+.auto-templates li{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:var(--r-lg);background:var(--hover);}
+.auto-templates li > div{flex:1;min-width:0;}
+.auto-templates b{display:block;font-size:13px;font-weight:550;}
+.auto-templates p{margin:1px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-soft);}
+.auto-guest p{margin:0 0 10px;font-size:13.5px;line-height:1.55;color:var(--ink-soft);}
+.auto-guest .btn{margin-top:4px;}
+
+/* Formulario «Cuando… entonces…». */
+.auto-block{margin:0 0 14px;padding:0;border:0;min-width:0;display:flex;flex-direction:column;gap:8px;}
+.auto-block legend{padding:0;margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--ink);}
+.auto-block > .btn{align-self:flex-start;}
+.auto-action{display:flex;align-items:center;gap:8px;}
+.auto-action > .dd,.auto-action > select,.auto-action > input,.auto-action > .auto-days{flex:1;min-width:0;}
+.auto-action > .icon-only{flex:none;}
+.auto-days{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);}
+.auto-days input{width:84px;flex:none;}
+.auto-hint{flex:1;font-size:12.5px;color:var(--ink-faint);}
+.auto-form .lock-error{margin:0 0 10px;}
+
+@media (max-width:600px){
+  #dlgAutomations{width:100vw;}
+  .auto-rule{flex-wrap:wrap;}
+  .auto-rule-actions{width:100%;justify-content:flex-end;}
+  .auto-action{flex-wrap:wrap;}
+  .auto-action > .dd,.auto-action > select{flex:1 1 100%;}
+}

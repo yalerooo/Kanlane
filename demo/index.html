@@ -157,7 +157,7 @@
       <section class="tv-section">
         <h3 id="tvNotesTitle">Notas <span class="tv-count" id="tvNotesCount"></span></h3>
         <div class="tv-notes" id="tvNotes"></div>
-        <form class="tv-comment-form" id="tvCommentForm" hidden><label class="sr-only" for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="2" placeholder="Comparte una actualización con el equipo…" required></textarea><div><p class="lock-error" id="tvCommentError" role="alert" hidden></p><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button></div></form>
+        <form class="tv-comment-form" id="tvCommentForm" hidden><label class="sr-only" for="tvCommentText">Escribir un comentario</label><textarea id="tvCommentText" maxlength="2000" rows="2" placeholder="Comparte una actualización con el equipo…" required></textarea><div><p class="lock-error" id="tvCommentError" role="alert" hidden></p><div class="tv-comment-image" id="tvCommentImageWrap" hidden><img id="tvCommentImagePreview" alt=""><button type="button" class="icon-btn" id="tvCommentImageRemove">Quitar imagen</button></div><input type="file" id="tvCommentImage" accept="image/*" hidden><button type="button" class="icon-only" id="tvCommentAttach" aria-label="Adjuntar imagen" hidden></button><button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Publicar comentario</button></div></form>
       </section>
       <section class="tv-section" id="tvGhWrap" hidden>
         <h3>Actividad de GitHub</h3>

@@ -276,7 +276,11 @@
       })));
       const wipeOthers = (isTeam ? TEAM_DATA_COLLECTIONS : DATA_COLLECTIONS).filter((c) => c !== 'tasks').map((name) => {
         const col = db.collection(name);
-        return col.get().then((snap) => Promise.all(snap.docs.map((d) => col.doc(d.id).delete())));
+        const wipe = col.get().then((snap) => Promise.all(snap.docs.map((d) => col.doc(d.id).delete())));
+        /* Las credenciales de un equipo: si las reglas publicadas aún no las admiten, no se pueden
+           leer, pero tampoco se pudo guardar ninguna. Que eso no impida eliminar el equipo (ni
+           deshacer una conversión que falló justo por eso). */
+        return isTeam && name === 'vault' ? wipe.catch(() => null) : wipe;
       });
       /* El proyecto principal conserva las instalaciones antiguas en esta
          colección raíz; borrarlo también debe quitar sus plugins. */

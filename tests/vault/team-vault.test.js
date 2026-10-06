@@ -40,6 +40,9 @@ const ANA = {uid:'ana', email:'ana@example.test', name:'Ana', photo:''};
 const MARTA = {uid:'marta', email:'marta@example.test', name:'Marta', photo:''};
 const ANA_PASS = 'la maestra de ana', MARTA_PASS = 'la maestra de marta';
 
+/* Ids de equipo: únicos aunque una cuenta se conecte dos veces. */
+let ids = 0;
+
 /* Base de datos de una cuenta sobre un almacén común, con la forma de la de firebase-backend. */
 function accountDb(store, me){
   const base = 'users/' + me.uid + '/';
@@ -49,7 +52,6 @@ function accountDb(store, me){
     doc:(p) => store.doc(base + p),
     team:(tid) => ({collection:(n) => store.collection('teams/' + tid + '/' + n), doc:(p) => store.doc('teams/' + tid + '/' + p)})
   };
-  let ids = 0;
   db.teams = {
     query:() => store.collection('teams'),
     doc:(tid) => {
@@ -271,6 +273,35 @@ function openVault(db, me, tid, owner){
   await assert.rejects(dup._createShared('otra'), /vault-exists/);
   assert.deepEqual(store.raw('teams/' + tid2 + '/vault_meta', 'check'), before);
   ok('equipo sin cofre: lo crea la propietaria y a los demás les pide un código de acceso');
+
+  /* ---------- reglas antiguas publicadas: la conversión falla y no deja un equipo a medias ---------- */
+  {
+    const denied = () => Promise.reject(Object.assign(new Error('denied'), {code:'permission-denied'}));
+    const oldDb = accountDb(store, ANA);
+    const teamOf = oldDb.team;
+    /* Como con las reglas de antes: nada del cofre se puede leer ni escribir en un equipo. */
+    oldDb.team = (tid) => {
+      const t = teamOf(tid);
+      const locked = (p) => /^vault/.test(p);
+      return {
+        collection:(n) => (locked(n) ? {get:denied, doc:() => ({set:denied, delete:denied, get:denied})} : t.collection(n)),
+        doc:(p) => (locked(p) ? {set:denied, delete:denied, get:denied} : t.doc(p))
+      };
+    };
+    const oldProjects = new ProjectModel();
+    oldProjects.connect(oldDb);
+    const oldTeam = new TeamModel(oldProjects);
+    await tick(5);
+    const teamsBefore = store.rawAll('teams').size;
+    await assert.rejects(oldTeam.convert(project, null, null, move), (err) => err.code === 'permission-denied' && err.phase === 'guardar la clave de las contraseñas');
+    assert.equal(store.rawAll('teams').size, teamsBefore, 'el equipo que se llegó a crear se deshace');
+    assert.ok(store.raw('users/ana/vault', linked), 'y el proyecto personal sigue entero');
+    /* Un equipo que quedó huérfano antes de este arreglo también se puede eliminar. */
+    const orphan = await oldProjects.createTeam('Huérfano', null, {});
+    await oldProjects.removeProject(orphan.id, oldDb, null);
+    assert.equal(store.raw('teams', orphan.teamId), undefined);
+    ok('con las reglas antiguas publicadas la conversión se deshace entera y un equipo se puede eliminar');
+  }
 
   /* ---------- enlace con el que se abre la app ---------- */
   assert.equal(TeamVault.pendingLink(), null);

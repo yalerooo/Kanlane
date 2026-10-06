@@ -382,6 +382,10 @@
         this.controllers.backup.scheduleAuto();
         this.controllers.account.start();
 
+        /* El invitado aterriza siempre en Tareas: la última vista recordada es de este navegador, no
+           suya (podía ser la de otra persona, o «Copia de seguridad» de la sesión anterior). */
+        const auth = this.controllers.auth;
+        if(auth && auth.guest) return;
         /* "Contactos" ahora está dentro de "Clientes". */
         let savedTab = prefs.read(TAB_PREF, null);
         if(savedTab === 'contacts') savedTab = 'clients';

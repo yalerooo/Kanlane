@@ -944,9 +944,15 @@
   </div>
   <form class="tv-comment-form" id="tvCommentForm" hidden>
     <p class="lock-error" id="tvCommentError" role="alert" hidden></p>
+    <div class="tv-comment-image" id="tvCommentImageWrap" hidden>
+      <img id="tvCommentImagePreview" alt="">
+      <button type="button" class="icon-btn" id="tvCommentImageRemove">Quitar imagen</button>
+    </div>
     <div class="tv-comment-box">
       <label class="sr-only" for="tvCommentText">Escribir una nota</label>
       <textarea id="tvCommentText" maxlength="2000" rows="1" placeholder="Escribe una nota…" required></textarea>
+      <input type="file" id="tvCommentImage" accept="image/*" hidden>
+      <button type="button" class="icon-only" id="tvCommentAttach" title="Adjuntar imagen" aria-label="Adjuntar imagen"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></button>
       <button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Añadir</button>
     </div>
   </form>

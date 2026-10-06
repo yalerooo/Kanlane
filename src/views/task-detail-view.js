@@ -43,6 +43,11 @@
       this.commentText = $('tvCommentText');
       this.commentSend = $('tvCommentSend');
       this.commentError = $('tvCommentError');
+      /* Imagen adjunta a la nota que se está escribiendo (se sube al enviar). */
+      this.commentImage = $('tvCommentImage');
+      this.commentImageWrap = $('tvCommentImageWrap');
+      this.commentImagePreview = $('tvCommentImagePreview');
+      this.pendingImage = null;
       this.linksWrap = $('tvLinksWrap');
       this.links = $('tvLinks');
       this.labelsWrap = $('tvLabelsWrap');
@@ -99,8 +104,22 @@
       this.commentForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         const value = this.commentText.value.trim();
-        if(value && this.taskId) handler(this.taskId, value);
+        if(value && this.taskId) handler(this.taskId, value, this.pendingImage);
       });
+      $('tvCommentAttach').addEventListener('click', () => this.commentImage.click());
+      this.commentImage.addEventListener('change', () => {
+        const file = this.commentImage.files && this.commentImage.files[0];
+        if(!file) return;
+        this.pendingImage = file;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if(this.pendingImage !== file) return;
+          this.commentImagePreview.src = reader.result;
+          this.commentImageWrap.hidden = false;
+        };
+        reader.readAsDataURL(file);
+      });
+      $('tvCommentImageRemove').addEventListener('click', () => this.clearCommentImage());
       /* Intro envía; Mayús + Intro, salto de línea. El campo crece con el texto. */
       this.commentText.addEventListener('keydown', (ev) => {
         if(ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) return;
@@ -109,6 +128,12 @@
         else this.commentSend.click();
       });
       this.commentText.addEventListener('input', () => this.fitComment());
+    }
+    clearCommentImage(){
+      this.pendingImage = null;
+      this.commentImage.value = '';
+      this.commentImageWrap.hidden = true;
+      this.commentImagePreview.removeAttribute('src');
     }
     fitComment(){
       this.commentText.style.height = 'auto';
@@ -121,8 +146,9 @@
         : {send:Workhub.t('Añadir'), busy:Workhub.t('Guardando…'), hint:Workhub.t('Escribe una nota…'), error:Workhub.t('No se pudo guardar la nota.')};
     }
     setCommentBusy(busy){ const l = this.commentLabels(); this.commentSend.disabled = busy; this.commentSend.textContent = busy ? l.busy : l.send; }
-    commentSaved(){ this.commentText.value = ''; this.fitComment(); this.commentError.hidden = true; }
-    commentFailed(){ this.commentError.textContent = this.commentLabels().error; this.commentError.hidden = false; }
+    commentSaved(){ this.commentText.value = ''; this.clearCommentImage(); this.fitComment(); this.commentError.hidden = true; }
+    /* msg: el motivo, si se sabe (p. ej. la imagen no se pudo subir). */
+    commentFailed(msg){ this.commentError.textContent = msg ? Workhub.t(msg) : this.commentLabels().error; this.commentError.hidden = false; }
 
     /* «Asignarme» / «Quitar mi asignación» en la ficha. */
     bindAssignMe(handler){
@@ -171,6 +197,7 @@
 
     open(t, ctx){
       this.ghShown = null;
+      this.clearCommentImage();
       this.render(t, ctx);
       this.notes.innerHTML = '<p class="tv-empty">Cargando notas…</p>';
       this.notesCount.textContent = '';

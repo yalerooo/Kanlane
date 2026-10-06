@@ -200,6 +200,11 @@
     bindSubmit(handler){
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
+        /* Intro en una subtarea nunca guarda la tarea, tampoco si llega como envío del formulario
+           (teclados que no avisan de la tecla): añade la subtarea o pasa al campo de añadir. */
+        const at = document.activeElement;
+        if(at === this.checkNew){ this._addCheck(); return; }
+        if(at && this.checkList.contains(at) && at.matches('input[type=text]')){ this.checkNew.focus(); return; }
         handler(this.fields.id.value, this.values());
       });
     }
@@ -264,6 +269,7 @@
         this.checkNew.focus();
       };
       $('fCheckAdd').addEventListener('click', add);
+      this._addCheck = add;
       this.checkNew.addEventListener('keydown', (ev) => {
         if(ev.key === 'Enter'){ ev.preventDefault(); add(); }
       });

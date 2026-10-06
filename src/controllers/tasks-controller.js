@@ -86,7 +86,7 @@
       this.detail.bindChecklist((id, itemId, done) => {
         this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
       });
-      this.detail.bindComment((id, text) => this.postComment(id, text));
+      this.detail.bindComment((id, text, image) => this.postComment(id, text, image));
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       this.detail.bindAssignMe((id) => this.toggleMine(id));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
@@ -115,11 +115,20 @@
       if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).label + '»');
     }
 
-    postComment(id, text){
+    /* image: archivo de imagen adjunto (opcional); se sube antes de guardar la nota. */
+    postComment(id, text, image){
       if(!Workhub.views.team.canEdit()) return;
       this.detail.setCommentBusy(true);
-      this.tasks.addNote(id, text, '').then(() => this.detail.commentSaved(),
-        () => this.detail.commentFailed()).finally(() => this.detail.setCommentBusy(false));
+      let uploaded = !image;
+      (image ? platform.uploadAsset(image) : Promise.resolve('')).then((assetId) => {
+        uploaded = true;
+        return this.tasks.addNote(id, text, assetId);
+      }).then(() => this.detail.commentSaved(), (err) => {
+        const code = err && (err.code || err.message);
+        this.detail.commentFailed(uploaded ? '' : code === 'image-too-large' ? 'La imagen es demasiado grande y no se pudo reducir lo suficiente. La nota no se ha guardado: prueba con una imagen más pequeña.'
+          : code === 'image-unreadable' ? 'No se pudo leer la imagen. La nota no se ha guardado: prueba con un archivo JPG o PNG.'
+          : 'No se pudo subir la imagen. La nota no se ha guardado.');
+      }).finally(() => this.detail.setCommentBusy(false));
     }
 
     /* Cambió el equipo del proyecto abierto (miembros, mi rol): filtro, tarjetas y ficha. */

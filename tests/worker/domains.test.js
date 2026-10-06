@@ -29,9 +29,10 @@ const path = require('node:path');
   /* Las páginas de captación pasan por el Worker también en el espejo y los dominios antiguos. */
   const wrangler = fs.readFileSync(path.join(__dirname, '../../wrangler.jsonc'), 'utf8');
 
-  /* Una dirección que no existe: 404 con página propia (y con enlace al inicio), no un cuerpo vacío. */
+  /* Una dirección que no existe: 404 con página propia (y con enlace al inicio), no un cuerpo vacío.
+     El enlace lleva «?portada»: sin él, quien tiene sesión acabaría en la aplicación (src/landing/landing-boot.js). */
   assert.match(wrangler, /"not_found_handling":\s*"404-page"/);
-  for(const [file, home] of [['404.html', '/'], ['en/404.html', '/en/']]){
+  for(const [file, home] of [['404.html', '/?portada'], ['en/404.html', '/en/?portada']]){
     const html = fs.readFileSync(path.join(__dirname, '../..', file), 'utf8');
     assert.ok(html.includes('<a class="nf-btn is-primary" href="' + home + '">'), file + ' enlaza al inicio');
     assert.match(html, /<meta name="robots" content="noindex/, file + ' no se indexa');

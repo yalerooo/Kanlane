@@ -26,4 +26,18 @@ const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meet
   assert.equal(saved[0].ivV2, 'new-iv');
   assert.equal(saved[0].cipherV2, 'new-cipher');
   console.log('OK   copia: conserva las credenciales migradas');
+
+  /* En un proyecto de equipo las reglas no dejan leer vault_meta: la copia no debe pedirlo. */
+  const denied = async () => { throw new Error('permission-denied'); };
+  const tasks = Object.assign({}, empty, {withNotes:async () => [{title:'Tarea', notes:[]}]});
+  const team = new Workhub.models.BackupModel({tasks, contacts:empty, meetings:empty, clients:empty,
+    vault:{items:[], getMeta:denied, setMeta:denied, add:denied}});
+  Workhub.views = {team:{enabled:() => true}};
+  const copy = await team.build('Equipo');
+  assert.equal(copy.counts.tasks, 1);
+  assert.equal(JSON.parse(copy.json).vault.meta, null);
+  const imported = await team.import({tasks:[{title:'Tarea'}], vault:{meta:{saltPassword:'salt'}, entries:[{cliente:'Prueba', iv:'iv', cipher:'c'}]}});
+  assert.equal(imported.vaultOutcome, 'team');
+  assert.equal(imported.counts.tasks, 1);
+  console.log('OK   copia: un proyecto de equipo se exporta e importa sin tocar el cofre');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

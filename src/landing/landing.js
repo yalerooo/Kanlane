@@ -14,6 +14,19 @@
   var all = function(sel, from){ return Array.prototype.slice.call((from || document).querySelectorAll(sel)); };
   var clamp = function(v, a, b){ return Math.max(a, Math.min(b, v)); };
 
+  /* ---------- Con sesión iniciada (se llega con «?portada»): nada de «Iniciar sesión» ni «Crear cuenta» ----------
+     Los enlaces de registro pasan a abrir la aplicación y los de acceso sobran. Un invitado no
+     tiene cuenta, así que a él se le siguen ofreciendo. */
+  var session = false;
+  try{ session = localStorage.getItem('workhub_session') === '1'; }catch(e){}
+  if(session) all('a[href]').forEach(function(a){
+    var m = /^((?:\.\.\/|\/)?app\/)(\?registro\b.*)?$/.exec(a.getAttribute('href'));
+    if(!m) return;
+    if(!m[2]){ a.parentNode.removeChild(a); return; }
+    a.setAttribute('href', m[1]);
+    a.firstChild.nodeValue = (en ? 'Open the app' : 'Abrir la aplicación') + (a.children.length ? ' ' : '');
+  });
+
   var year = byId('year');
   if(year) year.textContent = String(new Date().getFullYear());
 

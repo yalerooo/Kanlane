@@ -23,6 +23,7 @@
     gh: '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.72.5.1.68-.22.68-.49v-1.9c-2.78.62-3.37-1.21-3.37-1.21-.46-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.85.09-.66.35-1.12.64-1.38-2.22-.26-4.55-1.14-4.55-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.72 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.46.1 2.72.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9v2.81c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>'
   };
   const TICK_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
+  const BOLT_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>';
   const LOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
   class TaskDetailView {
@@ -66,6 +67,9 @@
       this.stamp = $('tvStamp');
       this.taskId = null;
       this.descShown = null;
+      /* Botones de las automatizaciones (un clic ejecuta sus acciones en esta tarea). */
+      this.autoWrap = $('tvAutoWrap');
+      this.autoButtons = $('tvAutoButtons');
 
       attachments.bind(this.notes);
     }
@@ -134,6 +138,14 @@
       this.facts.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-action="assign-me"]');
         if(b && this.taskId) handler(this.taskId);
+      });
+    }
+
+    /* Botones de automatización de la ficha. handler(taskId, idRegla). */
+    bindAutoButton(handler){
+      this.autoButtons.addEventListener('click', (ev) => {
+        const btn = closest(ev.target, 'button[data-auto-rule]');
+        if(btn && this.taskId) handler(this.taskId, btn.getAttribute('data-auto-rule'));
       });
     }
 
@@ -305,6 +317,11 @@
         this.descShown = descKey;
         this.desc.innerHTML = md.render(t.desc || '', {tasks:team.canEdit() ? 'interactive' : 'static'});
       }
+
+      const buttons = (ctx && ctx.buttons) || [];
+      this.autoWrap.hidden = !buttons.length;
+      this.autoButtons.innerHTML = buttons.map((b) =>
+        '<button type="button" class="btn btn-ghost btn-sm" data-auto-rule="' + esc(b.id) + '" translate="no">' + BOLT_ICON + esc(b.name) + '</button>').join('');
 
       const items = Array.isArray(t.checklist) ? t.checklist : [];
       const prog = TaskModel.checklistProgress(t);

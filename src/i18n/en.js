@@ -832,6 +832,22 @@
     'Al completar una tarea':'When a task is completed',
     'El día que vence':'On the due date',
     'A {n} días de vencer':'{n} days before due',
+    'Botón':'Button',
+    'alguien pulsa su botón en la tarea':'someone presses its button on the task',
+    'Texto del botón':'Button text',
+    'El botón sale en la ficha de cada tarea, para quien puede editar el proyecto.':'The button appears on every task, for anyone who can edit the project.',
+    'Las automatizaciones por fecha se ejecutan aunque nadie tenga Kanlane abierto: el servidor las revisa cada media hora.':'Date-based automations run even when nobody has Kanlane open: the server checks them every half hour.',
+    'En este proyecto las automatizaciones por fecha solo se ejecutan mientras alguien que puede editarlo tiene Kanlane abierto.':'In this project, date-based automations only run while someone who can edit it has Kanlane open.',
+    'Las automatizaciones necesitan una cuenta: se guardan con el proyecto y se ejecutan en tu nombre, también desde otros dispositivos.':'Automations need an account: they are saved with the project and run on your behalf, also from other devices.',
+    'Se cortó una cadena de automatizaciones que se repetía: una volvía a dispararse. Revisa tus automatizaciones.':'A repeating chain of automations was stopped: one was firing again. Check your automations.',
+    'Se cortó una cadena de automatizaciones demasiado larga (más de tres seguidas). Revisa tus automatizaciones.':'A chain of automations that was too long (more than three in a row) was stopped. Check your automations.',
+    'Ponle un nombre al botón: es lo que se lee en la tarea.':'Give the button a name: it is what people read on the task.',
+    'Al pulsar el botón en una tarea':'When the button is pressed on a task',
+    '{name} ya no está en el proyecto':'{name} is no longer in the project',
+    'alguien que ya no está':'someone who is no longer here',
+    'Enviar a revisión':'Send to review',
+    'Un botón en la tarea: la mueve a «{name}» y añade la subtarea «Revisar».':'A button on the task: moves it to “{name}” and adds the subtask “Review”.',
+    'Acciones rápidas':'Quick actions',
     'Automatizaciones':'Automations',
     'Cuando pasa algo en una tarea, Kanlane hace el resto.':'When something happens to a task, Kanlane does the rest.',
     'Nueva automatización':'New automation',
@@ -840,11 +856,6 @@
     'la persona asignada ya no está en el proyecto':'the assigned person is no longer in the project',
     'asignar tareas solo existe en los proyectos de equipo':'assigning tasks only exists in team projects',
     'el proyecto no tiene ninguna etapa final':'the project has no final stage',
-    'movió la tarea a «{name}»':'moved the task to “{name}”',
-    'asignó la tarea a {name}':'assigned the task to {name}',
-    'añadió la etiqueta «{name}»':'added the label “{name}”',
-    'añadió la subtarea «{name}»':'added the subtask “{name}”',
-    'puso la fecha límite el {date}':'set the due date to {date}',
     'Cuando se crea una tarea en «{name}»':'When a task is created in “{name}”',
     'Cuando se crea una tarea':'When a task is created',
     'Cuando una tarea se mueve a «{name}»':'When a task is moved to “{name}”',
@@ -868,13 +879,10 @@
     'Cada tarea nueva en «{name}» vence en 7 días.':'Every new task in “{name}” is due in 7 days.',
     'Preparar la revisión':'Prepare the review',
     'Al pasar a «{name}», añade la subtarea «Revisar».':'When moved to “{name}”, adds the subtask “Review”.',
-    'Poner fecha al empezar':'Set a date when starting',
-    'Al pasar a «{name}», la tarea vence en 3 días.':'When moved to “{name}”, the task is due in 3 days.',
     'Avisar de lo que vence':'Flag what is due soon',
     'Cuando faltan 2 días para la fecha límite, añade la etiqueta «{name}».':'When the due date is 2 days away, adds the label “{name}”.',
     'Repartir lo que nadie tiene':'Hand out unassigned tasks',
     'Las tareas nuevas sin responsable se te asignan a ti.':'New tasks with nobody assigned are assigned to you.',
-    'Las automatizaciones necesitan una cuenta: las reglas se guardan con el proyecto y se ejecutan en tu nombre, también desde otros dispositivos.':'Automations need an account: rules are saved with the project and run on your behalf, also from other devices.',
     'Crea una cuenta y tus datos de invitado se copian a ella.':'Create an account and your guest data is copied to it.',
     'Activar «{name}»':'Enable “{name}”',
     'En pausa: {why}.':'Paused: {why}.',
@@ -883,7 +891,6 @@
     'Todavía no hay ninguna automatización en este proyecto.':'This project has no automations yet.',
     'Solo quien es propietario del equipo puede crear o cambiar las automatizaciones.':'Only the team owner can create or change automations.',
     'No tienes permiso para cambiar las automatizaciones de este proyecto.':'You don\'t have permission to change this project\'s automations.',
-    'Las reglas por fecha se comprueban mientras alguien que puede editar el proyecto tiene Kanlane abierto.':'Date rules are checked while someone who can edit the project has Kanlane open.',
     'Cualquier columna':'Any column',
     'una tarea se mueve a una columna':'a task is moved to a column',
     'se crea una tarea':'a task is created',
@@ -916,10 +923,7 @@
     'Está asignada a {name}':'Is assigned to {name}',
     'Entonces…':'Then…',
     'Añadir otra acción':'Add another action',
-    'Se cortó una cadena de automatizaciones que se repetía: una regla volvía a dispararse. Revisa las reglas.':'A repeating chain of automations was stopped: a rule was firing again. Check your rules.',
-    'Se cortó una cadena de automatizaciones demasiado larga (más de tres seguidas). Revisa las reglas.':'A chain of automations that was too long (more than three in a row) was stopped. Check your rules.',
     'Demasiadas automatizaciones a la vez: las que faltaban se han saltado. Vuelve a intentarlo en un minuto.':'Too many automations at once: the remaining ones were skipped. Try again in a minute.',
-    'Automatización «{name}»: {what}':'Automation “{name}”: {what}',
     'La automatización «{name}» está en pausa: {why}.':'The automation “{name}” is paused: {why}.',
     'Abre un proyecto para ver sus automatizaciones.':'Open a project to see its automations.',
     'Elige al menos una acción y rellena sus datos.':'Choose at least one action and fill in its details.',
@@ -1864,7 +1868,14 @@
     [/^Sesión iniciada como (.+)\.$/, 'Signed in as $1.'],
     [/^El plugin pide permisos que Kanlane no conoce: (.+)\.$/, 'The plugin asks for permissions Kanlane doesn\'t know: $1.'],
     [/^Falta el permiso "(.+)"\.$/, 'Missing the "$1" permission.'],
-    [/^Automatización «(.+?)»: (.+)$/, 'Automation “$1”: $2'],
+    [/^(Automatización|Botón) «(.+?)»: (.+)$/, function(all, kind, name, what){
+      return (kind === 'Botón' ? 'Button' : 'Automation') + ' “' + name + '”: ' + what
+        .replace(/movió la tarea a «([^»]*)»/g, 'moved the task to “$1”')
+        .replace(/asignó la tarea a ([^,]+)/g, 'assigned the task to $1')
+        .replace(/añadió la etiqueta «([^»]*)»/g, 'added the label “$1”')
+        .replace(/añadió la subtarea «([^»]*)»/g, 'added the subtask “$1”')
+        .replace(/puso la fecha límite el (\d{2}\/\d{2}\/\d{4})/g, 'set the due date to $1');
+    }],
     [/^(.+) detectado$/, '$1 detected']
   ]);
 })();

@@ -46,6 +46,7 @@ jobs:
           node tests/season/season.test.js
           node tests/worker/rate-limit.test.js
           node tests/worker/kms.test.js
+          node tests/worker/automations.test.js
           node tests/worker/totp.test.js
           node tests/worker/domains.test.js
           node tests/e2e/hreflang-check.js
@@ -104,6 +105,8 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-smoke.js"
       - name: Equipo con cifrado total en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-team.js"
+      - name: Automatizaciones por fecha en el servidor con Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/automation-cron.js"
       - name: Contraseñas compartidas de un equipo en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/team-vault.js"
       - name: Cambio de clave de un proyecto cifrado en Firebase emulado

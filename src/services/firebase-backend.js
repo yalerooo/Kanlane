@@ -376,6 +376,8 @@
     /* ID token de la sesión, para el servidor de claves del modo gestionado (worker/index.js). */
     db.idToken = () => (auth.currentUser || user).getIdToken();
     db.team = (tid) => scopedDb(firestore.collection('teams').doc(tid));
+    /* Reglas por fecha que ejecuta el servidor (worker/automations.mjs): una copia por proyecto. */
+    db.jobs = {doc: (id) => firestore.collection('automation_jobs').doc(id)};
     db.teams = {
       /* Equipos de los que soy miembro. */
       query: () => firestore.collection('teams').where('memberIds', 'array-contains', uid),

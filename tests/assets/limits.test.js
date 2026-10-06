@@ -51,7 +51,8 @@ test('las imágenes de equipo pasan por la misma validación', () => {
   /* Desde el PR 2 del cifrado la escritura pasa por validWrite, que sin sellar cae en validData (donde está el límite de assets). */
   assert.match(rules, /allow create: if isTeamCollection\(col\) && canEdit\(tid\) && validWrite\(col\)/);
   /* Desde el PR 10 se añade teamKid (lo sellado, con la clave vigente del equipo): no afecta a las imágenes en claro. */
-  assert.match(rules, /allow update: if isTeamCollection\(col\) && canEdit\(tid\) && validWrite\(col\) && teamKid\(tid\);/);
+  /* Y, con las automatizaciones, una condición más que solo afecta a plugin_data/kanlane.automations. */
+  assert.match(rules, /allow update: if isTeamCollection\(col\) && canEdit\(tid\) && validWrite\(col\) && teamKid\(tid\)/);
   assert.match(rules, /function validWrite\(col\) \{[^}]*validData\(col\)/);
 });
 

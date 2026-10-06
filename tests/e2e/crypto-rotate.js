@@ -226,6 +226,9 @@ async function changeKey(page){
     await page.locator('.tv-note-text').filter({hasText:'Nota confidencial'}).waitFor();
     await page.waitForFunction(() => { const img = document.querySelector('.tv-note img'); return !!img && img.naturalWidth === 40; });
     await page.keyboard.press('Escape');
+    /* La ficha se cierra con una animación y, mientras dura, sigue siendo un diálogo modal: el resto
+       de la página no admite el foco y lo que se escribiera en la pantalla de bloqueo se perdería. */
+    await page.locator('#dlgTaskView').waitFor({state:'hidden'});
     await page.evaluate(() => Workhub.app.controllers.crypto.lock());
     await page.locator('#projectLockScreen').waitFor({state:'visible'});
     await page.locator('#plPass').fill(PASSWORD);

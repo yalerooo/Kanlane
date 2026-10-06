@@ -168,6 +168,9 @@
     $('authPass').autocomplete = 'new-password';
   }
 
+  /* Viene de «Crear cuenta y llevarme mis datos» (AuthController.upgradeGuest): el aviso, ya. */
+  try{ if(localStorage.getItem('workhub_guest_migrate')) $('authMigrate').hidden = false; }catch(e){}
+
   /* El idioma en uso, marcado ya en su botón (la misma cuenta que boot.js e i18n.js). */
   var lang = null;
   try{ lang = localStorage.getItem('workhub_lang'); }catch(e){}

@@ -5,6 +5,8 @@
    la página para no mezclar datos de dos usuarios. */
 (function(){
   const firebase = Workhub.services.firebase;
+  const platform = Workhub.services.platform;
+  const migration = Workhub.models.guestMigration;
   const MIN_PASSWORD = 8;
   /* Margen tras volver de la ventana de acceso antes de soltar los botones (ms): da tiempo a que
      un acceso correcto entre en la app sin que el formulario parpadee. */
@@ -70,6 +72,8 @@
       this.guest = '';
 
       this.view.bindGuest((name) => this.enterGuest(name));
+      this.view.bindUpgrade(() => this.upgradeGuest());
+      this.view.bindMigrateCancel(() => this.cancelUpgrade());
       this.view.bindProvider((key) => this.signInWith(key));
       this.view.bindEmail((mode, values) => this.submitEmail(mode, values));
       this.view.bindSignOut(() => this.signOut());
@@ -108,7 +112,65 @@
         this.view.showMessage('Este navegador no permite guardar datos, así que no se puede usar el modo invitado.');
         return;
       }
+      /* Vuelve a ser invitado: ya no hay nada pendiente de llevar a una cuenta. */
+      migration.clear();
       location.reload();
+    }
+
+    /* «Crear cuenta y llevarme mis datos»: se apunta en este navegador y se va a la pantalla de
+       acceso (abierta en «Crear cuenta»). Los datos siguen donde están; se copian a la cuenta
+       que entre (bringGuestData). Hasta entonces se puede volver atrás (cancelUpgrade). */
+    upgradeGuest(){
+      if(!this.guest) return;
+      if(!migration.request(this.guest, this.app.projectId)) return;
+      /* Al entrar con la cuenta se abre el tablero, no Ajustes (desde donde se suele pedir). */
+      this.app.navigate('tasks');
+      try{ localStorage.removeItem(GUEST_KEY); }catch(e){}
+      location.assign(location.pathname + '?registro');
+    }
+
+    /* «Seguir como invitado» desde la pantalla de acceso. */
+    cancelUpgrade(){
+      const state = migration.pending();
+      if(state) this.enterGuest(state.name || Workhub.t('Invitado'));
+    }
+
+    /* Con una cuenta ya dentro: copia a ella los datos del modo invitado, si se pidió. Va antes de
+       arrancar la app, así al abrirse ya están. Nunca se rechaza: si algo falla se entra igual, los
+       datos siguen en este navegador y se vuelve a intentar en la siguiente carga. */
+    bringGuestData(){
+      const state = migration.pending();
+      const local = window.__localStore;
+      if(!state || !local) return Promise.resolve();
+      this.view.showMigrating();
+      return Promise.all([platform.connectDb(), platform.connectAssets()]).then((r) => migration.run({
+        from: local.db, to: r[0], state: state, save: migration.save,
+        assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)}
+      })).then((res) => {
+        migration.clear();
+        /* «?registro» ya cumplió: fuera de la dirección, para que recargar no lo repita. */
+        try{ history.replaceState(null, '', location.pathname); }catch(e){}
+        if(res.open){
+          this.app.projectId = res.open.id;
+          this.app.rememberProject(res.open);
+        }
+        this.migrated = res;
+        /* Todo está en la cuenta: no se deja una copia en este navegador. Si algo no se pudo
+           copiar, se queda aquí para no perderlo (se ve entrando otra vez como invitado). */
+        return res.skipped ? null : local.wipe().catch(() => null);
+      }).catch(() => { this.migrated = {failed:true}; }).then(() => this.view.showAppSkeleton());
+    }
+
+    /* Ya dentro de la app: se cuenta cómo ha ido la copia de los datos de invitado. */
+    reportMigration(){
+      const res = this.migrated;
+      if(!res) return;
+      this.migrated = null;
+      const toast = Workhub.views.toast;
+      const t = Workhub.t;
+      if(res.failed) toast.error(t('No se pudieron copiar tus datos de invitado. Siguen en este navegador: recarga la página para volver a intentarlo.'), {important:true});
+      else if(res.skipped) toast.error(t('Tus datos de invitado ya están en tu cuenta, salvo {n} elementos que no se pudieron copiar. Esos siguen en este navegador, en el modo invitado.', {n:res.skipped}), {important:true});
+      else if(res.projects.length) toast.success(t('Tus datos de invitado ya están en tu cuenta.'), {important:true});
     }
 
     /* El almacén local (window.claude del shim) ya está activo: solo hay que mostrar la app. */
@@ -147,6 +209,9 @@
         /* Sesión caducada o cerrada desde otra pestaña: fuera las claves de cifrado que no sean de confianza. */
         this.purgeKeys();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
+        /* Viene de «Crear cuenta y llevarme mis datos»: se avisa de que se copiarán al entrar. */
+        const move = migration.pending();
+        if(move) this.view.showMigrate(move.name);
       }
     }
 
@@ -168,9 +233,12 @@
       Promise.all([firebase.startSession(), beat]).then(() => {
         if(beat) this.view.showAppSkeleton();
         firebase.install(user);
-        this.view.hide();
-        this.view.showAccount(user);
-        if(this.resolveGate) this.resolveGate();
+        this.bringGuestData().then(() => {
+          this.view.hide();
+          this.view.showAccount(user);
+          if(this.resolveGate) this.resolveGate();
+          this.reportMigration();
+        });
         /* Firestore se carga aparte del acceso (firebase.init): si no llegó, se avisa. */
       }, () => this.view.showLoadError(() => location.reload()));
     }

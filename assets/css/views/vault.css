@@ -51,6 +51,10 @@
 .pass-gen{display:flex;gap:8px;margin-top:10px;}
 #totpForm{margin-top:4px;}
 #totpCode,#vtCode{font-family:var(--mono);font-size:15px;letter-spacing:.3em;text-align:center;}
+/* El QR va siempre en negro sobre blanco, también con el tema oscuro: si no, no se lee. */
+.totp-qr{width:184px;margin:0 auto 12px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);line-height:0;}
+.totp-qr svg{display:block;width:100%;height:auto;}
+.totp-manual{text-align:center;margin:0 0 6px;}
 #dlgVaultTotp .recovery-key-box{font-size:13px;}
 #dlgVaultTotp .recovery-actions{margin-bottom:14px;}
 #dlgVaultTotp .recovery-actions a.btn{text-decoration:none;justify-content:center;}

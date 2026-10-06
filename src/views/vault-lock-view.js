@@ -174,9 +174,12 @@
       this.vtError.hidden = true;
       this.vtSetup.hidden = !setup;
       this.vtSecret.textContent = setup ? setup.secret : '';
+      /* Sin QR (el enlace no cabe) queda la clave para teclearla. */
+      this.vtQr.innerHTML = setup ? Workhub.utils.qr.svg(setup.uri) : '';
+      this.vtQr.hidden = !this.vtQr.firstChild;
       this.vtOpen.setAttribute('href', setup ? setup.uri : '#');
       this.vtLead.textContent = setup
-        ? 'Además de la contraseña maestra, al desbloquear se pedirá un código de tu aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Añade esta clave en la aplicación y escribe abajo el código que te dé.'
+        ? 'Además de la contraseña maestra, al desbloquear se pedirá un código de tu aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Escanea este código con la aplicación y escribe abajo el código de 6 cifras que te dé.'
         : 'Para desactivarla escribe tu contraseña maestra y un código de la aplicación. Después, al desbloquear solo se pedirá la contraseña maestra.';
       this.totpMode = setup ? 'on' : 'off';
       this._resetPasswordFields([this.vtPass]);
@@ -200,6 +203,7 @@
     /* Al cerrar no queda en la página ni la clave del autenticador ni la contraseña. */
     _clearTotp(){
       this.vtSecret.textContent = '';
+      this.vtQr.innerHTML = '';
       this.vtOpen.setAttribute('href', '#');
       this._resetPasswordFields([this.vtPass]);
       this.vtCode.value = '';

@@ -75,6 +75,7 @@
       this.vtForm = $('vtForm');
       this.vtLead = $('vtLead');
       this.vtSetup = $('vtSetup');
+      this.vtQr = $('vtQr');
       this.vtSecret = $('vtSecret');
       this.vtCopy = $('vtCopy');
       this.vtOpen = $('vtOpen');

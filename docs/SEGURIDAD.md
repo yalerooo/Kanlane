@@ -41,7 +41,7 @@ Detalle completo: `docs/CIFRADO-PROYECTOS.md`.
 
 ## Verificación en dos pasos de las contraseñas
 
-Con las contraseñas desbloqueadas, «Activar verificación en dos pasos» enseña una clave para añadir en una aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Desde entonces, abrir las contraseñas pide la contraseña maestra **y** un código de 6 cifras.
+Con las contraseñas desbloqueadas, «Activar verificación en dos pasos» enseña un código QR (y la misma clave en texto) para añadir en una aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Desde entonces, abrir las contraseñas pide la contraseña maestra **y** un código de 6 cifras.
 
 - **Lo comprueba el servidor, no el navegador.** La clave del cofre queda envuelta dos veces: con la contraseña maestra y con una clave que el Worker (`/__/kms/v1/totp`) solo entrega tras un código válido. Quien tenga la contraseña maestra y una copia de la base de datos no puede abrir el cofre sin el código.
 - **Qué no protege:** la clave de recuperación entra sin código (y al usarla se desactiva el segundo paso), así que hay que guardarla igual de bien. Un código son 6 cifras: lo que impide probarlos es un límite de 3 intentos por minuto y cuenta (`TOTP_RATE_LIMIT`), que frena pero no hace imposible un ataque de días de alguien que ya tiene tu sesión y tu contraseña maestra. Tampoco protege frente a un dispositivo comprometido mientras el cofre está abierto.

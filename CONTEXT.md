@@ -292,7 +292,8 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
   - El código lo comprueba el **Worker** (`POST /__/kms/v1/totp`, `worker/index.js`), no el navegador: con el segundo paso, el envoltorio de la contraseña guarda `{totp, iv, cipher}` en vez de `{dek}`, y la clave que abre ese `cipher` solo la da el Worker tras un código válido. La contraseña maestra más una copia de la base de datos no bastan.
   - El Worker no guarda nada: `totp` es el secreto del autenticador cifrado con una clave derivada de `KMS_MASTER_V1` y atado al uid. Los intentos los limita `TOTP_RATE_LIMIT` (3 por minuto y cuenta, `wrangler.jsonc`); sin ese límite la ruta responde 503.
   - **La clave de recuperación no pasa por el segundo paso** y, al usarla, el cofre queda sin él. Perder `KMS_MASTER_V1` deja esos cofres abribles solo con la clave de recuperación.
-  - No hay código QR (se teclea la clave o se abre el enlace `otpauth://`). Con el segundo paso activado no se puede dar acceso a las contraseñas de un equipo ni llevar el cofre a un equipo con solo la contraseña maestra (`TeamVault.openWithPassword` → `totp`): hay que desactivarlo antes.
+  - El alta enseña un **código QR** del enlace `otpauth://` (`src/utils/qr.js`, propio y sin dependencias: modo byte, corrección M, hasta 213 bytes; siempre negro sobre blanco), con la clave debajo para teclearla y «Abrir en la aplicación». `tests/vault/qr.test.js` fija una huella de un símbolo leído con un lector real: no cambiarla sin volver a leerlo.
+  - Con el segundo paso activado no se puede dar acceso a las contraseñas de un equipo ni llevar el cofre a un equipo con solo la contraseña maestra (`TeamVault.openWithPassword` → `totp`): hay que desactivarlo antes.
 - **Clave de recuperación:**
   - Formato `XXXX-XXXX-…`; se descarga un .txt y hay que confirmar que se ha guardado.
   - Al usarla se genera una nueva y la anterior deja de valer.

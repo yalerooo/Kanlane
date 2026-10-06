@@ -19,6 +19,18 @@
 .auto-guest p{margin:0 0 10px;font-size:13.5px;line-height:1.55;color:var(--ink-soft);}
 .auto-guest .btn{margin-top:4px;}
 
+.auto-tag{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--ink-soft);font-size:11px;font-weight:500;vertical-align:1px;}
+.auto-rule-main b{display:inline;}
+.auto-note-form{margin:-4px 0 14px;}
+.auto-block[hidden]{display:none;}
+
+/* Botones de automatización en la ficha de la tarea. */
+.tv-auto{margin-top:12px;}
+.tv-auto[hidden]{display:none;}
+.tv-auto-buttons{display:flex;flex-wrap:wrap;gap:6px;}
+.tv-auto-buttons .btn{max-width:100%;}
+.tv-auto-buttons .btn svg{flex:none;color:var(--ink-faint);}
+
 /* Formulario «Cuando… entonces…». */
 .auto-block{margin:0 0 14px;padding:0;border:0;min-width:0;display:flex;flex-direction:column;gap:8px;}
 .auto-block legend{padding:0;margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--ink);}

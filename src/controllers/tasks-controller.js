@@ -95,6 +95,7 @@
         this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
       });
       this.detail.bindComment((id, text, files) => this.postComment(id, text, files));
+      this.detail.bindAutoButton((id, ruleId) => { const autos = this.app.controllers.automations; if(autos) autos.press(ruleId, id); });
       /* Casillas de la descripción: marcar una reescribe su «- [ ]» en el texto. */
       this.detail.bindDescTasks((id, n, checked) => {
         const t = this.tasks.find(id);
@@ -307,7 +308,8 @@
     /* ---------- Ficha de la tarea ---------- */
 
     detailContext(){
-      return {contacts:this.contacts.items, vault:this.vault};
+      const autos = this.app.controllers && this.app.controllers.automations;
+      return {contacts:this.contacts.items, vault:this.vault, buttons:autos ? autos.buttons() : []};
     }
 
     openDetail(id){

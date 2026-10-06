@@ -75,7 +75,7 @@
     showGuest(){
       this.foot.hidden = false;
       this.btnNew.hidden = true;
-      this.body.innerHTML = '<div class="auto-guest"><p>' + esc(t('Las automatizaciones necesitan una cuenta: las reglas se guardan con el proyecto y se ejecutan en tu nombre, también desde otros dispositivos.')) + '</p>' +
+      this.body.innerHTML = '<div class="auto-guest"><p>' + esc(t('Las automatizaciones necesitan una cuenta: se guardan con el proyecto y se ejecutan en tu nombre, también desde otros dispositivos.')) + '</p>' +
         '<p>' + esc(t('Crea una cuenta y tus datos de invitado se copian a ella.')) + '</p>' +
         '<button type="button" class="btn btn-primary" data-auto="upgrade">' + esc(t('Crear cuenta y llevarme mis datos')) + '</button></div>';
     }
@@ -91,7 +91,8 @@
         return '<li class="auto-rule' + (rule.on ? '' : ' is-off') + (r.problem ? ' is-broken' : '') + '">' +
           '<input type="checkbox" data-auto-toggle="' + esc(rule.id) + '"' + (rule.on ? ' checked' : '') + (s.canManage ? '' : ' disabled') +
           ' aria-label="' + esc(t('Activar «{name}»', {name:rule.name})) + '">' +
-          '<div class="auto-rule-main"><b translate="no">' + esc(rule.name) + '</b><p translate="no">' + esc(r.text) + '</p>' +
+          '<div class="auto-rule-main"><b translate="no">' + esc(rule.name) + '</b>' + (rule.trigger.type === 'button' ? ' <span class="auto-tag">' + esc(t('Botón')) + '</span>' : '') +
+          '<p translate="no">' + esc(r.text) + '</p>' +
           (r.problem ? '<p class="auto-broken">' + esc(t('En pausa: {why}.', {why:r.problem})) + '</p>' : '') + '</div>' +
           (s.canManage ? '<div class="auto-rule-actions"><button type="button" class="icon-btn" data-auto="edit" data-id="' + esc(rule.id) + '">' + esc(t('Editar')) + '</button>' +
             '<button type="button" class="icon-btn" data-auto="remove" data-id="' + esc(rule.id) + '">' + esc(t('Eliminar')) + '</button></div>' : '') +
@@ -104,7 +105,8 @@
         (s.rules.length ? '<ul class="auto-rules">' + rules + '</ul>' : '<p class="auto-empty">' + esc(t('Todavía no hay ninguna automatización en este proyecto.')) + '</p>') +
         (s.canManage ? '' : '<p class="auto-note">' + esc(t(s.team ? 'Solo quien es propietario del equipo puede crear o cambiar las automatizaciones.' : 'No tienes permiso para cambiar las automatizaciones de este proyecto.')) + '</p>') +
         templates +
-        '<p class="auto-note">' + esc(t('Las reglas por fecha se comprueban mientras alguien que puede editar el proyecto tiene Kanlane abierto.')) + '</p>';
+        '<p class="auto-note">' + esc(t(s.server ? 'Las automatizaciones por fecha se ejecutan aunque nadie tenga Kanlane abierto: el servidor las revisa cada media hora.'
+          : 'En este proyecto las automatizaciones por fecha solo se ejecutan mientras alguien que puede editarlo tiene Kanlane abierto.')) + '</p>';
     }
 
     /* Formulario de una regla (nueva o existente). ctx: el de Automations. */
@@ -146,7 +148,8 @@
       const d = this.draft, ctx = this.ctx;
       const stages = (selected, any) => (any ? option('', t('Cualquier columna'), !selected) : '') + ctx.stages.map((s) => option(s.key, s.label, s.key === selected)).join('');
       const tr = d.trigger || {};
-      const triggers = [['moved', 'una tarea se mueve a una columna'], ['created', 'se crea una tarea'], ['completed', 'una tarea se completa'], ['due', 'se acerca la fecha límite']];
+      const triggers = [['moved', 'una tarea se mueve a una columna'], ['created', 'se crea una tarea'], ['completed', 'una tarea se completa'], ['due', 'se acerca la fecha límite'], ['button', 'alguien pulsa su botón en la tarea']];
+      const isButton = tr.type === 'button';
       const types = [['move', 'Mover a la columna'], ['complete', 'Marcar como completada'], ['label', 'Añadir la etiqueta'], ['subtask', 'Añadir la subtarea'], ['due', 'Poner la fecha límite']]
         .concat(ctx.team ? [['assign', 'Asignar a']] : []);
       const param = (a, i) => {
@@ -167,13 +170,14 @@
         '</div>').join('');
       this.foot.hidden = true;
       this.body.innerHTML = '<form id="autoForm" class="auto-form" novalidate>' +
-        '<div class="field"><label for="autoName">' + esc(t('Nombre (opcional)')) + '</label><input id="autoName" maxlength="80" autocomplete="off" value="' + esc(d.name || '') + '" placeholder="' + esc(t('Por ejemplo: Enviar a revisión')) + '"></div>' +
+        '<div class="field"><label for="autoName">' + esc(t(isButton ? 'Texto del botón' : 'Nombre (opcional)')) + '</label><input id="autoName" maxlength="' + (isButton ? 40 : 80) + '" autocomplete="off" value="' + esc(d.name || '') + '" placeholder="' + esc(t('Por ejemplo: Enviar a revisión')) + '"></div>' +
         '<fieldset class="auto-block"><legend>' + esc(t('Cuando…')) + '</legend>' +
           '<select id="autoTrigger" aria-label="' + esc(t('Qué tiene que pasar')) + '">' + triggers.map((x) => option(x[0], t(x[1]), x[0] === tr.type)).join('') + '</select>' +
           (tr.type === 'moved' || tr.type === 'created' ? '<select id="autoStage" aria-label="' + esc(t('Columna')) + '">' + stages(tr.stage || (tr.type === 'moved' ? (ctx.stages[0] || {}).key : ''), tr.type === 'created') + '</select>' : '') +
           (tr.type === 'due' ? '<span class="auto-days"><input type="number" id="autoDays" min="0" max="365" value="' + esc(tr.days == null || tr.days === '' ? 2 : tr.days) + '" aria-label="' + esc(t('Días antes de la fecha límite')) + '"><span>' + esc(t('días antes (0 = el mismo día)')) + '</span></span>' : '') +
         '</fieldset>' +
-        '<fieldset class="auto-block"><legend>' + esc(t('Solo si… (opcional)')) + '</legend>' +
+        (isButton ? '<p class="auto-note auto-note-form">' + esc(t('El botón sale en la ficha de cada tarea, para quien puede editar el proyecto.')) + '</p>' : '') +
+        '<fieldset class="auto-block"' + (isButton ? ' hidden' : '') + '><legend>' + esc(t('Solo si… (opcional)')) + '</legend>' +
           '<select id="autoCondLabel" aria-label="' + esc(t('Etiqueta que tiene que llevar')) + '">' + option('', t('Con cualquier etiqueta o sin ninguna'), !d.cond.label) + ctx.labels.map((l) => option(l, t('Lleva la etiqueta «{name}»', {name:l}), l === d.cond.label)).join('') + '</select>' +
           (ctx.team ? '<select id="autoCondAssignee" aria-label="' + esc(t('Quién la tiene asignada')) + '">' + option('', t('La tenga quien la tenga'), !d.cond.assignee) + option('none', t('No tiene a nadie asignado'), d.cond.assignee === 'none') +
             ctx.members.map((m) => option(m.uid, t('Está asignada a {name}', {name:m.name}), m.uid === d.cond.assignee)).join('') + '</select>' : '') +

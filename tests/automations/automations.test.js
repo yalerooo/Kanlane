@@ -203,6 +203,85 @@ test('una regla por fecha que mueve la tarea encadena con las demás, sin repeti
   assert.equal(w.tasks[0].checklist[0].text, 'Revisar');
 });
 
+test('el aviso de una columna o una persona borrada dice su nombre, no su identificador', () => {
+  const full = ctx();
+  const saved = A.withNames(rule({trigger:{type:'moved', stage:'doing'}, cond:{assignee:'luis'}, actions:[{type:'move', stage:'review'}, {type:'assign', uid:'ana'}]}), full);
+  assert.equal(saved.trigger.stageName, 'En curso');
+  assert.equal(saved.cond.assigneeName, 'Luis');
+  assert.equal(saved.actions[0].stageName, 'Revisión');
+  assert.equal(saved.actions[1].memberName, 'Ana');
+  /* Los nombres sobreviven a guardar y volver a leer. */
+  const kept = A.normalize(JSON.parse(JSON.stringify(saved)));
+  assert.equal(kept.trigger.stageName, 'En curso');
+  /* Se borra la columna «En curso» (clave interna «doing»). */
+  const noDoing = ctx({stages:full.stages.filter((s) => s.key !== 'doing')});
+  assert.equal(A.problem(kept, noDoing), 'la columna «En curso» ya no existe');
+  assert.match(A.describe(kept, noDoing), /^Cuando una tarea se mueve a «En curso» y está asignada a Luis: moverla a «Revisión», asignarla a Ana\.$/);
+  assert.equal(A.title(kept, noDoing), 'Al mover a «En curso»');
+  /* Se va Luis del equipo. */
+  assert.equal(A.problem(kept, ctx({members:[{uid:'ana', name:'Ana'}]})), 'Luis ya no está en el proyecto');
+  /* Sin columna borrada, el nombre guardado no manda: se usa el de ahora (si se renombra, cambia). */
+  const renamed = ctx({stages:full.stages.map((s) => (s.key === 'doing' ? {key:'doing', label:'En marcha'} : s))});
+  assert.match(A.describe(kept, renamed), /se mueve a «En marcha»/);
+  assert.equal(A.withNames(kept, renamed).trigger.stageName, 'En marcha');
+  /* Una regla antigua, sin nombre guardado, enseña lo único que tiene. */
+  assert.equal(A.problem(rule({trigger:{type:'moved', stage:'doing'}, actions:[{type:'complete'}]}), noDoing), 'la columna «doing» ya no existe');
+});
+
+test('botón de tarea: un clic ejecuta sus acciones, encadena y deja su línea', async () => {
+  assert.equal(A.normalize({trigger:{type:'button'}, actions:[{type:'complete'}]}), null, 'un botón necesita nombre');
+  const w = world([
+    rule({id:'b', name:'Enviar a revisión', trigger:{type:'button'}, actions:[{type:'move', stage:'review'}, {type:'subtask', text:'Revisar'}]}),
+    rule({id:'m', name:'Plazo', trigger:{type:'moved', stage:'review'}, actions:[{type:'due', days:2}]})
+  ], [{id:'t', status:'todo'}]);
+  /* Mover la tarea a mano no pulsa el botón. */
+  await w.engine.handle({type:'moved', id:'t', from:'doing', to:'todo'});
+  assert.equal(w.log.length, 0);
+  await w.engine.press('b', 't');
+  assert.equal(w.tasks[0].status, 'review');
+  assert.equal(w.tasks[0].checklist[0].text, 'Revisar');
+  assert.equal(w.tasks[0].dueDate, 'D+2');
+  assert.deepEqual(w.log.map((l) => l.rule), ['b', 'm']);
+  assert.equal(A.logText(w.rules[0], w.log[0].did), 'Botón «Enviar a revisión»: movió la tarea a «Revisión», añadió la subtarea «Revisar»');
+  assert.equal(A.logText(w.rules[1], w.log[1].did), 'Automatización «Plazo»: puso la fecha límite el D+2');
+  /* Pulsarlo otra vez no cambia nada; uno desactivado o que no es botón, tampoco. */
+  await w.engine.press('b', 't');
+  await w.engine.press('m', 't');
+  w.rules[0].on = false;
+  w.tasks[0].status = 'todo';
+  await w.engine.press('b', 't');
+  assert.equal(w.log.length, 2);
+  assert.equal(w.tasks[0].status, 'todo');
+});
+
+test('un botón que choca con otra regla también se corta, y respeta el cupo por minuto', async () => {
+  const w = world([
+    rule({id:'b', name:'Ida', trigger:{type:'button'}, actions:[{type:'move', stage:'review'}]}),
+    rule({id:'v', name:'Vuelta', trigger:{type:'moved', stage:'review'}, actions:[{type:'move', stage:'doing'}]}),
+    rule({id:'o', name:'Otra', trigger:{type:'moved', stage:'doing'}, actions:[{type:'move', stage:'review'}]})
+  ], [{id:'t', status:'todo'}]);
+  await w.engine.press('b', 't');
+  assert.deepEqual(w.log.map((l) => l.rule), ['b', 'v', 'o']);
+  assert.deepEqual(w.warns, ['loop']);
+  const many = world([rule({id:'b', name:'Etiqueta', trigger:{type:'button'}, actions:[{type:'label', name:'Web'}]})],
+    Array.from({length:100}, (x, i) => ({id:'t' + i, status:'todo', labels:[]})));
+  await Promise.all(many.tasks.map((t) => many.engine.press('b', t.id)));
+  assert.equal(many.log.length, A.MAX_PER_MINUTE);
+  assert.ok(many.warns.every((x) => x === 'rate') && many.warns.length === 100 - A.MAX_PER_MINUTE);
+});
+
+test('las reglas por fecha respetan lo que el motor no debe tocar (skip) y gastan un cupo por ejecución', async () => {
+  const w = world([rule({id:'d', trigger:{type:'due', days:5}, actions:[{type:'complete'}]})],
+    Array.from({length:80}, (x, i) => ({id:'t' + i, status:'todo', dueDate:'D+1', repeat:i === 0 ? 'weekly' : ''})));
+  w.engine.io.skip = (r, task) => !!task.repeat;
+  const fired = {};
+  await w.engine.checkDue(w.tasks, fired);
+  assert.equal(w.tasks[0].status, 'todo', 'la que se repite se deja para el navegador');
+  assert.equal(fired['d:t0'], undefined);
+  assert.equal(w.log.length, A.MAX_PER_MINUTE, 'un cupo por ejecución, no dos');
+  assert.equal(Object.keys(fired).length, A.MAX_PER_MINUTE);
+});
+
 (async () => {
   for(const [name, fn] of tests){
     await fn();

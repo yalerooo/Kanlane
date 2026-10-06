@@ -89,6 +89,36 @@ async function t(name, fn){
   await t('bob (editor) no expulsa a carol', () => assertFails(teamRef(bob).update({memberIds: FVc.arrayRemove('carol'), ['members.carol']: FVc.delete()})));
   await t('bob (editor) no invita', () => assertFails(bob.collection('invites').doc('t1_dave@x.com').set(invite('t1', 'dave@x.com', 'editor', 'bob'))));
   await t('bob (editor) no borra el equipo', () => assertFails(teamRef(bob).delete()));
+  console.log('Automatizaciones');
+  {
+    const auto = (who) => who.collection('teams').doc('t1').collection('plugin_data');
+    const values = {values:{rules:'[]'}, updatedAt:1};
+    await t('la propietaria guarda las automatizaciones del equipo', () => assertSucceeds(auto(alice).doc('kanlane.automations').set(values)));
+    await t('un editor las lee', () => assertSucceeds(auto(bob).doc('kanlane.automations').get()));
+    await t('un editor no las cambia', () => assertFails(auto(bob).doc('kanlane.automations').set({values:{rules:'[{}]'}, updatedAt:2})));
+    await t('un editor no las borra', () => assertFails(auto(bob).doc('kanlane.automations').delete()));
+    await t('un editor sí apunta las marcas de ejecución', () => assertSucceeds(auto(bob).doc('kanlane.automations.state').set({values:{fired:'{}'}, updatedAt:1})));
+    await t('y sigue guardando los datos de otros plugins', () => assertSucceeds(auto(bob).doc('workhub.otro').set({values:{a:'1'}, updatedAt:1})));
+    const jobs = (who) => who.collection('automation_jobs');
+    const job = (extra) => Object.assign({v:1, uid:'alice', tz:'Europe/Madrid', rules:[{id:'r1'}], ctx:{stages:[], labels:[], members:[], team:false}, updatedAt:1}, extra);
+    await t('leer el trabajo propio que aún no existe', () => assertSucceeds(jobs(alice).doc('u~alice~main').get()));
+    await t('dejar las reglas por fecha de un proyecto propio', () => assertSucceeds(jobs(alice).doc('u~alice~main').set(job({kind:'u', pid:'main'}))));
+    await t('y de otro proyecto propio', () => assertSucceeds(jobs(alice).doc('u~alice~p2').set(job({kind:'u', pid:'p2'}))));
+    await t('la propietaria deja las del equipo', () => assertSucceeds(jobs(alice).doc('t~t1').set(job({kind:'t', tid:'t1', ctx:{stages:[], labels:[], members:[], team:true}}))));
+    await t('no se dejan a nombre de otra cuenta', () => assertFails(jobs(bob).doc('u~alice~p3').set(job({kind:'u', pid:'p3'}))));
+    await t('ni con un identificador que no es el del proyecto', () => assertFails(jobs(alice).doc('u~alice~otro').set(job({kind:'u', pid:'main'}))));
+    await t('ni en el proyecto de otra persona', () => assertFails(jobs(bob).doc('u~alice~main').set(job({kind:'u', pid:'main', uid:'bob'}))));
+    await t('un editor no deja las del equipo', () => assertFails(jobs(bob).doc('t~t1').set(job({kind:'t', tid:'t1', uid:'bob'}))));
+    await t('una lectora tampoco', () => assertFails(jobs(carol).doc('t~t1').set(job({kind:'t', tid:'t1', uid:'carol'}))));
+    await t('ni alguien de fuera', () => assertFails(jobs(dave).doc('t~t1').set(job({kind:'t', tid:'t1', uid:'dave'}))));
+    await t('una lectora no cambia las automatizaciones', () => assertFails(auto(carol).doc('kanlane.automations').set(values)));
+    await t('no admite campos de más', () => assertFails(jobs(alice).doc('u~alice~p4').set(job({kind:'u', pid:'p4', token:'x'}))));
+    await t('ni más de 30 reglas', () => assertFails(jobs(alice).doc('u~alice~p5').set(job({kind:'u', pid:'p5', rules:Array.from({length:31}, () => ({}))}))));
+    await t('otra cuenta no lee el trabajo', () => assertFails(jobs(bob).doc('u~alice~main').get()));
+    await t('ni lo borra', () => assertFails(jobs(bob).doc('t~t1').delete()));
+    await t('su dueña lo borra', () => assertSucceeds(jobs(alice).doc('u~alice~p2').delete()));
+  }
+
   console.log('Contraseñas compartidas');
   {
     const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;

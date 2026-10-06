@@ -453,13 +453,44 @@ service cloud.firestore {
       allow delete: if verified() && resource.data.members[request.auth.uid].role == 'owner';
     }
 
+    // Las automatizaciones del equipo (plugin_data/kanlane.automations: reglas y botones) solo las
+    // cambia quien es propietario. Sus marcas de ejecución van en otro documento, que escribe quien edita.
+    function ownerOnly(col, docId) {
+      return col == 'plugin_data' && docId == 'kanlane.automations';
+    }
+
     match /teams/{tid}/{col}/{docId} {
       allow read: if isTeamCollection(col) && isMember(tid);
-      allow delete: if isTeamCollection(col) && canEdit(tid);
+      allow delete: if isTeamCollection(col) && canEdit(tid) && (!ownerOnly(col, docId) || isOwner(tid));
       allow create: if isTeamCollection(col) && canEdit(tid) && validWrite(col)
         && (!sealRequired(col) || isSealed(request.resource.data) || !teamEnc(tid))
-        && teamKid(tid);
-      allow update: if isTeamCollection(col) && canEdit(tid) && validWrite(col) && teamKid(tid);
+        && teamKid(tid)
+        && (!ownerOnly(col, docId) || isOwner(tid));
+      allow update: if isTeamCollection(col) && canEdit(tid) && validWrite(col) && teamKid(tid)
+        && (!ownerOnly(col, docId) || isOwner(tid));
+    }
+
+    // Reglas por fecha que ejecuta el servidor con Kanlane cerrado (worker/automations.mjs): una copia
+    // por proyecto, que solo deja, lee y borra quien es su dueño. El identificador dice de qué proyecto
+    // es (u~uid~proyecto o t~equipo) y tiene que coincidir con quien escribe. Un proyecto con cifrado
+    // total no puede dejarla: el servidor no puede leerlo. El servidor entra con su cuenta de servicio.
+    function validJob(jobId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['v', 'kind', 'uid', 'pid', 'tid', 'tz', 'rules', 'ctx', 'updatedAt'])
+        && d.v == 1 && d.uid == request.auth.uid
+        && d.tz is string && d.tz.size() <= 64
+        && d.rules is list && d.rules.size() > 0 && d.rules.size() <= 30
+        && d.ctx is map && d.ctx.keys().hasOnly(['stages', 'labels', 'members', 'team'])
+        && d.updatedAt is number
+        && ((d.kind == 'u' && d.pid is string && !('tid' in d)
+              && jobId == 'u~' + request.auth.uid + '~' + d.pid && !personalEnc(request.auth.uid, d.pid))
+            || (d.kind == 't' && d.tid is string && !('pid' in d)
+              && jobId == 't~' + d.tid && isOwner(d.tid) && !teamEnc(d.tid)));
+    }
+
+    match /automation_jobs/{jobId} {
+      allow read, delete: if verified() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create, update: if verified() && validJob(jobId);
     }
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);

@@ -162,8 +162,12 @@ function assertSealed(res, what){
       /* Una automatización: sus reglas van selladas con el proyecto. */
       const autos = app.controllers.automations;
       await autos.load(true);
-      autos.rules = Workhub.models.Automations.normalizeAll([{name:'Regla reservada', trigger:{type:'completed'}, actions:[{type:'subtask', text:'Paso reservado'}]}]);
+      autos.rules = Workhub.models.Automations.normalizeAll([{name:'Regla reservada', trigger:{type:'completed'}, actions:[{type:'subtask', text:'Paso reservado'}]},
+        {name:'Fecha reservada', trigger:{type:'due', days:365}, actions:[{type:'subtask', text:'Aviso reservado'}]}]);
       await autos.saveRules();
+      /* Con cifrado total no se deja copia de las reglas por fecha para el servidor. */
+      await autos.syncJob();
+      if(autos.jobData() !== null) throw new Error('un proyecto cifrado no debe preparar copia para el servidor');
       window.__assetId = assetId;
       return t.id;
     });
@@ -175,6 +179,36 @@ function assertSealed(res, what){
     assertSealed(await storedWhen(base + '/plugin_data', hasSeal), 'datos de plugins');
     const assetId = await page.evaluate(() => window.__assetId);
     assert.ok(assetId, 'la imagen se subió');
+    /* ---------- el servidor de las automatizaciones por fecha no puede con un proyecto cifrado ---------- */
+    {
+      const {pathToFileURL} = require('node:url');
+      const cron = await import(pathToFileURL(path.join(root, 'worker/automations.mjs')).href);
+      const cronEnv = {FIRESTORE_EMULATOR_HOST:storeUrl.split('/')[2], FIREBASE_PROJECT:'demo-workhub'};
+      const jobId = 'u~' + seed.uid + '~' + seed.id;
+      assert.equal((await stored('automation_jobs/' + jobId)).status, 404, 'la app no deja copia de las reglas de un proyecto cifrado');
+      assert.equal((await cron.run(cronEnv)).results.some((r) => r.id === jobId), false, 'el servidor ni lo ve');
+      /* Aunque alguien colara una copia a mano con las reglas en claro: el servidor encuentra las
+         tareas selladas, no escribe nada y borra la copia. */
+      const before = await stored(base + '/tasks/' + taskId);
+      const rogue = {fields:{v:{integerValue:'1'}, kind:{stringValue:'u'}, uid:{stringValue:seed.uid}, pid:{stringValue:seed.id}, tz:{stringValue:'UTC'}, updatedAt:{integerValue:'1'},
+        ctx:{mapValue:{fields:{stages:{arrayValue:{values:[{mapValue:{fields:{key:{stringValue:'x'}, label:{stringValue:'X'}}}}]}}, labels:{arrayValue:{}}, members:{arrayValue:{}}, team:{booleanValue:false}}}},
+        rules:{arrayValue:{values:[{mapValue:{fields:{id:{stringValue:'r'}, name:{stringValue:'Colada'}, on:{booleanValue:true},
+          trigger:{mapValue:{fields:{type:{stringValue:'due'}, days:{integerValue:'365'}}}}, cond:{mapValue:{fields:{}}},
+          actions:{arrayValue:{values:[{mapValue:{fields:{type:{stringValue:'subtask'}, text:{stringValue:'Colada'}}}}]}}}}}]}}}};
+      /* Una tarea con fecha, para que la consulta del servidor la encuentre (la fecha va en claro). */
+      await page.evaluate((id) => Workhub.app.models.tasks.update(id, {dueDate:Workhub.utils.dates.todayYmd()}), taskId);
+      await storedWhen(base + '/tasks/' + taskId, (res) => res.text.indexOf('dueDate') !== -1);
+      const put = await fetch(storeUrl + 'automation_jobs/' + jobId, {method:'PATCH', headers:{Authorization:'Bearer owner', 'Content-Type':'application/json'}, body:JSON.stringify(rogue)});
+      assert.equal(put.status, 200, 'copia colada como administrador');
+      const out = await cron.run(cronEnv);
+      assert.equal(out.results.find((r) => r.id === jobId).status, 'encrypted');
+      assert.equal((await stored('automation_jobs/' + jobId)).status, 404, 'la copia se borra');
+      const after = await stored(base + '/tasks/' + taskId);
+      assert.ok(after.text.indexOf('Colada') === -1 && after.text.indexOf('checklist') === -1, 'la tarea sellada no se toca');
+      assert.equal((await stored(base + '/plugin_data/kanlane.automations.state')).status, 404, 'ni se apunta nada en el proyecto');
+      assertSealed(after, 'tarea tras pasar el servidor');
+      await page.evaluate((id) => Workhub.app.models.tasks.update(id, {dueDate:''}), taskId);
+    }
     const autoDoc = await storedWhen(base + '/plugin_data/kanlane.automations', hasSeal);
     assertSealed(autoDoc, 'automatizaciones');
     assert.ok(autoDoc.text.indexOf('reservad') === -1 && autoDoc.text.indexOf('subtask') === -1, 'las reglas no están en claro');

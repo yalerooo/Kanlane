@@ -37,6 +37,14 @@
     { "pattern": "workhub.yalero.net", "custom_domain": true }
   ],
 
+  // Automatizaciones por fecha con Kanlane cerrado (worker/automations.mjs): cada 30 minutos.
+  // Necesita el secreto FIREBASE_SERVICE_ACCOUNT ("npx wrangler secret put FIREBASE_SERVICE_ACCOUNT",
+  // el JSON de una cuenta de servicio con el rol «Usuario de Cloud Datastore»: ver
+  // docs/AUTOMATIZACIONES.md). Sin el secreto, el cron no hace nada.
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+
   // A dónde mandan los dominios antiguos. Para volver al respaldo si kanlane.com
   // da problemas: pon "https://kanlane.yalero.net" y despliega. LEGACY_STATUS pasa a
   // "301" (permanente) cuando todo esté probado: una 301 se queda en la caché de los

@@ -14,7 +14,10 @@
    Solo se reenvían las rutas de Firebase indicadas; no es un proxy abierto.
 
    Además atiende /__/kms/v1/kek: la clave de los proyectos «Gestionado por Kanlane», y
-   /__/kms/v1/totp: la verificación en dos pasos del gestor de contraseñas. */
+   /__/kms/v1/totp: la verificación en dos pasos del gestor de contraseñas.
+
+   Y, sin atender ninguna petición, ejecuta cada 30 minutos las automatizaciones por fecha de los
+   proyectos (cron de wrangler.jsonc → `scheduled` → worker/automations.mjs). */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -277,6 +280,16 @@ async function totp(request, env, url) {
 }
 
 export default {
+  /* Cron: automatizaciones por fecha con Kanlane cerrado. Se carga aparte (solo cuando toca) y,
+     sin el secreto FIREBASE_SERVICE_ACCOUNT, no hace nada. */
+  async scheduled(event, env, ctx) {
+    const job = import('./automations.mjs').then((m) => m.run(env)).then((out) => {
+      if (out.configured && out.ran) console.log('automatizaciones: ' + out.ran + ' ejecuciones en ' + out.jobs + ' proyectos');
+    }, (err) => console.error('automatizaciones: ' + (err && err.message)));
+    ctx.waitUntil(job);
+    return job;
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();

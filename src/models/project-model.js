@@ -318,6 +318,11 @@
         const keystore = Workhub.services.keystore;
         if(keystore) wipeOthers.push(keystore.forgetProject(id, me).catch(() => null));
       }
+      /* Y la copia de sus reglas por fecha que lee el servidor (automation_jobs), si la dejó. */
+      if(rootDb.jobs && me){
+        const jobId = isTeam ? 't~' + ProjectModel.teamId(id) : 'u~' + me + '~' + id;
+        wipeOthers.push(rootDb.jobs.doc(jobId).delete().catch(() => null));
+      }
       return Promise.all([wipeTasks, wipeMeta].concat(wipeOthers)).then(() => {
         /* Las imágenes son lo menos importante: si alguna falla, se sigue. */
         if(!assets || !assets.delete) return null;

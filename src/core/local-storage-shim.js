@@ -4,7 +4,19 @@
    aplicación funciona igual en los dos sitios. */
 if(!window.claude){
   (function(){
-    var DB_NAME = 'tablero_local_db';
+    var LEGACY_DB = 'tablero_local_db';
+    /* Cada invitado tiene su propia base de datos (tablero_guest_{id}), para que quien entre después
+       en este navegador no herede sus datos. El id va con el invitado en workhub_guest o, mientras
+       se llevan sus datos a una cuenta, en workhub_guest_migrate (AuthController). Sin id —modo
+       local, o un invitado anterior a esto— se usa la base de siempre. */
+    var GUEST_ID = (function(){
+      function stored(key){
+        try{ return JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){ return null; }
+      }
+      var who = stored('workhub_guest') || stored('workhub_guest_migrate');
+      return who && typeof who.id === 'string' && /^[a-z0-9]{6,40}$/.test(who.id) ? who.id : '';
+    })();
+    var DB_NAME = GUEST_ID ? 'tablero_guest_' + GUEST_ID : LEGACY_DB;
     var DB_VERSION = 1;
     var DOCS_STORE = 'docs';
     var ASSETS_STORE = 'assets';
@@ -256,6 +268,8 @@ if(!window.claude){
        (src/models/guest-migration.js). wipe() lo vacía entero. */
     window.__localStore = {
       db: localDb,
+      /* De qué invitado es esta base ('' = la de siempre). */
+      guestId: GUEST_ID,
       blob: function(id){
         return idbGet(ASSETS_STORE, id).then(function(rec){ return rec ? rec.blob : null; });
       },

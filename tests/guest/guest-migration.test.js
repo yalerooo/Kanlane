@@ -76,8 +76,10 @@ function assets(){
 (async () => {
   /* ---------- Lo pendiente, en el navegador ---------- */
   assert.equal(migration.pending(), null);
-  assert.equal(migration.request('Lola', 'p2'), true);
-  assert.deepEqual(migration.pending(), {name:'Lola', open:'p2'});
+  assert.equal(migration.request('Lola', 'p2', 'abc123xyz'), true);
+  assert.deepEqual(migration.pending(), {name:'Lola', id:'abc123xyz', open:'p2'});
+  assert.equal(migration.request('De antes', 'main'), true);
+  assert.equal(migration.pending().id, '', 'sin id: la base de datos de siempre');
   migration.clear();
   assert.equal(migration.pending(), null);
   ok('lo pendiente se apunta y se borra en este navegador');

@@ -18,11 +18,43 @@
   /* «Ya entró antes en este navegador»: lo lee boot.js para pintar el esqueleto sin esperar a Firebase. */
   const SESSION_KEY = 'workhub_session';
 
-  function guestName(){
+  /* Invitados que han usado este navegador y siguen teniendo aquí sus datos: [{id, name, at}], el
+     más reciente primero. Cada uno tiene su base de datos (core/local-storage-shim.js); id '' es
+     la base de siempre, la de quien fue invitado antes de que hubiera una por persona. */
+  const GUESTS_KEY = 'workhub_guests';
+  const MAX_GUESTS = 5;
+
+  /* El invitado que está dentro: {name, id}, o null. */
+  function currentGuest(){
     try{
       const g = JSON.parse(localStorage.getItem(GUEST_KEY) || 'null');
-      return g && typeof g.name === 'string' && g.name.trim() ? g.name.trim().slice(0, 40) : '';
-    }catch(e){ return ''; }
+      const name = g && typeof g.name === 'string' ? g.name.trim().slice(0, 40) : '';
+      return name ? {name:name, id:typeof g.id === 'string' ? g.id : ''} : null;
+    }catch(e){ return null; }
+  }
+
+  function knownGuests(){
+    try{
+      const list = JSON.parse(localStorage.getItem(GUESTS_KEY) || '[]');
+      return (Array.isArray(list) ? list : []).filter((g) => g && typeof g.id === 'string' && typeof g.name === 'string')
+        .map((g) => ({id:g.id, name:g.name.slice(0, 40), at:+g.at || 0}));
+    }catch(e){ return []; }
+  }
+
+  function saveGuests(list){
+    try{ localStorage.setItem(GUESTS_KEY, JSON.stringify(list.slice(0, MAX_GUESTS))); }catch(e){}
+  }
+
+  function rememberGuest(guest){
+    saveGuests([{id:guest.id, name:guest.name, at:Date.now()}].concat(knownGuests().filter((g) => g.id !== guest.id)));
+  }
+
+  function forgetGuest(id){
+    saveGuests(knownGuests().filter((g) => g.id !== id));
+  }
+
+  function newGuestId(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
 
   const ERRORS = {
@@ -70,8 +102,9 @@
       this.view = view;
       this.user = null;
       this.guest = '';
+      this.guestId = '';
 
-      this.view.bindGuest((name) => this.enterGuest(name));
+      this.view.bindGuest((name, id) => this.enterGuest(name, id));
       this.view.bindUpgrade(() => this.upgradeGuest());
       this.view.bindMigrateCancel(() => this.cancelUpgrade());
       this.view.bindProvider((key) => this.signInWith(key));
@@ -92,7 +125,7 @@
         return Promise.resolve();
       }
       /* Invitado recordado: no se contacta con Firebase en ningún momento. */
-      const guest = guestName();
+      const guest = currentGuest();
       if(guest){
         this.startGuest(guest);
         return Promise.resolve();
@@ -104,17 +137,32 @@
     }
 
     /* Entra como invitado desde la pantalla de acceso. Se recarga para arrancar
-       limpio con el almacén local, sin ninguna sesión de Firebase de por medio. */
-    enterGuest(name){
+       limpio con el almacén local, sin ninguna sesión de Firebase de por medio.
+       Sin id es alguien nuevo: estrena su propia base de datos, vacía, y no ve lo de quien
+       fuera invitado antes en este navegador. Con id (aunque sea '') vuelve uno de los de antes. */
+    enterGuest(name, id){
       name = String(name || '').trim().slice(0, 40);
       if(!name) return;
-      try{ localStorage.setItem(GUEST_KEY, JSON.stringify({name:name})); }catch(e){
+      const guest = {name:name, id:typeof id === 'string' ? id : newGuestId()};
+      try{ localStorage.setItem(GUEST_KEY, JSON.stringify(guest)); }catch(e){
         this.view.showMessage('Este navegador no permite guardar datos, así que no se puede usar el modo invitado.');
         return;
       }
+      rememberGuest(guest);
       /* Vuelve a ser invitado: ya no hay nada pendiente de llevar a una cuenta. */
       migration.clear();
       location.reload();
+    }
+
+    /* Invitados de antes con datos en este navegador, para ofrecer «Continuar como…». Quien salió
+       antes de que se apuntaran no está en la lista: se mira si la base de siempre tiene algo. */
+    previousGuests(){
+      const list = knownGuests();
+      const local = window.__localStore;
+      if(!local || local.guestId || list.some((g) => !g.id)) return Promise.resolve(list);
+      return Promise.all(['projects', 'tasks'].map((name) => local.db.collection(name).get()))
+        .then((snaps) => (snaps.some((s) => s.docs.length) ? list.concat({id:'', name:'', at:0}) : list))
+        .catch(() => list);
     }
 
     /* «Crear cuenta y llevarme mis datos»: se apunta en este navegador y se va a la pantalla de
@@ -122,9 +170,10 @@
        que entre (bringGuestData). Hasta entonces se puede volver atrás (cancelUpgrade). */
     upgradeGuest(){
       if(!this.guest) return;
-      if(!migration.request(this.guest, this.app.projectId)) return;
+      if(!migration.request(this.guest, this.app.projectId, this.guestId)) return;
       /* Al entrar con la cuenta se abre el tablero, no Ajustes (desde donde se suele pedir). */
       this.app.navigate('tasks');
+      rememberGuest({name:this.guest, id:this.guestId});
       try{ localStorage.removeItem(GUEST_KEY); }catch(e){}
       location.assign(location.pathname + '?registro');
     }
@@ -132,33 +181,49 @@
     /* «Seguir como invitado» desde la pantalla de acceso. */
     cancelUpgrade(){
       const state = migration.pending();
-      if(state) this.enterGuest(state.name || Workhub.t('Invitado'));
+      if(state) this.enterGuest(state.name || Workhub.t('Invitado'), state.id || '');
     }
 
     /* Con una cuenta ya dentro: copia a ella los datos del modo invitado, si se pidió. Va antes de
        arrancar la app, así al abrirse ya están. Nunca se rechaza: si algo falla se entra igual, los
        datos siguen en este navegador y se vuelve a intentar en la siguiente carga. */
     bringGuestData(){
-      const state = migration.pending();
       const local = window.__localStore;
-      if(!state || !local) return Promise.resolve();
+      /* Solo los datos del invitado que lo pidió: la base abierta tiene que ser la suya. */
+      const mine = (state) => !!state && !!local && (state.id || '') === local.guestId;
+      if(!mine(migration.pending())) return Promise.resolve();
       this.view.showMigrating();
-      return Promise.all([platform.connectDb(), platform.connectAssets()]).then((r) => migration.run({
-        from: local.db, to: r[0], state: state, save: migration.save,
-        assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)}
-      })).then((res) => {
-        migration.clear();
-        /* «?registro» ya cumplió: fuera de la dirección, para que recargar no lo repita. */
-        try{ history.replaceState(null, '', location.pathname); }catch(e){}
-        if(res.open){
-          this.app.projectId = res.open.id;
-          this.app.rememberProject(res.open);
-        }
-        this.migrated = res;
-        /* Todo está en la cuenta: no se deja una copia en este navegador. Si algo no se pudo
-           copiar, se queda aquí para no perderlo (se ve entrando otra vez como invitado). */
-        return res.skipped ? null : local.wipe().catch(() => null);
-      }).catch(() => { this.migrated = {failed:true}; }).then(() => this.view.showAppSkeleton());
+      /* De una en una: con la app en dos pestañas (p. ej. al volver del correo de verificación) la
+         segunda espera, y si la primera ya lo ha hecho no queda nada pendiente. */
+      const copy = () => {
+        const state = migration.pending();
+        if(!mine(state)) return Promise.resolve(null);
+        return Promise.all([platform.connectDb(), platform.connectAssets()]).then((r) => migration.run({
+          from: local.db, to: r[0], state: state, save: migration.save,
+          assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)}
+        })).then((res) => this.afterCopy(res, state, local));
+      };
+      const locks = navigator.locks;
+      return (locks && locks.request ? locks.request('workhub-guest-migrate', copy) : copy())
+        .catch(() => { this.migrated = {failed:true}; }).then(() => this.view.showAppSkeleton());
+    }
+
+    /* La copia ha terminado: nada pendiente, y se abre el proyecto que el invitado tenía abierto. */
+    afterCopy(res, state, local){
+      migration.clear();
+      /* «?registro» ya cumplió: fuera de la dirección, para que recargar no lo repita. */
+      try{ history.replaceState(null, '', location.pathname); }catch(e){}
+      if(res.open){
+        this.app.projectId = res.open.id;
+        this.app.rememberProject(res.open);
+      }
+      this.migrated = res;
+      /* Todo está en la cuenta: no se deja una copia en este navegador, y ese invitado deja de
+         ofrecerse en el acceso. Si algo no se pudo copiar, se queda aquí para no perderlo (se ve
+         entrando otra vez como ese invitado). */
+      if(res.skipped) return null;
+      forgetGuest(state.id || '');
+      return local.wipe().catch(() => null);
     }
 
     /* Ya dentro de la app: se cuenta cómo ha ido la copia de los datos de invitado. */
@@ -174,10 +239,11 @@
     }
 
     /* El almacén local (window.claude del shim) ya está activo: solo hay que mostrar la app. */
-    startGuest(name){
-      this.guest = name;
+    startGuest(guest){
+      this.guest = guest.name;
+      this.guestId = guest.id;
       this.view.hide();
-      this.view.showGuest(name);
+      this.view.showGuest(guest.name);
     }
 
     boot(){
@@ -209,6 +275,7 @@
         /* Sesión caducada o cerrada desde otra pestaña: fuera las claves de cifrado que no sean de confianza. */
         this.purgeKeys();
         this.view.showSignIn(firebase.providers(), firebase.allowSignup());
+        this.previousGuests().then((list) => this.view.showGuests(list));
         /* Viene de «Crear cuenta y llevarme mis datos»: se avisa de que se copiarán al entrar. */
         const move = migration.pending();
         if(move) this.view.showMigrate(move.name);
@@ -345,7 +412,9 @@
        copia local de los datos (clearLocalCache). */
     signOut(){
       if(this.guest){
-        /* Los datos se quedan en el navegador: al volver a entrar como invitado siguen ahí. */
+        /* Los datos se quedan en el navegador, en la base de este invitado: puede volver a ellos
+           desde la pantalla de acceso («Continuar como…»). Quien entre como otro invitado no los ve. */
+        rememberGuest({name:this.guest, id:this.guestId});
         try{ localStorage.removeItem(GUEST_KEY); }catch(e){}
         SESSION_PREFS.forEach((key) => { try{ localStorage.removeItem(key); }catch(e){} });
         location.reload();

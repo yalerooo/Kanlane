@@ -271,6 +271,10 @@ html.auth-gate .app{display:none !important;}
 }
 
 /* ---------- Invitado ---------- */
+/* Invitados de antes: «Continuar como…», y debajo el nombre para entrar como alguien nuevo. */
+.auth-guest-prev{margin:0 0 12px;}
+.auth-guest-prev .auth-guest-back{margin:0 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.auth-guest-or{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink-faint);}
 .auth-guest-note{margin:0 0 14px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
 .auth-guest-back{width:100%;height:40px;margin-top:8px;border-radius:calc(var(--r-md) + 2px);}
 /* Paso «invitado»: solo el nombre y sus botones, sin el resto del acceso. */

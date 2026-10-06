@@ -155,6 +155,7 @@
   });
   $('btnProject').addEventListener('click', () => lock('project'));
   $('btnCommand').addEventListener('click', () => lock('search'));
+  $('btnAutomations').addEventListener('click', () => lock('section'));
   document.addEventListener('keydown', (ev) => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((ev.target && ev.target.tagName) || '');
     if((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')){ ev.preventDefault(); lock('search'); }

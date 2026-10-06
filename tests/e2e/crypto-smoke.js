@@ -159,6 +159,11 @@ function assertSealed(res, what){
       window.__filePart = files[0].parts[1];
       const PluginModel = Workhub.models.PluginModel;
       await PluginModel.storageSet(app.controllers.plugins.bucket('workhub.prueba'), 'dato', 'valor privado del plugin');
+      /* Una automatización: sus reglas van selladas con el proyecto. */
+      const autos = app.controllers.automations;
+      await autos.load(true);
+      autos.rules = Workhub.models.Automations.normalizeAll([{name:'Regla reservada', trigger:{type:'completed'}, actions:[{type:'subtask', text:'Paso reservado'}]}]);
+      await autos.saveRules();
       window.__assetId = assetId;
       return t.id;
     });
@@ -170,6 +175,9 @@ function assertSealed(res, what){
     assertSealed(await storedWhen(base + '/plugin_data', hasSeal), 'datos de plugins');
     const assetId = await page.evaluate(() => window.__assetId);
     assert.ok(assetId, 'la imagen se subió');
+    const autoDoc = await storedWhen(base + '/plugin_data/kanlane.automations', hasSeal);
+    assertSealed(autoDoc, 'automatizaciones');
+    assert.ok(autoDoc.text.indexOf('reservad') === -1 && autoDoc.text.indexOf('subtask') === -1, 'las reglas no están en claro');
     const asset = await storedWhen('users/' + seed.uid + '/assets/' + assetId, hasSeal);
     /* El trozo del archivo adjunto también está sellado, sin `data` ni tipo en claro. */
     const filePart = await storedWhen('users/' + seed.uid + '/assets/' + await page.evaluate(() => window.__filePart), hasSeal);

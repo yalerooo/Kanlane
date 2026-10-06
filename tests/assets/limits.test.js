@@ -55,6 +55,20 @@ test('las imágenes de equipo pasan por la misma validación', () => {
   assert.match(rules, /function validWrite\(col\) \{[^}]*validData\(col\)/);
 });
 
+test('un trozo de archivo adjunto cabe en un documento de assets', () => {
+  const files = Workhub.services.firebase.fileLimits;
+  assert.ok(files, 'firebase-backend publica fileLimits');
+  const chars = files.prefix.length + Math.ceil(files.chunkBytes / 3) * 4;
+  assert.ok(chars <= limits.maxChars, 'trozo ' + chars + ' <= ' + limits.maxChars);
+  /* El máximo por archivo (platform.js) no pasa de los ids que admite una nota (400 en las reglas). */
+  const platformSource = fs.readFileSync(path.join(root, 'src/services/platform.js'), 'utf8');
+  const maxBytes = Function('return ' + platformSource.match(/const FILE_MAX_BYTES = ([^;]+);/)[1])();
+  const perNote = Number(platformSource.match(/const NOTE_MAX_FILES = (\d+);/)[1]);
+  const idsMax = Number(rules.match(/listWithin\(data, 'assetIds', (\d+)\)/)[1]);
+  assert.ok(Math.ceil(maxBytes / files.chunkBytes) * perNote <= idsMax, 'los trozos de una nota llena caben en assetIds');
+  assert.ok(perNote <= Number(rules.match(/listWithin\(data, 'attachments', (\d+)\)/)[1]));
+});
+
 test('un documento de imagen al límite cabe en 1 MiB de Firestore', () => {
   const doc = {data: dataUrl(limits.maxChars), contentType: 'image/jpeg', createdAt: Date.now()};
   assert.ok(Buffer.byteLength(JSON.stringify(doc)) < 1048576 - 1024);

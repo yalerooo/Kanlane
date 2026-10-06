@@ -41,6 +41,53 @@
     });
   }
 
+  /* Archivos adjuntos que no son imágenes: como mucho 10 MB cada uno y 10 adjuntos por nota. */
+  const FILE_MAX_BYTES = 10 * 1024 * 1024;
+  const NOTE_MAX_FILES = 10;
+
+  /* Sube un archivo tal cual y devuelve los ids de sus trozos ([] si este modo no guarda
+     archivos). En la nube se reparte en varios documentos (firebase-backend.js); en local y
+     en claude.ai va entero. Se rechaza con err.code 'file-too-large' si pasa del máximo. */
+  function uploadFile(file){
+    if(file.size > FILE_MAX_BYTES){
+      const err = new Error('file-too-large');
+      err.code = 'file-too-large';
+      return Promise.reject(err);
+    }
+    return use('assets').then((assets) => {
+      if(!assets) return [];
+      if(assets.uploadFile) return assets.uploadFile(file).then((res) => res.parts);
+      return assets.upload(file, {type:file.type || 'application/octet-stream'}).then((res) => [res.id]);
+    });
+  }
+
+  /* Contenido de un adjunto ({parts, type}) como Blob, para descargarlo. */
+  function fileBlob(att){
+    const parts = Array.isArray(att && att.parts) ? att.parts : [];
+    const type = (att && att.type) || 'application/octet-stream';
+    if(window.__assetBytes){
+      return Promise.all(parts.map((id) => window.__assetBytes(id))).then((chunks) => {
+        if(!chunks.length || chunks.some((c) => !c)) throw new Error('file-missing');
+        return new Blob(chunks, {type:type});
+      });
+    }
+    const url = mode() === 'claude' ? Promise.resolve('/_blob/' + parts[0])
+      : window.__localAssetUrl ? window.__localAssetUrl(parts[0]) : Promise.resolve('');
+    return url.then((src) => {
+      if(!src || !parts[0]) throw new Error('file-missing');
+      return fetch(src).then((res) => res.blob()).then((blob) => new Blob([blob], {type:type}));
+    });
+  }
+
+  /* Borra imágenes y trozos de archivos que ya no enlaza ninguna nota. Si alguno falla, se sigue. */
+  function deleteAssets(ids){
+    if(!ids || !ids.length) return Promise.resolve();
+    return use('assets').then((assets) => {
+      if(!assets || !assets.delete) return null;
+      return Promise.all(ids.map((id) => assets.delete(id).catch(() => null)));
+    }).catch(() => null);
+  }
+
   function download(filename, data){
     return use('downloads').then((dl) => {
       if(!dl) throw new Error('no-downloads');
@@ -73,5 +120,6 @@
     }
   }
 
-  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, connectAssets, uploadAsset, download, assetSrc, hydrateAssetImages, whenReady};
+  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, connectAssets, uploadAsset, uploadFile, fileBlob, deleteAssets, download, assetSrc, hydrateAssetImages, whenReady,
+    fileLimits: {maxBytes: FILE_MAX_BYTES, maxPerNote: NOTE_MAX_FILES}};
 })();

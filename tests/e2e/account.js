@@ -101,6 +101,28 @@ async function openAccount(page){
       const app = Workhub.app;
       const task = app.models.tasks.items[0];
       await app.models.tasks.addNote(task.id, 'Una nota', '');
+      /* Nota con varios adjuntos: un archivo que ocupa tres trozos y dos imágenes. Se lee de vuelta
+         byte a byte y, al eliminar la nota, sus documentos de assets desaparecen. */
+      const A = Workhub.views.attachments, P = Workhub.services.platform;
+      const bytes = new Uint8Array(1500000);
+      for(let i = 0; i < bytes.length; i++) bytes[i] = (i * 31 + 7) % 251;
+      const image = async (color) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 60; canvas.height = 40;
+        const g = canvas.getContext('2d');
+        g.fillStyle = color; g.fillRect(0, 0, 60, 40);
+        return new File([await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))], color + '.png', {type:'image/png'});
+      };
+      const list = await A.upload([new File([bytes], 'informe.bin', {type:'application/octet-stream'}), await image('red'), await image('blue')]);
+      if(list.length !== 3 || list[0].parts.length !== 3 || !list[1].image || !list[2].image) throw new Error('adjuntos subidos: ' + JSON.stringify(list));
+      const noteRef = await app.models.tasks.addNote(task.id, 'Con adjuntos', list);
+      const saved = (await app.models.tasks.notes(task.id).doc(noteRef.id).get()).data();
+      if(saved.assetIds.length !== 5 || saved.attachments.length !== 3 || saved.imageAssetId) throw new Error('nota guardada: ' + JSON.stringify(saved));
+      const back = new Uint8Array(await (await P.fileBlob(list[0])).arrayBuffer());
+      if(back.length !== bytes.length || back.some((b, i) => b !== bytes[i])) throw new Error('el archivo descargado no coincide');
+      if(!(await window.__assetUrl(list[1].parts[0]))) throw new Error('la imagen no se lee');
+      await P.deleteAssets(await app.models.tasks.removeNote(task.id, noteRef.id));
+      if(await window.__assetBytes(list[0].parts[0])) throw new Error('los trozos siguen ahí tras eliminar la nota');
       const second = await app.models.projects.create('Segundo', 3, {});
       await app.rootDb.collection('projects').doc(second.id).collection('tasks').add({title:'Del segundo', status:'todo', order:1, createdAt:Date.now(), updatedAt:Date.now()});
       const team = await app.models.projects.createTeam('Equipo propio', 4, {});

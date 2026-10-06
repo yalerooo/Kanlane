@@ -49,6 +49,9 @@ function guest(){
   db.put('tasks', 't1', {title:'Con nota', status:'todo', linkedContacts:['c1'], linkedVault:['v1'], createdAt:1});
   db.put('tasks/t1/notes', 'n1', {text:'con foto', imageAssetId:'img-local', createdAt:2, kind:'note'});
   db.put('tasks/t1/notes', 'n2', {text:'sin foto', imageAssetId:'', createdAt:3, kind:'note'});
+  db.put('tasks/t1/notes', 'n3', {text:'con archivo', imageAssetId:'', createdAt:4, kind:'note',
+    attachments:[{name:'informe.pdf', type:'application/pdf', size:9, image:false, parts:['file-local']}, {name:'perdido.zip', type:'application/zip', size:5, image:false, parts:['ya-no-existe']}],
+    assetIds:['file-local', 'ya-no-existe']});
   db.put('tasks', 't2', {title:'Otra', status:'doing', createdAt:4});
   db.put('clients', 'cl1', {nombre:'Acme', createdAt:1});
   db.put('contacts', 'c1', {cliente:'Acme', nombre:'Ana', createdAt:1});
@@ -68,8 +71,10 @@ function assets(){
   const uploads = [];
   return {
     uploads,
-    read: (id) => Promise.resolve(id === 'img-local' ? {blob:id} : null),
-    upload: (blob) => { uploads.push(blob); return Promise.resolve({id:'img-cuenta-' + uploads.length}); }
+    read: (id) => Promise.resolve(id === 'img-local' || id === 'file-local' ? {blob:id} : null),
+    upload: (blob) => { uploads.push(blob); return Promise.resolve({id:'img-cuenta-' + uploads.length}); },
+    /* En la cuenta un archivo se reparte en varios trozos. */
+    uploadFile: (blob) => Promise.resolve({parts:[blob.blob + '-a', blob.blob + '-b']})
   };
 }
 
@@ -112,6 +117,9 @@ function assets(){
     assert.equal(to.raw(base + 'tasks/t1/notes', 'n1').imageAssetId, 'img-cuenta-1', 'la imagen de la nota se sube a la cuenta');
     assert.equal(to.raw(base + 'tasks/t1/notes', 'n2').imageAssetId, '');
     assert.equal(imgs.uploads.length, 1);
+    const n3 = to.raw(base + 'tasks/t1/notes', 'n3');
+    assert.deepEqual(n3.attachments, [{name:'informe.pdf', type:'application/pdf', size:9, image:false, parts:['file-local-a', 'file-local-b']}], 'el archivo adjunto se sube a la cuenta; el que ya no existe se quita');
+    assert.deepEqual(n3.assetIds, ['file-local-a', 'file-local-b'], 'y la nota enlaza sus trozos nuevos');
     assert.deepEqual(to.raw(base + 'plugin_data', 'workhub.informe'), {values:{a:'1'}, updatedAt:1});
     assert.deepEqual(to.raw(base + 'plugin_data', 'install:workhub.temporizador'), {
       _kind:'plugin-install', pluginId:'workhub.temporizador', url:'/plugins/temporizador/',

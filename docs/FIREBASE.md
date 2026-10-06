@@ -109,7 +109,7 @@ Para publicar cambios más adelante, repite solo `firebase deploy --only hosting
 
 Así se importan también las contraseñas cifradas. Después, en **Contraseñas**, se desbloquean con la misma contraseña maestra que usabas. Si ya habías creado una contraseña maestra en la web, las contraseñas del archivo se omiten para no dejarlas ilegibles.
 
-Las imágenes adjuntas a las notas no viajan en la copia de seguridad.
+Las imágenes y los archivos adjuntos a las notas no viajan en la copia de seguridad.
 
 ## 7. Dominio propio (opcional)
 
@@ -123,6 +123,7 @@ Consola → **Hosting** → **Añadir dominio personalizado** y sigue las instru
 - `src/services/firebase-backend.js`: carga el SDK de Firebase (versión *compat*) desde el CDN de Google, gestiona la sesión y entrega a la app la misma interfaz de datos que ya usaba: `collection`, `doc`, `where`, `orderBy` y `onSnapshot`. Los modelos, vistas y controladores no saben que hay Firebase detrás.
 - **Datos:** todo cuelga de `users/{uid}`: `tasks` (con la subcolección `notes`), `clients`, `contacts`, `meetings`, `vault`, `vault_meta` y `assets`, además de `settings/preferences` (color de acento y tema) y `plugins` (plugins instalados), comunes a todos los proyectos. Los datos que guarda cada plugin van en `plugin_data`, por proyecto. Esos datos son los del **proyecto principal**; los **proyectos de equipo** (compartidos) viven aparte, en `teams/{id}` (ver [EQUIPOS.md](EQUIPOS.md)); cada proyecto adicional está en `projects/{id}` (nombre y color) y guarda las mismas colecciones debajo: `projects/{id}/tasks`, `projects/{id}/clients`, etc. Las reglas ya cubren todo lo que hay bajo `users/{uid}`, así que no hay que cambiarlas.
 - **Imágenes de las notas:** se comprimen en el navegador (lado máximo 1600 px, JPEG, bajando calidad y tamaño hasta que la `data:` URL ocupe como mucho 880 000 caracteres, por debajo de los 900 000 que admiten las reglas) y se guardan en `users/{uid}/assets` dentro de Firestore. Así no hace falta Cloud Storage, que exige el plan de pago.
+- **Otros archivos adjuntos a las notas:** se guardan sin tocar, repartidos en trozos de 640 000 bytes, cada trozo en un documento de `assets` (una `data:` URL en base64 que cabe en ese mismo límite). Como mucho 10 MB por archivo y 10 adjuntos por nota. La nota guarda qué es cada adjunto (`attachments`: nombre, tipo, tamaño y los ids de sus trozos) y la lista de todos los documentos que enlaza (`assetIds`). Al eliminar la nota se borran sus trozos. Cuentan para la cuota de almacenamiento de Firestore (1 GiB en el plan gratuito).
 - **Contraseñas:** la contraseña y las notas de cada credencial se cifran en el navegador con tu contraseña maestra antes de subir. El resto de la credencial (tipo, cliente, servicio, usuario…) y todo el demás contenido se guarda en Firestore sin cifrado de extremo a extremo (ver [SEGURIDAD.md](SEGURIDAD.md)).
 - **Sin conexión:** Firestore guarda una caché local, así que la app carga al instante y aguanta cortes de conexión cortos.
 - **Cerrar sesión:** desde el pie de la barra lateral, desde **Ajustes** (también en móvil) o desde la paleta (`Ctrl K` → "Cerrar sesión").

@@ -207,6 +207,11 @@ async function t(name, fn){
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea con campos ajenos se rechaza', () => assertFails(own.collection('tasks').doc('unknown').set({title:'x', permisoInventado:true})));
   await t('una nota demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('oversize').set({text:'a'.repeat(20001)})));
+  /* Notas con varios adjuntos: `attachments` (qué son) y `assetIds` (los documentos de assets que enlazan). */
+  const att = (n) => Array.from({length:n}, (x, i) => ({name:'informe-' + i + '.pdf', type:'application/pdf', size:1000, image:false, parts:['p' + i]}));
+  await t('una nota con varios adjuntos se permite', () => assertSucceeds(own.collection('tasks').doc('q').collection('notes').doc('files').set({text:'', imageAssetId:'', createdAt:1, kind:'note', attachments:att(3), assetIds:['p0', 'p1', 'p2']})));
+  await t('una nota con demasiados adjuntos se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('manyfiles').set({text:'', attachments:att(21), assetIds:['p0']})));
+  await t('una nota con demasiados trozos enlazados se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('manyparts').set({text:'', attachments:att(1), assetIds:Array.from({length:401}, (x, i) => 'p' + i)})));
   await t('una tarea normal sigue permitida', () => assertSucceeds(own.collection('tasks').doc('normal').set({title:'Tarea normal', checklist:[{text:'Paso',done:false}]})));
   /* El cliente (firebase-backend.js, IMAGE_MAX_CHARS) admite data: URL de hasta 880 000 caracteres. */
   const image = (n) => 'data:image/jpeg;base64,' + 'A'.repeat(n - 23);
@@ -278,6 +283,8 @@ async function t(name, fn){
   await t('crear una tarea en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('tasks').doc('c1').set({title: 'en claro'})));
   await t('crear una tarea en claro en un proyecto sin cifrar se permite', () => assertSucceeds(pa.collection('tasks').doc('c1').set({title: 'en claro'})));
   await t('nota sellada en un proyecto cifrado', () => assertSucceeds(pb.collection('tasks').doc('s1').collection('notes').doc('n1').set(sealed({createdAt: 1, kind: 'comment', actorUid: 'zed'}))));
+  await t('nota sellada con los ids de sus adjuntos en claro', () => assertSucceeds(pb.collection('tasks').doc('s1').collection('notes').doc('n3').set(sealed({createdAt: 1, kind: 'note', imageAssetId: '', assetIds: ['p0', 'p1']}))));
+  await t('nota sellada con los adjuntos en claro se rechaza', () => assertFails(pb.collection('tasks').doc('s1').collection('notes').doc('n4').set(sealed({createdAt: 1, attachments: [{name: 'a.pdf', parts: ['p0']}]}))));
   await t('nota en claro en un proyecto cifrado se rechaza', () => assertFails(pb.collection('tasks').doc('s1').collection('notes').doc('n2').set({text: 'en claro'})));
   await t('nota en claro en un proyecto sin cifrar se permite', () => assertSucceeds(pa.collection('tasks').doc('c1').collection('notes').doc('n1').set({text: 'en claro'})));
   await t('clientes, contactos y reuniones sellados', async () => {

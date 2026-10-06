@@ -1,0 +1,93 @@
+/* ---------- Texto con formato (Markdown) ---------- */
+/* Descripción de la tarea y texto de las notas (src/utils/markdown.js). */
+.tv-desc.md,.tv-note-text.md,.note-text.md{white-space:normal;}
+.md > :first-child{margin-top:0;}
+.md > :last-child{margin-bottom:0;}
+.md p{margin:0 0 .65em;}
+.md .md-h{font-weight:600;color:var(--ink);line-height:1.3;margin:1.1em 0 .4em;letter-spacing:-0.005em;}
+.md .md-h1{font-size:1.28em;}
+.md .md-h2{font-size:1.14em;}
+.md .md-h3{font-size:1em;}
+.md strong{font-weight:600;color:var(--ink);}
+.md a{overflow-wrap:anywhere;}
+.md ul,.md ol{margin:0 0 .65em;padding-left:1.5em;}
+.md li{margin:.2em 0;}
+.md li > ul,.md li > ol{margin:.2em 0 0;}
+/* Casillas: la casilla ocupa el sitio de la viñeta. */
+.md li.md-task{list-style:none;position:relative;}
+.md li.md-task > input{position:absolute;left:-1.5em;top:.22em;margin:0;}
+.md li.md-task.is-done > span{color:var(--ink-faint);text-decoration:line-through;}
+.md li.md-task > input:disabled{opacity:.75;cursor:default;}
+.md code{font-family:var(--mono);font-size:.88em;padding:.1em .38em;border-radius:5px;background:var(--hover);border:1px solid var(--line);}
+.md pre{margin:0 0 .65em;padding:10px 12px;border-radius:var(--r-md);background:var(--hover);border:1px solid var(--line);overflow-x:auto;white-space:pre;line-height:1.5;}
+.md pre code{padding:0;border:0;background:none;font-size:.86em;}
+/* Cita: fondo suave, sin raya lateral. */
+.md blockquote{margin:0 0 .65em;padding:8px 12px;border-radius:var(--r-md);background:var(--accent-soft);color:var(--ink-soft);}
+.md hr{border:0;border-top:1px solid var(--line-strong);margin:1em 0;}
+.md del{color:var(--ink-faint);}
+
+/* ---------- Adjuntos de una nota ---------- */
+.att-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.att-grid img{display:block;max-width:220px;max-height:160px;border-radius:var(--r-md);border:1px solid var(--line);object-fit:cover;cursor:zoom-in;background:var(--hover);}
+.att-grid.is-many img{width:104px;height:104px;max-width:none;max-height:none;}
+.att-files{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:8px;}
+.att-file{
+  display:inline-flex;align-items:center;gap:8px;max-width:100%;
+  padding:7px 11px;border:1px solid var(--line-strong);border-radius:var(--r-md);
+  background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;cursor:pointer;text-align:left;
+  transition:background .12s ease, border-color .12s ease;
+}
+.att-file:hover{background:var(--hover);border-color:var(--ink-faint);}
+.att-file:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
+.att-file.is-busy{opacity:.6;cursor:progress;}
+.att-file svg,.att-chip svg{flex:none;color:var(--ink-faint);}
+.att-file-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.att-file-size{flex:none;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+.tv-bubble > .att-grid:first-child,.tv-bubble > .att-files:first-child{margin-top:4px;}
+
+/* Lo que se va a adjuntar a la nota que se está escribiendo. */
+.att-pending{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;}
+.att-pending[hidden]{display:none;}
+.note-add-box .att-pending{margin:6px 6px 2px;}
+.att-chip{
+  display:inline-flex;align-items:center;gap:7px;max-width:240px;
+  padding:4px 4px 4px 8px;border:1px solid var(--line-strong);border-radius:var(--r-md);
+  background:var(--surface);font-size:12px;color:var(--ink);
+}
+.att-chip img{flex:none;width:28px;height:28px;margin-left:-4px;border-radius:6px;object-fit:cover;}
+.att-chip-remove{
+  flex:none;display:grid;place-items:center;width:20px;height:20px;padding:0;border:0;border-radius:6px;
+  background:transparent;color:var(--ink-faint);cursor:pointer;
+}
+.att-chip-remove:hover{background:var(--danger-bg);color:var(--danger);}
+.att-chip-remove:focus-visible{outline:2px solid var(--accent-solid);outline-offset:1px;}
+/* Al arrastrar archivos encima del campo de la nota. */
+.is-dropping .tv-comment-box,.note-add-box.is-dropping{border-color:var(--accent-solid);box-shadow:0 0 0 3px var(--focus);}
+
+/* ---------- Visor de imágenes ---------- */
+/* Un <dialog> modal: queda por encima de la ficha de la tarea y de cualquier otro diálogo. */
+dialog.lightbox{
+  width:100vw;max-width:none;height:100vh;height:100dvh;max-height:none;margin:0;padding:56px 64px;
+  border:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden;cursor:zoom-out;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+dialog.lightbox[open]{display:flex;align-items:center;justify-content:center;animation:fade-in .16s ease;}
+dialog.lightbox::backdrop{background:rgba(8,8,10,0.88);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+.lightbox img{max-width:100%;max-height:100%;border-radius:var(--r-lg);box-shadow:var(--shadow-lg);cursor:default;object-fit:contain;}
+.lightbox-btn{
+  position:absolute;display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid rgba(255,255,255,0.16);border-radius:50%;
+  background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;transition:background .12s ease;
+}
+.lightbox-btn[hidden]{display:none;}
+.lightbox-btn:hover{background:rgba(255,255,255,0.22);}
+.lightbox-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.lightbox-close{top:12px;right:12px;}
+.lightbox-prev{left:12px;top:50%;transform:translateY(-50%);}
+.lightbox-next{right:12px;top:50%;transform:translateY(-50%);}
+.lightbox-count{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);margin:0;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.12);color:#fff;font-size:12px;font-variant-numeric:tabular-nums;}
+.lightbox-count[hidden]{display:none;}
+@media (max-width: 760px){
+  dialog.lightbox{padding:56px 12px 48px;}
+  .lightbox-prev,.lightbox-next{top:auto;bottom:8px;transform:none;}
+  .att-grid.is-many img{width:84px;height:84px;}
+}

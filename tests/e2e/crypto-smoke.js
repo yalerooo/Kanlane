@@ -148,6 +148,15 @@ function assertSealed(res, what){
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       const assetId = await Workhub.services.platform.uploadAsset(new File([blob], 'nota.png', {type:'image/png'}));
       await m.tasks.addNote(t.id, 'Nota confidencial', assetId);
+      /* Archivo adjunto de dos trozos: cifrado trozo a trozo y legible de vuelta. */
+      const secretBytes = new Uint8Array(700000);
+      for(let i = 0; i < secretBytes.length; i++) secretBytes[i] = (i * 17 + 3) % 253;
+      const files = await Workhub.views.attachments.upload([new File([secretBytes], 'contrato reservado.pdf', {type:'application/pdf'})]);
+      if(files.length !== 1 || files[0].parts.length !== 2) throw new Error('trozos: ' + JSON.stringify(files));
+      window.__fileNote = (await m.tasks.addNote(t.id, 'Nota con archivo', files)).id;
+      const round = new Uint8Array(await (await Workhub.services.platform.fileBlob(files[0])).arrayBuffer());
+      if(round.length !== secretBytes.length || round.some((b, i) => b !== secretBytes[i])) throw new Error('el archivo cifrado no vuelve igual');
+      window.__filePart = files[0].parts[1];
       const PluginModel = Workhub.models.PluginModel;
       await PluginModel.storageSet(app.controllers.plugins.bucket('workhub.prueba'), 'dato', 'valor privado del plugin');
       window.__assetId = assetId;
@@ -162,6 +171,19 @@ function assertSealed(res, what){
     const assetId = await page.evaluate(() => window.__assetId);
     assert.ok(assetId, 'la imagen se subió');
     const asset = await storedWhen('users/' + seed.uid + '/assets/' + assetId, hasSeal);
+    /* El trozo del archivo adjunto también está sellado, sin `data` ni tipo en claro. */
+    const filePart = await storedWhen('users/' + seed.uid + '/assets/' + await page.evaluate(() => window.__filePart), hasSeal);
+    assertSealed(filePart, 'archivo adjunto');
+    assert.ok(filePart.text.indexOf('"data"') === -1 && filePart.text.indexOf('contentType') === -1, 'el trozo no lleva su contenido en claro');
+    const fileNotes = await stored(base + '/tasks/' + taskId + '/notes');
+    assert.ok(fileNotes.text.indexOf('contrato reservado') === -1 && fileNotes.text.indexOf('application/pdf') === -1, 'el nombre y el tipo del archivo van cifrados');
+    assert.ok(fileNotes.text.indexOf('assetIds') !== -1, 'los ids de los trozos van en claro');
+    /* Al eliminar la nota se van sus trozos (los ids en claro bastan, sin descifrarla). */
+    assert.equal(await page.evaluate(async (id) => {
+      const ids = await Workhub.app.models.tasks.removeNote(id, window.__fileNote);
+      await Workhub.services.platform.deleteAssets(ids);
+      return ids.length + ':' + !!(await window.__assetBytes(window.__filePart));
+    }, taskId), '2:false', 'los trozos se borran con la nota');
     assertSealed(asset, 'imagen');
     assert.ok(asset.text.indexOf('"data"') === -1 && asset.text.indexOf('contentType') === -1, 'la imagen no lleva la data: URL en claro');
 

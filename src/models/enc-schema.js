@@ -13,7 +13,7 @@
   const CLEAR = {
     tasks: ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
             'assignees', 'linkedContacts', 'linkedVault'],
-    notes: ['createdAt', 'kind', 'actorUid', 'imageAssetId'],
+    notes: ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'assetIds'],
     clients: ['color', 'createdAt'],
     contacts: ['createdAt', 'updatedAt'],
     meetings: ['date', 'createdAt', 'updatedAt'],
@@ -38,7 +38,8 @@
     vault: {label: 500}
   };
   const LIST_MAX = {
-    tasks: {labels: 1000, checklist: 200, assignees: 50}
+    tasks: {labels: 1000, checklist: 200, assignees: 50},
+    notes: {attachments: 20, assetIds: 400}
   };
 
   function has(col){

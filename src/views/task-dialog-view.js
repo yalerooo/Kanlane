@@ -5,6 +5,8 @@
   const {copyWithFeedback, showMessage} = Workhub.utils.ui;
   const platform = Workhub.services.platform;
   const VaultModel = Workhub.models.VaultModel;
+  const md = Workhub.utils.markdown;
+  const attachments = Workhub.views.attachments;
 
   const $ = (id) => document.getElementById(id);
 
@@ -37,14 +39,13 @@
       this.notesSection = $('taskNotesSection');
       this.notesList = $('taskNotesList');
       this.noteText = $('noteText');
-      this.noteImageInput = $('noteImageInput');
-      this.btnAttachImage = $('btnAttachImage');
-      this.noteImagePreviewWrap = $('noteImagePreviewWrap');
-      this.noteImagePreview = $('noteImagePreview');
-      this.btnRemoveNoteImage = $('btnRemoveNoteImage');
       this.btnAddNote = $('btnAddNote');
       this.noteError = $('noteError');
-      this.pendingImage = null;
+      /* Archivos adjuntos a la nota que se está escribiendo (se suben al añadirla). */
+      this.picker = new attachments.Picker({
+        input:$('noteImageInput'), button:$('btnAttachImage'), list:$('noteFiles'),
+        drop:$('noteAddBox'), paste:this.noteText, onError:(msg) => this.showNoteError(msg)
+      });
 
       this.linksSection = $('taskLinksSection');
       this.linksSection2 = $('taskLinksSection2');
@@ -52,9 +53,6 @@
       this.linkContactPicker = $('linkContactPicker');
       this.linkedVaultList = $('linkedVaultList');
       this.linkVaultPicker = $('linkVaultPicker');
-
-      this.lightbox = $('lightbox');
-      this.lightboxImg = $('lightboxImg');
 
       /* Asignadas a (solo en equipos): uids de los miembros elegidos. */
       this.assigneesEl = $('fAssignees');
@@ -164,35 +162,9 @@
       }).join('');
     }
 
-    /* Interacciones que no tocan datos: imagen adjunta y visor de imágenes. */
+    /* Interacciones que no tocan datos: ampliar una imagen o descargar un archivo de una nota. */
     _bindLocalUi(){
-      this.btnAttachImage.addEventListener('click', () => this.noteImageInput.click());
-      this.noteImageInput.addEventListener('change', () => {
-        const file = this.noteImageInput.files && this.noteImageInput.files[0];
-        if(!file) return;
-        this.pendingImage = file;
-        const reader = new FileReader();
-        reader.onload = () => {
-          this.noteImagePreview.src = reader.result;
-          this.noteImagePreviewWrap.hidden = false;
-        };
-        reader.readAsDataURL(file);
-      });
-      this.btnRemoveNoteImage.addEventListener('click', () => this._clearNoteImage());
-
-      this.notesList.addEventListener('click', (ev) => {
-        const img = closest(ev.target, 'img[data-asset-id]');
-        if(img) this.openLightbox(img.currentSrc || img.src);
-      });
-      this.lightbox.addEventListener('click', () => {
-        this.lightbox.hidden = true;
-        this.lightboxImg.src = '';
-      });
-    }
-
-    openLightbox(url){
-      this.lightboxImg.src = url;
-      this.lightbox.hidden = false;
+      attachments.bind(this.notesList);
     }
 
     /* ---------- Eventos hacia el controlador ---------- */
@@ -219,11 +191,12 @@
       this.btnAddNote.addEventListener('click', () => {
         this.noteError.hidden = true;
         const text = this.noteText.value.trim();
-        if(!text && !this.pendingImage){
-          showMessage(this.noteError, 'Escribe algo o adjunta una imagen.');
+        const files = this.picker.files.slice();
+        if(!text && !files.length){
+          showMessage(this.noteError, 'Escribe algo o adjunta un archivo.');
           return;
         }
-        handler(text, this.pendingImage);
+        handler(text, files);
       });
     }
 
@@ -454,12 +427,7 @@
 
     /* ---------- Notas ---------- */
 
-    _clearNoteImage(){
-      this.pendingImage = null;
-      this.noteImageInput.value = '';
-      this.noteImagePreviewWrap.hidden = true;
-      this.noteImagePreview.src = '';
-    }
+    _clearNoteImage(){ this.picker.clear(); }
 
     resetNoteForm(){
       this.noteText.value = '';
@@ -551,14 +519,11 @@
     const n = d.data() || {};
     const text = n._undecryptable ? Workhub.t('No se puede descifrar') : (n.text ? (n.kind === 'activity' ? Workhub.t(n.text) : n.text) : '');
     const actor = n.actorName ? '<span translate="no">' + esc(n.actorName) + '</span> · ' : '';
-    const img = n.imageAssetId
-      ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="">'
-      : '';
     return '<div class="note-item" data-id="' + esc(d.id) + '">' +
       (n.kind === 'activity' ? '' : '<button type="button" class="note-del" data-action="delnote" data-id="' + esc(d.id) + '">Eliminar</button>') +
       '<div class="note-date">' + actor + esc(fmtDateTime(n.createdAt)) + '</div>' +
-      (text ? '<div class="note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') +
-      img +
+      (text ? '<div class="note-text' + (n._undecryptable || n.kind === 'activity' ? (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) : ' md" translate="no">' + md.render(text)) + '</div>' : '') +
+      attachments.html(n) +
       '</div>';
   }
 

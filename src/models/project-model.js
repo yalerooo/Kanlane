@@ -270,7 +270,7 @@
         const ref = db.collection('tasks').doc(d.id);
         return ref.collection('notes').get().then((notes) => Promise.all(notes.docs.map((n) => {
           const data = n.data() || {};
-          if(data.imageAssetId) assetIds.push(data.imageAssetId);
+          [data.imageAssetId].concat(Array.isArray(data.assetIds) ? data.assetIds : []).forEach((a) => { if(a) assetIds.push(a); });
           return ref.collection('notes').doc(n.id).delete();
         }))).then(() => ref.delete());
       })));

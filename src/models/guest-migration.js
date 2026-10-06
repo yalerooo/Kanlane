@@ -94,7 +94,8 @@
 
   /* o: {from, to, assets, state, save, onPlan}
      - from / to: base de datos del invitado y de la cuenta (sin acotar a ningún proyecto).
-     - assets: {read(id) → Promise<Blob|null>, upload(blob) → Promise<{id}>}: imágenes de las notas.
+     - assets: {read(id) → Promise<Blob|null>, upload(blob) → Promise<{id}>, uploadFile(blob) → Promise<{parts}>}:
+       imágenes y archivos adjuntos de las notas.
      - state: lo pendiente (pending()); save(state) lo guarda tras cada paso.
      - onPlan({projects, open}): antes de escribir nada, qué proyectos va a tener la cuenta (ya con
        su id) y cuál se abrirá; sirve para entrar en la app si la copia tarda.
@@ -136,6 +137,39 @@
       });
     };
 
+    /* Archivo adjunto de una nota (en el navegador va entero, en un solo id): ids de sus trozos en
+       la cuenta ([] si ya no existe o no se pudo subir). */
+    const file = (att) => {
+      const id = att.parts[0];
+      if(state.assets[id]) return Promise.resolve(String(state.assets[id]).split(','));
+      if(!o.assets || !o.assets.uploadFile) return Promise.resolve([]);
+      return o.assets.read(id).then((blob) => {
+        if(!blob) return [];
+        return o.assets.uploadFile(blob).then((res) => {
+          state.assets[id] = res.parts.join(',');
+          keep();
+          return res.parts;
+        });
+      }).catch((err) => {
+        if(!err || PERMANENT.indexOf(err.code) === -1) throw err;
+        skipped++;
+        return [];
+      });
+    };
+
+    /* Adjuntos de una nota (`attachments`): se suben uno a uno y la nota se queda con los que llegaron. */
+    const attachments = (note) => {
+      const list = Array.isArray(note.attachments) ? note.attachments.filter((a) => a && Array.isArray(a.parts) && a.parts.length) : [];
+      if(!list.length) return Promise.resolve();
+      const moved = [];
+      return list.reduce((chain, a) => chain.then(() => (a.image ? image(a.parts[0]).then((id) => (id ? [id] : [])) : file(a))).then((parts) => {
+        if(parts.length) moved.push(Object.assign({}, a, {parts:parts}));
+      }), Promise.resolve()).then(() => {
+        note.attachments = moved;
+        note.assetIds = moved.reduce((ids, a) => ids.concat(a.parts), []);
+      });
+    };
+
     const copyCollection = (src, dst, name) => src.collection(name).get().then((snap) =>
       pool.run(snap.docs, LIMIT, (d) => put(dst.collection(name).doc(d.id), d.data() || {})));
 
@@ -150,8 +184,8 @@
             const linked = note.imageAssetId ? image(note.imageAssetId) : Promise.resolve('');
             return linked.then((assetId) => {
               if(note.imageAssetId) note.imageAssetId = assetId;
-              return put(target.collection('notes').doc(n.id), note);
-            });
+              return attachments(note);
+            }).then(() => put(target.collection('notes').doc(n.id), note));
           }));
       });
     };

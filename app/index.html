@@ -99,6 +99,10 @@
           <h1 id="authTitle">Inicia sesión</h1>
           <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
           <div class="auth-notice" id="authNotice" role="status" hidden></div>
+          <div class="auth-notice auth-migrate" id="authMigrate" role="status" hidden>
+            <p>Al entrar o crear tu cuenta, copiaremos a ella los datos que tienes como invitado en este navegador.</p>
+            <button type="button" class="auth-link" id="authMigrateCancel">Seguir como invitado</button>
+          </div>
           <form id="authEmailForm" class="auth-form" novalidate>
             <div class="field" id="authNameField" hidden>
               <label class="sr-only" for="authName">Nombre</label>
@@ -203,6 +207,7 @@
       <div class="account" id="accountBox" hidden>
         <span class="avatar is-xs" id="accountAvatar" aria-hidden="true"></span>
         <div class="account-text"><span class="account-name" id="accountName"></span><span class="account-mail" id="accountMail"></span></div>
+        <button type="button" class="icon-only" id="btnGuestUpgradeSide" aria-label="Crear cuenta y llevarme mis datos" title="Crear cuenta y llevarme mis datos" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></button>
         <button type="button" class="icon-only" id="btnSignOut" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
       </div>
       <div class="foot-row">
@@ -720,6 +725,10 @@
                     <span class="settings-account-mail" id="settingsAccountMail" translate="no"></span>
                   </div>
                   <button type="button" class="btn btn-ghost btn-sm" id="btnSignOutSettings">Cerrar sesión</button>
+                </div>
+                <div class="settings-upgrade" id="guestUpgrade" hidden>
+                  <p>Crea una cuenta para no perder lo que tienes aquí: tus proyectos pasan a ella y los verás en todos tus dispositivos.</p>
+                  <button type="button" class="btn btn-primary btn-sm" id="btnGuestUpgrade">Crear cuenta y llevarme mis datos</button>
                 </div>
               </div>
             </div>
@@ -1722,6 +1731,7 @@
 <script src="../src/models/settings-model.js"></script>
 <script src="../src/models/backup-model.js"></script>
 <script src="../src/models/project-model.js"></script>
+<script src="../src/models/guest-migration.js"></script>
 <script src="../src/models/plugin-model.js"></script>
 <script src="../src/models/github-sync.js"></script>
 <script src="../src/models/team-model.js"></script>

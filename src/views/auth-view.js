@@ -64,6 +64,7 @@
       this.guestForm = $('authGuestForm');
       this.guestName = $('authGuestName');
       this.guestMsg = $('authGuestMsg');
+      this.migrate = $('authMigrate');
       /* La portada enlaza a /app/?registro para abrir directamente «Crear cuenta». */
       this.registroRequested = /[?&]registro(=|&|$)/.test(location.search);
       this.mode = 'signin';
@@ -188,6 +189,17 @@
         }
         handler(name);
       });
+    }
+
+    /* «Crear cuenta y llevarme mis datos», en la barra lateral y en Ajustes (solo como invitado). */
+    bindUpgrade(handler){
+      $('btnGuestUpgrade').addEventListener('click', handler);
+      $('btnGuestUpgradeSide').addEventListener('click', handler);
+    }
+
+    /* «Seguir como invitado», en el aviso de la pantalla de acceso. */
+    bindMigrateCancel(handler){
+      $('authMigrateCancel').addEventListener('click', handler);
     }
 
     /* handler('light' | 'dark'): el botón de sol/luna de la pantalla de acceso. */
@@ -362,6 +374,31 @@
         window.addEventListener('focus', this.verifyWatch);
       }
       this.verifyRun = run;
+    }
+
+    /* Viene de «Crear cuenta y llevarme mis datos»: aviso de que los datos de invitado se copiarán
+       a la cuenta que entre, con la vuelta atrás. El nombre del invitado ya va puesto. */
+    showMigrate(name){
+      this.migrate.hidden = false;
+      if(name && !this.name.value) this.name.value = name;
+    }
+
+    /* Cuenta dentro, copiando los datos de invitado: puede tardar si hay muchas imágenes. */
+    showMigrating(){
+      document.documentElement.classList.remove('auth-early');
+      window.__hideBootSkeleton();
+      EARLY.take(false);
+      document.body.classList.add('is-authing');
+      this.screen.hidden = false;
+      this.panel.hidden = true;
+      this.loading.hidden = false;
+      this.loading.classList.remove('is-error');
+      this.loading.classList.add('is-verify');
+      const t = Workhub.t;
+      this.loading.innerHTML =
+        '<span class="auth-badge is-busy" aria-hidden="true">' + SPIN + '</span>' +
+        '<strong class="auth-verify-title">' + esc(t('Llevando tus datos a tu cuenta')) + '</strong>' +
+        '<span class="auth-sent-text">' + esc(t('Estamos copiando tus proyectos de invitado. No cierres esta pestaña.')) + '</span>';
     }
 
     /* Tras enviar un correo, «Reenviar» descansa unos segundos (evita reenvíos en ráfaga). */
@@ -596,6 +633,8 @@
       this.settingsAccountMail.textContent = name;
       $('btnSignOut').title = Workhub.t('Salir del modo invitado');
       $('btnSignOutSettings').textContent = Workhub.t('Salir del modo invitado');
+      $('guestUpgrade').hidden = false;
+      $('btnGuestUpgradeSide').hidden = false;
     }
 
     showAccount(user){

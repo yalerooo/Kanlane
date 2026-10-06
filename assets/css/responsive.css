@@ -70,6 +70,7 @@
   :root:not([data-nav="top"]):not([data-sidebar="full"]) .sidebar-foot{padding:8px 0 0;width:100%;}
   :root:not([data-nav="top"]):not([data-sidebar="full"]) .account{justify-content:center;padding:0;margin-bottom:6px;}
   :root:not([data-nav="top"]):not([data-sidebar="full"]) .account-text,
+  :root:not([data-nav="top"]):not([data-sidebar="full"]) #btnGuestUpgradeSide,
   :root:not([data-nav="top"]):not([data-sidebar="full"]) #btnSignOut{display:none;}
   :root:not([data-nav="top"]):not([data-sidebar="full"]) .foot-row{flex-direction:column;padding:0;gap:6px;}
   :root:not([data-nav="top"]):not([data-sidebar="full"]) .storage-status{justify-content:center;flex:none;}

@@ -251,6 +251,27 @@ if(!window.claude){
       }
     };
 
+    /* El almacén local sigue a mano cuando una cuenta ocupa window.claude (firebase-backend.js):
+       de aquí se leen los datos del modo invitado para llevarlos a la cuenta
+       (src/models/guest-migration.js). wipe() lo vacía entero. */
+    window.__localStore = {
+      db: localDb,
+      blob: function(id){
+        return idbGet(ASSETS_STORE, id).then(function(rec){ return rec ? rec.blob : null; });
+      },
+      wipe: function(){
+        return openIdb().then(function(idb){
+          return new Promise(function(resolve, reject){
+            var tx = idb.transaction([DOCS_STORE, ASSETS_STORE], 'readwrite');
+            tx.objectStore(DOCS_STORE).clear();
+            tx.objectStore(ASSETS_STORE).clear();
+            tx.oncomplete = function(){ resolve(); };
+            tx.onerror = function(){ reject(tx.error); };
+          });
+        });
+      }
+    };
+
     window.__usingLocalStorageShim = true;
     window.claude = {
       use: function(name){

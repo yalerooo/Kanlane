@@ -170,6 +170,10 @@ body.no-clients .client-chip{display:none;}
 /* Editar columna, menú de columna y confirmaciones */
 #dlgColumn{width:min(420px, calc(100vw - 32px));}
 #dlgConfirm{width:min(400px, calc(100vw - 32px));}
+#dlgGhConsent{width:min(440px, calc(100vw - 32px));}
+#dlgGhConsent .gh-consent-points{margin:0 0 16px;}
+#dlgGhConsent .gh-consent-check{align-items:flex-start;gap:8px;margin:0 0 18px;padding:0;border:0;font-size:13px;line-height:1.4;color:var(--ink);cursor:pointer;}
+#dlgGhConsent .gh-consent-check input[type="checkbox"]{flex:none;margin:2px 0 0;}
 .stage-colors{display:flex;flex-wrap:wrap;gap:10px;padding:2px 0;}
 .stage-color.is-lg{width:26px;height:26px;}
 .stage-color.is-selected{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--c);}

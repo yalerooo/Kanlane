@@ -212,19 +212,23 @@
         this.render();
         return;
       }
-      this.connecting = true;
-      this.render();
-      this.sync.link(v).then(() => {
-        this.connecting = false;
-        this.schedule();
+      /* Nada sale hacia GitHub (ni se guarda el token) hasta aceptar el aviso. */
+      this.view.consent(v.target !== NEW).then((ok) => {
+        if(!ok || this.connecting) return;
+        this.connecting = true;
         this.render();
-        if(!this.sync.error) toast.success('Proyecto conectado con GitHub');
-      }).catch((err) => {
-        this.connecting = false;
-        this.connectError = (err && err.message) || 'No se pudo conectar con GitHub.';
-        /* Un token rechazado no se conserva. */
-        if(err && (err.code === 'auth' || err.code === 'scopes')) api.setToken('');
-        this.render();
+        this.sync.link(v).then(() => {
+          this.connecting = false;
+          this.schedule();
+          this.render();
+          if(!this.sync.error) toast.success('Proyecto conectado con GitHub');
+        }).catch((err) => {
+          this.connecting = false;
+          this.connectError = (err && err.message) || 'No se pudo conectar con GitHub.';
+          /* Un token rechazado no se conserva. */
+          if(err && (err.code === 'auth' || err.code === 'scopes')) api.setToken('');
+          this.render();
+        });
       });
     }
 
@@ -248,7 +252,11 @@
     createFromGithub(v){
       if(!api.token() && !v.token) return Promise.reject(new Error('Pega un token de GitHub.'));
       if(!v.url) return Promise.reject(new Error('Pega el enlace de tu proyecto de GitHub.'));
-      return this.sync.link({url:v.url, token:v.token, target:Workhub.models.GithubSync.NEW, name:v.nombre}).then(() => {
+      /* Proyecto nuevo: no hay columnas que sustituir, pero las tareas sí salen sin cifrar. */
+      return this.view.consent(false).then((ok) => {
+        if(!ok) throw Object.assign(new Error(''), {code:'cancelled'});
+        return this.sync.link({url:v.url, token:v.token, target:Workhub.models.GithubSync.NEW, name:v.nombre});
+      }).then(() => {
         this.schedule();
         this.render();
         toast.success('Proyecto creado desde GitHub');

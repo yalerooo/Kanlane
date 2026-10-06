@@ -74,6 +74,39 @@
         if(ev.target.id === 'ghTokenMore') this.form.tokenOpen = ev.target.open;
       }, true);
       this.button.addEventListener('click', () => this.handlers.sync());
+
+      /* Aviso antes de activar la sincronización. */
+      this.consentDlg = $('dlgGhConsent');
+      this.consentCheck = $('ghConsentCheck');
+      this.consentOk = $('btnGhConsentOk');
+      this.consentResolve = null;
+      this.consentCheck.addEventListener('change', () => { this.consentOk.disabled = !this.consentCheck.checked; });
+      this.consentOk.addEventListener('click', () => { if(this.consentCheck.checked) this._settleConsent(true); });
+      $('btnGhConsentCancel').addEventListener('click', () => this.consentDlg.close());
+      this.consentDlg.addEventListener('close', () => this._settleConsent(false));
+    }
+
+    /* Aviso de lo que implica sincronizar. replaces: el destino es un proyecto que ya existe
+       (sus columnas se sustituyen). Devuelve una promesa con true solo si se acepta. */
+    consent(replaces){
+      this._settleConsent(false);
+      $('ghConsentColumns').hidden = !replaces;
+      $('ghConsentLabelBoth').hidden = !replaces;
+      $('ghConsentLabelSend').hidden = !!replaces;
+      this.consentCheck.checked = false;
+      this.consentOk.disabled = true;
+      return new Promise((resolve) => {
+        this.consentResolve = resolve;
+        this.consentDlg.showModal();
+        this.consentCheck.focus();
+      });
+    }
+
+    _settleConsent(ok){
+      const resolve = this.consentResolve;
+      this.consentResolve = null;
+      if(this.consentDlg.open) this.consentDlg.close();
+      if(resolve) resolve(ok);
     }
 
     /* handlers: {connect({url, token, pushExisting}), sync, unlink, forget, pushNew(on)} */

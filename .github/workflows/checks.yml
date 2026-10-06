@@ -86,6 +86,8 @@ jobs:
         run: npm test --prefix tests/e2e
       - name: Almacén de claves en el navegador
         run: node tests/e2e/keystore-check.js
+      - name: Aviso antes de sincronizar con GitHub
+        run: node tests/e2e/github-consent.js
       - name: Instalar emuladores de Firebase
         run: npm ci --prefix tests/rules --no-audit --no-fund
       - name: Alta y cofre con Firebase emulado

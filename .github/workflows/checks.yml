@@ -26,6 +26,7 @@ jobs:
           node tests/vault/vault.test.js
           node tests/vault/team-vault.test.js
           node tests/vault/vault-totp.test.js
+          node tests/vault/qr.test.js
           node tests/crypto/project-crypto.test.js
           node tests/crypto/keystore.test.js
           node tests/crypto/schema-rules.test.js

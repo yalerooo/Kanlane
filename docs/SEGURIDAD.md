@@ -16,7 +16,8 @@ Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus 
 | Nombre o foto del perfil de Google/GitHub manipulados | El nombre se pinta como texto y la foto solo se acepta si es `https:`. |
 | Conexión sin cifrar | HTTPS obligatorio (`Strict-Transport-Security`). |
 | Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas. La contraseña maestra de las contraseñas pide 12 o más y rechaza las fáciles de adivinar (muy comunes, secuencias y repeticiones); el campo lleva un medidor, que avisa además si contiene tu correo o el nombre del proyecto, y un generador. Las contraseñas maestras creadas antes de este cambio siguen valiendo. |
-| Alguien averigua tu contraseña maestra | Verificación en dos pasos opcional (TOTP) para abrir las contraseñas. Ver más abajo. |
+| Alguien averigua tu contraseña maestra | Verificación en dos pasos opcional (TOTP) para abrir las contraseñas, que tampoco se salta con la clave de recuperación. Ver más abajo. |
+| Probar contraseñas maestras una tras otra | Espera creciente tras cuatro fallos (hasta 15 minutos). Ver más abajo. |
 | Adivinar si un correo tiene cuenta | "Recuperar contraseña" responde lo mismo exista o no la cuenta. |
 | Fuerza bruta contra el inicio de sesión | Firebase bloquea temporalmente tras muchos intentos (`auth/too-many-requests`). |
 | Token de GitHub (integración con GitHub Projects) | Se guarda solo en el navegador (`localStorage`), nunca en Firestore ni en el repositorio, tanto si se pega como si se obtiene con «Conectar con GitHub» (que usa el inicio de sesión de GitHub y no toca tu cuenta). Ver [GITHUB.md](GITHUB.md#seguridad). |
@@ -41,14 +42,23 @@ Detalle completo: `docs/CIFRADO-PROYECTOS.md`.
 
 ## Verificación en dos pasos de las contraseñas
 
-Con las contraseñas desbloqueadas, «Activar verificación en dos pasos» enseña una clave para añadir en una aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Desde entonces, abrir las contraseñas pide la contraseña maestra **y** un código de 6 cifras.
+Con las contraseñas desbloqueadas, «Activar verificación en dos pasos» enseña un código QR (y la misma clave en texto) para añadir en una aplicación de autenticación (Google Authenticator, Aegis, 1Password…). Desde entonces, abrir las contraseñas pide la contraseña maestra **y** un código de 6 cifras.
 
 - **Lo comprueba el servidor, no el navegador.** La clave del cofre queda envuelta dos veces: con la contraseña maestra y con una clave que el Worker (`/__/kms/v1/totp`) solo entrega tras un código válido. Quien tenga la contraseña maestra y una copia de la base de datos no puede abrir el cofre sin el código.
-- **Qué no protege:** la clave de recuperación entra sin código (y al usarla se desactiva el segundo paso), así que hay que guardarla igual de bien. Un código son 6 cifras: lo que impide probarlos es un límite de 3 intentos por minuto y cuenta (`TOTP_RATE_LIMIT`), que frena pero no hace imposible un ataque de días de alguien que ya tiene tu sesión y tu contraseña maestra. Tampoco protege frente a un dispositivo comprometido mientras el cofre está abierto.
-- **Kanlane no guarda el secreto del autenticador**: va cifrado, dentro del envoltorio de tu contraseña maestra, con una clave derivada de `KMS_MASTER_V1`. Si ese secreto del Worker se perdiera, esos cofres solo se abrirían con la clave de recuperación.
-- **Solo con cuenta.** En modo local no hay servidor que compruebe el código y la opción no aparece. Una copia de seguridad con el segundo paso activado, importada en otra cuenta, solo se abre con la clave de recuperación.
+- **La clave de recuperación no se lo salta.** Con el segundo paso activado, restablecer la contraseña con la clave de recuperación pide además un código de la aplicación o uno de respaldo, y el segundo paso sigue activado después. Para que sea así, **activarlo o desactivarlo cambia la clave de recuperación**: la app enseña la nueva y la anterior deja de valer.
+- **Códigos de respaldo.** Al activarlo se dan diez códigos de un solo uso, para cuando no se tiene el teléfono. Sustituyen al código de la aplicación, no a la contraseña maestra. Se pueden cambiar por otros nuevos (los anteriores dejan de valer) y, con uno de ellos, también desactivar el segundo paso. Se comprueban en el navegador: «de un solo uso» significa que al usarlo se borra de los datos actuales, no que deje de valer contra una copia antigua de la base de datos.
+- **Si se pierde todo:** sin teléfono **y** sin códigos de respaldo no hay forma de entrar, ni con la clave de recuperación. Kanlane no puede desactivarlo por nadie.
+- **Qué no protege:** un código son 6 cifras; lo que impide probarlos es un límite de 3 intentos por minuto y cuenta (`TOTP_RATE_LIMIT`), que frena pero no hace imposible un ataque de días de alguien que ya tiene tu sesión y tu contraseña maestra. Tampoco protege frente a un dispositivo comprometido mientras el cofre está abierto.
+- **Kanlane no guarda el secreto del autenticador**: va cifrado, dentro de los envoltorios, con una clave derivada de `KMS_MASTER_V1`. Si ese secreto del Worker se perdiera, esos cofres solo se abrirían con un código de respaldo (y con él se puede desactivar el segundo paso).
+- **Solo con cuenta.** En modo local no hay servidor que compruebe el código y la opción no aparece. Una copia de seguridad con el segundo paso activado, importada en otra cuenta, pide un código de respaldo: el de la aplicación solo lo acepta el servidor para la cuenta original.
 - **Equipos:** para dar acceso a las contraseñas de un equipo, o llevar las de un proyecto a un equipo, hay que desactivarla antes (esas acciones abren la clave solo con la contraseña maestra).
-- **Despliegue:** hace falta desplegar el Worker con el límite `TOTP_RATE_LIMIT` de `wrangler.jsonc` (sin él la ruta responde 503) y tener `KMS_MASTER_V1` (ver [CLOUDFLARE.md](CLOUDFLARE.md)). Para retirarla: `Workhub.features.vaultTotp = false`; los cofres que ya la tengan siguen pidiendo el código.
+- **Despliegue:** hace falta desplegar el Worker con el límite `TOTP_RATE_LIMIT` de `wrangler.jsonc` (sin él la ruta responde 503), tener `KMS_MASTER_V1` (ver [CLOUDFLARE.md](CLOUDFLARE.md)) y **publicar `firestore.rules`**: las claves de los equipos (`vault_keys`) admiten ahora el campo de los códigos de respaldo, y sin las reglas nuevas no se puede activar en un proyecto de equipo. Para retirarla: `Workhub.features.vaultTotp = false`; los cofres que ya la tengan siguen pidiendo el código.
+
+## Contraseña maestra: intentos, cambio y clave de recuperación
+
+- **Límite de intentos.** Tras cuatro fallos seguidos (contraseña maestra, clave de recuperación o código), cada fallo más obliga a esperar: 30 s, 1 min, 2 min… hasta 15 min. La cuenta se guarda en el navegador y no se reinicia al recargar. Es un freno para quien prueba desde la app; quien tenga una copia de los datos puede probar por su cuenta, y contra eso están la longitud mínima, PBKDF2 y la verificación en dos pasos.
+- **Contraseñas antiguas débiles.** Un cofre creado con una contraseña que hoy no se aceptaría sigue abriéndose, con un aviso dentro para cambiarla. «Cambiar contraseña maestra» pide la actual y aplica las reglas nuevas; la clave de recuperación no cambia.
+- **Sin vuelta atrás.** Si se pierden la contraseña maestra y la clave de recuperación, las contraseñas guardadas no se pueden recuperar: Kanlane no las tiene. La pantalla de la clave lo dice y no deja seguir hasta escribir un grupo de la clave elegido al azar.
 
 ## Lo que tienes que hacer en la consola (una vez)
 

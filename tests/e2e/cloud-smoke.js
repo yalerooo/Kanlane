@@ -101,6 +101,7 @@ async function verify(email){
     await page.locator('#masterPass2').fill('maestra-prueba-123');
     await page.locator('#btnUnlock').click();
     await page.locator('#recoveryReveal').waitFor({state:'visible'});
+    await page.locator('#recoveryCheck').fill((await page.locator('#recoveryKeyBox').textContent()).trim().split('-')[+(await page.locator('#recoveryCheckN').textContent()) - 1]);
     await page.locator('#recoveryConfirmChk').check();
     await page.locator('#btnRecoveryContinue').click();
     await page.locator('#vaultContent').waitFor({state:'visible'});

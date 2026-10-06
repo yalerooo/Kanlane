@@ -9,14 +9,17 @@
      envuelta con su propia contraseña maestra en 'vault_keys/{uid}' y 'vault_meta/check' solo marca
      que el cofre existe (ver team-vault.js). Quien aún no tiene la DEK la recibe con un código de
      acceso de un solo uso (redeem).
-   - Con la verificación en dos pasos, el envoltorio de la contraseña no guarda {dek} sino
-     {totp, iv, cipher}: la DEK cifrada con una clave que el servidor solo entrega tras un código
-     válido (services/vault-totp.js), más el token que hay que presentarle. Los nombres de los
-     campos del documento no cambian. La clave de recuperación no pasa por el segundo paso. */
+   - Con la verificación en dos pasos, los dos envoltorios (contraseña y clave de recuperación) no
+     guardan {dek} sino {totp, iv, cipher}: la DEK cifrada con una clave que el servidor solo
+     entrega tras un código válido (services/vault-totp.js), más el token que hay que presentarle.
+     Así ni la contraseña ni la clave de recuperación abren el cofre sin el segundo paso. El campo
+     «backup» guarda esa clave del servidor cifrada con cada código de respaldo. */
 (function(){
   const cryptoSvc = Workhub.services.crypto;
   const META_PATH = 'vault_meta/check';
   const TeamVault = () => Workhub.models.TeamVault;
+  const BACKUP_CODES = 10;
+  const BACKUP_BYTES = 10;
 
   const TYPE_LABELS = {correo:'Correo / Web', usuario:'Usuario / Web', servidor:'Servidor', rdp:'RDP', vpn:'VPN'};
 
@@ -94,12 +97,18 @@
     /* Envuelve la DEK con la contraseña y con una clave de recuperación nueva.
        Devuelve {meta, recoveryKey}: el documento a guardar y la clave de recuperación formateada. */
     static wrapDek(password, dekB64, createdAt){
+      return VaultModel.wrapInner(password, {dek:dekB64}, createdAt);
+    }
+
+    /* Lo mismo para lo que vaya dentro de los dos envoltorios: {dek}, o {totp, iv, cipher} con la
+       verificación en dos pasos (así tampoco la clave de recuperación abre el cofre sin ella). */
+    static wrapInner(password, inner, createdAt){
       const saltPassword = cryptoSvc.randomBytes(16);
       const recoveryBytes = cryptoSvc.randomBytes(32);
       return Promise.all([cryptoSvc.deriveKey(password, saltPassword), cryptoSvc.importAesKeyRaw(recoveryBytes)]).then((keys) => {
         return Promise.all([
-          cryptoSvc.encryptJSON(keys[0], {dek:dekB64}),
-          cryptoSvc.encryptJSON(keys[1], {dek:dekB64})
+          cryptoSvc.encryptJSON(keys[0], inner),
+          cryptoSvc.encryptJSON(keys[1], inner)
         ]);
       }).then((wraps) => ({
         meta: {
@@ -117,12 +126,77 @@
       return VaultModel.wrapDek(password, dekB64, createdAt).then((w) => this.setMeta(w.meta).then(() => w.recoveryKey));
     }
 
-    /* Los envoltorios que escriben create, redeem, recover y la migración no llevan segundo paso. */
-    _setUnlocked(key){
+    /* ---------- Códigos de respaldo de la verificación en dos pasos ----------
+       Diez códigos de un solo uso (80 bits cada uno, con el formato de la clave de recuperación).
+       Cada uno cifra la clave que da el servidor tras un código TOTP, así que sustituyen al
+       teléfono pero no a la contraseña maestra. Van en el campo «backup» del documento, fuera de
+       los envoltorios: usar uno es borrar su entrada, y eso no pide la contraseña. */
+
+    /* → {codes:[…], field}: los códigos para enseñar y lo que se guarda. */
+    static makeBackup(share){
+      const secrets = [];
+      for(let i = 0; i < BACKUP_CODES; i++) secrets.push(cryptoSvc.randomBytes(BACKUP_BYTES));
+      return Promise.all(secrets.map((bytes) => {
+        return cryptoSvc.codeKey(bytes).then((key) => cryptoSvc.encryptJSON(key, {s:cryptoSvc.b64encode(share)})).then((enc) => enc.iv + ':' + enc.cipher);
+      })).then((entries) => ({codes:secrets.map((bytes) => cryptoSvc.formatRecoveryKey(bytes)), field:entries.join('.')}));
+    }
+
+    static backupEntries(field){
+      return typeof field === 'string' ? field.split('.').filter(Boolean) : [];
+    }
+
+    /* ¿Tiene forma de código de respaldo? (No dice si es bueno.) */
+    static isBackupCode(text){
+      return cryptoSvc.base32Decode(text).length === BACKUP_BYTES;
+    }
+
+    /* Abre con un código la clave del servidor: {share (bytes), rest (el campo sin ese código)}.
+       Rechaza con 'bad-backup' si no es de los que quedan. */
+    static openBackup(field, code){
+      const fail = () => { const err = new Error('bad-backup'); err.code = 'bad-backup'; return err; };
+      const bytes = cryptoSvc.base32Decode(code);
+      const entries = VaultModel.backupEntries(field);
+      if(bytes.length !== BACKUP_BYTES || !entries.length) return Promise.reject(fail());
+      return cryptoSvc.codeKey(bytes).then((key) => Promise.all(entries.map((entry) => {
+        const parts = entry.split(':');
+        return cryptoSvc.decryptJSON(key, parts[0], parts[1]).then((obj) => obj, () => null);
+      }))).then((opened) => {
+        const at = opened.findIndex((obj) => obj && obj.s);
+        if(at === -1) throw fail();
+        return {share:cryptoSvc.b64decode(opened[at].s), rest:entries.filter((e, i) => i !== at).join('.')};
+      });
+    }
+
+    /* La clave del servidor para un envoltorio con segundo paso. second: {verify(token) → bytes}
+       (un código de la aplicación, que comprueba el servidor) o {backup:'código de respaldo'}.
+       Devuelve {share, rest}; rest solo viene si se ha gastado un código de respaldo. */
+    _shareFor(data, locked, second){
+      if(second && second.backup) return VaultModel.openBackup(data.backup, second.backup);
+      if(second && second.verify) return Promise.resolve(second.verify(locked.totp)).then((share) => ({share:share}));
+      const err = new Error('totp-required');
+      err.code = 'totp-required';
+      return Promise.reject(err);
+    }
+
+    /* La DEK (base64) de un envoltorio con segundo paso, con la clave del servidor. */
+    _dekWithShare(locked, share){
+      return cryptoSvc.importAesKeyRaw(share).then((key) => cryptoSvc.decryptJSON(key, locked.iv, locked.cipher)).then((obj) => obj, () => null).then((obj) => {
+        if(!obj || !obj.dek) throw new Error('bad-share');
+        return obj.dek;
+      });
+    }
+
+    /* Cuántos códigos de respaldo quedan. */
+    backupLeft(){
+      return this.getMeta().then((snap) => (snap.exists ? VaultModel.backupEntries(snap.data().backup).length : 0));
+    }
+
+    /* totp: si los envoltorios que se acaban de escribir llevan segundo paso. */
+    _setUnlocked(key, totp){
       this.key = key;
       this.metaState = 'current';
       this.unlocked = true;
-      this.totp = false;
+      this.totp = !!totp;
       this.pendingTotp = null;
       this.revealed = {};
       this.visible = {};
@@ -243,6 +317,31 @@
       });
     }
 
+    /* Segundo paso con un código de respaldo en vez del teléfono. El código se gasta: su entrada
+       se borra del documento. Devuelve cuántos quedan. Rechaza con 'bad-backup'. */
+    unlockWithBackup(code){
+      if(!this.pendingTotp) return Promise.reject(new Error('no-pending'));
+      let data, rest;
+      return this.getMeta().then((snap) => {
+        data = snap.exists ? snap.data() : {};
+        return VaultModel.openBackup(data.backup, code);
+      }).then((opened) => {
+        rest = opened.rest;
+        return this.unlockWithShare(opened.share);
+      }).then(() => {
+        /* Sin esperar a que se guarde: sin conexión esa escritura tarda y el cofre ya está abierto. */
+        Promise.resolve(this.setMeta(Object.assign({}, data, {backup:rest, updatedAt:Date.now()}))).catch(() => {});
+        return VaultModel.backupEntries(rest).length;
+      });
+    }
+
+    /* Cambia la contraseña maestra. Lo de dentro del envoltorio no cambia: con verificación en dos
+       pasos sigue haciendo falta el código, y la clave de recuperación sigue siendo la misma.
+       Errores: 'bad-pass'. */
+    changePassword(current, next){
+      return this._openPasswordWrap(current).then((o) => this._rewrapPassword(next, o.data, o.obj));
+    }
+
     /* Lo que hay dentro del envoltorio de la contraseña: {data, obj}. 'bad-pass' si no es esa. */
     _openPasswordWrap(password){
       return this.getMeta(true).then((snap) => {
@@ -272,9 +371,12 @@
 
     /* Activa la verificación en dos pasos. enroll() → Promise<{token, share}>: el alta en el
        servidor, que solo se pide si la contraseña es la buena.
+       Se escriben de nuevo los dos envoltorios, así que la clave de recuperación cambia (la
+       anterior abría el cofre sin segundo paso). Devuelve {recoveryKey, codes}: la clave nueva y
+       los códigos de respaldo.
        Errores: 'bad-pass', 'totp-on' (ya estaba activada) y los de enroll(). */
     enableTotp(password, enroll){
-      let opened;
+      let opened, out;
       return this._openPasswordWrap(password).then((o) => {
         if(!o.obj.dek) throw new Error('totp-on');
         opened = o;
@@ -282,24 +384,55 @@
       }).then((made) => {
         return cryptoSvc.importAesKeyRaw(made.share)
           .then((key) => cryptoSvc.encryptJSON(key, {dek:opened.obj.dek}))
-          .then((enc) => this._rewrapPassword(password, opened.data, {totp:made.token, iv:enc.iv, cipher:enc.cipher}));
-      }).then(() => { this.totp = true; });
+          .then((enc) => Promise.all([
+            VaultModel.wrapInner(password, {totp:made.token, iv:enc.iv, cipher:enc.cipher}, opened.data.createdAt),
+            VaultModel.makeBackup(made.share)
+          ]));
+      }).then((made) => {
+        out = {recoveryKey:made[0].recoveryKey, codes:made[1].codes};
+        return this.setMeta(Object.assign(made[0].meta, {backup:made[1].field}));
+      }).then(() => {
+        this.totp = true;
+        return out;
+      });
     }
 
-    /* La desactiva. verify(token) → Promise<bytes>: la clave del servidor para ese token.
-       Errores: 'bad-pass', 'totp-off' (no estaba activada) y los de verify(). */
-    disableTotp(password, verify){
-      let opened;
+    /* La desactiva. second: un código de la aplicación o uno de respaldo (ver _shareFor).
+       También cambia la clave de recuperación, que vuelve a abrir el cofre ella sola; devuelve la
+       nueva. Errores: 'bad-pass', 'totp-off' (no estaba activada), 'bad-backup' y los de verify(). */
+    disableTotp(password, second){
+      let opened, recoveryKey;
       return this._openPasswordWrap(password).then((o) => {
         if(!o.obj.totp) throw new Error('totp-off');
         opened = o;
-        return verify(o.obj.totp);
-      }).then((share) => cryptoSvc.importAesKeyRaw(share))
-        .then((key) => cryptoSvc.decryptJSON(key, opened.obj.iv, opened.obj.cipher))
-        .then((inner) => {
-          if(!inner || !inner.dek) throw new Error('bad-share');
-          return this._rewrapPassword(password, opened.data, {dek:inner.dek});
-        }).then(() => { this.totp = false; });
+        return this._shareFor(o.data, o.obj, second);
+      }).then((got) => this._dekWithShare(opened.obj, got.share))
+        .then((dek) => VaultModel.wrapDek(password, dek, opened.data.createdAt))
+        .then((w) => {
+          recoveryKey = w.recoveryKey;
+          return this.setMeta(w.meta);
+        }).then(() => {
+          this.totp = false;
+          return recoveryKey;
+        });
+    }
+
+    /* Códigos de respaldo nuevos: los anteriores dejan de valer. Devuelve los códigos.
+       Errores: los de disableTotp(). */
+    newBackupCodes(password, second){
+      let opened, share, codes;
+      return this._openPasswordWrap(password).then((o) => {
+        if(!o.obj.totp) throw new Error('totp-off');
+        opened = o;
+        return this._shareFor(o.data, o.obj, second);
+      }).then((got) => {
+        share = got.share;
+        /* Que la clave sea la buena antes de cifrar con ella códigos que no servirían. */
+        return this._dekWithShare(opened.obj, share);
+      }).then(() => VaultModel.makeBackup(share)).then((made) => {
+        codes = made.codes;
+        return this.setMeta(Object.assign({}, opened.data, {backup:made.field, updatedAt:Date.now()}));
+      }).then(() => codes);
     }
 
     /* La migración conserva iv/cipher antiguos. Solo después de guardar todas
@@ -344,24 +477,33 @@
     }
 
     /* Restablece la contraseña maestra con la clave de recuperación.
-       Devuelve la clave de recuperación nueva (la anterior queda invalidada). */
-    recover(recoveryKeyBytes, newPassword){
-      let dekB64;
+       Devuelve la clave de recuperación nueva (la anterior queda invalidada).
+       Con verificación en dos pasos la clave de recuperación no basta: hace falta además second
+       (un código de la aplicación o uno de respaldo, ver _shareFor), y el segundo paso sigue
+       activado después. Sin second rechaza con 'totp-required' (.code) y no cambia nada.
+       Errores: 'no-recovery', 'bad-key', 'totp-required', 'bad-backup', 'bad-share' y los de verify(). */
+    recover(recoveryKeyBytes, newPassword, second){
+      let data, locked = null, dekB64, backup, recoveryKey;
       return cryptoSvc.importAesKeyRaw(recoveryKeyBytes).then((kekRecovery) => {
         return this.getMeta().then((snap) => {
           if(!snap.exists || !snap.data().ivRecovery) throw new Error('no-recovery');
-          const data = snap.data();
-          return cryptoSvc.decryptJSON(kekRecovery, data.ivRecovery, data.cipherRecovery).then((obj) => {
-            if(!obj || !obj.dek) throw new Error('bad-key');
-            dekB64 = obj.dek;
-            return this._writeWrappedDek(newPassword, dekB64, data.createdAt);
-          });
+          data = snap.data();
+          return cryptoSvc.decryptJSON(kekRecovery, data.ivRecovery, data.cipherRecovery).then((obj) => obj, () => null);
         });
-      }).then((recoveryKey) => {
-        return cryptoSvc.importAesKeyRaw(cryptoSvc.b64decode(dekB64)).then((key) => {
-          this._setUnlocked(key);
-          return recoveryKey;
-        });
+      }).then((obj) => {
+        if(!obj || (!obj.dek && !obj.totp)) throw new Error('bad-key');
+        if(obj.dek){ dekB64 = obj.dek; return; }
+        locked = {totp:obj.totp, iv:obj.iv, cipher:obj.cipher};
+        return this._shareFor(data, locked, second).then((got) => {
+          backup = got.rest !== undefined ? got.rest : (data.backup || '');
+          return this._dekWithShare(locked, got.share);
+        }).then((dek) => { dekB64 = dek; });
+      }).then(() => VaultModel.wrapInner(newPassword, locked || {dek:dekB64}, data.createdAt)).then((w) => {
+        recoveryKey = w.recoveryKey;
+        return this.setMeta(locked ? Object.assign(w.meta, {backup:backup}) : w.meta);
+      }).then(() => cryptoSvc.importAesKeyRaw(cryptoSvc.b64decode(dekB64))).then((key) => {
+        this._setUnlocked(key, !!locked);
+        return recoveryKey;
       });
     }
 

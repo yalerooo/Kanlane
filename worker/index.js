@@ -73,8 +73,9 @@ const CLOCK_SKEW = 300;
    dentro del envoltorio de la contraseña maestra. «share» = HKDF-SHA256(secreto, sal
    «kanlane-vault-totp-v1», info «share|u:{uid}|{token}»).
    Un código son 6 cifras: lo que impide probarlos todos es TOTP_RATE_LIMIT (por cuenta). Sin ese
-   límite configurado la ruta no responde. Perder KMS_MASTER_V1 obliga a entrar con la clave de
-   recuperación del cofre, que no pasa por aquí. */
+   límite configurado la ruta no responde. La clave de recuperación del cofre va envuelta igual, así
+   que tampoco abre sin pasar por aquí; lo único que no pasa por aquí son los códigos de respaldo
+   (src/models/vault-model.js), que es con lo que se entraría si se perdiera KMS_MASTER_V1. */
 const TOTP_PATH = '/__/kms/v1/totp';
 const TOTP_SALT = 'kanlane-vault-totp-v1';
 const TOTP_STEP = 30;

@@ -75,6 +75,7 @@
       this.vtForm = $('vtForm');
       this.vtLead = $('vtLead');
       this.vtSetup = $('vtSetup');
+      this.vtQr = $('vtQr');
       this.vtSecret = $('vtSecret');
       this.vtCopy = $('vtCopy');
       this.vtOpen = $('vtOpen');
@@ -83,6 +84,22 @@
       this.vtError = $('vtError');
       this.vtCancel = $('vtCancel');
       this.vtSubmit = $('vtSubmit');
+      this.vtCodes = $('vtCodes');
+      this.vtCodeLabel = $('vtCodeLabel');
+      this.vtLeft = $('vtLeft');
+
+      /* Contraseña maestra débil y cambiarla */
+      this.weakNote = $('vaultWeakNote');
+      this.btnVaultWeak = $('btnVaultWeak');
+      this.btnVaultPass = $('btnVaultPass');
+      this.passDlg = $('dlgVaultPass');
+      this.vpForm = $('vpForm');
+      this.vpCurrent = $('vpCurrent');
+      this.vpNew = $('vpNew');
+      this.vpNew2 = $('vpNew2');
+      this.vpError = $('vpError');
+      this.vpCancel = $('vpCancel');
+      this.vpSubmit = $('vpSubmit');
 
       /* Recuperación */
       this.recoverForm = $('recoverForm');
@@ -90,6 +107,8 @@
       this.newPass1 = $('newPass1');
       this.newPass2 = $('newPass2');
       this.recoverError = $('recoverError');
+      this.recoverCodeWrap = $('recoverCodeWrap');
+      this.recoverCode = $('recoverCode');
       this.btnRecover = $('btnRecover');
       this.linkCancelRecover = $('linkCancelRecover');
 
@@ -99,6 +118,12 @@
       this.btnCopyRecovery = $('btnCopyRecovery');
       this.btnDownloadRecovery = $('btnDownloadRecovery');
       this.recoveryConfirmChk = $('recoveryConfirmChk');
+      this.recoveryCheckWrap = $('recoveryCheckWrap');
+      this.recoveryCheck = $('recoveryCheck');
+      this.recoveryCheckN = $('recoveryCheckN');
+      this.recoveryWarning = $('recoveryWarning');
+      this.backupCodesWrap = $('backupCodesWrap');
+      this.backupCodesBox = $('backupCodesBox');
       this.btnRecoveryContinue = $('btnRecoveryContinue');
 
       /* Contenido */
@@ -156,9 +181,10 @@
       this.vtCopy.addEventListener('click', () => copyWithFeedback(this.vtCopy, this.vtSecret.textContent.replace(/\s/g, '')));
       /* También al cerrarlo con Escape. */
       this.totpDlg.addEventListener('close', () => this._clearTotp());
-      this.recoveryConfirmChk.addEventListener('change', () => {
-        this.btnRecoveryContinue.disabled = !this.recoveryConfirmChk.checked;
-      });
+      this.recoveryConfirmChk.addEventListener('change', () => this._paintRecoveryContinue());
+      this.recoveryCheck.addEventListener('input', () => this._paintRecoveryContinue());
+      this.vpCancel.addEventListener('click', () => this.closePass());
+      this.passDlg.addEventListener('close', () => this._clearPass());
       this.tipo.addEventListener('change', () => this._toggleTypeFields());
       this.btnCancel.addEventListener('click', () => this.dlg.close());
       this.btnVvClose.addEventListener('click', () => this.viewDlg.close());

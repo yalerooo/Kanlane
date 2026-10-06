@@ -57,8 +57,10 @@
 
   /* Enlace otpauth:// (lo abren las aplicaciones de autenticación del propio dispositivo). */
   function uri(bytes, account){
-    const label = 'Kanlane' + (account ? ':' + account : '');
-    return 'otpauth://totp/' + encodeURIComponent(label) + '?secret=' + base32(bytes) + '&issuer=Kanlane';
+    const make = (label) => 'otpauth://totp/' + encodeURIComponent(label) + '?secret=' + base32(bytes) + '&issuer=Kanlane';
+    const full = make('Kanlane' + (account ? ':' + account : ''));
+    /* Con un correo larguísimo no cabría en el código QR (utils/qr.js): va sin él. */
+    return full.length <= 200 ? full : make('Kanlane');
   }
 
   async function request(rootDb, body){

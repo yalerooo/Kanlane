@@ -484,17 +484,19 @@ service cloud.firestore {
     }
 
     // La clave del cofre de cada miembro, envuelta con su contraseña maestra y su clave de
-    // recuperación: solo la lee y la escribe él. El propietario puede borrar las de otros.
+    // recuperación (y, con la verificación en dos pasos, sus códigos de respaldo): solo la lee y la escribe él. El propietario puede borrar las de otros.
     match /teams/{tid}/vault_keys/{who} {
       allow read: if verified() && who == request.auth.uid && isMember(tid);
       allow create, update: if verified() && who == request.auth.uid && isMember(tid)
-        && request.resource.data.keys().hasOnly(['saltPassword', 'ivPassword', 'cipherPassword', 'ivRecovery', 'cipherRecovery', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['saltPassword', 'ivPassword', 'cipherPassword', 'ivRecovery', 'cipherRecovery', 'backup', 'createdAt', 'updatedAt'])
         && request.resource.data.keys().hasAll(['saltPassword', 'ivPassword', 'cipherPassword', 'ivRecovery', 'cipherRecovery'])
         && request.resource.data.saltPassword is string && request.resource.data.saltPassword.size() <= 64
         && request.resource.data.ivPassword is string && request.resource.data.ivPassword.size() <= 32
         && request.resource.data.cipherPassword is string && request.resource.data.cipherPassword.size() <= 512
         && request.resource.data.ivRecovery is string && request.resource.data.ivRecovery.size() <= 32
-        && request.resource.data.cipherRecovery is string && request.resource.data.cipherRecovery.size() <= 512;
+        && request.resource.data.cipherRecovery is string && request.resource.data.cipherRecovery.size() <= 512
+        // Códigos de respaldo de la verificación en dos pasos (cifrados; ver vault-model.js).
+        && request.resource.data.get('backup', '') is string && request.resource.data.get('backup', '').size() <= 2048;
       allow delete: if verified() && (who == request.auth.uid || isOwner(tid));
     }
 

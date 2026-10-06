@@ -242,6 +242,7 @@ async function closeShare(page){
     await gp.locator('#recoveryReveal').waitFor({state:'visible', timeout:30000});
     const guestRecovery = (await gp.locator('#recoveryKeyBox').textContent()).trim();
     assert.ok(guestRecovery.length > 30 && guestRecovery !== seed.recovery, 'el invitado tiene su propia clave de recuperación');
+    await gp.locator('#recoveryCheck').fill((await gp.locator('#recoveryKeyBox').textContent()).trim().split('-')[+(await gp.locator('#recoveryCheckN').textContent()) - 1]);
     await gp.locator('#recoveryConfirmChk').check();
     await gp.locator('#btnRecoveryContinue').click();
     await gp.locator('#vaultContent').waitFor({state:'visible'});

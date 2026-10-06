@@ -379,6 +379,10 @@
         <h2 id="lockTitle">Desbloquear contraseñas</h2>
         <p id="lockDesc" class="lock-desc">Introduce tu contraseña maestra. Se usa solo en tu navegador para cifrar y descifrar — nunca se guarda ni se envía a ningún sitio.</p>
         <form id="unlockForm">
+          <div class="field" id="vaultCodeWrap" hidden>
+            <label for="vaultCode">Enlace o código de acceso</label>
+            <input id="vaultCode" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="300" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX">
+          </div>
           <div class="field">
             <label for="masterPass">Contraseña maestra</label>
             <input id="masterPass" type="password" autocomplete="off" required>
@@ -1143,16 +1147,21 @@
     <p class="dlg-lead" id="shLead"></p>
     <div id="shPersonal" hidden>
       <ul class="share-points">
-        <li>Se crea un proyecto de equipo con una copia de sus tareas (con notas e imágenes), clientes, contactos y reuniones.</li>
-        <li>Las contraseñas guardadas no se copian: todavía no se pueden compartir con seguridad.</li>
-        <li>El proyecto original no cambia; si ya no lo quieres, puedes eliminarlo después.</li>
-        <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo y el original deja de sincronizar. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
+        <li>El proyecto pasa a ser de equipo con todo lo que tiene: tareas (con notas e imágenes), clientes, contactos y reuniones.</li>
+        <li>No queda una copia: cuando todo está en el equipo, el proyecto personal se elimina.</li>
+        <li id="shVaultNote" hidden>Las contraseñas guardadas pasan al equipo. Tú sigues entrando con tu contraseña maestra y tu clave de recuperación de siempre. A cada persona le das un enlace de un solo uso y crea su propia contraseña maestra.</li>
+        <li id="shGithubNote" hidden>Está enlazado con GitHub: el enlace pasa al equipo. Cada miembro conecta su propia cuenta de GitHub, porque el acceso no se comparte.</li>
         <li id="shEncNote" hidden>El equipo tendrá su propia clave. A cada persona que invites le darás un código de acceso de un solo uso por otro canal (en persona, por mensaje…). Caduca en 24 horas.</li>
         <li id="shManagedNote" hidden>Este proyecto está gestionado por Kanlane: su clave está ligada a tu cuenta y, por ahora, no se puede convertir en un proyecto de equipo.</li>
       </ul>
       <div class="field" id="shConvertPassWrap" hidden>
         <label for="shConvertPass">Contraseña de cifrado del proyecto</label>
         <input id="shConvertPass" type="password" autocomplete="off">
+      </div>
+      <div class="field" id="shVaultPassWrap" hidden>
+        <label for="shVaultPass">Contraseña maestra de las contraseñas</label>
+        <input id="shVaultPass" type="password" autocomplete="off">
+        <p class="field-help">Hace falta para llevar las contraseñas de este proyecto al equipo. No se guarda ni se envía.</p>
       </div>
       <div id="shKeyPanel" hidden>
         <p class="dlg-lead">Esta es la clave de recuperación del equipo: es distinta de la del proyecto original. Guárdala fuera de Kanlane antes de continuar.</p>
@@ -1171,10 +1180,21 @@
       <button type="button" class="btn btn-primary" id="shConvert">Convertir en proyecto de equipo</button>
     </div>
     <div id="shCodePanel" hidden>
-      <p class="dlg-lead">Dáselo por un canal distinto del correo de la invitación. Solo sirve una vez, caduca en 24 horas y no se vuelve a mostrar.</p>
-      <div class="recovery-key-box" id="shCode" translate="no"></div>
+      <div id="shCodeWrap">
+        <p class="dlg-lead">Dáselo por un canal distinto del correo de la invitación. Solo sirve una vez, caduca en 24 horas y no se vuelve a mostrar.</p>
+        <div class="recovery-key-box" id="shCode" translate="no"></div>
+        <div class="recovery-actions">
+          <button type="button" class="btn btn-ghost" id="shCodeCopy">Copiar código</button>
+        </div>
+      </div>
+      <div id="shLinkWrap" hidden>
+        <p class="dlg-lead">Enlace de acceso a las contraseñas del equipo. Dáselo a esa persona por un canal privado: al abrirlo con su cuenta creará su propia contraseña maestra. Solo sirve una vez, caduca en 24 horas y no se vuelve a mostrar.</p>
+        <div class="recovery-key-box" id="shLink" translate="no" style="word-break:break-all"></div>
+        <div class="recovery-actions">
+          <button type="button" class="btn btn-ghost" id="shLinkCopy">Copiar enlace</button>
+        </div>
+      </div>
       <div class="recovery-actions">
-        <button type="button" class="btn btn-ghost" id="shCodeCopy">Copiar código</button>
         <button type="button" class="btn btn-primary" id="shCodeDone">Hecho</button>
       </div>
     </div>
@@ -1197,6 +1217,11 @@
           <label for="shInvitePass">Tu contraseña de cifrado</label>
           <input id="shInvitePass" type="password" autocomplete="off">
           <p class="field-help">Este proyecto tiene cifrado total: al invitar se crea un código de acceso que tendrás que darle a esa persona.</p>
+        </div>
+        <div class="field invite-pass" id="shMasterPassWrap" hidden>
+          <label for="shMasterPass">Tu contraseña maestra</label>
+          <input id="shMasterPass" type="password" autocomplete="off">
+          <p class="field-help">Para dar acceso a las contraseñas del equipo: se crea un enlace de un solo uso que tendrás que darle a esa persona. Déjala vacía para invitar sin acceso a las contraseñas.</p>
         </div>
         <p class="field-help">La persona verá la invitación al entrar en Kanlane con ese correo. Tiene que tener una cuenta con ese mismo correo.</p>
       </form>
@@ -1686,6 +1711,7 @@
 <script src="../src/models/task-model.js"></script>
 <script src="../src/models/contact-model.js"></script>
 <script src="../src/models/meeting-model.js"></script>
+<script src="../src/models/team-vault.js"></script>
 <script src="../src/models/vault-model.js"></script>
 <script src="../src/models/settings-model.js"></script>
 <script src="../src/models/backup-model.js"></script>

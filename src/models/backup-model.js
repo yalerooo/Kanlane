@@ -36,15 +36,11 @@
       return m.tasks.isReady() && m.contacts.isReady() && m.vault.isReady() && m.clients.isReady() && m.meetings.isReady();
     }
 
-    /* Un proyecto de equipo no tiene gestor de contraseñas: las reglas no dejan ni leer
-       vault_meta, así que pedirlo haría fallar la copia entera. */
+    /* En un proyecto de equipo el cofre es compartido y cada persona tiene su propia clave
+       (team-vault.js): la copia lleva la mía, pero un archivo no se importa sobre el cofre del equipo. */
     inTeam(){
       const team = Workhub.views && Workhub.views.team;
       return !!team && team.enabled();
-    }
-
-    vaultMeta(){
-      return this.inTeam() ? Promise.resolve({exists:false}) : this.models.vault.getMeta();
     }
 
     /* Devuelve {filename, json, counts}. projectName: proyecto abierto (se
@@ -52,7 +48,7 @@
     build(projectName){
       const m = this.models;
       return m.tasks.withNotes().then((tasksWithNotes) => {
-        return this.vaultMeta().then((metaSnap) => {
+        return m.vault.getMeta().then((metaSnap) => {
           const data = {
             exportedAt: new Date().toISOString(),
             formatVersion: FORMAT_VERSION,
@@ -162,7 +158,7 @@
       });
 
       return Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises)).then(() => {
-        return this.vaultMeta();
+        return this.inTeam() ? null : m.vault.getMeta();
       }).then((metaSnap) => {
         const vaultData = data.vault || {};
         const entries = list(vaultData.entries);

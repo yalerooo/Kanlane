@@ -44,7 +44,7 @@ const quiet = {error:() => {}, log:() => {}, warn:() => {}};
 ['src/core/emitter.js', 'src/utils/dates.js', 'src/utils/pool.js', 'src/services/crypto.js',
   'src/services/project-crypto.js', 'src/models/enc-schema.js', 'src/models/project-cipher.js',
   'src/models/collection-model.js', 'src/models/project-templates.js', 'src/models/task-model.js',
-  'src/models/project-model.js', 'src/models/team-model.js', 'src/models/project-reseal.js',
+  'src/models/project-model.js', 'src/models/team-vault.js', 'src/models/team-model.js', 'src/models/project-reseal.js',
   'src/controllers/project-crypto-controller.js', 'src/controllers/team-crypto-controller.js',
   'src/controllers/key-rotation-controller.js', 'src/controllers/app-controller.js'
 ].forEach((rel) => new Function('Workhub', 'window', 'crypto', 'console', read(rel))(Workhub, {crypto:globalThis.crypto}, globalThis.crypto, quiet));

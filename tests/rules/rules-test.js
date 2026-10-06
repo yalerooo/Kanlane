@@ -40,7 +40,7 @@ async function t(name, fn){
   await t('alice escribe una nota', () => assertSucceeds(alice.collection('teams').doc('t1').collection('tasks').doc('a').collection('notes').doc('n').set({text: 'x'})));
   await t('bob no lee las tareas', () => assertFails(bob.collection('teams').doc('t1').collection('tasks').doc('a').get()));
   await t('bob no escribe tareas', () => assertFails(bob.collection('teams').doc('t1').collection('tasks').doc('b').set({title: 'y'})));
-  await t('el gestor de contraseñas (vault) no se permite en equipos', () => assertFails(alice.collection('teams').doc('t1').collection('vault').doc('v').set({x: 1})));
+  await t('una credencial con campos inventados no se permite', () => assertFails(alice.collection('teams').doc('t1').collection('vault').doc('v').set({x: 1})));
   await t('colección inventada no se permite', () => assertFails(alice.collection('teams').doc('t1').collection('basura').doc('v').set({x: 1})));
 
   console.log('Invitaciones');
@@ -89,6 +89,83 @@ async function t(name, fn){
   await t('bob (editor) no expulsa a carol', () => assertFails(teamRef(bob).update({memberIds: FVc.arrayRemove('carol'), ['members.carol']: FVc.delete()})));
   await t('bob (editor) no invita', () => assertFails(bob.collection('invites').doc('t1_dave@x.com').set(invite('t1', 'dave@x.com', 'editor', 'bob'))));
   await t('bob (editor) no borra el equipo', () => assertFails(teamRef(bob).delete()));
+  console.log('Contraseñas compartidas');
+  {
+    const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;
+    const vkey = (extra) => Object.assign({saltPassword: 'c2FsdA==', ivPassword: 'aXY=', cipherPassword: 'Y2lwaGVy', ivRecovery: 'aXY=', cipherRecovery: 'Y2lwaGVy', createdAt: 1, updatedAt: 1}, extra || {});
+    const vcheck = (by) => ({v: 1, pid: 'p'.repeat(22), kid: 'k'.repeat(11), iv: 'aXY=', cipher: 'Y2lwaGVy', createdBy: by, createdAt: 1});
+    const ventry = (extra) => Object.assign({tipo: 'correo', cliente: 'Acme', label: 'Correo', iv: 'aXY=', cipher: 'Y2lwaGVy', order: 1, createdAt: 1, updatedAt: 1}, extra || {});
+    const vgrant = (by, extra) => Object.assign({salt: 'c2FsdA', iter: 100000, iv: 'aXY', ct: 'Y3Q', by: by, createdAt: FVc.serverTimestamp()}, extra || {});
+    const col = (db, name) => teamRef(db).collection(name);
+
+    await t('bob (editor) no crea el cofre del equipo', () => assertFails(col(bob, 'vault_meta').doc('check').set(vcheck('bob'))));
+    await t('alice no crea el cofre a nombre de otro', () => assertFails(col(alice, 'vault_meta').doc('check').set(vcheck('bob'))));
+    await t('alice no crea otra marca que no sea check', () => assertFails(col(alice, 'vault_meta').doc('otra').set(vcheck('alice'))));
+    await t('alice crea el cofre: la marca y su clave envuelta, a la vez', async () => {
+      const b = alice.batch();
+      b.set(col(alice, 'vault_meta').doc('check'), vcheck('alice'));
+      b.set(col(alice, 'vault_keys').doc('alice'), vkey());
+      await assertSucceeds(b.commit());
+    });
+    await t('la marca del cofre no se cambia', () => assertFails(col(alice, 'vault_meta').doc('check').set(Object.assign(vcheck('alice'), {cipher: 'b3Rybw=='}))));
+    await t('bob y carol (miembros) leen la marca', async () => {
+      await assertSucceeds(col(bob, 'vault_meta').doc('check').get());
+      await assertSucceeds(col(carol, 'vault_meta').doc('check').get());
+    });
+    await t('dave (no miembro) no lee la marca', () => assertFails(col(dave, 'vault_meta').doc('check').get()));
+
+    await t('bob guarda su clave envuelta', () => assertSucceeds(col(bob, 'vault_keys').doc('bob').set(vkey())));
+    await t('bob cambia su contraseña maestra', () => assertSucceeds(col(bob, 'vault_keys').doc('bob').set(vkey({cipherPassword: 'bnVldmE=', updatedAt: 2}))));
+    await t('alice no escribe la clave de bob', () => assertFails(col(alice, 'vault_keys').doc('bob').set(vkey())));
+    await t('alice no lee la clave de bob', () => assertFails(col(alice, 'vault_keys').doc('bob').get()));
+    await t('bob no lee la clave de alice', () => assertFails(col(bob, 'vault_keys').doc('alice').get()));
+    await t('nadie lista las claves de los demás', () => assertFails(col(alice, 'vault_keys').get()));
+    await t('dave (no miembro) no guarda una clave', () => assertFails(col(dave, 'vault_keys').doc('dave').set(vkey())));
+    await t('una clave con campos de más se rechaza', () => assertFails(col(bob, 'vault_keys').doc('bob').set(vkey({dek: 'en claro'}))));
+
+    await t('bob (editor) guarda una credencial', () => assertSucceeds(col(bob, 'vault').doc('v1').set(ventry())));
+    await t('carol (lector) lee las credenciales', () => assertSucceeds(col(carol, 'vault').doc('v1').get()));
+    await t('carol (lector) no guarda credenciales', () => assertFails(col(carol, 'vault').doc('v2').set(ventry())));
+    await t('carol (lector) no borra credenciales', () => assertFails(col(carol, 'vault').doc('v1').delete()));
+    await t('dave (no miembro) no lee las credenciales', () => assertFails(col(dave, 'vault').doc('v1').get()));
+    await t('una credencial con la contraseña en claro se rechaza', () => assertFails(col(bob, 'vault').doc('v3').set(ventry({password: 'hunter2'}))));
+
+    await t('bob (editor) no da acceso a nadie', () => assertFails(col(bob, 'vault_grants').doc('carol@x.com').set(vgrant('bob'))));
+    await t('alice da acceso a carol', () => assertSucceeds(col(alice, 'vault_grants').doc('carol@x.com').set(vgrant('alice'))));
+    await t('un acceso no se sobrescribe', () => assertFails(col(alice, 'vault_grants').doc('carol@x.com').set(vgrant('alice', {ct: 'b3Rybw'}))));
+    await t('el correo del acceso va en minúsculas', () => assertFails(col(alice, 'vault_grants').doc('Carol@x.com').set(vgrant('alice'))));
+    await t('un acceso con una hora del cliente (para alargar la caducidad) se rechaza', () => assertFails(col(alice, 'vault_grants').doc('dave@x.com').set(vgrant('alice', {createdAt: Timestamp.fromMillis(Date.now() + 3600 * 1000)}))));
+    await t('un acceso a nombre de otro se rechaza', () => assertFails(col(alice, 'vault_grants').doc('dave@x.com').set(vgrant('bob'))));
+    await t('un acceso con la clave en claro se rechaza', () => assertFails(col(alice, 'vault_grants').doc('dave@x.com').set(vgrant('alice', {dek: 'en claro'}))));
+    await t('carol lee su acceso', () => assertSucceeds(col(carol, 'vault_grants').doc('carol@x.com').get()));
+    await t('bob no lee el acceso de carol', () => assertFails(col(bob, 'vault_grants').doc('carol@x.com').get()));
+    await t('alice (propietaria) ve los accesos pendientes', () => assertSucceeds(col(alice, 'vault_grants').get()));
+    await t('bob no borra el acceso de carol', () => assertFails(col(bob, 'vault_grants').doc('carol@x.com').delete()));
+    await t('carol guarda su clave y gasta el acceso', async () => {
+      await assertSucceeds(col(carol, 'vault_keys').doc('carol').set(vkey()));
+      await assertSucceeds(col(carol, 'vault_grants').doc('carol@x.com').delete());
+    });
+    await t('un acceso gastado ya no se lee', () => assertFails(col(carol, 'vault_grants').doc('carol@x.com').get()));
+    await t('un acceso de hace 25 horas ha caducado', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection('teams').doc('t1').collection('vault_grants').doc('carol@x.com').set(vgrant('alice', {createdAt: Timestamp.fromMillis(Date.now() - 25 * 3600 * 1000)}));
+      });
+      await assertFails(col(carol, 'vault_grants').doc('carol@x.com').get());
+    });
+    await t('uno de hace 23 horas todavía sirve', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection('teams').doc('t1').collection('vault_grants').doc('carol@x.com').set(vgrant('alice', {createdAt: Timestamp.fromMillis(Date.now() - 23 * 3600 * 1000)}));
+      });
+      await assertSucceeds(col(carol, 'vault_grants').doc('carol@x.com').get());
+    });
+    await t('alice retira un acceso y borra la clave de otro miembro', async () => {
+      await assertSucceeds(col(alice, 'vault_grants').doc('carol@x.com').delete());
+      await assertSucceeds(col(alice, 'vault_keys').doc('carol').delete());
+    });
+    await t('bob no borra la clave de alice', () => assertFails(col(bob, 'vault_keys').doc('alice').delete()));
+    await t('bob (editor) no borra el cofre', () => assertFails(col(bob, 'vault_meta').doc('check').delete()));
+  }
+
   await t('alice cambia el rol de carol a editor', () => assertSucceeds(teamRef(alice).update({['members.carol.role']: 'editor'})));
   await t('alice ya no puede cambiar de propietario', () => assertFails(teamRef(alice).update({ownerUid: 'bob'})));
   await t('alice no puede quitarse a sí misma de los miembros', () => assertFails(teamRef(alice).update({memberIds: FVc.arrayRemove('alice'), ['members.alice']: FVc.delete()})));

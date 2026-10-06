@@ -4,6 +4,7 @@
   const {LOCK_TEXT} = Workhub.views.shared.vault;
   const {esc} = Workhub.utils.html;
   const {copyWithFeedback, flashLabel, showMessage} = Workhub.utils.ui;
+  const $ = (id) => document.getElementById(id);
 
   Object.assign(Workhub.views.VaultView.prototype, {
     /* screen: 'lock' | 'recovery' | 'content' */
@@ -27,10 +28,12 @@
       this.lockMode = state;
       const text = LOCK_TEXT[state] || LOCK_TEXT.current;
       this.recoverForm.hidden = true;
-      this.unlockForm.hidden = false;
+      this.unlockForm.hidden = state === 'absent';
       this.lockTitle.textContent = text.title;
       this.lockDesc.textContent = text.desc;
-      this.masterPass2Wrap.hidden = state !== 'none';
+      /* Con un código de acceso también se crea una contraseña maestra: se pide dos veces. */
+      this.masterPass2Wrap.hidden = state !== 'none' && state !== 'grant';
+      $('vaultCodeWrap').hidden = state !== 'grant';
       this.forgotLinkWrap.hidden = state !== 'current';
       this.setUnlocking(false);
     },
@@ -47,6 +50,12 @@
       this.lockError.hidden = true;
       this.masterPass.value = '';
       this.masterPass2.value = '';
+      $('vaultCode').value = '';
+    },
+
+    /* Código del enlace de acceso con el que se abrió la app. */
+    setAccessCode(code){
+      if(!$('vaultCode').value) $('vaultCode').value = code || '';
     },
 
     showRecoverForm(){
@@ -87,7 +96,7 @@
       this.unlockForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         this.lockError.hidden = true;
-        handler(this.masterPass.value, this.masterPass2.value);
+        handler(this.masterPass.value, this.masterPass2.value, $('vaultCode').value);
       });
     },
 

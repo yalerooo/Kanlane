@@ -921,6 +921,8 @@ Al abrir la app, el propietario (que ya escucha `invitesFrom(tid)` en `TeamModel
 
 ### 10.8 El cofre en equipos cifrados
 
+**Actualización:** los equipos ya tienen contraseñas compartidas (`docs/EQUIPOS.md`, «Contraseñas compartidas»): la clave del cofre va envuelta por miembro con su contraseña maestra, y en un equipo B las credenciales van además selladas con la DEK del proyecto. Lo que sigue es el planteamiento original.
+
 Hoy no hay cofre en equipos y se mantiene igual en los equipos B: al convertir no se copian las credenciales y la pestaña Contraseñas sigue oculta (`body.team-project`). **Decisión pendiente (D11b)**. Observación para cuando se diseñe: en un equipo B ya existe una clave compartida por todos los miembros, así que un cofre compartido podría cifrarse con la DEK del proyecto (más, si se quiere, la contraseña del cofre), sin el par de claves por persona que propone `docs/EQUIPOS.md`. Necesitaría la rotación de PR10 para expulsar de verdad.
 
 ---

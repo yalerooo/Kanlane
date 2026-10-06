@@ -5,6 +5,8 @@
   const toast = Workhub.views.toast;
   const MIN_PASSWORD_LENGTH = 8;
   const RECOVERY_KEY_BYTES = 32;
+  const TeamVault = Workhub.models.TeamVault;
+  const P = Workhub.models.ProjectModel;
 
   function recoveryFileText(key){
     const when = new Date().toLocaleString(Workhub.i18n.locale);
@@ -56,7 +58,11 @@
         this.render();
       });
 
-      this.view.bindUnlock((pass, pass2) => this.unlock(pass, pass2));
+      this.view.bindUnlock((pass, pass2, code) => this.unlock(pass, pass2, code));
+      /* Enlace de acceso a las contraseñas de un equipo: en cuanto soy miembro, se abre ese proyecto
+         por la sección de contraseñas. */
+      this.linkFollowed = false;
+      app.models.projects.on('change', () => this.followLink());
       this.view.bindRecover((key, p1, p2) => this.recover(key, p1, p2));
       this.view.bindRecoveryActions({
         continue: () => {
@@ -129,17 +135,38 @@
     }
 
     checkLockMode(){
+      /* En un equipo lo que me falta lo pone otra persona (crear el cofre, darme acceso): se vuelve
+         a mirar cada vez. */
+      if(this.vault.team && this.vault.metaState !== 'current') this.vault.metaState = null;
       if(this.vault.metaState !== null){
-        this.view.setLockMode(this.vault.metaState);
+        this.setLockMode(this.vault.metaState);
         return;
       }
       if(!this.vault.isReady()){
         this.view.showLockError('No hay conexión con el almacenamiento.');
         return;
       }
-      this.vault.checkMeta().then((state) => this.view.setLockMode(state)).catch(() => {
+      this.vault.checkMeta().then((state) => this.setLockMode(state)).catch(() => {
         this.view.showLockError('No se pudo comprobar el gestor. Revisa la conexión e inténtalo de nuevo.');
       });
+    }
+
+    setLockMode(state){
+      this.view.setLockMode(state);
+      const link = TeamVault.pendingLink();
+      if(state === 'grant' && link && this.vault.team && link.tid === this.vault.team.tid) this.view.setAccessCode(link.code);
+    }
+
+    /* Se abrió la app con un enlace de acceso: cuando ese equipo está entre mis proyectos (puede
+       que antes haya que aceptar la invitación), se abre por las contraseñas. Solo una vez. */
+    followLink(){
+      const link = TeamVault.pendingLink();
+      if(!link || this.linkFollowed) return;
+      const id = P.teamKey(link.tid);
+      if(!this.app.models.projects.get(id)) return;
+      this.linkFollowed = true;
+      if(this.app.projectId !== id) this.app.switchProject(id);
+      this.app.navigate('vault');
     }
 
     showContent(){
@@ -170,17 +197,34 @@
 
     /* ---------- Desbloqueo ---------- */
 
-    unlock(pass, pass2){
+    unlock(pass, pass2, code){
       if(!pass || !this.vault.isReady()) return;
       const state = this.vault.metaState;
       const done = () => this.view.setUnlocking(false, this.vault.metaState);
       this.view.setUnlocking(true);
 
+      if(state === 'grant'){
+        const clean = TeamVault.parseCode(code);
+        if(!clean){ this.view.showLockError('Pega el enlace o el código de acceso que te ha dado el propietario.'); done(); return; }
+        if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
+        if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
+        this.vault.redeem(clean, pass).then((key) => {
+          TeamVault.clearLink();
+          this.presentRecoveryKey(key, false);
+        }).catch((err) => {
+          const c = err && err.code;
+          this.view.showLockError(c === 'bad-code' ? 'El código no es correcto.'
+            : c === 'no-grant' ? 'No hay ningún acceso pendiente para tu correo, o el enlace ha caducado. Pide otro al propietario.'
+            : 'No se pudo entrar en las contraseñas del equipo. Comprueba la conexión e inténtalo de nuevo.');
+        }).finally(done);
+        return;
+      }
+
       if(state === 'none'){
         if(pass !== pass2){ this.view.showLockError('Las dos contraseñas no coinciden.'); done(); return; }
         if(pass.length < MIN_PASSWORD_LENGTH){ this.view.showLockError('Usa al menos 8 caracteres.'); done(); return; }
         this.vault.create(pass).then((key) => this.presentRecoveryKey(key, false)).catch((err) => {
-          if(err && err.message === 'vault-exists') this.view.setLockMode(this.vault.metaState);
+          if(err && err.message === 'vault-exists') this.setLockMode(this.vault.metaState);
           this.view.showLockError('No se pudo crear la contraseña maestra. Comprueba la conexión y vuelve a intentarlo.');
         }).finally(done);
       } else if(state === 'legacy'){
@@ -192,7 +236,7 @@
           this.view.clearPasswords();
           this.showContent();
         }).catch((err) => {
-          if(err && err.message === 'no-check') this.view.setLockMode('none');
+          if(err && err.message === 'no-check') this.setLockMode(this.vault.metaState || 'none');
           else this.view.showLockError('Contraseña maestra incorrecta.');
         }).finally(done);
       }
@@ -221,7 +265,7 @@
       this.awaitingRecoveryConfirm = false;
       this.view.clearPasswords();
       this.view.showScreen('lock');
-      this.view.setLockMode(this.vault.metaState);
+      this.setLockMode(this.vault.metaState);
     }
 
     /* ---------- Credenciales ---------- */

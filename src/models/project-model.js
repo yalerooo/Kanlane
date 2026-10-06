@@ -18,7 +18,7 @@
   const VAULT_META_PATH = 'vault_meta/check';
   const TEAM_PREFIX = 't:';
   /* En un equipo no hay gestor de contraseñas (todavía) y las imágenes viven en assets. */
-  const TEAM_DATA_COLLECTIONS = ['tasks', 'clients', 'contacts', 'meetings', 'plugin_data', 'assets'];
+  const TEAM_DATA_COLLECTIONS = ['tasks', 'clients', 'contacts', 'meetings', 'vault', 'plugin_data', 'assets'];
   /* Campos del documento de un equipo que no son de configuración. 'enc' (cifrado total) es inmutable:
      si no estuviera aquí, set() lo borraría con FieldValue.delete() al guardar la configuración. */
   const TEAM_PROTECTED = ['ownerUid', 'memberIds', 'members', 'createdAt', 'enc'];
@@ -290,12 +290,19 @@
           return keepUserData.then(() => col.doc(d.id).delete());
         }))));
       }
-      /* En un equipo no hay gestor de contraseñas, y las reglas no lo permiten. */
-      const wipeMeta = isTeam ? Promise.resolve() : db.doc(VAULT_META_PATH).delete();
-      /* Cifrado total: las claves envueltas (la propia; en un equipo, el propietario borra las de todos)
-         y la clave guardada en este navegador. Si alguna falla se sigue: sin el proyecto no abren nada. */
       const project = this.get(id);
       const me = rootDb.me ? rootDb.me.uid : '';
+      /* El cofre de un equipo: la marca, la clave envuelta de cada miembro y los accesos pendientes
+         (los borra el propietario). Si alguno falla se sigue: sin el equipo no abren nada. */
+      const wipeMeta = !isTeam ? db.doc(VAULT_META_PATH).delete() : Promise.all(
+        (project && Array.isArray(project.memberIds) && project.memberIds.length ? project.memberIds : [me]).filter(Boolean)
+          .map((uid) => db.doc('vault_keys/' + uid).delete().catch(() => null))
+          .concat([
+            db.collection('vault_grants').get().then((snap) => Promise.all(snap.docs.map((d) => db.collection('vault_grants').doc(d.id).delete().catch(() => null)))).catch(() => null),
+            db.doc(VAULT_META_PATH).delete().catch(() => null)
+          ]));
+      /* Cifrado total: las claves envueltas (la propia; en un equipo, el propietario borra las de todos)
+         y la clave guardada en este navegador. Si alguna falla se sigue: sin el proyecto no abren nada. */
       if(ProjectModel.isEncrypted(project) && me){
         const who = isTeam && Array.isArray(project.memberIds) && project.memberIds.length ? project.memberIds : [me];
         who.forEach((uid) => {

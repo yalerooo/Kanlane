@@ -324,7 +324,6 @@
       const q = state.query;
       const orphan = !e.client;
       const hue = orphan ? 0 : clientColors.hueOf(e.nombre);
-      const team = document.body.classList.contains('team-project');
       const tab = orphan ? 'contacts' : (TABS.some((x) => x.id === state.tab) ? state.tab : 'overview');
 
       /* Las tareas, por urgencia: vencidas, de hoy, con fecha (la más cercana primero) y sin fecha. */
@@ -385,11 +384,11 @@
           : '';
         const next = meetings[0];
         const metrics =
-          '<div class="cl-metrics' + (team ? ' is-three' : '') + '">' +
+          '<div class="cl-metrics">' +
           cell(BOARD_ICON, 'Tareas abiertas', String(e.stats.open || 0), overdue ? '<em class="is-late">' + esc(t(plural(overdue, 'vencida', 'vencidas'))) + '</em>' : '<em>' + esc(t(e.stats.open ? 'Al día' : 'Nada pendiente')) + '</em>', ' data-action="tab" data-tab="tasks"') +
           cell(CHECK_ICON, 'Completadas', done + (total ? '<span>' + esc(t('de {total}', {total:total})) + '</span>' : ''), progress || '<em>' + esc(t('Sin tareas todavía')) + '</em>') +
           cell(CAL_ICON, 'Próxima reunión', '<span class="is-text">' + esc(meetingText(next)) + '</span>', next ? '<em translate="no">' + esc(next.title || '') + '</em>' : '<em>' + esc(t('Nada en la agenda')) + '</em>', ' data-action="tab" data-tab="meetings"') +
-          (team ? '' : cell(LOCK_ICON, 'Contraseñas', String(e.vaultCount || 0), '<em>' + esc(t(e.vaultCount ? 'Guardadas en el cofre' : 'Ninguna guardada')) + '</em>', ' data-action="view-vault" title="' + esc(t('Ver contraseñas')) + '"')) +
+          cell(LOCK_ICON, 'Contraseñas', String(e.vaultCount || 0), '<em>' + esc(t(e.vaultCount ? 'Guardadas en el cofre' : 'Ninguna guardada')) + '</em>', ' data-action="view-vault" title="' + esc(t('Ver contraseñas')) + '"') +
           '</div>' +
           '<div class="crm-shortcuts"><div class="ext-slot" data-ext-slot="client.actions" data-ext-context="' + esc(JSON.stringify({clientId:e.id, cliente:e.nombre})) + '" hidden></div></div>';
         const top = open.slice(0, 5);

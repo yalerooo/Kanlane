@@ -169,8 +169,6 @@
       this.app.shell.setTeamMode(T.enabled());
       const t = this.app.controllers.tasks;
       if(t) t.applyTeam();
-      /* En un equipo todavía no hay gestor de contraseñas. */
-      if(T.enabled() && this.app.shell.isVisible('vault')) this.app.navigate('tasks');
     }
 
     render(){

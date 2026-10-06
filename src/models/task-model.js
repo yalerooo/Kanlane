@@ -324,11 +324,35 @@
       return this.cipher.seal(this.notesPath(taskId), ref.id, data).then((doc) => ref.set(doc)).then(() => ref);
     }
 
-    addNote(taskId, text, imageAssetId){
+    /* Adjuntos de una nota tal como se guardó: [{name, type, size, image, parts:[ids]}]. Una nota
+       con una sola imagen lleva solo imageAssetId (como siempre); con más cosas, `attachments` y,
+       en claro, `assetIds` (todos los documentos de `assets` que enlaza, para poder borrarlos,
+       copiarlos o volver a cifrarlos sin abrir la nota). */
+    static attachmentsOf(n){
+      const out = [];
+      if(n && n.imageAssetId) out.push({name:'', type:'image/jpeg', size:0, image:true, parts:[n.imageAssetId]});
+      (Array.isArray(n && n.attachments) ? n.attachments : []).forEach((a) => {
+        const parts = Array.isArray(a && a.parts) ? a.parts.filter((id) => typeof id === 'string' && id) : [];
+        if(!parts.length) return;
+        out.push({name:String(a.name || ''), type:String(a.type || ''), size:+a.size || 0, image:!!a.image, parts:parts});
+      });
+      return out;
+    }
+
+    /* attachments: los adjuntos ya subidos (o, como antes, el id de una imagen). */
+    addNote(taskId, text, attachments){
       const team = Workhub.views.team;
       const actorUid = team.enabled() ? team.meUid() : '';
-      return this.addNoteRaw(taskId, {text:text, imageAssetId:imageAssetId || '', createdAt:Date.now(),
-        kind:actorUid ? 'comment' : 'note', actorUid:actorUid, actorName:actorUid ? team.name(actorUid) : ''});
+      const list = typeof attachments === 'string' ? (attachments ? [{image:true, parts:[attachments]}] : [])
+        : TaskModel.attachmentsOf({attachments:attachments});
+      const single = list.length === 1 && list[0].image && list[0].parts.length === 1;
+      const data = {text:text, imageAssetId:single ? list[0].parts[0] : '', createdAt:Date.now(),
+        kind:actorUid ? 'comment' : 'note', actorUid:actorUid, actorName:actorUid ? team.name(actorUid) : ''};
+      if(list.length && !single){
+        data.attachments = list.map((a) => ({name:a.name.slice(0, 200), type:a.type.slice(0, 120), size:a.size, image:a.image, parts:a.parts}));
+        data.assetIds = list.reduce((ids, a) => ids.concat(a.parts), []);
+      }
+      return this.addNoteRaw(taskId, data);
     }
 
     addActivity(taskId, text){
@@ -338,8 +362,15 @@
         actorName:team.name(team.meUid()), createdAt:Date.now()});
     }
 
+    /* Elimina la nota y devuelve los documentos de `assets` que enlazaba con `assetIds`, para
+       que se borren también. La imagen de una nota antigua (imageAssetId) se deja: una copia
+       importada puede enlazar la misma. */
     removeNote(taskId, noteId){
-      return this.notes(taskId).doc(noteId).delete();
+      const ref = this.notes(taskId).doc(noteId);
+      return ref.get().then((snap) => {
+        const data = (snap && snap.exists !== false && snap.data && snap.data()) || {};
+        return Array.isArray(data.assetIds) ? data.assetIds.filter((id) => typeof id === 'string' && id) : [];
+      }, () => []).then((ids) => ref.delete().then(() => ids));
     }
 
     /* Copia de todas las tareas con sus notas incrustadas (para exportar). */

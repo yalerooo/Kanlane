@@ -24,6 +24,10 @@
   const IMAGE_MAX_SIDE = 1600;
   const IMAGE_MAX_CHARS = 880000;
   const IMAGE_MAX_ATTEMPTS = 10;
+  /* Los demás archivos adjuntos se reparten en trozos, cada uno en su documento de `assets`.
+     640 000 bytes son 853 336 caracteres en base64: con su prefijo caben en IMAGE_MAX_CHARS. */
+  const FILE_CHUNK_BYTES = 640000;
+  const FILE_PREFIX = 'data:application/octet-stream;base64,';
 
   let fb = null;        /* espacio de nombres firebase */
   let auth = null;
@@ -482,6 +486,19 @@
       }
       return data && data.data ? data.data : null;
     }).catch(() => null);
+    /* Bytes de un documento de `assets` (un trozo de archivo, o una imagen): para descargar. */
+    const readBytes = (col, id) => col.doc(id).get().then((snap) => {
+      const data = snap.exists ? snap.data() : null;
+      if(data && data.ev){
+        const cipher = window.__assetCipher;
+        return cipher ? cipher.openBytes(id, data) : null;
+      }
+      return data && typeof data.data === 'string' ? b64.b64decode(data.data.slice(data.data.indexOf(',') + 1)) : null;
+    }).catch(() => null);
+    window.__assetBytes = (id) => {
+      const team = shared();
+      return (team ? readBytes(team, id) : Promise.resolve(null)).then((bytes) => bytes || readBytes(own, id));
+    };
     window.__assetUrl = (id) => {
       if(cache[id]) return Promise.resolve(cache[id]);
       const team = shared();
@@ -509,6 +526,25 @@
           cache[ref.id] = dataUrl;
           return {id:ref.id, url:dataUrl, contentType:'image/jpeg'};
         });
+      }),
+      /* Un archivo cualquiera, sin tocar: se parte en trozos y devuelve sus ids en orden. Si un
+         trozo falla, se borran los que ya estaban subidos. */
+      uploadFile: (file) => file.arrayBuffer().then((buffer) => {
+        const bytes = new Uint8Array(buffer);
+        const col = shared() || own;
+        const cipher = window.__assetCipher;
+        const refs = [];
+        const put = (at) => {
+          const chunk = bytes.slice(at, at + FILE_CHUNK_BYTES);
+          const ref = col.doc();
+          refs.push(ref);
+          const body = cipher
+            ? cipher.sealBytes(ref.id, chunk).then((sealed) => Object.assign({createdAt:Date.now()}, sealed))
+            : Promise.resolve({data:FILE_PREFIX + b64.b64encode(chunk), contentType:'application/octet-stream', createdAt:Date.now()});
+          return body.then((doc) => ref.set(doc)).then(() => (at + FILE_CHUNK_BYTES < bytes.length ? put(at + FILE_CHUNK_BYTES) : null));
+        };
+        return put(0).then(() => ({parts:refs.map((r) => r.id)}),
+          (err) => Promise.all(refs.map((r) => r.delete().catch(() => null))).then(() => { throw err; }));
       }),
       delete: (id) => (shared() || own).doc(id).delete().then(() => { delete cache[id]; return {deleted:true}; })
     };
@@ -553,6 +589,8 @@
     /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */
     allowSignup: () => config().allowSignup !== false,
     /* Límite de las imágenes de las notas (lo prueba tests/assets/limits.test.js). */
-    imageLimits: {maxChars: IMAGE_MAX_CHARS, maxSide: IMAGE_MAX_SIDE, maxAttempts: IMAGE_MAX_ATTEMPTS, fits: imageFits, fit: fitImage}
+    imageLimits: {maxChars: IMAGE_MAX_CHARS, maxSide: IMAGE_MAX_SIDE, maxAttempts: IMAGE_MAX_ATTEMPTS, fits: imageFits, fit: fitImage},
+    /* Trozos de los archivos adjuntos: cada uno tiene que caber en un documento de `assets`. */
+    fileLimits: {chunkBytes: FILE_CHUNK_BYTES, prefix: FILE_PREFIX}
   };
 })();

@@ -49,12 +49,12 @@ const detail = cut('<dialog id="dlgTaskView"', '</dialog>');
 
 const CSS = ['fonts', 'tokens', 'base', 'layout', 'components/skeleton', 'components/buttons', 'components/forms',
   'components/dropdown', 'components/toolbar', 'components/cards', 'components/dialogs', 'components/overlays',
-  'components/projects', 'components/extensions', 'views/board', 'views/task-detail', 'views/calendar', 'views/vault',
+  'components/projects', 'components/extensions', 'views/board', 'views/task-detail', 'components/rich', 'views/calendar', 'views/vault',
   'views/clients', 'views/github', 'components/plugin-form', 'views/team', 'views/plugins', 'views/settings',
   'responsive', 'components/appearance'];
-const JS = ['core/namespace', 'i18n/i18n', 'core/emitter', 'utils/html', 'utils/dates', 'utils/urls', 'utils/autoscroll',
+const JS = ['core/namespace', 'i18n/i18n', 'core/emitter', 'utils/html', 'utils/dates', 'utils/urls', 'utils/markdown', 'utils/autoscroll',
   'utils/ui', 'demo/demo-stubs', 'models/collection-model', 'models/project-templates', 'models/task-model',
-  'views/client-colors', 'views/labels', 'views/team-ui', 'views/plugin-icons', 'views/extensions', 'views/dropdown',
+  'views/client-colors', 'views/labels', 'views/attachments', 'views/team-ui', 'views/plugin-icons', 'views/extensions', 'views/dropdown',
   'views/client-select', 'views/board-view', 'views/task-detail-view', 'views/toast-view', 'demo/demo'];
 
 const html = `<!doctype html>
@@ -101,7 +101,13 @@ ${detail}
 </dialog>
 
 <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
-<div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
+<dialog id="lightbox" class="lightbox" aria-label="Imagen ampliada">
+  <button type="button" class="lightbox-btn lightbox-close" id="lightboxClose" aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  <button type="button" class="lightbox-btn lightbox-prev" id="lightboxPrev" aria-label="Imagen anterior" title="Imagen anterior" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <img id="lightboxImg" alt="">
+  <button type="button" class="lightbox-btn lightbox-next" id="lightboxNext" aria-label="Imagen siguiente" title="Imagen siguiente" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <p class="lightbox-count" id="lightboxCount" translate="no" hidden></p>
+</dialog>
 
 ${JS.map((s) => '<script src="../src/' + s + '.js"></script>').join('\n')}
 </body>

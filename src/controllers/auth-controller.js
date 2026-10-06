@@ -226,7 +226,7 @@
         if(!mine(state)) return Promise.resolve(null);
         return Promise.all([platform.connectDb(), platform.connectAssets()]).then((r) => migration.run({
           from: local.db, to: r[0], state: state, save: migration.save,
-          assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob)},
+          assets: {read: (id) => local.blob(id), upload: (blob) => r[1].upload(blob), uploadFile: (blob) => r[1].uploadFile(blob)},
           onPlan: (plan) => { this.copyPlan = plan; }
         })).then((res) => this.afterCopy(res, state, local));
       };

@@ -57,6 +57,6 @@ Qué no es:
 - No importa tableros de otras herramientas: no hay importación directa desde Trello, Asana ni Notion. Se empieza con un proyecto nuevo.
 - No tiene aplicación nativa en tiendas de aplicaciones: se usa en el navegador o instalada como PWA.
 - Los recordatorios de tareas y reuniones solo funcionan con Kanlane abierto; no hay avisos por correo con la aplicación cerrada.
-- La exportación no incluye las imágenes originales de las notas ni los datos de los plugins.
+- La exportación no incluye las imágenes ni los archivos adjuntos de las notas, ni los datos de los plugins.
 - El cofre de contraseñas no autocompleta, no tiene extensión de navegador, no se comparte con el equipo (los proyectos de equipo no tienen cofre) ni importa desde otros gestores.
 - No cifra todo por defecto ni es de «conocimiento cero»: el cifrado del contenido es opcional por proyecto, los metadatos indicados arriba quedan sin cifrar y la aplicación que cifra se sirve desde kanlane.com. No tiene una auditoría de seguridad externa.

@@ -23,7 +23,7 @@
   /* Lo que dura el código de acceso de una invitación a un equipo cifrado. La caducidad de verdad la
      aplican las reglas al leer la clave envuelta; expiresAt solo sirve para la interfaz. */
   const INVITE_TTL = 24 * 60 * 60 * 1000;
-  const JPEG_PREFIX = 'data:image/jpeg;base64,';
+  const DATA_URL = /^data:[a-z0-9.+/-]+;base64,/i;
 
   function fail(code){
     const err = new Error(code);
@@ -259,8 +259,9 @@
         if(!encrypted) return Promise.resolve(raw);
         const bytes = secret.src.isSealed(raw) ? secret.src.openBytes('assets', id, raw)
           : Promise.resolve().then(() => {
-            if(typeof raw.data !== 'string' || raw.data.indexOf(JPEG_PREFIX) !== 0) throw fail('bad-asset');
-            return Workhub.services.crypto.b64decode(raw.data.slice(JPEG_PREFIX.length));
+            /* Una imagen (JPEG) o un trozo de un archivo adjunto: los dos son data: URL en base64. */
+            if(typeof raw.data !== 'string' || !DATA_URL.test(raw.data)) throw fail('bad-asset');
+            return Workhub.services.crypto.b64decode(raw.data.slice(raw.data.indexOf(',') + 1));
           });
         return bytes.then((b) => secret.dst.sealBytes('assets', id, b)).then((sealed) => Object.assign({createdAt:raw.createdAt || Date.now()}, sealed),
           () => { skipped++; return null; });
@@ -296,7 +297,7 @@
             notesJobs.push(src.collection('tasks/' + d.id + '/notes').get().then((notes) => {
               notes.docs.forEach((n) => {
                 const nd = n.data() || {};
-                if(nd.imageAssetId) assetIds[nd.imageAssetId] = true;
+                [nd.imageAssetId].concat(Array.isArray(nd.assetIds) ? nd.assetIds : []).forEach((a) => { if(a) assetIds[a] = true; });
                 ops.push([dst.collection('tasks/' + d.id + '/notes').doc(n.id), () => recode('tasks/' + d.id + '/notes', n.id, nd)]);
               });
             }));

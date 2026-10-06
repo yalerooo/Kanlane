@@ -9,6 +9,8 @@
   const clientColors = Workhub.views.clientColors;
   const TaskModel = Workhub.models.TaskModel;
   const VaultModel = Workhub.models.VaultModel;
+  const md = Workhub.utils.markdown;
+  const attachments = Workhub.views.attachments;
   const $ = (id) => document.getElementById(id);
 
   const FACT_ICONS = {
@@ -43,11 +45,11 @@
       this.commentText = $('tvCommentText');
       this.commentSend = $('tvCommentSend');
       this.commentError = $('tvCommentError');
-      /* Imagen adjunta a la nota que se está escribiendo (se sube al enviar). */
-      this.commentImage = $('tvCommentImage');
-      this.commentImageWrap = $('tvCommentImageWrap');
-      this.commentImagePreview = $('tvCommentImagePreview');
-      this.pendingImage = null;
+      /* Archivos adjuntos a la nota que se está escribiendo (se suben al enviar). */
+      this.picker = new attachments.Picker({
+        input:$('tvCommentImage'), button:$('tvCommentAttach'), list:$('tvCommentFiles'),
+        drop:this.commentForm, paste:this.commentText, onError:(msg) => this.commentFailed(msg)
+      });
       this.linksWrap = $('tvLinksWrap');
       this.links = $('tvLinks');
       this.labelsWrap = $('tvLabelsWrap');
@@ -62,16 +64,10 @@
       this.btnEdit = $('btnTvEdit');
       this.btnDone = $('btnTvDone');
       this.stamp = $('tvStamp');
-      this.lightbox = $('lightbox');
-      this.lightboxImg = $('lightboxImg');
       this.taskId = null;
+      this.descShown = null;
 
-      this.notes.addEventListener('click', (ev) => {
-        const img = closest(ev.target, 'img[data-asset-id]');
-        if(!img) return;
-        this.lightboxImg.src = img.currentSrc || img.src;
-        this.lightbox.hidden = false;
-      });
+      attachments.bind(this.notes);
     }
 
     /* ---------- Eventos hacia el controlador ---------- */
@@ -104,22 +100,10 @@
       this.commentForm.addEventListener('submit', (ev) => {
         ev.preventDefault();
         const value = this.commentText.value.trim();
-        if(value && this.taskId) handler(this.taskId, value, this.pendingImage);
+        const files = this.picker.files.slice();
+        /* Vale una nota solo con adjuntos. */
+        if((value || files.length) && this.taskId && !this.commentSend.disabled) handler(this.taskId, value, files);
       });
-      $('tvCommentAttach').addEventListener('click', () => this.commentImage.click());
-      this.commentImage.addEventListener('change', () => {
-        const file = this.commentImage.files && this.commentImage.files[0];
-        if(!file) return;
-        this.pendingImage = file;
-        const reader = new FileReader();
-        reader.onload = () => {
-          if(this.pendingImage !== file) return;
-          this.commentImagePreview.src = reader.result;
-          this.commentImageWrap.hidden = false;
-        };
-        reader.readAsDataURL(file);
-      });
-      $('tvCommentImageRemove').addEventListener('click', () => this.clearCommentImage());
       /* Intro envía; Mayús + Intro, salto de línea. El campo crece con el texto. */
       this.commentText.addEventListener('keydown', (ev) => {
         if(ev.key !== 'Enter' || ev.shiftKey || ev.isComposing) return;
@@ -129,12 +113,7 @@
       });
       this.commentText.addEventListener('input', () => this.fitComment());
     }
-    clearCommentImage(){
-      this.pendingImage = null;
-      this.commentImage.value = '';
-      this.commentImageWrap.hidden = true;
-      this.commentImagePreview.removeAttribute('src');
-    }
+    clearCommentImage(){ this.picker.clear(); }
     fitComment(){
       this.commentText.style.height = 'auto';
       this.commentText.style.height = Math.min(140, this.commentText.scrollHeight) + 'px';
@@ -155,6 +134,14 @@
       this.facts.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-action="assign-me"]');
         if(b && this.taskId) handler(this.taskId);
+      });
+    }
+
+    /* Casillas de la descripción (- [ ] en Markdown). handler(taskId, n, checked): n es su número en el texto. */
+    bindDescTasks(handler){
+      this.desc.addEventListener('change', (ev) => {
+        const box = closest(ev.target, 'input[data-md-task]');
+        if(box && this.taskId) handler(this.taskId, +box.getAttribute('data-md-task'), box.checked);
       });
     }
 
@@ -303,7 +290,12 @@
       this.stamp.hidden = !this.stamp.innerHTML;
 
       this.descWrap.hidden = !t.desc;
-      this.desc.textContent = t.desc || '';
+      /* Solo se repinta si cambia: así no se pierde lo que se tenga seleccionado. */
+      const descKey = t.id + '|' + team.canEdit() + '|' + (t.desc || '');
+      if(this.descShown !== descKey){
+        this.descShown = descKey;
+        this.desc.innerHTML = md.render(t.desc || '', {tasks:team.canEdit() ? 'interactive' : 'static'});
+      }
 
       const items = Array.isArray(t.checklist) ? t.checklist : [];
       const prog = TaskModel.checklistProgress(t);
@@ -498,9 +490,7 @@
     const n = d.data() || {};
     const text = n._undecryptable ? Workhub.t('No se puede descifrar') : (n.text ? (n.kind === 'activity' ? Workhub.t(n.text) : n.text) : '');
     const actor = n.actorName ? '<span class="tv-note-author" translate="no">' + esc(n.actorName) + '</span>' : '';
-    const img = n.imageAssetId
-      ? '<img src="' + esc(platform.assetSrc(n.imageAssetId)) + '" data-asset-id="' + esc(n.imageAssetId) + '" alt="Imagen de la nota">'
-      : '';
+    const files = attachments.html(n);
     const when = '<time class="tv-note-date">' + esc(fmtDateTime(n.createdAt)) + '</time>';
     /* Un cambio (actividad del equipo) va en una línea; un comentario o una nota, en burbuja. */
     if(n.kind === 'activity'){
@@ -512,7 +502,7 @@
       : '';
     return '<article class="tv-note' + (mark ? ' has-author' : '') + '">' + mark +
       '<div class="tv-note-body"><div class="tv-note-meta">' + actor + when + '</div>' +
-      (text || img ? '<div class="tv-bubble">' + (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable' : '') + '" translate="no">' + esc(text) + '</div>' : '') + img + '</div>' : '') +
+      (text || files ? '<div class="tv-bubble">' + (text ? '<div class="tv-note-text' + (n._undecryptable ? ' is-undecryptable">' + esc(text) : ' md" translate="no">' + md.render(text)) + '</div>' : '') + files + '</div>' : '') +
       '</div></article>';
   }
 

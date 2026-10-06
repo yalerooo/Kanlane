@@ -13,7 +13,7 @@
   const Cipher = Workhub.models.ProjectCipher;
   const COLLECTIONS = ['clients', 'contacts', 'meetings', 'plugin_data', 'vault', 'tasks'];
   const CONCURRENCY = 12;
-  const JPEG_PREFIX = 'data:image/jpeg;base64,';
+  const DATA_URL = /^data:[a-z0-9.+/-]+;base64,/i;
 
   class ProjectReseal {
     /* o: {rootDb, projectId, cipher, transaction}. cipher lleva la clave vigente y, en prev, las
@@ -49,7 +49,7 @@
           const path = 'tasks/' + d.id + '/notes';
           more.push(db.collection(path).get().then((notes) => notes.docs.forEach((n) => {
             const raw = n.data() || {};
-            if(raw.imageAssetId) assetIds[raw.imageAssetId] = true;
+            [raw.imageAssetId].concat(Array.isArray(raw.assetIds) ? raw.assetIds : []).forEach((a) => { if(a) assetIds[a] = true; });
             jobs.push({ref:db.collection(path).doc(n.id), path:path, id:n.id, kind:'doc', raw:raw});
           })));
         });
@@ -75,8 +75,9 @@
       const sealed = cipher.isSealed(raw);
       if(job.kind === 'asset'){
         const bytes = sealed ? cipher.openBytes('assets', job.id, raw) : Promise.resolve().then(() => {
-          if(typeof raw.data !== 'string' || raw.data.indexOf(JPEG_PREFIX) !== 0) throw Cipher.error('undecryptable');
-          return Workhub.services.crypto.b64decode(raw.data.slice(JPEG_PREFIX.length));
+          /* Una imagen (JPEG) o un trozo de un archivo adjunto: los dos son data: URL en base64. */
+          if(typeof raw.data !== 'string' || !DATA_URL.test(raw.data)) throw Cipher.error('undecryptable');
+          return Workhub.services.crypto.b64decode(raw.data.slice(raw.data.indexOf(',') + 1));
         });
         return bytes.then((b) => cipher.sealBytes('assets', job.id, b)).then((s) => (sealed
           ? {op:'update', data:s}

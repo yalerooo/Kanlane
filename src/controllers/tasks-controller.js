@@ -60,9 +60,10 @@
       this.dialog.bindSubmit((id, values) => this.save(id, values));
       this.dialog.bindCancel(() => this.closeDialog(true));
       this.dialog.bindDelete((id) => this.remove(id));
-      this.dialog.bindAddNote((text, image) => this.addNote(text, image));
+      this.dialog.bindAddNote((text, files) => this.addNote(text, files));
       this.dialog.bindDeleteNote((noteId) => {
-        if(this.currentId) this.tasks.removeNote(this.currentId, noteId).catch(() => {});
+        /* Con la nota se van sus archivos adjuntos. */
+        if(this.currentId) this.tasks.removeNote(this.currentId, noteId).then((ids) => platform.deleteAssets(ids)).catch(() => {});
       });
       this.dialog.bindLinkPickers(
         (id) => this.link('contacts', id),
@@ -86,7 +87,16 @@
       this.detail.bindChecklist((id, itemId, done) => {
         this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
       });
-      this.detail.bindComment((id, text, image) => this.postComment(id, text, image));
+      this.detail.bindComment((id, text, files) => this.postComment(id, text, files));
+      /* Casillas de la descripción: marcar una reescribe su «- [ ]» en el texto. */
+      this.detail.bindDescTasks((id, n, checked) => {
+        const t = this.tasks.find(id);
+        if(!t || !Workhub.views.team.canEdit()) return;
+        const desc = Workhub.utils.markdown.toggleTask(t.desc || '', n, checked);
+        if(desc === (t.desc || '')) return;
+        this.tasks.patchLocal(id, {desc:desc});
+        this.tasks.update(id, {desc:desc, updatedAt:Date.now()}).catch(() => toast.error('No se pudo guardar el cambio.'));
+      });
       this.detail.bindLinkActions((action, id, btn) => this.onDetailLinkAction(action, id, btn));
       this.detail.bindAssignMe((id) => this.toggleMine(id));
       /* Cerrada con Escape: deja de escuchar sus notas (salvo que ya se haya reabierto). */
@@ -115,20 +125,21 @@
       if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).raw + '»');
     }
 
-    /* image: archivo de imagen adjunto (opcional); se sube antes de guardar la nota. */
-    postComment(id, text, image){
+    /* Sube los adjuntos y guarda la nota; si la nota no llega a guardarse, lo subido se borra.
+       Se rechaza con el mensaje para la persona ('' si lo que falló fue guardar la nota). */
+    saveNote(taskId, text, files){
+      const A = Workhub.views.attachments;
+      return A.upload(files || []).then((list) => this.tasks.addNote(taskId, text, list).catch(() => {
+        return platform.deleteAssets(list.reduce((ids, a) => ids.concat(a.parts), [])).then(() => { throw ''; });
+      }), (err) => { throw A.uploadError(err); });
+    }
+
+    /* files: archivos adjuntos (opcional); se suben antes de guardar la nota. */
+    postComment(id, text, files){
       if(!Workhub.views.team.canEdit()) return;
       this.detail.setCommentBusy(true);
-      let uploaded = !image;
-      (image ? platform.uploadAsset(image) : Promise.resolve('')).then((assetId) => {
-        uploaded = true;
-        return this.tasks.addNote(id, text, assetId);
-      }).then(() => this.detail.commentSaved(), (err) => {
-        const code = err && (err.code || err.message);
-        this.detail.commentFailed(uploaded ? '' : code === 'image-too-large' ? 'La imagen es demasiado grande y no se pudo reducir lo suficiente. La nota no se ha guardado: prueba con una imagen más pequeña.'
-          : code === 'image-unreadable' ? 'No se pudo leer la imagen. La nota no se ha guardado: prueba con un archivo JPG o PNG.'
-          : 'No se pudo subir la imagen. La nota no se ha guardado.');
-      }).finally(() => this.detail.setCommentBusy(false));
+      this.saveNote(id, text, files).then(() => this.detail.commentSaved(), (msg) => this.detail.commentFailed(msg))
+        .then(() => this.detail.setCommentBusy(false));
     }
 
     /* Cambió el equipo del proyecto abierto (miembros, mi rol): filtro, tarjetas y ficha. */
@@ -448,26 +459,12 @@
       });
     }
 
-    addNote(text, image){
+    addNote(text, files){
       if(!this.currentId) return;
-      const taskId = this.currentId;
       this.dialog.setAddingNote(true);
-      const upload = image ? platform.uploadAsset(image) : Promise.resolve('');
-      let uploaded = !image;
-      upload.then((assetId) => {
-        uploaded = true;
-        return this.tasks.addNote(taskId, text, assetId);
-      }).then(() => {
-        this.dialog.resetNoteForm();
-      }).catch((err) => {
-        const code = err && (err.code || err.message);
-        if(!uploaded && code === 'image-too-large') this.dialog.showNoteError('La imagen es demasiado grande y no se pudo reducir lo suficiente. La nota no se ha guardado: prueba con una imagen más pequeña.');
-        else if(!uploaded && code === 'image-unreadable') this.dialog.showNoteError('No se pudo leer la imagen. La nota no se ha guardado: prueba con un archivo JPG o PNG.');
-        else if(!uploaded) this.dialog.showNoteError('No se pudo subir la imagen. La nota no se ha guardado.');
-        else this.dialog.showNoteError('No se pudo añadir la nota.');
-      }).finally(() => {
-        this.dialog.setAddingNote(false);
-      });
+      this.saveNote(this.currentId, text, files).then(() => this.dialog.resetNoteForm(),
+        (msg) => this.dialog.showNoteError(msg || 'No se pudo añadir la nota.'))
+        .then(() => this.dialog.setAddingNote(false));
     }
 
     /* ---------- Vínculos con contactos y contraseñas ---------- */

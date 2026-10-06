@@ -115,9 +115,12 @@ service cloud.firestore {
         && (col != 'projects' || (textWithin(data, 'nombre', 200)
           && listWithin(data, 'stages', 500) && listWithin(data, 'labels', 1000)))
         && (col != 'notes' || (data.keys().hasOnly([
-            'text', 'imageAssetId', 'createdAt', 'kind', 'actorUid', 'actorName'
+            'text', 'imageAssetId', 'createdAt', 'kind', 'actorUid', 'actorName',
+            'attachments', 'assetIds'
           ]) && textWithin(data, 'text', 20000)
-          && textWithin(data, 'actorName', 200)));
+          && textWithin(data, 'actorName', 200)
+          && listWithin(data, 'attachments', 20)
+          && listWithin(data, 'assetIds', 400)));
     }
 
     // ---------- Cifrado por proyecto ----------
@@ -137,7 +140,7 @@ service cloud.firestore {
     function encFields(col) {
       return col == 'tasks' ? ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
                                'assignees', 'linkedContacts', 'linkedVault', 'e', 'ev', 'kid']
-        : col == 'notes' ? ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'e', 'ev', 'kid']
+        : col == 'notes' ? ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'assetIds', 'e', 'ev', 'kid']
         : col == 'clients' ? ['color', 'createdAt', 'e', 'ev', 'kid']
         : col == 'contacts' ? ['createdAt', 'updatedAt', 'e', 'ev', 'kid']
         : col == 'meetings' ? ['date', 'createdAt', 'updatedAt', 'e', 'ev', 'kid']
@@ -165,6 +168,7 @@ service cloud.firestore {
         && d.e is string && d.e.size() > 0 && d.e.size() <= encMax(col)
         && d.keys().hasOnly(encFields(col))
         && listWithin(d, 'assignees', 50)
+        && listWithin(d, 'assetIds', 400)
         && textWithin(d, 'cipher', 900000) && textWithin(d, 'cipherV2', 900000);
     }
 

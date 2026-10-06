@@ -637,7 +637,7 @@
     return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + (TaskModel.isDone(t) ? ' is-done' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
       (top ? '<div class="card-top">' + top + '</div>' : '') +
       '<h3 translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</h3>' +
-      (t.desc ? '<p translate="no">' + esc(t.desc) + '</p>' : '') +
+      (t.desc ? '<p translate="no">' + esc(Workhub.utils.markdown.plain(t.desc)) + '</p>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
       contact +
       (foot ? '<div class="card-foot">' + foot + '</div>' : '') +

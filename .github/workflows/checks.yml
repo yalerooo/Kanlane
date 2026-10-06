@@ -40,6 +40,7 @@ jobs:
           node tests/backup/backup.test.js
           node tests/trello/trello-import.test.js
           node tests/assets/limits.test.js
+          node tests/markdown/markdown.test.js
           node tests/build/bundle.test.js
           node tests/season/season.test.js
           node tests/worker/rate-limit.test.js

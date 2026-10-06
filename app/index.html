@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="../assets/css/components/extensions.css">
   <link rel="stylesheet" href="../assets/css/views/board.css">
   <link rel="stylesheet" href="../assets/css/views/task-detail.css">
+  <link rel="stylesheet" href="../assets/css/components/rich.css">
   <link rel="stylesheet" href="../assets/css/views/calendar.css">
   <link rel="stylesheet" href="../assets/css/views/vault.css">
   <link rel="stylesheet" href="../assets/css/views/clients.css">
@@ -877,7 +878,8 @@
     </div>
     <div class="field">
       <label for="fDesc">Descripción / notas</label>
-      <textarea id="fDesc" maxlength="600" placeholder="Detalles, próximos pasos…"></textarea>
+      <textarea id="fDesc" maxlength="16000" rows="5" placeholder="Detalles, próximos pasos…"></textarea>
+      <p class="field-help">Admite Markdown: **negrita**, listas, casillas con «- [ ]», enlaces y bloques de código.</p>
     </div>
     <div class="field team-only team-off" id="fAssigneesField">
       <span class="field-label" id="fAssigneesLabel">Asignada a</span>
@@ -945,15 +947,12 @@
     <div class="field" id="taskNotesSection" hidden>
       <label>Notas</label>
       <div class="notes-list" id="taskNotesList"></div>
-      <div class="note-add-box">
-        <textarea id="noteText" rows="2" placeholder="Añade una nota…"></textarea>
-        <div id="noteImagePreviewWrap" class="note-image-preview" hidden>
-          <img id="noteImagePreview" alt="">
-          <button type="button" class="icon-btn" id="btnRemoveNoteImage">Quitar imagen</button>
-        </div>
+      <div class="note-add-box" id="noteAddBox">
+        <textarea id="noteText" rows="2" maxlength="16000" placeholder="Añade una nota…"></textarea>
+        <div class="att-pending" id="noteFiles" hidden></div>
         <div class="note-add-actions">
-          <input type="file" id="noteImageInput" accept="image/*" hidden>
-          <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar imagen</button>
+          <input type="file" id="noteImageInput" multiple hidden>
+          <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar archivos</button>
           <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
         </div>
         <p class="lock-error" id="noteError" hidden></p>
@@ -1003,7 +1002,7 @@
     </div>
     <section id="tvDescWrap" hidden>
       <h3 class="sr-only">Descripción</h3>
-      <div class="tv-desc" id="tvDesc" translate="no"></div>
+      <div class="tv-desc md" id="tvDesc" translate="no"></div>
     </section>
     <section class="tv-section" id="tvChecklistWrap" hidden>
       <h3>Subtareas <span class="tv-check-progress" id="tvChecklistProgress" role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="tvChecklistProgressFill"></span></span><span class="tv-count" id="tvChecklistCount"></span></h3>
@@ -1044,15 +1043,12 @@
   </div>
   <form class="tv-comment-form" id="tvCommentForm" hidden>
     <p class="lock-error" id="tvCommentError" role="alert" hidden></p>
-    <div class="tv-comment-image" id="tvCommentImageWrap" hidden>
-      <img id="tvCommentImagePreview" alt="">
-      <button type="button" class="icon-btn" id="tvCommentImageRemove">Quitar imagen</button>
-    </div>
+    <div class="att-pending" id="tvCommentFiles" hidden></div>
     <div class="tv-comment-box">
       <label class="sr-only" for="tvCommentText">Escribir una nota</label>
-      <textarea id="tvCommentText" maxlength="2000" rows="1" placeholder="Escribe una nota…" required></textarea>
-      <input type="file" id="tvCommentImage" accept="image/*" hidden>
-      <button type="button" class="icon-only" id="tvCommentAttach" title="Adjuntar imagen" aria-label="Adjuntar imagen"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg></button>
+      <textarea id="tvCommentText" maxlength="16000" rows="1" placeholder="Escribe una nota…"></textarea>
+      <input type="file" id="tvCommentImage" multiple hidden>
+      <button type="button" class="icon-only" id="tvCommentAttach" title="Adjuntar archivos" aria-label="Adjuntar archivos"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
       <button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Añadir</button>
     </div>
   </form>
@@ -1076,7 +1072,13 @@
 
 <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
 
-<div id="lightbox" class="lightbox" hidden><img id="lightboxImg" alt=""></div>
+<dialog id="lightbox" class="lightbox" aria-label="Imagen ampliada">
+  <button type="button" class="lightbox-btn lightbox-close" id="lightboxClose" aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  <button type="button" class="lightbox-btn lightbox-prev" id="lightboxPrev" aria-label="Imagen anterior" title="Imagen anterior" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <img id="lightboxImg" alt="">
+  <button type="button" class="lightbox-btn lightbox-next" id="lightboxNext" aria-label="Imagen siguiente" title="Imagen siguiente" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+  <p class="lightbox-count" id="lightboxCount" translate="no" hidden></p>
+</dialog>
 
 <dialog id="dlgProject">
   <form class="dlg-inner" id="formProject" method="dialog">
@@ -1950,6 +1952,7 @@
 <script src="../src/utils/html.js"></script>
 <script src="../src/utils/dates.js"></script>
 <script src="../src/utils/urls.js"></script>
+<script src="../src/utils/markdown.js"></script>
 <script src="../src/utils/autoscroll.js"></script>
 <script src="../src/utils/ui.js"></script>
 <script src="../src/utils/pool.js"></script>
@@ -1994,6 +1997,7 @@
 <!-- Vistas: DOM y renderizado -->
 <script src="../src/views/client-colors.js"></script>
 <script src="../src/views/labels.js"></script>
+<script src="../src/views/attachments.js"></script>
 <script src="../src/views/team-ui.js"></script>
 <script src="../src/views/plugin-icons.js"></script>
 <script src="../src/views/extensions.js"></script>

@@ -514,7 +514,7 @@
     const st = TaskModel.statusOf(task.status);
     const ds = TaskModel.dueState(task);
     const due = task.dueDate
-      ? '<span class="due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : '') + '">' + iconSpan('calendar') + esc(ds === 'today' ? t('Hoy') : fmtDate(task.dueDate)) + '</span>'
+      ? '<span class="due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : '') + '">' + iconSpan('calendar') + esc(ds === 'today' ? t('Hoy') : fmtDate(task.dueDate)) + (task.dueTime ? '<span class="due-time" translate="no">' + esc(task.dueTime) + '</span>' : '') + '</span>'
       : '';
     return '<div class="cl-row" data-action="open-task" data-id="' + esc(task.id) + '" role="button" tabindex="0">' +
       '<span class="agenda-ring" style="--st:' + st.dot + '" title="' + esc(st.label) + '"></span>' +

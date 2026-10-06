@@ -1,0 +1,161 @@
+/* ---------- Selector de fecha (src/views/date-picker.js) ---------- */
+.dp{position:relative;display:flex;min-width:0;}
+/* El campo real queda oculto tras el botón propio. */
+input.dp-native{
+  position:absolute;
+  width:1px;
+  height:1px;
+  min-height:0;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  border:0;
+  opacity:0;
+  pointer-events:none;
+}
+.dp-trigger{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  font-family:inherit;
+  font-size:13px;
+  line-height:1.4;
+  text-align:left;
+  color:var(--ink);
+  background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-md);
+  padding:0 30px 0 10px;
+  min-height:32px;
+  cursor:pointer;
+  transition:border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.dp-trigger:hover{border-color:var(--ink-faint);}
+.dp-trigger:focus-visible,
+.dp.is-open .dp-trigger{
+  outline:none;
+  border-color:var(--accent-solid);
+  box-shadow:0 0 0 3px var(--focus);
+}
+.dp-trigger > svg{flex:none;color:var(--ink-faint);transition:color .12s ease;}
+.dp-trigger:not(.is-placeholder) > svg,.dp.is-open .dp-trigger > svg{color:var(--ink-soft);}
+.dp-value{display:flex;flex:1;min-width:0;}
+.dp-placeholder{color:var(--ink-soft);}
+.dp-text{display:flex;align-items:center;gap:7px;min-width:0;font-variant-numeric:tabular-nums;}
+.dp-text > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.dp-at{flex:none;padding:1px 6px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--ink-soft);font-size:12px;font-weight:500;}
+.dp [hidden]{display:none;}
+.dp-clear{
+  position:absolute;
+  top:50%;
+  right:5px;
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  margin-top:-11px;
+  padding:0;
+  border:0;
+  border-radius:var(--r-sm);
+  background:none;
+  color:var(--ink-faint);
+  cursor:pointer;
+}
+.dp-clear:hover{background:var(--hover);color:var(--ink);}
+.dp-clear:focus-visible{outline:2px solid var(--accent-solid);outline-offset:1px;}
+
+.dp-menu{
+  position:fixed;
+  inset:auto;
+  margin:0;
+  z-index:2000;
+  width:276px;
+  max-width:calc(100vw - 16px);
+  padding:10px;
+  color:var(--ink);
+  /* Lo que se superpone va en cristal (--sheet), como los desplegables. */
+  background:var(--sheet);
+  -webkit-backdrop-filter:var(--sheet-blur);
+  backdrop-filter:var(--sheet-blur);
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-pop);
+  overflow:hidden;
+  animation:dd-in .14s cubic-bezier(.2,.8,.2,1);
+  transform-origin:top center;
+}
+.dp-menu.is-above{transform-origin:bottom center;animation-name:dd-in-up;}
+.dp-menu:not(:popover-open):not([hidden]){display:none;}
+.dp-menu[hidden]{display:none;}
+.dp-menu button{font-family:inherit;cursor:pointer;}
+
+.dp-head{display:flex;align-items:center;gap:4px;margin-bottom:6px;}
+.dp-month{flex:1;text-align:center;font-size:13px;font-weight:600;letter-spacing:-0.01em;}
+.dp-nav{display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:var(--r-md);background:none;color:var(--ink-soft);}
+.dp-nav:hover{background:var(--hover);color:var(--ink);}
+
+.dp-week,.dp-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:2px;}
+.dp-week{margin-bottom:2px;}
+.dp-week span{height:24px;display:grid;place-items:center;font-size:11px;font-weight:500;color:var(--ink-faint);}
+.dp-day{
+  height:34px;
+  padding:0;
+  border:0;
+  border-radius:var(--r-md);
+  background:none;
+  color:var(--ink);
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+  transition:background .1s ease;
+}
+.dp-day:hover{background:var(--hover);}
+.dp-day.is-out{color:var(--ink-faint);}
+.dp-day.is-today{font-weight:650;box-shadow:inset 0 0 0 1px var(--line-strong);}
+.dp-day.is-selected,.dp-day.is-selected:hover{background:var(--accent-solid);color:var(--accent-ink);font-weight:600;box-shadow:none;}
+.dp-nav:focus-visible,.dp-day:focus-visible,.dp-menu button:focus-visible{outline:2px solid var(--accent-solid);outline-offset:1px;}
+
+.dp-quick{display:flex;gap:6px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line);}
+.dp-quick button,.dp-presets button{
+  flex:1;
+  height:28px;
+  padding:0 8px;
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  color:var(--ink-soft);
+  font-size:12px;
+  white-space:nowrap;
+}
+.dp-quick button:hover,.dp-presets button:hover{background:var(--hover);color:var(--ink);}
+
+.dp-time{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+.dp-time label{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12.5px;font-weight:500;color:var(--ink-soft);}
+.dp-time label svg{color:var(--ink-faint);}
+.dp-time input{width:92px;min-height:30px !important;padding:4px 8px !important;font-variant-numeric:tabular-nums;}
+/* El reloj nativo sobra: la hora se escribe o se elige de las de abajo. */
+.dp-time input::-webkit-calendar-picker-indicator{display:none;}
+.dp-notime{margin-left:auto;padding:0;border:0;background:none;color:var(--ink-faint);font-size:12px;}
+.dp-notime:hover{color:var(--ink);text-decoration:underline;}
+.dp-presets{display:flex;gap:6px;flex:1 1 100%;font-variant-numeric:tabular-nums;}
+.dp-presets button.is-selected{border-color:var(--accent-solid);color:var(--ink);font-weight:550;}
+
+.dp-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+.dp-remove{padding:0 4px;height:30px;border:0;background:none;color:var(--ink-soft);font-size:12.5px;}
+.dp-remove:hover{color:var(--late);}
+.dp-remove:disabled{visibility:hidden;}
+.dp-done{height:30px;padding:0 14px;border:0;border-radius:var(--r-md);background:var(--accent-solid);color:var(--accent-ink);font-size:12.5px;font-weight:550;}
+.dp-done:hover{opacity:.88;}
+
+/* Hora de la fecha límite en las etiquetas de tarea. */
+.due-time{font-weight:550;}
+
+@media (max-width:640px){
+  .dp-trigger{min-height:38px;}
+  .dp-day{height:38px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .dp-menu{animation:none;}
+}

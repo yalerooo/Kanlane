@@ -100,7 +100,7 @@
         /* linkedContacts/linkedVault no se importan: guardan ids de documentos
            que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
         counts.tasks++;
-        return m.tasks.add({
+        return m.tasks.add(Object.assign(t.dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') ? {dueTime:t.dueTime} : {}, {
           title: t.title || '',
           desc: t.desc || '',
           cliente: t.cliente || '',
@@ -111,7 +111,7 @@
           order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()
-        }).then((ref) => {
+        })).then((ref) => {
           return Promise.all(list(t.notes).map((n) => {
             if(!n) return Promise.resolve();
             counts.notes++;

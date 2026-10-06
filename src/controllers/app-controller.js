@@ -33,6 +33,7 @@
       V.clientColors.setResolver((name) => this.models.clients.hueOf(name));
       this.shell = new V.ShellView();
       V.Dropdown.enhanceAll(document);
+      V.DatePicker.enhanceAll(document);
       this.shell.addDialogCloseButtons();
       /* Hasta abrir un proyecto de equipo, lo que es solo de equipos queda oculto. */
       this.shell.setTeamMode(false);

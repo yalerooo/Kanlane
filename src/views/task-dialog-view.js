@@ -372,26 +372,35 @@
     /* ---------- Estado del formulario ---------- */
 
     values(){
-      return {
+      const fecha = this.fields.fecha.value || '';
+      const hora = fecha ? this._hora().value || '' : '';
+      const values = {
         title: this.fields.title.value.trim(),
         desc: this.fields.desc.value.trim(),
         cliente: this.cliente.value() || '',
         status: this.fields.estado.value,
         contacto: this.fields.contacto.value.trim(),
-        dueDate: this.fields.fecha.value || '',
+        dueDate: fecha,
         /* Repetir necesita una fecha de la que partir. */
-        repeat: this.fields.fecha.value ? (this.fields.repeat.value || '') : '',
+        repeat: fecha ? (this.fields.repeat.value || '') : '',
         checklist: this.checklist.filter((c) => c.text.trim()).map((c) => ({id:c.id, text:c.text.trim(), done:!!c.done})),
         labels: this.selected.slice(),
         /* Fuera de un equipo no se toca el campo. */
         assignees: Workhub.views.team.enabled() ? this.assigned.slice() : undefined
       };
+      /* La hora solo se escribe si la hay o si hay que quitar la que tenía: las tareas sin hora no llevan el campo. */
+      if(hora || this.hadTime) values.dueTime = hora;
+      return values;
     }
+
+    /* El campo de la hora lo crea el selector de fecha (data-dp-time en #fFecha). */
+    _hora(){ return $('fHora') || {value:''}; }
 
     openNew(clientNames, defaultCliente, status){
       this.form.reset();
       this.resetNoteForm();
       this.fields.id.value = '';
+      this.hadTime = false;
       this.checklist = [];
       this._renderChecklist();
       this.selected = [];
@@ -418,6 +427,8 @@
       this.fields.estado.value = Workhub.models.TaskModel.stageKey(t);
       this.fields.contacto.value = t.contacto || '';
       this.fields.fecha.value = t.dueDate || '';
+      this._hora().value = t.dueDate ? (t.dueTime || '') : '';
+      this.hadTime = !!t.dueTime;
       this.fields.repeat.value = t.repeat || '';
       this.checklist = (Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text || '', done:!!c.done}));
       this._renderChecklist();

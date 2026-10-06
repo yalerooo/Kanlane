@@ -83,7 +83,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().size() <= 50
         && (col != 'tasks' || (data.keys().hasOnly([
-            'title', 'desc', 'cliente', 'status', 'contacto', 'dueDate', 'repeat',
+            'title', 'desc', 'cliente', 'status', 'contacto', 'dueDate', 'dueTime', 'repeat',
             'checklist', 'labels', 'assignees', 'linkedContacts', 'linkedVault',
             'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
@@ -91,6 +91,7 @@ service cloud.firestore {
           ]) && textWithin(data, 'title', 500)
           && textWithin(data, 'desc', 20000)
           && textWithin(data, 'cliente', 200)
+          && textWithin(data, 'dueTime', 5)
           && listWithin(data, 'labels', 60)
           && listWithin(data, 'checklist', 100)
           && listWithin(data, 'assignees', 50)))

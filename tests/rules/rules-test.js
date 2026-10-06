@@ -199,6 +199,8 @@ async function t(name, fn){
   console.log('Límites y copias cifradas');
   const own = alice.collection('users').doc('alice');
   const other = bob.collection('users').doc('alice');
+  await t('una tarea admite hora en la fecha límite', () => assertSucceeds(own.collection('tasks').doc('timed').set({title:'a', dueDate:'2026-10-09', dueTime:'16:30'})));
+  await t('una hora que no es HH:MM se rechaza', () => assertFails(own.collection('tasks').doc('timed2').set({title:'a', dueDate:'2026-10-09', dueTime:'16:30:00'})));
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea con campos ajenos se rechaza', () => assertFails(own.collection('tasks').doc('unknown').set({title:'x', permisoInventado:true})));
   await t('una nota demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('oversize').set({text:'a'.repeat(20001)})));

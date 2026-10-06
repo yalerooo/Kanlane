@@ -595,7 +595,7 @@
     const cls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
     const txt = ds === 'today' ? 'Hoy' : fmtDate(t.dueDate);
     const title = ds === 'overdue' ? ' title="' + esc(Workhub.t('Vencida')) + '"' : '';
-    return '<span class="' + cls + '"' + title + '>' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(txt) + '</span>';
+    return '<span class="' + cls + '"' + title + '>' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(txt) + (t.dueTime ? '<span class="due-time" translate="no">' + esc(t.dueTime) + '</span>' : '') + '</span>';
   }
 
   /* Progreso de las subtareas: anillo y «hechas/total». */

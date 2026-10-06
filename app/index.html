@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="../assets/css/components/buttons.css">
   <link rel="stylesheet" href="../assets/css/components/forms.css">
   <link rel="stylesheet" href="../assets/css/components/dropdown.css">
+  <link rel="stylesheet" href="../assets/css/components/date-picker.css">
   <link rel="stylesheet" href="../assets/css/components/toolbar.css">
   <link rel="stylesheet" href="../assets/css/components/cards.css">
   <link rel="stylesheet" href="../assets/css/components/dialogs.css">
@@ -865,8 +866,8 @@
         <input id="fContacto" maxlength="80" placeholder="Nombre / email">
       </div>
       <div class="field">
-        <label for="fFecha">Fecha límite (opcional)</label>
-        <input id="fFecha" type="date">
+        <label for="fFecha">Fecha límite y hora (opcional)</label>
+        <input id="fFecha" type="date" data-dp data-dp-time="fHora">
       </div>
     </div>
     <div class="field" id="fRepeatField">
@@ -1836,6 +1837,7 @@
 <script src="../src/views/plugin-icons.js"></script>
 <script src="../src/views/extensions.js"></script>
 <script src="../src/views/dropdown.js"></script>
+<script src="../src/views/date-picker.js"></script>
 <script src="../src/views/client-select.js"></script>
 <script src="../src/views/shell-view.js"></script>
 <script src="../src/views/board-view.js"></script>

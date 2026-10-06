@@ -1,6 +1,6 @@
 /* Tareas del tablero, sus estados y sus notas (subcolección 'notes'). */
 (function(){
-  const {todayYmd} = Workhub.utils.dates;
+  const {todayYmd, pad2} = Workhub.utils.dates;
 
   /* Etapas del proyecto abierto. Es un único array que se rellena en el sitio
      (setStages), así todos los que lo leen ven siempre las etapas actuales. */
@@ -25,6 +25,12 @@
   const REPEAT_KEYS = REPEATS.map((r) => r.key).filter(Boolean);
 
   /* Suma un periodo a una fecha; en meses y años conserva el día (recortado al último del mes). */
+  /* La hora de ahora, 'HH:MM', para comparar con dueTime. */
+  function nowHm(){
+    const d = new Date();
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
   function addPeriod(date, repeat, day){
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     if(repeat === 'daily') d.setDate(d.getDate() + 1);
@@ -70,7 +76,8 @@
       if(TaskModel.isDone(t)) return 'done';
       const today = todayYmd();
       if(t.dueDate < today) return 'overdue';
-      if(t.dueDate === today) return 'today';
+      /* Con hora, pasada esa hora de hoy ya está vencida. */
+      if(t.dueDate === today) return t.dueTime && t.dueTime < nowHm() ? 'overdue' : 'today';
       return 'future';
     }
 
@@ -159,6 +166,7 @@
         checklist:(Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text, done:false})),
         updatedAt:Date.now()
       };
+      if(t.dueTime) copy.dueTime = t.dueTime;
       if(Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
       return Promise.all([this._create(copy), this.update(t.id, {repeatSpawned:true})]).then(() => {
         this.emit('recurred', {date:next, title:t.title});

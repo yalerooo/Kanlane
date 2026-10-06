@@ -221,7 +221,7 @@ Criterio: en claro solo lo que necesitan las reglas, una consulta del servidor, 
 
 | Colección | En claro | Dentro de `e` | Motivo de lo que queda en claro |
 |---|---|---|---|
-| `tasks` | `status`, `order`, `dueDate`, `repeat`, `repeatSpawned`, `createdAt`, `updatedAt`, `assignees`, `linkedContacts`, `linkedVault`, `e`, `ev`, `kid` | `title`, `desc`, `cliente`, `contacto`, `labels`, `checklist` | Arrastrar (`move`), `reschedule` y `spawnNext` escriben solo esos campos; `assignees` son uids ya visibles en el equipo; los `linked*` son ids opacos (ver D6). **No se permiten `gh*`** (B no admite GitHub). |
+| `tasks` | `status`, `order`, `dueDate`, `repeat`, `repeatSpawned`, `createdAt`, `updatedAt`, `assignees`, `linkedContacts`, `linkedVault`, `e`, `ev`, `kid` | `title`, `desc`, `cliente`, `contacto`, `dueTime`, `labels`, `checklist` | Arrastrar (`move`), `reschedule` y `spawnNext` escriben solo esos campos; `assignees` son uids ya visibles en el equipo; los `linked*` son ids opacos (ver D6). **No se permiten `gh*`** (B no admite GitHub). |
 | `tasks/*/notes` | `createdAt`, `kind`, `actorUid`, `imageAssetId`, `e`, `ev`, `kid` | `text`, `actorName` | `orderBy('createdAt')`; `imageAssetId` es un id opaco que necesitan `removeProject` y `TeamModel.convert` para borrar o copiar imágenes sin descifrar. |
 | `clients` | `color`, `createdAt`, `e`, `ev`, `kid` | `nombre` | `setColor` escribe solo `color` (un número). |
 | `contacts` | `createdAt`, `updatedAt`, `e`, `ev`, `kid` | `cliente`, `nombre`, `email`, `telefono`, `notas` | — |

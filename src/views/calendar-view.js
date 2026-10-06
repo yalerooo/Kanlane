@@ -419,11 +419,11 @@
     const s = TaskModel.statusOf(t.status);
     const ds = TaskModel.dueState(t);
     const prog = TaskModel.checklistProgress(t);
-    const meta = [clientMeta(t.cliente), '<span translate="no">' + esc(s.label) + '</span>',
+    const meta = [!when && t.dueTime ? '<b translate="no">' + esc(t.dueTime) + '</b>' : '', clientMeta(t.cliente), '<span translate="no">' + esc(s.label) + '</span>',
       prog.total ? '<span>' + esc(Workhub.t('{n} de {total}', {n:prog.done, total:prog.total})) + '</span>' : ''].filter(Boolean).join('<span aria-hidden="true">·</span>');
     const ring = '<span class="agenda-ring' + (s.done ? ' is-final' : '') + '" style="--st:' + s.dot + '" title="' + esc(ds === 'overdue' ? 'Vencida' : s.label) + '"></span>';
     return '<div class="agenda-item is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '') + '" data-kind="task" data-id="' + esc(t.id) + '">' +
-      '<div class="agenda-time">' + (when ? esc(when) : ring) + '</div>' +
+      '<div class="agenda-time">' + (when ? esc(when) + (t.dueTime ? '<small>' + esc(t.dueTime) + '</small>' : '') : ring) + '</div>' +
       '<div class="agenda-main"><div class="agenda-title" translate="no">' + esc(t.title) + '</div>' +
       '<div class="agenda-meta">' + meta + '</div></div>' +
       '</div>';

@@ -485,13 +485,13 @@
     const days = daysFromToday(t.dueDate);
     let rel;
     if(ds === 'done') rel = 'Completada';
-    else if(days === 0) rel = 'Vence hoy';
+    else if(days === 0) rel = ds === 'overdue' ? 'Venció hoy' : 'Vence hoy';
     else if(days === 1) rel = 'Mañana';
     else if(days > 1) rel = 'Faltan ' + days + ' días';
     else if(days === -1) rel = 'Venció ayer';
     else rel = 'Venció hace ' + (-days) + ' días';
     const cls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
-    return '<span class="' + cls + '">' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(rel) + '</span><small>' + esc(longDay(parseYmd(t.dueDate), true)) + '</small>';
+    return '<span class="' + cls + '">' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(rel) + '</span><small>' + esc(longDay(parseYmd(t.dueDate), true) + (t.dueTime ? ' · ' + t.dueTime : '')) + '</small>';
   }
 
   function noteHtml(d){

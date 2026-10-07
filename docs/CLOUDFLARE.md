@@ -43,7 +43,7 @@ La web se sirve ahora desde **cuatro dominios que apuntan al mismo Worker** (`wr
 
 - **Redirección temporal (302)** mientras se prueba; cuando todo funcione se pone `"LEGACY_STATUS": "301"` en `wrangler.jsonc`. Una 301 se queda en la caché del navegador y es difícil de deshacer.
 - **Marcha atrás si kanlane.com da problemas:** en `wrangler.jsonc` cambia `"REDIRECT_TARGET": "https://kanlane.com"` por `"https://kanlane.yalero.net"` y despliega. Los antiguos pasan a redirigir al respaldo y este deja de llevar `noindex`. **No es automática**: una redirección no sabe si su destino está caído.
-- `run_worker_first` hace que **solo las páginas** pasen por el Worker (`/`, `/app/*`, `/demo/*`, `/legal/*`, `/sw.js`); los scripts, estilos e imágenes no gastan peticiones del plan gratuito (100 000 al día).
+- `run_worker_first` hace que **solo las páginas y las rutas del propio Worker** pasen por él (`/`, `/app/*`, `/demo/*`, `/legal/*`, `/sw.js`, `/__/auth/*`, `/__/firebase/*`, `/__/kms/*`…). **Toda ruta que atienda el Worker tiene que estar en esa lista**: con `"not_found_handling": "404-page"`, lo que no es un archivo no llega al Worker y responde la página 404 (así se rompió el acceso con Google el 7-oct-2026). Así, los scripts, estilos e imágenes no gastan peticiones del plan gratuito (100 000 al día).
 - Cada dominio es un **origen distinto** para el navegador: sesión, modo invitado, datos locales y app instalada no se comparten entre ellos. Los datos de la nube (Firebase) son los mismos.
 - Pruebas: `node tests/worker/domains.test.js`.
 
@@ -130,7 +130,7 @@ Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código 
 
 - **La compilación dice que el Worker no coincide**: el nombre del proyecto en Cloudflare tiene que ser igual a `"name"` en `wrangler.jsonc` (`workhub`).
 - **El acceso da error de redirección**: falta alguno de los pasos del apartado 3, o los cambios de Google tardan unos minutos en aplicarse.
-- **`/__/auth/handler` da 404**: el Worker no se desplegó o no se ejecuta. Mira el registro de la última compilación y que `wrangler.jsonc` esté en la raíz del repositorio.
+- **`/__/auth/handler` da 404**: si sale la página 404 de Kanlane, falta `/__/auth/*` (o `/__/firebase/*`) en `run_worker_first` de `wrangler.jsonc`. Si no, el Worker no se desplegó o no se ejecuta. Mira el registro de la última compilación y que `wrangler.jsonc` esté en la raíz del repositorio.
 - **La web carga sin estilos o sin scripts**: casi siempre es la CSP. Abre la consola del navegador: el mensaje dice qué dominio se bloqueó; añádelo a `CSP` en `scripts/build-public.js`.
 
 ## Tareas por correo

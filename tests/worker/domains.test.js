@@ -39,6 +39,13 @@ const path = require('node:path');
     assert.ok(!/(?:href|src)="(?!\/|https?:)/.test(html), file + ' solo usa rutas absolutas');
   }
   ok('las direcciones que no existen tienen página 404 propia');
+  /* Con «404-page», lo que no es un archivo no llega al Worker: responde la página 404. Así que
+     toda ruta que atiende el Worker tiene que pasar antes por él. Sin /__/auth/* el acceso con
+     Google o GitHub acaba en la página 404 (pasó en producción el 7-oct-2026). */
+  for(const route of ['/__/auth/*', '/__/firebase/*', '/__/kms/*']){
+    assert.ok(wrangler.includes('"' + route + '"'), route + ' pasa antes por el Worker');
+  }
+  ok('las rutas del Worker (/__/auth, /__/firebase, /__/kms) pasan antes por él');
   for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm', 'en/client-password-manager']){
     const top = landing.split('/')[0];
     assert.ok(wrangler.includes('"/' + top + '"'), top + ' sin barra final pasa por el Worker');

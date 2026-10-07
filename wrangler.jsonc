@@ -63,7 +63,7 @@
     //   "free" admite mensajes de 8 MB (con 10 ms de CPU, un correo con adjuntos grandes puede
     //   quedarse sin ellos); "paid", de 25 MB. Al pasar la cuenta a Workers Paid, cambia esto a "paid".
     // Además hacen falta dos secretos (NO van aquí): CAPTURE_SECRET y FIREBASE_SERVICE_ACCOUNT.
-    "CAPTURE_DOMAINS": "",
+    "CAPTURE_DOMAINS": "kanlane.com",
     "CAPTURE_PLAN": "free"
   },
 

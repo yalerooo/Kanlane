@@ -105,7 +105,7 @@ a.lang-opt:hover{color:var(--ink);}
 .scroll-hint{margin-top:16px;text-align:center;font-size:12.5px;color:var(--ink-faint);}
 
 /* Ventana de ejemplo: la aplicación en pequeño. */
-.win{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;margin-top:56px;padding:10px;border-radius:22px;border:1px solid var(--line-strong);background:var(--bg);box-shadow:var(--shadow-lg);font-size:12px;line-height:1.4;text-align:left;-webkit-user-select:none;user-select:none;}
+.win{position:relative;display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px;margin-top:56px;padding:10px;border-radius:22px;border:1px solid var(--line-strong);background:var(--bg);box-shadow:var(--shadow-lg);font-size:12px;line-height:1.4;text-align:left;-webkit-user-select:none;user-select:none;}
 /* Dentro de la ventana no hay cristal: superficies sólidas, para que nada se emborrone al animarse. */
 .win-side{display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-radius:14px;background:var(--surface);border:1px solid var(--line);}
 .win-label{margin:10px 8px 3px;font-size:10.5px;color:var(--ink-faint);}
@@ -433,6 +433,10 @@ a.lang-opt:hover{color:var(--ink);}
 .closing{padding:40px 0 96px;}
 .closing-in{display:flex;flex-direction:column;align-items:center;gap:6px;padding:64px 24px;border-radius:28px;text-align:center;}
 .closing p{margin-top:10px;color:var(--ink-soft);font-size:17px;}
+.closing-sumi{display:block;margin-bottom:6px;color:var(--ink);}
+/* Sumi asomado al borde de la ventana de la cabecera: los brazos caen por dentro. */
+.win-sumi{position:absolute;top:-55px;right:8%;z-index:2;color:var(--ink);pointer-events:none;}
+@media (max-width:720px){ .win-sumi{top:-40px;right:22px;} .win-sumi .sumi{width:64px;height:64px;} }
 
 /* ---------- Pie ---------- */
 .foot{border-top:1px solid var(--line);padding:48px 0 28px;font-size:14px;}

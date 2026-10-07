@@ -487,7 +487,7 @@
   /* Sin ningún cliente todavía: qué es esta sección y por dónde se empieza. */
   function emptyHtml(){
     return '<div class="cl-empty">' +
-      Workhub.views.sumi.svg({mood:'dormido', size:84}) +
+      Workhub.views.sumi.svg({mood:'dormido', size:84, cls:'is-sleep'}) +
       '<h2>' + esc(t('Aún no hay clientes')) + '</h2>' +
       '<p>' + esc(t('Añade el primero para llevar en un mismo sitio sus tareas, sus personas de contacto, sus reuniones y sus contraseñas.')) + '</p>' +
       '<button type="button" class="btn btn-primary" data-action="new-client">' + PLUS_ICON + esc(t('Nuevo cliente')) + '</button>' +

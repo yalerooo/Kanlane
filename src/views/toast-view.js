@@ -4,8 +4,6 @@
   const DURATION = 3200;
   const UNDO_DURATION = 8000;
   const supportsPopover = typeof HTMLElement !== 'undefined' && HTMLElement.prototype.hasOwnProperty('popover');
-  const OK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  const ERR_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17v.01"/></svg>';
   const CLOSE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
   let container = null;
@@ -46,7 +44,10 @@
     el.className = 'toast' + (opts.error ? ' is-error' : '');
     el.dataset.message = message;
     el.setAttribute('role', opts.error ? 'alert' : 'status');
-    el.innerHTML = '<span class="toast-icon">' + (opts.error ? ERR_ICON : OK_ICON) + '</span><span class="toast-text"></span>';
+    /* Sumi acompaña al texto con el gesto que le toca: triste en un error, contento en una
+       confirmación y el normal cuando solo se ofrece una acción. opts.mood lo cambia. */
+    const mood = opts.mood || (opts.error ? 'triste' : opts.important ? 'contento' : 'normal');
+    el.innerHTML = Workhub.views.sumi.svg({mini:true, size:26, mood:mood, cls:'toast-sumi is-pop'}) + '<span class="toast-text"></span>';
     el.querySelector('.toast-text').textContent = message;
     if(opts.action){
       const btn = document.createElement('button');

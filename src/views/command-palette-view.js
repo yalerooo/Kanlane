@@ -95,7 +95,7 @@
             '</div>';
         });
       });
-      this.list.innerHTML = html || '<div class="cmdk-empty">' + Workhub.views.sumi.svg({mood:'dormido', size:48}) + '<span>Sin resultados para «' + esc(this.query.trim()) + '»</span></div>';
+      this.list.innerHTML = html || '<div class="cmdk-empty">' + Workhub.views.sumi.svg({mood:'dormido', size:48, cls:'is-sleep'}) + '<span>Sin resultados para «' + esc(this.query.trim()) + '»</span></div>';
       this._setActive(0, true);
     }
 

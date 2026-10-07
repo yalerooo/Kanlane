@@ -21,7 +21,7 @@ body.not-found{min-height:100vh;min-height:100dvh;display:flex;align-items:cente
 
 /* Sumi busca la página a los lados, una sola vez. */
 @media (prefers-reduced-motion: no-preference){
-  .nf-sumi .sumi-face{animation:nf-look 1.6s ease-in-out .5s 1;}
+  .sumi.nf-sumi.is-alive .sumi-face{animation:nf-look 1.6s ease-in-out .5s 1, sumi-blink 4.6s 2.6s infinite;}
 }
 @keyframes nf-look{0%,100%{transform:translateX(0);}25%{transform:translateX(-2.2px);}65%{transform:translateX(2.2px);}}
 

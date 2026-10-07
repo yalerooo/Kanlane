@@ -130,6 +130,7 @@
       const before = this.tasks.find(id);
       const oldStatus = before && before.status;
       this.tasks.move(id, status, beforeId);
+      if(before && oldStatus !== status && Workhub.models.TaskModel.statusOf(status).done) document.dispatchEvent(new CustomEvent('sumi:done'));
       if(before) this.logActivity(id, oldStatus === status ? 'ordenó la tarea' : 'movió la tarea a «' + Workhub.models.TaskModel.statusOf(status).raw + '»');
     }
 

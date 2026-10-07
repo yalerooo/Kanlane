@@ -82,7 +82,9 @@ html.auth-gate .app{display:none !important;}
 @media (prefers-reduced-motion: reduce){.auth-shell{animation:none;}}
 
 /* ---------- Formulario ---------- */
-.auth-card{min-width:0;padding:34px 38px 30px;display:flex;flex-direction:column;gap:28px;background:var(--surface-solid);}
+.auth-card{position:relative;min-width:0;padding:34px 38px 30px;display:flex;flex-direction:column;gap:28px;background:var(--surface-solid);}
+/* Sumi saluda una vez al abrir, sigue el cursor con los ojos y los cierra mientras se escribe la contraseña. */
+.auth-sumi{position:absolute;top:24px;right:30px;color:var(--ink);pointer-events:none;}
 .auth-card > #authPanel,.auth-card > .auth-loading{margin-top:auto;}
 .auth-card h1{font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;margin:0 0 6px;}
 .auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
@@ -351,6 +353,8 @@ html.auth-gate body:not(.is-authing) .consent{display:none;}
   .auth-top{padding:10px 14px;}
   .auth-stage{padding:6px 12px 16px;}
   .auth-card{padding:24px 20px 20px;}
+  .auth-sumi{top:16px;right:16px;}
+  .auth-sumi .sumi{width:44px;height:44px;}
   .auth-card h1{font-size:20px;}
   .auth-bottom{padding:0 16px 16px;}
   /* 16px evita que iOS amplíe la página al enfocar un campo. */

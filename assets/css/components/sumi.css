@@ -1,0 +1,44 @@
+/* ---------- Sumi, la mascota ----------
+   El dibujo sale de src/views/sumi.js. Aquí solo está cómo se mueve y los tres carriles.
+   Normas (docs/marca/cuaderno-sumi.html): una sola tinta, la del texto; se mueve una vez y
+   termina (solo el reposo se repite) y, con «reducir movimiento», no se mueve. */
+.sumi{display:block;flex:none;overflow:visible;}
+.sumi-face{transform-box:fill-box;transform-origin:center;}
+.sumi-arm{transform-box:fill-box;transform-origin:top center;}
+
+@media (prefers-reduced-motion: no-preference){
+  /* Los ojos siguen al cursor con `translate`, que se suma a las animaciones de `transform`. */
+  .sumi-face{transition:translate .12s ease-out;}
+  /* Reposo: respira y parpadea. Es el único movimiento que se repite. */
+  .sumi.is-alive{animation:sumi-bob 3.2s ease-in-out infinite;}
+  .sumi.is-alive .sumi-face{animation:sumi-blink 4.6s infinite;}
+  .sumi.is-sleep{animation:sumi-bob 3.2s ease-in-out infinite;}
+  /* Una vez y termina. */
+  .sumi.is-wink .sumi-face{animation:sumi-wink .35s ease-in-out 1;}
+  .sumi.is-look .sumi-face{animation:sumi-look 1.6s ease-in-out 1;}
+  .sumi.is-dip .sumi-arm-1{animation:sumi-dip .6s ease-in-out 1;}
+  .sumi.is-wave .sumi-arm-2{animation:sumi-wave 1.1s ease-in-out 2;}
+  .sumi.is-nod{animation:sumi-nod .9s ease-in-out 1;}
+  .sumi.is-pop{animation:sumi-pop .45s cubic-bezier(.2,1.4,.4,1) 1;}
+}
+@keyframes sumi-bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4%);}}
+@keyframes sumi-blink{0%,46%,50%,100%{transform:scaleY(1);}48%{transform:scaleY(.1);}}
+@keyframes sumi-wink{0%,100%{transform:scaleY(1);}50%{transform:scaleY(.1);}}
+@keyframes sumi-look{0%,100%{transform:translateX(0);}25%{transform:translateX(-2.2px);}65%{transform:translateX(2.2px);}}
+@keyframes sumi-dip{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
+@keyframes sumi-wave{0%,100%{transform:rotate(0);}50%{transform:rotate(-38deg);}}
+@keyframes sumi-nod{0%,100%{transform:rotate(0);}30%{transform:rotate(-7deg);}60%{transform:rotate(5deg);}}
+@keyframes sumi-pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* Los tres carriles, sin Sumi: corto, largo, medio. Para cargas cortas, donde una cara sobra. */
+.rails{display:inline-flex;align-items:flex-start;gap:.25em;height:1.15em;vertical-align:-.15em;flex:none;}
+.rails i{width:.5em;border-radius:.25em;background:currentColor;transform-origin:top;}
+.rails i:nth-child(1){height:56%;}
+.rails i:nth-child(2){height:100%;}
+.rails i:nth-child(3){height:78%;}
+@media (prefers-reduced-motion: no-preference){
+  .rails.is-run i{animation:rails-grow 1.2s ease-in-out infinite;}
+  .rails.is-run i:nth-child(2){animation-delay:.2s;}
+  .rails.is-run i:nth-child(3){animation-delay:.4s;}
+}
+@keyframes rails-grow{0%,100%{transform:scaleY(.55);}50%{transform:scaleY(1);}}

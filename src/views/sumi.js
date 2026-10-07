@@ -95,7 +95,7 @@
     const cut = !o.eye;
     const parts = face(o.mood, g, cut ? '#000' : o.eye);
     const shape = '<path d="' + bodyPath(g) + '"/>' + armsMarkup(g);
-    const extra = parts.extra ? '<path d="' + parts.extra + '" fill="none" stroke="' + body + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' : '';
+    const extra = '<path class="sumi-extra" d="' + parts.extra + '" fill="none" stroke="' + body + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
     let inner;
     if(cut){
       const id = 'sumi-m' + (++serial);
@@ -111,10 +111,117 @@
     }
     const size = o.size ? ' width="' + o.size + '" height="' + o.size + '"' : '';
     const a11y = o.title ? ' role="img" aria-label="' + String(o.title).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : ' aria-hidden="true" focusable="false"';
-    return '<svg class="sumi' + (o.cls ? ' ' + o.cls : '') + '" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"' + size + a11y + '>' + inner + '</svg>';
+    const data = (o.mini ? ' data-mini="1"' : '') + (cut ? '' : ' data-eye="' + o.eye + '"');
+    return '<svg class="sumi' + (o.cls ? ' ' + o.cls : '') + '" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"' + size + data + a11y + '>' + inner + '</svg>';
   }
 
   const api = {svg: svg, geometry: geometry, bodyPath: bodyPath, MOODS: MOODS};
-  if(typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.Workhub.views.sumi = api;
+  if(typeof module !== 'undefined' && module.exports){ module.exports = api; return; }
+
+  /* ---------- En el navegador: gestos y movimiento ----------
+     Las animaciones están en assets/css/components/sumi.css. Todo ocurre una vez y termina
+     (solo el reposo, .is-alive, se repite) y nada se mueve con «reducir movimiento». */
+  const doc = root.document;
+  const still = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const DURATION = {wink: 350, look: 1600, dip: 600, wave: 2300, nod: 900, pop: 450};
+
+  /* Cambia el gesto de un Sumi ya pintado, sin volver a crear el SVG. */
+  function setMood(el, mood){
+    if(!el) return;
+    const parts = face(mood, geometry(el.getAttribute('data-mini') === '1'), el.getAttribute('data-eye') || '#000');
+    const f = el.querySelector('.sumi-face'), x = el.querySelector('.sumi-extra');
+    if(f) f.innerHTML = parts.face;
+    if(x) x.setAttribute('d', parts.extra);
+  }
+
+  /* Reproduce una vez un movimiento: wink, look, dip, wave, nod o pop. */
+  function play(el, name){
+    if(!el || still() || !DURATION[name]) return;
+    const cls = 'is-' + name;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();
+    el.classList.add(cls);
+    el._sumiTimers = el._sumiTimers || {};
+    clearTimeout(el._sumiTimers[name]);
+    el._sumiTimers[name] = setTimeout(() => el.classList.remove(cls), DURATION[name] + 80);
+  }
+
+  /* Los ojos siguen al cursor; el cuerpo no se gira. Se suelta solo si el SVG sale de la página. */
+  const followers = [];
+  let pointer = null, frame = 0;
+  function track(){
+    frame = 0;
+    for(let i = followers.length - 1; i >= 0; i--){
+      const el = followers[i];
+      if(!el.isConnected){ followers.splice(i, 1); continue; }
+      const r = el.getBoundingClientRect(), f = el.querySelector('.sumi-face');
+      if(!f || !r.width) continue;
+      const lim = (v, m) => Math.max(-m, Math.min(m, v * m));
+      f.style.translate = lim((pointer.x - r.left - r.width / 2) / (r.width * 2.5), 1.8).toFixed(2) + 'px ' + lim((pointer.y - r.top - r.height * 0.4) / (r.height * 2.5), 1.3).toFixed(2) + 'px';
+    }
+    if(!followers.length) doc.removeEventListener('pointermove', onPointer);
+  }
+  function onPointer(ev){
+    pointer = {x: ev.clientX, y: ev.clientY};
+    if(!frame) frame = root.requestAnimationFrame(track);
+  }
+  function follow(el){
+    if(!el || still() || followers.indexOf(el) !== -1) return;
+    if(!followers.length) doc.addEventListener('pointermove', onPointer, {passive: true});
+    followers.push(el);
+  }
+
+  function whenSeen(host, run){
+    if(!('IntersectionObserver' in root)){ run(); return; }
+    const io = new root.IntersectionObserver((entries) => {
+      if(entries.some((e) => e.isIntersecting)){ io.disconnect(); run(); }
+    }, {threshold: 0.6});
+    io.observe(host);
+  }
+
+  /* Pinta un Sumi dentro de un hueco marcado en el HTML:
+       <span data-sumi="contento" data-sumi-size="64" data-sumi-class="is-alive"
+             data-sumi-play="wave" data-sumi-follow data-sumi-shy="#authPass"></span>
+     play: movimiento al entrar en pantalla. shy: cierra los ojos mientras ese campo tiene el foco. */
+  function mount(host){
+    if(host._sumi) return host._sumi;
+    const d = host.dataset, mood = d.sumi || 'normal';
+    host.innerHTML = svg({mood: mood, size: +d.sumiSize || 64, mini: d.sumiMini === '1', cls: d.sumiClass || ''});
+    const el = host._sumi = host.firstChild;
+    if(d.sumiFollow !== undefined) follow(el);
+    if(d.sumiPlay) whenSeen(host, () => play(el, d.sumiPlay));
+    if(d.sumiShy){
+      const shy = (ev) => !!(ev.target && ev.target.matches && ev.target.matches(d.sumiShy));
+      doc.addEventListener('focusin', (ev) => { if(shy(ev)) setMood(el, 'cerrado'); });
+      doc.addEventListener('focusout', (ev) => { if(shy(ev)) setMood(el, mood); });
+    }
+    return el;
+  }
+
+  /* El logotipo: el mismo dibujo que hay en el HTML, pero con piezas que se pueden mover.
+     Parpadea al pasar por encima y baja el brazo central cuando se completa una tarea. */
+  const marks = [];
+  function mark(host){
+    if(host._sumi) return;
+    const old = host.querySelector('svg');
+    host.innerHTML = svg({mini: true, eye: 'var(--accent-solid)', size: +(old && old.getAttribute('width')) || 19});
+    const el = host._sumi = host.firstChild;
+    marks.push(el);
+    (host.closest('a, .brand-row, .win-brand') || host).addEventListener('mouseenter', () => play(el, 'wink'));
+  }
+
+  function boot(){
+    doc.querySelectorAll('.brand-mark').forEach(mark);
+    doc.querySelectorAll('[data-sumi]').forEach(mount);
+    doc.querySelectorAll('svg.sumi[data-sumi-follow]').forEach(follow);
+    doc.addEventListener('sumi:done', () => marks.forEach((el) => { if(el.isConnected) play(el, 'dip'); }));
+  }
+
+  api.setMood = setMood; api.play = play; api.follow = follow; api.mount = mount;
+  root.KanlaneSumi = api;
+  if(root.Workhub && root.Workhub.views) root.Workhub.views.sumi = api;
+  if(doc){
+    if(doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

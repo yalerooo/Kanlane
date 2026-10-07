@@ -1430,6 +1430,8 @@
     'No se pudo conectar con el servicio de acceso. Comprueba tu conexión.':'Couldn\'t connect to the sign-in service. Check your connection.',
     'Reintentar':'Retry',
     'Sin conexión con el acceso':'Sign-in is unreachable',
+    'El servicio de acceso no responde':'The sign-in service isn\'t responding',
+    'No se pudo contactar con el servicio de acceso aunque tu conexión funciona. Puede estar bloqueado temporalmente, o por una extensión del navegador o un filtro de red. Espera unos minutos y vuelve a intentarlo.':'Couldn\'t reach the sign-in service even though your connection works. It may be blocked temporarily, or by a browser extension or a network filter. Wait a few minutes and try again.',
     'Con tareas abiertas':'With open tasks',
     'Con tareas vencidas':'With overdue tasks',
     'Resumen':'Overview',

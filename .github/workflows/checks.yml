@@ -21,6 +21,7 @@ jobs:
           node tests/demo/demo.test.js
           node tests/plugins/migration.test.js
           node tests/guest/guest-migration.test.js
+          node tests/auth/access-failure.test.js
           node tests/consent/consent.test.js
           node tests/settings/settings.test.js
           node tests/i18n/stages.test.js

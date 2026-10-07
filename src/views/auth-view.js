@@ -254,7 +254,8 @@
       this.screen.hidden = true;
     }
 
-    showLoadError(onRetry){
+    /* blocked: hay red pero el servicio de acceso no contesta (no se culpa a la conexión). */
+    showLoadError(onRetry, blocked){
       document.documentElement.classList.remove('auth-early');
       window.__hideBootSkeleton();
       EARLY.take(false);
@@ -265,8 +266,10 @@
       const t = Workhub.t;
       this.loading.innerHTML =
         '<span class="auth-badge" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.5a10.5 10.5 0 0 1 14 0"/><path d="M8.5 16a5.5 5.5 0 0 1 7 0"/><path d="M12 20h.01"/><path d="M3 3l18 18"/></svg></span>' +
-        '<strong class="auth-verify-title">' + esc(t('Sin conexión con el acceso')) + '</strong>' +
-        '<span class="auth-sent-text">' + esc(t('No se pudo conectar con el servicio de acceso. Comprueba tu conexión.')) + '</span>';
+        '<strong class="auth-verify-title">' + esc(t(blocked ? 'El servicio de acceso no responde' : 'Sin conexión con el acceso')) + '</strong>' +
+        '<span class="auth-sent-text">' + esc(t(blocked
+          ? 'No se pudo contactar con el servicio de acceso aunque tu conexión funciona. Puede estar bloqueado temporalmente, o por una extensión del navegador o un filtro de red. Espera unos minutos y vuelve a intentarlo.'
+          : 'No se pudo conectar con el servicio de acceso. Comprueba tu conexión.')) + '</span>';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn btn-primary auth-submit';

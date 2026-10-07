@@ -113,6 +113,15 @@
   transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease, opacity .15s ease;
 }
 .card:hover{border-color:var(--line-strong);box-shadow:var(--shadow);transform:translateY(-1px);}
+/* Selección de varias tareas: la marcada lleva borde, fondo y una señal en la esquina (no solo color). */
+.card.is-selected,.card.is-selected:hover{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft);}
+.card.is-selected::after,.tl-row.is-selected::after{content:'✓';position:absolute;top:6px;right:8px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink, #fff);font-size:12px;font-weight:700;line-height:18px;text-align:center;}
+#boardWrap.is-selecting .card,#boardWrap.is-selecting .tl-row{cursor:default;}
+.select-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:8px 10px 8px 14px;border:1px solid var(--line-strong);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow-sm);}
+.select-bar[hidden]{display:none;}
+.select-count{font-size:13px;font-weight:600;color:var(--ink);}
+.select-hint{font-size:12.5px;color:var(--ink-faint);}
+#btnTaskSelect[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);}
 .card:active{cursor:grabbing;}
 /* Al agarrarla: la tarjeta se levanta (crece un poco, se ladea y gana sombra). La imagen que
    sigue al cursor se toma en ese momento, así que se arrastra ya levantada. El gesto cabe en
@@ -319,6 +328,12 @@ body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--sh
 }
 .tl-row + .tl-row{border-top:1px solid var(--line);}
 .tl-row:hover{background:var(--hover);}
+/* En modo selección cada fila lleva delante su casilla: vacía o marcada. */
+.tl-row{position:relative;}
+#boardWrap.is-selecting .tl-row{padding-left:40px;}
+#boardWrap.is-selecting .tl-row::after{content:'';position:absolute;top:50%;left:13px;right:auto;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-strong);background:transparent;transform:translateY(-50%);box-sizing:border-box;}
+#boardWrap.is-selecting .tl-row.is-selected::after{content:'✓';border-color:var(--accent);background:var(--accent);color:var(--accent-ink, #fff);font-size:11px;font-weight:700;line-height:13px;text-align:center;}
+.tl-row.is-selected,.tl-row.is-selected:hover{background:var(--accent-soft);}
 .tl-row:focus-visible{outline:2px solid var(--accent-solid);outline-offset:-2px;}
 .tl-title{flex:1 1 220px;min-width:0;font-size:13.5px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tl-row.is-done .tl-title{color:var(--ink-soft);}
@@ -329,6 +344,9 @@ body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--sh
 .tl-due{display:flex;justify-content:flex-end;flex:0 0 96px;}
 body.no-clients .tl-row .card-client{display:none;}
 .tl-empty{margin:0 2px;font-size:12.5px;color:var(--ink-faint);}
+@media (max-width:700px){
+  .select-hint{display:none;}
+}
 @media (max-width:700px){
   .tl-row{flex-wrap:wrap;gap:6px 10px;padding:9px 12px;}
   .tl-title{flex:1 1 100%;white-space:normal;}

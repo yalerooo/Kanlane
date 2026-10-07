@@ -49,6 +49,7 @@
       this.board.bindNew(() => this.openNew());
       this.board.bindFilters(() => this.render());
       this.board.bindOpen((id) => this.openDetail(id));
+      this.board.bindSelect({remove: (ids) => this.removeMany(ids)});
       this.board.bindQuickAdd((status) => this.openNew(status));
       this.board.bindMove((id, status, beforeId) => this.moveWithActivity(id, status, beforeId));
       this.columns = new Workhub.views.ColumnView();
@@ -466,6 +467,28 @@
       }, () => {
         toast.error('No se pudo eliminar la tarea');
         this.closeDialog();
+      });
+    }
+
+    /* Elimina de una vez las tareas marcadas en el tablero o en la lista. Pide confirmación y, como
+       al eliminar una, se puede deshacer desde el aviso. */
+    removeMany(ids){
+      if(!this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      const list = (Array.isArray(ids) ? ids : []).filter((id) => this.tasks.find(id));
+      if(!list.length) return;
+      const n = list.length;
+      this.columns.confirm(n === 1 ? 'Eliminar tarea' : 'Eliminar tareas',
+        (n === 1 ? 'Se eliminará la tarea seleccionada.' : 'Se eliminarán las ' + n + ' tareas seleccionadas.') + ' Podrás deshacerlo desde el aviso que sale después.',
+        n === 1 ? 'Eliminar' : 'Eliminar ' + n).then((ok) => {
+        if(!ok) return;
+        /* Las que sigan existiendo al confirmar (otra persona pudo borrar alguna mientras tanto). */
+        const alive = list.filter((id) => this.tasks.find(id));
+        if(!alive.length){ this.board.setSelecting(false); return; }
+        const snap = this.tasks.snapshot(alive);
+        Promise.all(alive.map((id) => this.tasks.remove(id))).then(() => {
+          this.board.setSelecting(false);
+          toast.undoable(alive.length === 1 ? 'Tarea eliminada' : alive.length + ' tareas eliminadas', () => this.tasks.restore(snap), alive.length === 1 ? 'Tarea restaurada' : 'Tareas restauradas');
+        }, () => toast.error('No se pudieron eliminar todas las tareas'));
       });
     }
 

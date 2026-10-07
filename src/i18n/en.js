@@ -1644,6 +1644,7 @@
     'Reunión restaurada':'Meeting restored',
     'Repetir':'Repeat',
     'No se repite':'Doesn\'t repeat',
+    'La repetición necesita una fecha límite. Pon una fecha o elige «No se repite».':'Repeating needs a due date. Set a date or choose “Doesn\'t repeat”.',
     'Cada día':'Every day',
     'Cada semana':'Every week',
     'Cada 2 semanas':'Every 2 weeks',

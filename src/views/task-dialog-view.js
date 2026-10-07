@@ -32,6 +32,7 @@
       /* Los avisos del título y del cliente van junto a su campo: el general queda al final del formulario, fuera de la vista. */
       this.titleError = $('fTitleError');
       this.clienteError = $('fClienteError');
+      this.repeatError = $('fRepeatError');
       this.form.addEventListener('input', () => { this._clearErrors(); });
       this.form.addEventListener('change', () => { this._clearErrors(); });
       /* Subtareas: [{id, text, done}]. */
@@ -202,6 +203,7 @@
       this.formError.hidden = true;
       this.titleError.hidden = true;
       this.clienteError.hidden = true;
+      this.repeatError.hidden = true;
     }
 
     /* Fecha de inicio y campos personalizados: {startDate, custom} o {error, el} si algo no vale.
@@ -218,6 +220,10 @@
       const due = this.fields.fecha.value || '';
       if(start && due && start > due){
         return {error:'La fecha de inicio no puede ser posterior a la fecha límite.', el:this.fields.inicio.parentNode.querySelector('.dp-trigger') || this.fields.inicio};
+      }
+      /* Sin fecha límite no hay repetición: se avisa en vez de quitarla al guardar sin decir nada. */
+      if(!due && this.fields.repeat.value && !this.fields.repeat.closest('.field').hidden){
+        return {error:'La repetición necesita una fecha límite. Pon una fecha o elige «No se repite».', el:this.fields.fecha.parentNode.querySelector('.dp-trigger') || this.fields.fecha, at:this.repeatError};
       }
       const read = Workhub.views.fields.readForm(this.customEl);
       if(read.error) return read;

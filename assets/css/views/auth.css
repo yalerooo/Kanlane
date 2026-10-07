@@ -86,7 +86,7 @@ html.auth-gate .app{display:none !important;}
 /* Sumi saluda una vez al abrir, sigue el cursor con los ojos y los cierra mientras se escribe la contraseña. */
 .auth-sumi{position:absolute;top:24px;right:30px;color:var(--ink);pointer-events:none;}
 .auth-card > #authPanel,.auth-card > .auth-loading{margin-top:auto;}
-.auth-card h1{font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;margin:0 0 6px;}
+.auth-card h2{font-size:24px;font-weight:600;letter-spacing:-0.028em;line-height:1.15;margin:0 0 6px;}
 .auth-sub{margin:0 0 22px;color:var(--ink-soft);font-size:13.5px;line-height:1.45;}
 .auth-alt{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0, 1fr);gap:8px;}
 .auth-alt[hidden]{display:none;}
@@ -354,7 +354,7 @@ html.auth-gate body:not(.is-authing) .consent{display:none;}
   .auth-card{padding:24px 20px 20px;}
   .auth-sumi{top:16px;right:16px;}
   .auth-sumi .sumi{width:44px;height:44px;}
-  .auth-card h1{font-size:20px;}
+  .auth-card h2{font-size:20px;}
   .auth-bottom{padding:0 16px 16px;}
   /* 16px evita que iOS amplíe la página al enfocar un campo. */
   .auth-form input{font-size:16px;min-height:40px;}

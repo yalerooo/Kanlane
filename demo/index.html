@@ -95,10 +95,10 @@
         <button type="button" role="radio" data-task-mode="board" aria-checked="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></svg>Tablero</button>
         <button type="button" role="radio" data-task-mode="list" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Lista</button>
       </div>
-      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden><span>GitHub</span></button>
       <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
       <span class="bar-push" aria-hidden="true"></span>
-      <input type="search" id="search" class="bar-search" placeholder="Buscar por título, cliente o contacto…">
+      <input type="search" id="search" class="bar-search" aria-label="Buscar tareas" placeholder="Buscar por título, cliente o contacto…">
       <div class="bar-filter">
         <button type="button" class="icon-only" id="btnTaskFilter" aria-label="Filtrar" title="Filtrar" aria-haspopup="true" aria-expanded="false" aria-controls="taskFilterPanel"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="filter-dot" id="taskFilterDot" hidden></span></button>
         <div class="filter-panel" id="taskFilterPanel" hidden>
@@ -209,7 +209,7 @@
     <div class="tv-comment-box">
       <label class="sr-only" for="tvCommentText">Escribir una nota</label>
       <textarea id="tvCommentText" maxlength="16000" rows="1" placeholder="Escribe una nota…"></textarea>
-      <input type="file" id="tvCommentImage" multiple hidden>
+      <input type="file" id="tvCommentImage" multiple aria-label="Adjuntar archivos" hidden>
       <button type="button" class="icon-only" id="tvCommentAttach" title="Adjuntar archivos" aria-label="Adjuntar archivos"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
       <button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Añadir</button>
     </div>

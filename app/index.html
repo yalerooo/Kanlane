@@ -102,7 +102,7 @@
         <div id="authLoading" class="auth-loading" role="status" hidden></div>
         <div id="authPanel" hidden>
           <span class="auth-badge" id="authBadge" hidden aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
-          <h1 id="authTitle">Inicia sesión</h1>
+          <h2 id="authTitle">Inicia sesión</h2>
           <p class="auth-sub" id="authSub">Accede a tu espacio de trabajo.</p>
           <div class="auth-notice" id="authNotice" role="status" hidden></div>
           <div class="auth-notice auth-migrate" id="authMigrate" role="status" hidden>
@@ -180,6 +180,7 @@
 <script src="../src/views/auth-early.js"></script>
 
 <div class="app">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
   <aside class="sidebar glass">
     <div class="brand-row">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" width="19" height="19" fill="currentColor"><path d="M10 37C5.5 34 4 29.5 4 26C4 15.5 18 8 32 8C46 8 60 15.5 60 26C60 29.5 58.5 34 54 37V40H42a2 2 0 0 0 -4 0H26a2 2 0 0 0 -4 0H10Z"/><rect x="10" y="34" width="12" height="15" rx="6"/><rect x="26" y="34" width="12" height="21" rx="6"/><rect x="42" y="34" width="12" height="17" rx="6"/><circle cx="24" cy="26" r="4.4" fill="var(--accent-solid)"/><circle cx="40" cy="26" r="4.4" fill="var(--accent-solid)"/></svg></span>
@@ -229,7 +230,7 @@
     </div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="contenido" tabindex="-1">
   <div class="main-inner">
   <header class="page-head top glass">
     <div class="titles">
@@ -244,10 +245,10 @@
         <button type="button" role="radio" data-task-mode="table" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabla</button>
         <button type="button" role="radio" data-task-mode="timeline" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M8 12h11M5 18h7"/></svg>Cronograma</button>
       </div>
-      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
+      <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden><span>GitHub</span></button>
       <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
       <span class="bar-push" aria-hidden="true"></span>
-      <input type="search" id="search" class="bar-search" placeholder="Buscar por título, cliente o contacto…">
+      <input type="search" id="search" class="bar-search" aria-label="Buscar tareas" placeholder="Buscar por título, cliente o contacto…">
       <div class="bar-filter">
         <button type="button" class="icon-only" id="btnTaskFilter" aria-label="Filtrar" title="Filtrar" aria-haspopup="true" aria-expanded="false" aria-controls="taskFilterPanel"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="filter-dot" id="taskFilterDot" hidden></span></button>
         <div class="filter-panel" id="taskFilterPanel" hidden>
@@ -283,7 +284,7 @@
       <span class="bar-sep" aria-hidden="true"></span>
       <span class="bar-meta" id="vaultMeta"></span>
       <span class="bar-push" aria-hidden="true"></span>
-      <input type="search" id="searchVault" class="bar-search" placeholder="Buscar por cliente, correo, web o IP…">
+      <input type="search" id="searchVault" class="bar-search" aria-label="Buscar contraseñas" placeholder="Buscar por cliente, correo, web o IP…">
       <select id="filterTipo" aria-label="Filtrar por tipo">
         <option value="">Todos los tipos</option>
         <option value="correo">Correo / Web</option>
@@ -822,7 +823,7 @@
                 <div class="account-photo-actions">
                   <button type="button" class="btn btn-ghost btn-sm" id="btnAccountPhoto">Cambiar foto</button>
                   <button type="button" class="btn btn-ghost btn-sm" id="btnAccountPhotoRemove" hidden>Quitar foto</button>
-                  <input type="file" id="accountPhotoFile" accept="image/*" hidden>
+                  <input type="file" id="accountPhotoFile" accept="image/*" aria-label="Cambiar foto" hidden>
                 </div>
                 <div class="field account-name">
                   <label for="accountNameInput">Nombre</label>
@@ -921,7 +922,7 @@
         <label for="fCliente">Cliente / proyecto</label>
         <select id="fCliente"></select>
         <div class="new-client-inline" id="fClienteNewWrap" hidden>
-          <input id="fClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <input id="fClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
           <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
         </div>
       </div>
@@ -978,10 +979,10 @@
       <label>Notas</label>
       <div class="notes-list" id="taskNotesList"></div>
       <div class="note-add-box" id="noteAddBox">
-        <textarea id="noteText" rows="2" maxlength="16000" placeholder="Añade una nota…"></textarea>
+        <textarea id="noteText" rows="2" maxlength="16000" aria-label="Añade una nota…" placeholder="Añade una nota…"></textarea>
         <div class="att-pending" id="noteFiles" hidden></div>
         <div class="note-add-actions">
-          <input type="file" id="noteImageInput" multiple hidden>
+          <input type="file" id="noteImageInput" multiple aria-label="Adjuntar archivos" hidden>
           <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar archivos</button>
           <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
         </div>
@@ -1114,7 +1115,7 @@
     <div class="tv-comment-box">
       <label class="sr-only" for="tvCommentText">Escribir una nota</label>
       <textarea id="tvCommentText" maxlength="16000" rows="1" placeholder="Escribe una nota…"></textarea>
-      <input type="file" id="tvCommentImage" multiple hidden>
+      <input type="file" id="tvCommentImage" multiple aria-label="Adjuntar archivos" hidden>
       <button type="button" class="icon-only" id="tvCommentAttach" title="Adjuntar archivos" aria-label="Adjuntar archivos"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
       <button type="submit" class="btn btn-primary btn-sm" id="tvCommentSend">Añadir</button>
     </div>
@@ -1714,7 +1715,7 @@
         <label for="cCliente">Cliente</label>
         <select id="cCliente" required></select>
         <div class="new-client-inline" id="cClienteNewWrap" hidden>
-          <input id="cClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <input id="cClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
           <button type="button" class="btn btn-ghost" id="cClienteNewBtn">Crear</button>
         </div>
       </div>
@@ -1766,7 +1767,7 @@
         <label for="vCliente">Cliente</label>
         <select id="vCliente" required></select>
         <div class="new-client-inline" id="vClienteNewWrap" hidden>
-          <input id="vClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <input id="vClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
           <button type="button" class="btn btn-ghost" id="vClienteNewBtn">Crear</button>
         </div>
       </div>
@@ -1863,7 +1864,7 @@
         <label for="mCliente">Cliente (opcional)</label>
         <select id="mCliente" data-allow-empty="1"></select>
         <div class="new-client-inline" id="mClienteNewWrap" hidden>
-          <input id="mClienteNewInput" maxlength="60" placeholder="Nombre del cliente nuevo">
+          <input id="mClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
           <button type="button" class="btn btn-ghost" id="mClienteNewBtn">Crear</button>
         </div>
       </div>

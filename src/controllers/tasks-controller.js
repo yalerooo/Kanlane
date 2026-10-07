@@ -164,7 +164,8 @@
       return true;
     }
 
-    /* Fecha límite desde la tabla ('' la quita, y con ella la hora y la repetición). */
+    /* Fecha límite desde la tabla ('' la quita, y con ella la hora). A una tarea que se repite no
+       se le quita: la repetición parte de esa fecha, y perderla sin decir nada sería peor. */
     setDue(id, date){
       const t = this.tasks.find(id);
       if(!t || (date && !Workhub.models.CustomFields.validDate(date))) return false;
@@ -172,11 +173,12 @@
         toast.error('La fecha límite no puede ser anterior a la fecha de inicio.');
         return false;
       }
-      const patch = {dueDate:date};
-      if(!date){
-        if(t.repeat) patch.repeat = '';
-        if(t.dueTime) patch.dueTime = '';
+      if(!date && t.repeat){
+        toast.error('Esta tarea se repite y necesita una fecha límite. Para quitarla, elige antes «No se repite».');
+        return false;
       }
+      const patch = {dueDate:date};
+      if(!date && t.dueTime) patch.dueTime = '';
       return this.patchTask(id, patch);
     }
 

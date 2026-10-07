@@ -126,10 +126,10 @@ function newId() {
 /* ---------- Proyecto ---------- */
 
 const list = (v) => (Array.isArray(v) ? v : []);
-const keyOf = (ref) => (ref.kind === 't' ? 't~' + ref.tid : 'u~' + ref.uid + '~' + ref.pid);
+export const keyOf = (ref) => (ref.kind === 't' ? 't~' + ref.tid : 'u~' + ref.uid + '~' + ref.pid);
 
 /* Dónde está y cómo está el proyecto de una captura. → {gone:true} | {root, assets, doc, enc, team, stages} */
-async function loadProject(ref, store) {
+export async function loadProject(ref, store) {
   let doc, root, assets, team = null;
   if (ref.kind === 't') {
     doc = team = await store.get('teams/' + ref.tid);
@@ -147,7 +147,7 @@ async function loadProject(ref, store) {
 }
 
 /* El papel de una cuenta en un equipo: 'owner' | 'editor' | 'viewer' | ''. */
-function roleIn(team, uid) {
+export function roleIn(team, uid) {
   if (!team || list(team.memberIds).indexOf(uid) === -1) return '';
   const role = team.members && team.members[uid] && team.members[uid].role;
   return role === 'owner' ? (team.ownerUid === uid ? 'owner' : '') : role === 'editor' || role === 'viewer' ? role : '';

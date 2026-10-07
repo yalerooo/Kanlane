@@ -492,6 +492,20 @@ Cada proyecto puede tener una dirección de correo que crea tareas. **Guía comp
 - **Sin comprobar:** la entrega real por Cloudflare, DKIM con proveedores reales y si los adjuntos caben en la CPU del plan gratuito.
 - **Pruebas:** `tests/worker/mime.test.js`, `tests/worker/capture.test.js` (comparten `mail-fixtures.js`), `tests/e2e/mail-capture.js`, `tests/rules`.
 
+### Servidor MCP (oct-2026)
+Un asistente (Claude Code u otro cliente MCP) lee, mueve, anota y crea tareas de **un proyecto**. **Guía completa: `docs/MCP.md`** (protocolo, permisos, límites, puesta en marcha, qué falta por comprobar).
+- **Hecho:** el servidor. **Pendiente:** la pantalla de Ajustes para crear y revocar tokens (hoy solo por la ruta de gestión), llamar a `op:'purge'` al eliminar la cuenta y la página pública.
+- **Entrada:** `POST /__/mcp/v1` con `Authorization: Bearer kl_…` → `worker/index.js` (`mcp`) → `worker/mcp.mjs` (`rpc`). JSON-RPC sin estado: `initialize`, `ping`, `tools/list`, `tools/call`. Gestión de tokens: `POST /__/mcp/v1/tokens` con el ID token (`manage`: `list`, `create`, `revoke`, `purge`). En las pruebas las dos las sirve `scripts/dev.js`.
+- **Token:** `kl_` + 16 letras al azar + 16 de HMAC con el secreto `MCP_SECRET`; en Firestore solo su hash. Uno por proyecto, hasta 10, con nombre y opción de solo lectura.
+- **Permisos:** en cada llamada, el papel actual de quien creó el token (propietario o editor escriben; lector solo lee; quien sale del equipo lo pierde).
+- **Herramientas:** `list_tasks`, `get_task`, `move_task`, `add_note`, `create_task`. Trabajan con las columnas reales del proyecto. Completar una tarea que se repite crea la siguiente (como `TaskModel.spawnNext`); las reglas «al crear» y «al mover» no se disparan.
+- **Datos (solo servidor, sin regla en `firestore.rules`):** `mcp_tokens`, `mcp_rate` (cambios por proyecto y día; lo limpia el cron).
+- **Sin MCP:** proyectos cifrados (total o gestionado): el Worker no tiene la clave.
+- **Límites:** 60 llamadas por token y minuto (`MCP_RATE_LIMIT` en `wrangler.jsonc`), 2 000 cambios por proyecto y día, 500 tareas leídas por llamada.
+- **Reutiliza de la captura:** `loadProject`, `roleIn` y `keyOf` (exportadas de `worker/capture.mjs`) y `restStore` (`worker/automations.mjs`, con el método nuevo `list`).
+- **Sin comprobar:** un cliente MCP real (Claude Code, claude.ai), el despliegue en Cloudflare y la CPU del plan gratuito.
+- **Pruebas:** `tests/worker/mcp.test.js`, `tests/e2e/mcp.js` (emulador, sin navegador), `tests/rules`.
+
 ### Mejoras de uso diario (oct-2026)
 
 - **Eliminar varias tareas a la vez:** botón «Seleccionar tareas» de la barra (`#btnTaskSelect`) o Ctrl/Cmd + clic en una tarea; en ese modo un clic (o Intro/espacio) marca en vez de abrir, y Mayús + clic marca el tramo. Barra `#taskSelectBar` con el recuento, «Seleccionar todas», «Eliminar» y «Cancelar» (también Escape). Vale en tablero y lista. La selección vive en `BoardView` (`selected`, `selecting`, `_selectClick`, `_paintSelection`); lo que un filtro esconde deja de estar seleccionado. `TasksController.removeMany` confirma, borra y ofrece deshacer. Solo para quien puede editar.

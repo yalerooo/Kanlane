@@ -179,6 +179,11 @@ export function restStore(env, deps) {
     /* Identificadores de los documentos de una colección raíz con un campo menor que un valor. */
     olderThan: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
       where: {fieldFilter: Object.assign(field(path), {op: 'LESS_THAN', value: encode(value)})}, limit: n}).then((rows) => rows.map((r) => r.id)),
+    /* Documentos de una colección que cuelga de `parent`: [{id, data, updateTime}]. filter:
+       {field, op: 'EQUAL' | 'NOT_IN', value}; order: {field, desc}. Lo usa el servidor MCP. */
+    list: (parent, collection, n, filter, order) => query(parent, Object.assign({from: [{collectionId: collection}], limit: n},
+      filter ? {where: {fieldFilter: Object.assign(field(filter.field), {op: filter.op, value: encode(filter.value)})}} : {},
+      order ? {orderBy: [Object.assign(field(order.field), {direction: order.desc ? 'DESCENDING' : 'ASCENDING'})]} : {})),
     /* Como get, con la marca de la última escritura: {data, updateTime} | null. */
     getDoc: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? {data: decodeFields(doc.fields), updateTime: doc.updateTime || ''} : null)),
     /* Tareas del proyecto con fecha límite hasta `maxDate` (incluye las vencidas). */

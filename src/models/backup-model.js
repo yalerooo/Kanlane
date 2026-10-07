@@ -26,6 +26,26 @@
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   }
 
+  /* Lo que admite una tarea (firestore.rules y enc-schema.js). */
+  const CHECKLIST_MAX = 200;
+  const CHECK_TEXT_MAX = 500;
+  const NOTE_FILES_MAX = 20;
+
+  /* Subtareas de una tarea del archivo, tal como se guardan: [{id, text, done}]. */
+  function checklistOf(value){
+    const seen = {};
+    const out = [];
+    (Array.isArray(value) ? value : []).forEach((c, i) => {
+      const text = c && typeof c.text === 'string' ? c.text.trim().slice(0, CHECK_TEXT_MAX) : '';
+      if(!text || out.length >= CHECKLIST_MAX) return;
+      let id = typeof c.id === 'string' && c.id && c.id.length <= 40 && !seen[c.id] ? c.id : 'c' + Date.now().toString(36) + i.toString(36);
+      while(seen[id]) id += 'x';
+      seen[id] = true;
+      out.push({id:id, text:text, done:c.done === true});
+    });
+    return out;
+  }
+
   /* Campos personalizados del proyecto abierto. */
   function projectFields(){
     return Workhub.views && Workhub.views.fields ? Workhub.views.fields.list() : [];
@@ -34,6 +54,30 @@
   class BackupModel {
     constructor(models){
       this.models = models;
+      /* Cómo copiar un adjunto: {read(att) → Promise<Blob>, image(blob) → Promise<id>, file(blob) →
+         Promise<[ids]>}. Lo pone AppController; sin ello los adjuntos del archivo no se importan. */
+      this.files = null;
+    }
+
+    /* Los adjuntos de una nota del archivo (`attachments`), copiados a archivos nuevos: la copia no
+       comparte nada con la nota original, así que borrar una no deja a la otra sin sus archivos.
+       Los que ya no están (se borraron, o el archivo viene de otra cuenta) o no se pueden subir
+       se quedan fuera y se cuentan en counts.filesSkipped. → [{name, type, size, image, parts}] */
+    copyAttachments(note, counts){
+      const list = (Array.isArray(note && note.attachments) ? note.attachments : [])
+        .filter((a) => a && Array.isArray(a.parts) && a.parts.length && a.parts.every((id) => typeof id === 'string' && id)).slice(0, NOTE_FILES_MAX);
+      const copied = [];
+      return list.reduce((chain, a) => chain.then(() => {
+        if(!this.files){ counts.filesSkipped++; return null; }
+        const att = {name:String(a.name || '').slice(0, 200), type:String(a.type || '').slice(0, 120), size:+a.size || 0, image:!!a.image};
+        return Promise.resolve().then(() => this.files.read({parts:a.parts, type:att.type || (att.image ? 'image/jpeg' : '')}))
+          .then((blob) => (att.image ? Promise.resolve(this.files.image(blob)).then((id) => (id ? [id] : [])) : this.files.file(blob)))
+          .then((parts) => {
+            if(!Array.isArray(parts) || !parts.length){ counts.filesSkipped++; return; }
+            counts.files++;
+            copied.push(Object.assign(att, {parts:parts}));
+          }, () => { counts.filesSkipped++; });
+      }), Promise.resolve()).then(() => copied);
     }
 
     isReady(){
@@ -87,7 +131,7 @@
     /* Devuelve {counts, vaultOutcome: 'none' | 'skipped' | 'team' | 'imported'}. */
     import(data){
       const m = this.models;
-      const counts = {clients:0, tasks:0, notes:0, meetings:0, contacts:0, vault:0};
+      const counts = {clients:0, tasks:0, notes:0, meetings:0, contacts:0, vault:0, files:0, filesSkipped:0};
       const list = (x) => (Array.isArray(x) ? x : []);
       const existingClientNames = {};
       m.clients.items.forEach((c) => { existingClientNames[c.nombre] = true; });
@@ -126,6 +170,7 @@
           contacto: t.contacto || '',
           dueDate: t.dueDate || '',
           labels: Array.isArray(t.labels) ? t.labels.filter((n) => typeof n === 'string').slice(0, 1000) : [],
+          checklist: checklistOf(t.checklist),
           order: typeof t.order === 'number' ? t.order : (t.createdAt || Date.now()),
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()
@@ -133,13 +178,20 @@
           return Promise.all(list(t.notes).map((n) => {
             if(!n) return Promise.resolve();
             counts.notes++;
-            return m.tasks.addNoteRaw(ref.id, {
-              text: n.text || '',
-              imageAssetId: n.imageAssetId || '',
-              createdAt: n.createdAt || Date.now(),
-              kind: ['comment','activity'].includes(n.kind) ? n.kind : 'note',
-              actorUid: typeof n.actorUid === 'string' ? n.actorUid : '',
-              actorName: typeof n.actorName === 'string' ? n.actorName : ''
+            return this.copyAttachments(n, counts).then((files) => {
+              const note = {
+                text: n.text || '',
+                imageAssetId: n.imageAssetId || '',
+                createdAt: n.createdAt || Date.now(),
+                kind: ['comment','activity'].includes(n.kind) ? n.kind : 'note',
+                actorUid: typeof n.actorUid === 'string' ? n.actorUid : '',
+                actorName: typeof n.actorName === 'string' ? n.actorName : ''
+              };
+              if(files.length){
+                note.attachments = files;
+                note.assetIds = files.reduce((ids, a) => ids.concat(a.parts), []);
+              }
+              return m.tasks.addNoteRaw(ref.id, note);
             });
           }));
         });

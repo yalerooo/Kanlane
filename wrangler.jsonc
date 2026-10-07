@@ -17,10 +17,13 @@
     // Una dirección que no existe responde 404 con la página 404.html más cercana
     // (en/404.html para /en/…, 404.html para el resto). Sin esto el 404 va vacío.
     "not_found_handling": "404-page",
+    // OJO: con "404-page", una dirección que no es un archivo NO llega al Worker: responde la
+    // página 404. Por eso toda ruta que atienda el Worker tiene que estar en "run_worker_first",
+    // también /__/auth/* y /__/firebase/* (sin ellas el acceso con Google o GitHub da 404).
     // Solo las páginas pasan antes por el Worker (redirecciones entre dominios y
     // cabecera noindex del espejo). Los scripts, estilos e imágenes se sirven
     // directamente, sin gastar peticiones del Worker (100 000 al día en el plan gratuito).
-    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/kms/*", "/__/capture/*"]
+    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/auth/*", "/__/firebase/*", "/__/kms/*", "/__/capture/*"]
   },
 
   // Dominios (todos apuntan a este mismo Worker; ver worker/index.js):

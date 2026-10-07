@@ -288,6 +288,28 @@ const byName = (rows, name) => rows.find((r) => r.name === name);
     assert.equal(await warn.isVisible(), false, 'sin aviso si no hay reglas afectadas');
     await page.locator('#btnConfirmCancel').click();
     await page.locator('#dlgConfirm').waitFor({state:'hidden'});
+    /* Lo mismo al guardar «Editar proyecto» sin esa columna: confirma antes, con el mismo aviso. */
+    const stagesBefore = await page.evaluate(() => Workhub.models.TaskModel.STATUS.map((s) => s.key));
+    await page.evaluate((key) => {
+      const app = Workhub.app, PT = Workhub.models.ProjectTemplates, p = app.models.projects.get(app.projectId), cfg = app.models.projects.configOf(p);
+      app.controllers.projects.save(p.id, p.nombre, typeof p.color === 'number' ? p.color : null, PT.fieldsFor(PT.CUSTOM_TYPE, cfg.stages.filter((s) => s.key !== key), cfg.clients));
+    }, made.second);
+    await page.locator('#dlgConfirm').waitFor({state:'visible'});
+    assert.equal(await page.locator('#confirmTitle').textContent(), 'Quitar una columna');
+    assert.equal(await page.locator('#confirmText').textContent(), 'El proyecto se guardará sin la columna «' + made.secondLabel + '».');
+    assert.equal(await warn.textContent(), warnText, 'el mismo aviso que desde el tablero');
+    await page.locator('#btnConfirmCancel').click();
+    await page.locator('#dlgConfirm').waitFor({state:'hidden'});
+    await sleep(800);
+    assert.deepEqual(await page.evaluate(() => Workhub.models.TaskModel.STATUS.map((s) => s.key)), stagesBefore, 'al cancelar, el proyecto no se guarda');
+    /* Y guardar sin quitar ninguna columna no pregunta nada. */
+    await page.evaluate(() => {
+      const app = Workhub.app, PT = Workhub.models.ProjectTemplates, p = app.models.projects.get(app.projectId), cfg = app.models.projects.configOf(p);
+      app.controllers.projects.save(p.id, p.nombre, typeof p.color === 'number' ? p.color : null, PT.fieldsFor(PT.CUSTOM_TYPE, cfg.stages, cfg.clients));
+    });
+    await sleep(1200);
+    assert.equal(await page.locator('#dlgConfirm').isVisible(), false);
+
     /* Ahora sí. */
     await page.locator('[data-col-menu="' + made.second + '"]').click();
     await page.locator('[role="menuitem"][data-act="remove"]').click();

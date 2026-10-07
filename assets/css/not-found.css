@@ -4,7 +4,8 @@ body.not-found{min-height:100vh;min-height:100dvh;display:flex;align-items:cente
 .nf{width:100%;max-width:460px;text-align:center;}
 .nf-brand{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-0.02em;color:var(--ink);text-decoration:none;}
 .nf-brand img{display:block;border-radius:8px;}
-.nf-code{margin:36px 0 0;font-size:84px;font-weight:600;letter-spacing:-0.05em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
+.nf-sumi{display:block;margin:30px auto 0;color:var(--ink);}
+.nf-code{margin:14px 0 0;font-size:56px;font-weight:600;letter-spacing:-0.05em;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;}
 .nf h1{margin:14px 0 10px;font-size:26px;font-weight:600;letter-spacing:-0.03em;line-height:1.2;text-wrap:balance;}
 .nf-lead{margin:0 0 26px;font-size:15px;line-height:1.65;color:var(--ink-soft);text-wrap:pretty;}
 .nf-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
@@ -18,8 +19,15 @@ body.not-found{min-height:100vh;min-height:100dvh;display:flex;align-items:cente
 .nf-alt a:hover{color:var(--accent);text-decoration:underline;}
 .nf a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--r-md);}
 
+/* Sumi busca la página a los lados, una sola vez. */
+@media (prefers-reduced-motion: no-preference){
+  .nf-sumi .sumi-face{animation:nf-look 1.6s ease-in-out .5s 1;}
+}
+@keyframes nf-look{0%,100%{transform:translateX(0);}25%{transform:translateX(-2.2px);}65%{transform:translateX(2.2px);}}
+
 @media (max-width:480px){
-  .nf-code{font-size:64px;}
+  .nf-sumi{width:80px;height:80px;}
+  .nf-code{font-size:48px;}
   .nf h1{font-size:22px;}
   .nf-actions .nf-btn{flex:1 1 100%;}
 }

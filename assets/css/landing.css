@@ -44,7 +44,8 @@ ul,ol{padding:0;list-style:none;}
 a{color:inherit;}
 button{font:inherit;color:inherit;cursor:pointer;}
 svg.ico,.brand-mark svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none;}
-.brand-mark svg{stroke-width:8;}
+/* El logo es Sumi: una sola tinta rellena; los ojos llevan el color del cuadrado. */
+.brand-mark svg{fill:currentColor;stroke:none;}
 [hidden]{display:none !important;}
 :focus-visible{outline:2px solid var(--accent-solid);outline-offset:3px;border-radius:6px;}
 ::selection{background:color-mix(in srgb, var(--accent-solid) 22%, transparent);}

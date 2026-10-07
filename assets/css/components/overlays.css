@@ -78,7 +78,8 @@ dialog.cmdk[open]{display:flex;animation:cmdk-in .18s cubic-bezier(.2,.8,.2,1);}
 .cmdk-enter{flex:none;display:none;}
 .cmdk-item.is-active .cmdk-enter{display:inline-flex;}
 .cmdk-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:38px 16px 34px;text-align:center;color:var(--ink-faint);font-size:13px;}
-.cmdk-empty-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;color:var(--ink-soft);background:var(--surface-2);}
+/* Sin resultados: Sumi dormido, en la tinta del texto. */
+.cmdk-empty .sumi{color:var(--ink);}
 .cmdk-foot{
   display:flex;
   align-items:center;

@@ -18,7 +18,6 @@
   const MAIL_ICON = svg(14, '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>');
   const PHONE_ICON = svg(14, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>');
   const BOARD_ICON = svg(15, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/>');
-  const USERS_ICON = svg(22, '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>');
   const USER_ICON = svg(15, '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>');
   const ARROW_ICON = svg(14, '<path d="M7 17L17 7M8 7h9v9"/>');
   const LOCK_ICON = svg(15, '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>');
@@ -488,7 +487,7 @@
   /* Sin ningún cliente todavía: qué es esta sección y por dónde se empieza. */
   function emptyHtml(){
     return '<div class="cl-empty">' +
-      '<span class="cl-empty-ic" aria-hidden="true">' + USERS_ICON + '</span>' +
+      Workhub.views.sumi.svg({mood:'dormido', size:84}) +
       '<h2>' + esc(t('Aún no hay clientes')) + '</h2>' +
       '<p>' + esc(t('Añade el primero para llevar en un mismo sitio sus tareas, sus personas de contacto, sus reuniones y sus contraseñas.')) + '</p>' +
       '<button type="button" class="btn btn-primary" data-action="new-client">' + PLUS_ICON + esc(t('Nuevo cliente')) + '</button>' +

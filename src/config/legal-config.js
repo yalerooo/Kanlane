@@ -24,5 +24,5 @@ window.WORKHUB_LEGAL = {
   /* Fecha de la última revisión de los textos (AAAA-MM-DD) y número de versión. Súbela
      cuando cambies algo de fondo en las páginas legales. */
   actualizado: '2026-10-07',
-  version: 12
+  version: 13
 };

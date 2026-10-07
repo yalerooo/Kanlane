@@ -109,6 +109,15 @@ function memoryStore() {
     return Array.from(s.docs.entries()).filter(([p, d]) => p.indexOf(collection + '/') === 0 && p.split('/').length === 2 && d.data[field] !== undefined && d.data[field] < value)
       .slice(0, n).map(([p]) => p.slice(collection.length + 1));
   };
+  s.list = async (parent, collection, n, filter, order) => {
+    s.reads++;
+    const prefix = parent + '/' + collection + '/';
+    let rows = Array.from(s.docs.entries()).filter(([p]) => p.indexOf(prefix) === 0 && p.slice(prefix.length).indexOf('/') === -1)
+      .map(([p, d]) => ({id: p.slice(prefix.length), data: JSON.parse(JSON.stringify(d.data)), updateTime: 'v' + d.v}));
+    if (filter) rows = rows.filter((r) => { const v = r.data[filter.field]; return filter.op === 'EQUAL' ? v === filter.value : v !== undefined && v !== null && filter.value.indexOf(v) === -1; });
+    if (order) rows.sort((a, b) => (a.data[order.field] - b.data[order.field]) * (order.desc ? -1 : 1));
+    return rows.slice(0, n);
+  };
   s.commit = async (writes) => {
     s.commits++;
     if (s.failWhen && s.failWhen(writes)) throw Object.assign(new Error('POST :commit 503'), {status: 503});

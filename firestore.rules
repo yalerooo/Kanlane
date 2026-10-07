@@ -500,6 +500,8 @@ service cloud.firestore {
     // (configuración por proyecto), mail_seen (correos ya recibidos) y mail_rate (contadores) solo las
     // lee y escribe el servidor con su cuenta de servicio. Ningún cliente entra, ni el dueño: la
     // dirección se pide al servidor, que comprueba quién la pide. Lo prueba tests/rules/rules-test.js.
+    // Lo mismo el servidor MCP (worker/mcp.mjs, docs/MCP.md): mcp_tokens (hash de cada token →
+    // proyecto y quién lo creó) y mcp_rate (contadores) tampoco tienen regla.
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);
       allow delete: if canEdit(tid);

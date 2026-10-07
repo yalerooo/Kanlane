@@ -174,6 +174,27 @@ async function t(name, fn){
     await t('sin sesión, nada', () => assertFails(env.unauthenticatedContext().firestore().collection('mail_capture').doc(ids.mail_capture).get()));
   }
 
+  console.log('Servidor MCP: solo el servidor');
+  {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const admin = ctx.firestore();
+      await admin.collection('mcp_tokens').doc('m'.repeat(64)).set({v:1, id:'abcdefghijklmnop', key:'u~alice~main', kind:'u', uid:'alice', pid:'main', by:'alice', name:'Portátil', ro:false});
+      await admin.collection('mcp_rate').doc('u~alice~main~20261007').set({n:1, key:'u~alice~main', day:'20261007'});
+    });
+    const ids = {mcp_tokens:'m'.repeat(64), mcp_rate:'u~alice~main~20261007'};
+    for(const col of ['mcp_tokens', 'mcp_rate']){
+      await t(col + ': su dueña no lo lee', () => assertFails(alice.collection(col).doc(ids[col]).get()));
+      await t(col + ': ni lo lista', () => assertFails(alice.collection(col).get()));
+      await t(col + ': ni lo busca por quién lo creó', () => assertFails(alice.collection(col).where('by', '==', 'alice').get()));
+      await t(col + ': ni lo cambia', () => assertFails(alice.collection(col).doc(ids[col]).set({v:1, by:'alice'})));
+      await t(col + ': ni lo crea', () => assertFails(alice.collection(col).doc('nuevo').set({v:1, by:'alice', key:'u~alice~main'})));
+      await t(col + ': ni lo borra', () => assertFails(alice.collection(col).doc(ids[col]).delete()));
+      await t(col + ': otra cuenta tampoco', () => assertFails(bob.collection(col).doc(ids[col]).get()));
+    }
+    await t('nadie se apunta un token propio hacia el proyecto de otra persona', () => assertFails(bob.collection('mcp_tokens').doc('n'.repeat(64)).set({v:1, id:'abcdefghijklmnop', key:'u~alice~main', kind:'u', uid:'alice', pid:'main', by:'alice', name:'x', ro:false})));
+    await t('sin sesión, nada', () => assertFails(env.unauthenticatedContext().firestore().collection('mcp_tokens').doc(ids.mcp_tokens).get()));
+  }
+
   console.log('Contraseñas compartidas');
   {
     const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;

@@ -21,6 +21,8 @@ const emulator = args.indexOf('--emulador') !== -1;
 /* Entorno de la captura por correo con los emuladores (las pruebas de tests/e2e usan el mismo). */
 const CAPTURE_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT: 'demo-workhub', CAPTURE_SECRET: Buffer.alloc(32, 9).toString('base64'),
   CAPTURE_DOMAINS: 'in.kanlane.test,respaldo.kanlane.test', CAPTURE_PLAN: 'paid'};
+/* Entorno del servidor MCP con los emuladores. */
+const MCP_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT: 'demo-workhub', MCP_SECRET: Buffer.alloc(32, 7).toString('base64')};
 const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
@@ -116,6 +118,33 @@ const server = http.createServer((req, res) => {
       }
       import(require('url').pathToFileURL(path.join(ROOT, 'worker/capture.mjs')).href)
         .then((m) => m.manage(who, body, CAPTURE_ENV))
+        .then((out) => send(out.status, out.body), () => send(503, {error: 'unavailable'}));
+    });
+    return;
+  }
+
+  /* Servidor MCP, SOLO con los emuladores: el mismo código que el Worker (worker/mcp.mjs) contra el
+     Firestore emulado, con un secreto fijo. /tokens no verifica la firma del token de Firebase. */
+  if((url === '/__/mcp/v1' || url === '/__/mcp/v1/tokens') && emulator){
+    const send = (status, body) => { res.writeHead(status, {'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store'}); res.end(body === null ? '' : JSON.stringify(body)); };
+    if(req.method !== 'POST') return send(405, {error: 'method'});
+    let raw = '';
+    req.on('data', (chunk) => { if(raw.length <= 65536) raw += chunk; });
+    req.on('end', () => {
+      const bearer = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '');
+      const mcp = import(require('url').pathToFileURL(path.join(ROOT, 'worker/mcp.mjs')).href);
+      let body, who;
+      try{
+        body = JSON.parse(raw);
+        if(url === '/__/mcp/v1/tokens'){
+          const claims = JSON.parse(Buffer.from(bearer[1].split('.')[1], 'base64url').toString('utf8'));
+          who = {uid: claims.user_id || claims.sub};
+          if(!who.uid) throw new Error('auth');
+        }
+      }catch(e){
+        return send(url === '/__/mcp/v1' ? 400 : 401, {error: url === '/__/mcp/v1' ? 'request' : 'auth'});
+      }
+      (url === '/__/mcp/v1' ? mcp.then((m) => m.rpc(bearer ? bearer[1] : '', body, MCP_ENV)) : mcp.then((m) => m.manage(who, body, MCP_ENV)))
         .then((out) => send(out.status, out.body), () => send(503, {error: 'unavailable'}));
     });
     return;

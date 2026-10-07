@@ -23,7 +23,11 @@
    - /__/capture/v1: activar, desactivar, regenerar y configurar la dirección de un proyecto, con el
      mismo «Authorization» que /__/kms/. Lo que se pide va en el cuerpo: {op, pid | tid, stage, allow}.
    - `email`: el correo que Cloudflare Email Routing entrega a un dominio de captura. No es una
-     ruta: no se puede llamar desde fuera. */
+     ruta: no se puede llamar desde fuera.
+
+   Servidor MCP (docs/MCP.md, worker/mcp.mjs): un asistente lee y mueve las tareas de un proyecto.
+   - /__/mcp/v1: el servidor. JSON-RPC por POST con «Authorization: Bearer kl_…» (un token del proyecto).
+   - /__/mcp/v1/tokens: crear, ver y revocar esos tokens, con el mismo «Authorization» que /__/kms/. */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -94,6 +98,11 @@ const TOTP_TOKEN = /^[A-Za-z0-9_-]{64}$/;
 
 const CAPTURE_PATH = '/__/capture/v1';
 const CAPTURE_BODY_MAX = 4096;
+
+const MCP_PATH = '/__/mcp/v1';
+const MCP_TOKENS_PATH = '/__/mcp/v1/tokens';
+const MCP_BODY_MAX = 65536;
+const MCP_BEARER = /^Bearer (kl_[a-z2-7]{32})$/;
 
 const text = new TextEncoder();
 let jwks = {keys: null, until: 0};
@@ -236,6 +245,81 @@ async function capture(request, env, url) {
   }
 }
 
+/* Tokens del servidor MCP de un proyecto. Como en la captura: quién llama sale del ID token
+   verificado y qué puede hacer lo decide worker/mcp.mjs mirando el proyecto. */
+async function mcpTokens(request, env, url) {
+  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+  if (env.AUTH_RATE_LIMIT) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+  }
+  const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
+  let uid = null;
+  try {
+    uid = auth ? await verifiedUid(auth[1]) : null;
+  } catch (e) {
+    return json(503, {error: 'unavailable'});
+  }
+  if (!uid) return json(401, {error: 'auth'});
+  let body = null;
+  try {
+    const raw = await request.text();
+    if (raw.length <= CAPTURE_BODY_MAX) body = JSON.parse(raw);
+  } catch (e) { body = null; }
+  if (!body || typeof body !== 'object') return json(400, {error: 'request'});
+  try {
+    const m = await import('./mcp.mjs');
+    const out = await m.manage({uid: uid}, body, env);
+    return json(out.status, out.body);
+  } catch (e) {
+    console.error('mcp: ' + (e && e.message));
+    return json(503, {error: 'unavailable'});
+  }
+}
+
+/* El servidor MCP. No es para navegadores: una página de otro origen no entra (y la propia web no
+   lo usa). Dos límites: por IP, antes de mirar nada, y por token (MCP_RATE_LIMIT). Un token
+   inventado se descarta en worker/mcp.mjs sin leer la base de datos. En los registros no queda ni
+   el token ni el contenido. */
+async function mcp(request, env, url) {
+  const error = (status, code, message, extra) => json(status, {jsonrpc: '2.0', id: null, error: {code: code, message: message}}, extra);
+  if (request.method !== 'POST') return error(405, -32600, 'Use POST.', {Allow: 'POST'});
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return error(403, -32600, 'Origin not allowed.');
+  if (env.AUTH_RATE_LIMIT) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+    if (!success) return error(429, -32002, 'Too many requests.', {'Retry-After': '60'});
+  }
+  const auth = MCP_BEARER.exec(request.headers.get('Authorization') || '');
+  if (!auth) return error(401, -32001, 'Invalid or revoked token.', {'WWW-Authenticate': 'Bearer'});
+  if (env.MCP_RATE_LIMIT) {
+    /* Por el identificador del token (su primera mitad), que no es secreto. */
+    const {success} = await env.MCP_RATE_LIMIT.limit({key: 'mcp:' + auth[1].slice(3, 19)});
+    if (!success) return error(429, -32002, 'Too many requests.', {'Retry-After': '60'});
+  }
+  let message = null;
+  try {
+    const raw = await request.text();
+    if (raw.length > MCP_BODY_MAX) return error(413, -32600, 'Request too large.');
+    message = JSON.parse(raw);
+  } catch (e) {
+    return error(400, -32700, 'Parse error.');
+  }
+  try {
+    const m = await import('./mcp.mjs');
+    const out = await m.rpc(auth[1], message, env);
+    if (out.body === null) return new Response(null, {status: out.status, headers: {'Cache-Control': 'no-store'}});
+    return json(out.status, out.body, out.status === 401 ? {'WWW-Authenticate': 'Bearer'} : undefined);
+  } catch (e) {
+    console.error('mcp: ' + (e && e.message));
+    return error(503, -32000, 'Temporarily unavailable.');
+  }
+}
+
 async function jsonBody(request) {
   try {
     const raw = await request.text();
@@ -343,7 +427,11 @@ export default {
          (no a la vez) para no competir por las subpeticiones de la vuelta. */
       .then(() => import('./capture.mjs')).then((m) => m.sweep(env)).then((out) => {
         if (out.configured && (out.seen || out.rate)) console.log('captura: limpieza, ' + out.seen + ' marcas y ' + out.rate + ' contadores caducados');
-      }, (err) => console.error('captura: limpieza, ' + (err && err.message)));
+      }, (err) => console.error('captura: limpieza, ' + (err && err.message)))
+      /* Y los contadores del servidor MCP de días pasados. */
+      .then(() => import('./mcp.mjs')).then((m) => m.sweep(env)).then((out) => {
+        if (out.configured && out.rate) console.log('mcp: limpieza, ' + out.rate + ' contadores caducados');
+      }, (err) => console.error('mcp: limpieza, ' + (err && err.message)));
     ctx.waitUntil(job);
     return job;
   },
@@ -393,6 +481,8 @@ export default {
     if (url.pathname === KMS_PATH) return kms(request, env, url);
     if (url.pathname === TOTP_PATH) return totp(request, env, url);
     if (url.pathname === CAPTURE_PATH) return capture(request, env, url);
+    if (url.pathname === MCP_TOKENS_PATH) return mcpTokens(request, env, url);
+    if (url.pathname === MCP_PATH) return mcp(request, env, url);
 
     if (METHODS.indexOf(request.method) === -1) {
       return new Response('Método no permitido', {status: 405});

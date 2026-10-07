@@ -118,6 +118,8 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mail-capture.js"
       - name: Servidor MCP con Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mcp.js"
+      - name: Tokens del servidor MCP en Ajustes con Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mcp-settings.js"
       - name: Contraseñas compartidas de un equipo en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/team-vault.js"
       - name: Cambio de clave de un proyecto cifrado en Firebase emulado

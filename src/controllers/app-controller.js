@@ -59,6 +59,7 @@
       this.controllers.plugins = new C.PluginsController(this, new V.PluginsView());
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
+      this.controllers.mcp = new C.McpController(this, new V.McpView());
       this.controllers.reminders = new C.RemindersController(this, new V.RemindersView());
       this.controllers.automations = new C.AutomationsController(this, new V.AutomationsView());
       this.controllers.account = new C.AccountController(this, new V.AccountView());
@@ -157,7 +158,7 @@
       prefs.write(TAB_PREF, view);
       const c = this.controllers;
       if(view === 'tasks') c.tasks.board.fitHeight();
-      if(view === 'settings'){ c.settings.render(); c.account.render(); }
+      if(view === 'settings'){ c.settings.render(); c.account.render(); c.mcp.onShow(); }
       if(view === 'calendar') c.calendar.render();
       if(view === 'clients') c.clients.render();
       if(view === 'vault') c.vault.onShow();
@@ -350,6 +351,7 @@
       this.controllers.vault.onProjectChange();
       this.controllers.plugins.onProjectChange();
       this.controllers.github.onProjectChange();
+      this.controllers.mcp.onProjectChange();
       this.updateCounts();
     }
 

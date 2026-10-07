@@ -297,12 +297,14 @@
          importadas de copias antiguas no traen fechas reales de creación). */
       const known = (ts) => ts > 100000;
       this.facts.innerHTML = [
+        t.startDate ? fact('due', 'Fecha de inicio', '<span>' + esc(longDay(parseYmd(t.startDate), true)) + '</span>') : '',
         fact('due', 'Fecha límite', dueHtml(t)),
         assigneesFact(t),
         t.contacto ? fact('contact', 'Contacto', '<span translate="no">' + esc(t.contacto) + '</span>') : '',
         fact('repeat', 'Se repite', t.repeat ? esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || '')) : '<span class="tv-muted">' + esc(Workhub.t('No se repite')) + '</span>'),
         ghFact(t)
-      ].join('');
+      ].join('') + (Workhub.views.fields ? Workhub.views.fields.filled(t).map((f) =>
+        '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label" translate="no">' + esc(f.name) + '</span><div class="tv-prop-value tv-fact-value"><span translate="no">' + esc(f.text) + '</span></div></div>').join('') : '');
       /* Al pie de la columna: cuándo se creó y cuándo se tocó por última vez. */
       this.stamp.innerHTML = [
         known(t.createdAt) ? esc(Workhub.t('Creada')) + ' · ' + esc(fmtDateTime(t.createdAt)) : '',

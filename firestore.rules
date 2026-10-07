@@ -87,8 +87,10 @@ service cloud.firestore {
             'checklist', 'labels', 'assignees', 'linkedContacts', 'linkedVault',
             'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
-            'ghPrs', 'ghSyncedAt', 'ghRemoteAt'
+            'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom'
           ]) && textWithin(data, 'title', 500)
+          && textWithin(data, 'startDate', 10)
+          && data.get('custom', {}) is map && data.get('custom', {}).size() <= 50
           && textWithin(data, 'desc', 20000)
           && textWithin(data, 'cliente', 200)
           && textWithin(data, 'dueTime', 5)
@@ -113,7 +115,8 @@ service cloud.firestore {
         && (col != 'assets' || (data.keys().hasOnly(['data', 'contentType', 'createdAt'])
           && textWithin(data, 'data', 900000)))
         && (col != 'projects' || (textWithin(data, 'nombre', 200)
-          && listWithin(data, 'stages', 500) && listWithin(data, 'labels', 1000)))
+          && listWithin(data, 'stages', 500) && listWithin(data, 'labels', 1000)
+          && listWithin(data, 'customFields', 50)))
         && (col != 'notes' || (data.keys().hasOnly([
             'text', 'imageAssetId', 'createdAt', 'kind', 'actorUid', 'actorName',
             'attachments', 'assetIds'

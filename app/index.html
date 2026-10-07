@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="../assets/css/components/projects.css">
   <link rel="stylesheet" href="../assets/css/components/extensions.css">
   <link rel="stylesheet" href="../assets/css/views/board.css">
+  <link rel="stylesheet" href="../assets/css/views/task-views.css">
   <link rel="stylesheet" href="../assets/css/views/task-detail.css">
   <link rel="stylesheet" href="../assets/css/components/rich.css">
   <link rel="stylesheet" href="../assets/css/views/automations.css">
@@ -240,6 +241,8 @@
       <div class="segmented" id="taskMode" role="radiogroup" aria-label="Vista de las tareas">
         <button type="button" role="radio" data-task-mode="board" aria-checked="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10" rx="1.5"/><rect x="16" y="4" width="5" height="13" rx="1.5"/></svg>Tablero</button>
         <button type="button" role="radio" data-task-mode="list" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>Lista</button>
+        <button type="button" role="radio" data-task-mode="table" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabla</button>
+        <button type="button" role="radio" data-task-mode="timeline" aria-checked="false"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M8 12h11M5 18h7"/></svg>Cronograma</button>
       </div>
       <button type="button" class="btn btn-ghost btn-sm gh-sync" id="btnGhSync" hidden></button>
       <div class="ext-slot" data-ext-slot="tasks.toolbar" hidden></div>
@@ -254,6 +257,7 @@
         </div>
       </div>
       <button type="button" class="icon-only" id="btnTaskSelect" aria-label="Seleccionar tareas" title="Seleccionar varias tareas" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.8 2.8L16 9.5"/></svg></button>
+      <button type="button" class="icon-only" id="btnFields" aria-label="Campos personalizados" title="Campos personalizados" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="11" height="6" rx="2"/><path d="M18 14v6M15 17h6"/></svg></button>
       <button type="button" class="icon-only" id="btnAutomations" aria-label="Automatizaciones" title="Automatizaciones" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
       <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
     </div>
@@ -380,6 +384,11 @@
       <p class="sr-only" id="boardKeyboardStatus" role="status" aria-live="polite"></p>
       <div class="board" id="board" hidden></div>
       <div class="task-list" id="taskList"></div>
+      <div class="task-table" id="taskTable" role="region" aria-label="Tareas en tabla"></div>
+      <p class="sr-only" id="tableStatus" role="status" aria-live="polite"></p>
+      <div class="task-timeline" id="taskTimeline" role="region" aria-label="Cronograma de tareas"></div>
+      <p class="sr-only" id="timelineHelp">Pulsa Intro para abrir la tarea. Con Alt y las flechas izquierda o derecha se mueve un día; con Alt, Mayús y las flechas cambia su fecha límite.</p>
+      <p class="sr-only" id="timelineStatus" role="status" aria-live="polite"></p>
     </div>
   </section>
 
@@ -926,10 +935,14 @@
         </select>
       </div>
     </div>
+    <div class="field">
+      <label for="fContacto">Contacto (opcional)</label>
+      <input id="fContacto" maxlength="80" placeholder="Nombre / email">
+    </div>
     <div class="row2">
       <div class="field">
-        <label for="fContacto">Contacto (opcional)</label>
-        <input id="fContacto" maxlength="80" placeholder="Nombre / email">
+        <label for="fInicio">Fecha de inicio (opcional)</label>
+        <input id="fInicio" type="date" data-dp>
       </div>
       <div class="field">
         <label for="fFecha">Fecha límite y hora (opcional)</label>
@@ -947,6 +960,10 @@
         <option value="yearly">Cada año</option>
       </select>
       <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
+    </div>
+    <div class="field" id="fCustomField" hidden>
+      <span class="field-label" id="fCustomLabel">Campos personalizados</span>
+      <div class="cf-form" id="fCustom" role="group" aria-labelledby="fCustomLabel"></div>
     </div>
     <div class="field" id="fChecklistField">
       <div class="check-heading"><span class="field-label" id="fChecklistLabel">Subtareas</span><span class="check-summary" id="fChecklistSummary" hidden></span></div>
@@ -985,6 +1002,7 @@
         <option value="">+ Vincular contraseña existente…</option>
       </select>
     </div>
+    <p class="lock-error" id="fFormError" role="alert" hidden></p>
     <div class="dlg-actions">
       <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
       <div class="right">
@@ -993,6 +1011,39 @@
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlgFields" aria-labelledby="cfTitle">
+  <div class="dlg-inner">
+    <h2 id="cfTitle">Campos personalizados</h2>
+    <p class="dlg-lead">Datos propios de este proyecto que puedes rellenar en cada tarea.</p>
+    <div class="cf-list" id="cfList"></div>
+    <div class="cf-new">
+      <div class="field">
+        <label for="cfNewName">Nuevo campo</label>
+        <input id="cfNewName" maxlength="60" autocomplete="off" placeholder="Nombre del campo">
+      </div>
+      <div class="field">
+        <label for="cfNewType">Tipo</label>
+        <select id="cfNewType">
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Fecha</option>
+          <option value="checkbox">Casilla de verificación</option>
+          <option value="select">Lista desplegable</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-ghost" id="cfNewAdd">Añadir campo</button>
+    </div>
+    <p class="field-help">El tipo se elige al crear el campo. «En la tarjeta» enseña su valor en el tablero.</p>
+    <p class="lock-error" id="cfError" role="alert" hidden></p>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnFieldsCancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnFieldsSave">Guardar</button>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="dlgTaskView" class="task-view" aria-labelledby="tvTitle">
@@ -2006,6 +2057,7 @@
 <script src="../src/models/collection-model.js"></script>
 <script src="../src/models/client-model.js"></script>
 <script src="../src/models/project-templates.js"></script>
+<script src="../src/models/custom-fields.js"></script>
 <script src="../src/models/task-model.js"></script>
 <script src="../src/models/contact-model.js"></script>
 <script src="../src/models/meeting-model.js"></script>
@@ -2037,7 +2089,10 @@
 <script src="../src/views/date-picker.js"></script>
 <script src="../src/views/client-select.js"></script>
 <script src="../src/views/shell-view.js"></script>
+<script src="../src/views/custom-fields-view.js"></script>
 <script src="../src/views/board-view.js"></script>
+<script src="../src/views/task-table-view.js"></script>
+<script src="../src/views/task-timeline-view.js"></script>
 <script src="../src/views/column-view.js"></script>
 <script src="../src/views/task-dialog-view.js"></script>
 <script src="../src/views/task-detail-view.js"></script>

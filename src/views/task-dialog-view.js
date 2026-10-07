@@ -22,8 +22,15 @@
         estado: $('fEstado'),
         contacto: $('fContacto'),
         fecha: $('fFecha'),
+        inicio: $('fInicio'),
         repeat: $('fRepeat')
       };
+      /* Campos personalizados del proyecto (los pinta Workhub.views.fields). */
+      this.customField = $('fCustomField');
+      this.customEl = $('fCustom');
+      this.formError = $('fFormError');
+      this.form.addEventListener('input', () => { this.formError.hidden = true; });
+      this.form.addEventListener('change', () => { this.formError.hidden = true; });
       /* Subtareas: [{id, text, done}]. */
       this.checklist = [];
       this.checkList = $('fChecklist');
@@ -177,8 +184,34 @@
         const at = document.activeElement;
         if(at === this.checkNew){ this._addCheck(); return; }
         if(at && this.checkList.contains(at) && at.matches('input[type=text]')){ this.checkNew.focus(); return; }
-        handler(this.fields.id.value, this.values());
+        const extra = this._extras();
+        if(extra.error){
+          showMessage(this.formError, extra.error);
+          if(extra.el && extra.el.focus) extra.el.focus();
+          return;
+        }
+        handler(this.fields.id.value, this.values(extra));
       });
+    }
+
+    /* Fecha de inicio y campos personalizados: {startDate, custom} o {error, el} si algo no vale. */
+    _extras(){
+      const start = this.fields.inicio.value || '';
+      const due = this.fields.fecha.value || '';
+      if(start && due && start > due){
+        return {error:'La fecha de inicio no puede ser posterior a la fecha límite.', el:this.fields.inicio.parentNode.querySelector('.dp-trigger') || this.fields.inicio};
+      }
+      const read = Workhub.views.fields.readForm(this.customEl);
+      if(read.error) return read;
+      return {startDate:start, custom:read.values};
+    }
+
+    _renderCustom(custom){
+      const list = Workhub.views.fields.list();
+      this.customField.hidden = !list.length;
+      this.customEl.innerHTML = Workhub.views.fields.formHtml(custom);
+      Workhub.views.Dropdown.enhanceAll(this.customEl);
+      Workhub.views.DatePicker.enhanceAll(this.customEl);
     }
 
     bindCancel(handler){ this.btnCancel.addEventListener('click', handler); }
@@ -353,7 +386,8 @@
 
     /* ---------- Estado del formulario ---------- */
 
-    values(){
+    values(extra){
+      extra = extra || this._extras();
       const fecha = this.fields.fecha.value || '';
       const hora = fecha ? this._hora().value || '' : '';
       const values = {
@@ -372,6 +406,9 @@
       };
       /* La hora solo se escribe si la hay o si hay que quitar la que tenía: las tareas sin hora no llevan el campo. */
       if(hora || this.hadTime) values.dueTime = hora;
+      /* Lo mismo con el inicio y los campos personalizados: una tarea que no los usa no los lleva. */
+      if(extra.startDate || this.hadStart) values.startDate = extra.startDate || '';
+      if(extra.custom && (Object.keys(extra.custom).length || this.hadCustom)) values.custom = extra.custom;
       return values;
     }
 
@@ -383,6 +420,9 @@
       this.resetNoteForm();
       this.fields.id.value = '';
       this.hadTime = false;
+      this.hadStart = this.hadCustom = false;
+      this.formError.hidden = true;
+      this._renderCustom({});
       this.checklist = [];
       this._renderChecklist();
       this.selected = [];
@@ -411,6 +451,11 @@
       this.fields.fecha.value = t.dueDate || '';
       this._hora().value = t.dueDate ? (t.dueTime || '') : '';
       this.hadTime = !!t.dueTime;
+      this.fields.inicio.value = t.startDate || '';
+      this.hadStart = !!t.startDate;
+      this.hadCustom = !!(t.custom && Object.keys(t.custom).length);
+      this.formError.hidden = true;
+      this._renderCustom(t.custom || {});
       this.fields.repeat.value = t.repeat || '';
       this.checklist = (Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text || '', done:!!c.done}));
       this._renderChecklist();

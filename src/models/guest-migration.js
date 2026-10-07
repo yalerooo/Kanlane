@@ -89,6 +89,7 @@
     if(typeof data.createdAt !== 'number') data.createdAt = Date.now();
     if(Array.isArray(data.stages)) data.stages = data.stages.slice(0, MAX_STAGES);
     if(Array.isArray(data.labels)) data.labels = data.labels.slice(0, MAX_LABELS);
+    if(Array.isArray(data.customFields)) data.customFields = data.customFields.slice(0, 50);
     return data;
   }
 

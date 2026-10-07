@@ -6,8 +6,10 @@
   const clientColors = Workhub.views.clientColors;
   const {fmtDate, ymd} = Workhub.utils.dates;
   const prefs = Workhub.services.preferences;
-  /* Tablero o lista: se recuerda en este navegador. */
+  /* Tablero, lista, tabla o cronograma: se recuerda en este navegador. La tabla y el cronograma
+     los pintan TaskTableView y TaskTimelineView (el controlador decide cuál toca). */
   const MODE_KEY = 'workhub_task_mode';
+  const MODES = ['board', 'list', 'table', 'timeline'];
   /* Clientes que se ofrecen como filtro rápido (los que más tareas abiertas tienen). */
   const QUICK_CLIENTS = 5;
 
@@ -47,7 +49,9 @@
       this.filterClear = document.getElementById('btnTaskFilterClear');
       /* Filtro rápido «Vencen esta semana». */
       this.week = false;
-      this.mode = prefs.read(MODE_KEY, 'board') === 'list' ? 'list' : 'board';
+      this.mode = prefs.read(MODE_KEY, 'board');
+      /* Solo las vistas que esta página ofrece (la demo no trae tabla ni cronograma). */
+      if(MODES.indexOf(this.mode) === -1 || !this.modeSeg || !this.modeSeg.querySelector('[data-task-mode="' + this.mode + '"]')) this.mode = 'board';
       this._applyMode();
       this._bindFilterPanel();
 
@@ -153,8 +157,10 @@
       if(this.modeSeg) this.modeSeg.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-task-mode]');
         if(!b) return;
-        this.mode = b.getAttribute('data-task-mode') === 'list' ? 'list' : 'board';
+        this.mode = MODES.indexOf(b.getAttribute('data-task-mode')) === -1 ? 'board' : b.getAttribute('data-task-mode');
         prefs.write(MODE_KEY, this.mode);
+        /* La selección múltiple es del tablero y de la lista. */
+        if(this.mode !== 'board' && this.mode !== 'list') this.setSelecting(false);
         this._applyMode();
         handler();
       });
@@ -202,7 +208,7 @@
     }
 
     canSelect(){
-      return !!this.selectReady && Workhub.views.team.canEdit();
+      return !!this.selectReady && Workhub.views.team.canEdit() && (this.mode === 'board' || this.mode === 'list');
     }
 
     setSelecting(on){
@@ -274,9 +280,12 @@
 
     _applyMode(){
       const list = this.mode === 'list';
-      if(this.wrap) this.wrap.classList.toggle('is-list', list);
+      if(this.wrap){
+        this.wrap.classList.toggle('is-list', list);
+        this.wrap.setAttribute('data-mode', this.mode);
+      }
       if(this.modeSeg) this.modeSeg.querySelectorAll('button').forEach((b) => {
-        b.setAttribute('aria-checked', (b.getAttribute('data-task-mode') === 'list') === list ? 'true' : 'false');
+        b.setAttribute('aria-checked', b.getAttribute('data-task-mode') === this.mode ? 'true' : 'false');
       });
     }
 
@@ -743,6 +752,7 @@
       t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '',
       who ? '<span class="card-assignees">' + who + '</span>' : ''
     ].join('');
+    const custom = Workhub.views.fields ? Workhub.views.fields.cardHtml(t) : '';
     const contact = t.contacto ? '<div class="card-contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></div>' : '';
     return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + (TaskModel.isDone(t) ? ' is-done' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
       (top ? '<div class="card-top">' + top + '</div>' : '') +
@@ -750,6 +760,7 @@
       (t.desc ? '<p translate="no">' + esc(Workhub.utils.markdown.plain(t.desc)) + '</p>' : '') +
       (Array.isArray(t.ghPrs) && t.ghPrs.length ? '<div class="card-prs">' + Workhub.views.labels.prs(t.ghPrs, 4) + '</div>' : '') +
       contact +
+      (custom ? '<div class="card-fields">' + custom + '</div>' : '') +
       (foot ? '<div class="card-foot">' + foot + '</div>' : '') +
       (ext ? '<div class="ext-badges">' + ext + '</div>' : '') +
       '</article>';

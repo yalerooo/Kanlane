@@ -14,7 +14,8 @@ const vault = {
   add:async (entry) => { saved.push(entry); }
 };
 const Workhub = {utils:{urls:{safeUrl:(url) => url || ''}}, models:{}};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../src/models/backup-model.js'), 'utf8'), {Workhub, Date, Promise, JSON, String});
+const sandbox = vm.createContext({Workhub, Date, Promise, JSON, String, Math, Number, Object, Array});
+['custom-fields', 'backup-model'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(__dirname, '../../src/models/' + f + '.js'), 'utf8'), sandbox));
 const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meetings:empty, clients:empty, vault});
 
 (async () => {

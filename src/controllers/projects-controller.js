@@ -182,6 +182,7 @@
       this.view.renderCurrent(p, this.projects.hueOf(p));
       this.app.applyProjectConfig(this.projects.configOf(p));
       this.applyLabels(p);
+      this.applyCustomFields(p);
       this.applyTeam(p);
       document.title = this.projects.list().length > 1 ? p.nombre + ' · Kanlane' : 'Kanlane';
     }
@@ -231,6 +232,34 @@
       Workhub.views.labels.setCatalog(list);
       const t = this.app.controllers.tasks;
       if(t){ t.render(); t.refreshDetail(); t.dialog.setLabelCatalog(list); }
+    }
+
+    /* Campos personalizados del proyecto abierto (models/custom-fields.js). */
+    customFields(){
+      const p = this.current();
+      return Workhub.models.CustomFields.normalize(p && p.customFields);
+    }
+
+    applyCustomFields(p){
+      const list = Workhub.models.CustomFields.normalize(p && p.customFields);
+      const sig = JSON.stringify(list);
+      if(sig === this.fieldsSig) return;
+      this.fieldsSig = sig;
+      Workhub.views.fields.set(list);
+      const t = this.app.controllers.tasks;
+      if(t){ t.render(); t.refreshDetail(); }
+    }
+
+    /* Guarda las definiciones (crear, renombrar, ordenar, quitar). Se ve al instante. */
+    saveCustomFields(list){
+      const p = this.current();
+      if(!p || !this.projects.isReady() || !Workhub.views.team.canEdit()) return Promise.resolve(false);
+      const clean = Workhub.models.CustomFields.normalize(list);
+      this.applyCustomFields({customFields:clean});
+      return this.projects.patch(p.id, {customFields:clean.length ? clean : null}).then(() => true, () => {
+        this.applyCustomFields(this.current());
+        return false;
+      });
     }
 
     /* Etiqueta nueva desde el formulario de tarea. */

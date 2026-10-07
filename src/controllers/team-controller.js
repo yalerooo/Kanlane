@@ -328,7 +328,7 @@
         this.view.close();
         const pc = this.app.controllers.projects;
         pc.justCreated = t.id;
-        this.app.rememberProject({id:t.id, nombre:p.nombre, color:p.color, tipo:p.tipo, stages:p.stages, clients:p.clients, labels:p.labels, enc:prepared ? true : undefined});
+        this.app.rememberProject({id:t.id, nombre:p.nombre, color:p.color, tipo:p.tipo, stages:p.stages, clients:p.clients, labels:p.labels, customFields:p.customFields, enc:prepared ? true : undefined});
         this.app.switchProject(t.id);
         if(t.skipped){
           /* Algo no se pudo leer: el original se queda, para no perderlo. El enlace con GitHub pasa

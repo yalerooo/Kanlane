@@ -38,6 +38,7 @@ jobs:
           node tests/crypto/key-rotation.test.js
           node tests/crypto/project-convert.test.js
           node tests/backup/backup.test.js
+          node tests/fields/custom-fields.test.js
           node tests/trello/trello-import.test.js
           node tests/assets/limits.test.js
           node tests/markdown/markdown.test.js

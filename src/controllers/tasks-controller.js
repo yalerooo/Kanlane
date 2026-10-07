@@ -55,6 +55,30 @@
       this.columns = new Workhub.views.ColumnView();
       this.bindColumns();
 
+      /* Tabla y cronograma: otras dos vistas de las mismas tareas. */
+      this.table = new Workhub.views.TaskTableView();
+      this.table.bind({
+        open: (id) => this.openDetail(id),
+        create: () => this.openNew(),
+        title: (id, title) => this.patchTask(id, {title:title}),
+        status: (id, status) => this.moveWithActivity(id, status),
+        labels: (id, labels) => this.patchTask(id, {labels:labels}),
+        assignees: (id, uids) => this.patchTask(id, {assignees:uids}),
+        due: (id, date) => this.setDue(id, date)
+      });
+      this.timeline = new Workhub.views.TaskTimelineView();
+      this.timeline.bind({
+        open: (id) => this.openDetail(id),
+        range: (id, start, due) => this.setRange(id, start, due)
+      });
+      this.fields = new Workhub.views.FieldsDialogView();
+      document.getElementById('btnFields').addEventListener('click', () => this.openFields());
+      this.fields.bindSave((list) => this.app.controllers.projects.saveCustomFields(list).then((ok) => {
+        if(ok) toast.success('Campos guardados');
+        return ok;
+      }));
+      this.fields.bindRemove((field) => this.removeField(field));
+
       this.dialog.cliente.bindCreate((name) => app.createClient(name));
       this.dialog.bindCreateLabel((name, color) => app.controllers.projects.addLabel(name, color));
       this.dialog.setLabelCatalog(Workhub.views.labels.catalog());
@@ -120,6 +144,80 @@
       let list = this.tasks.filter(f.query, f.cliente, f.assignee);
       if(f.week) list = this.board.dueThisWeek(list);
       this.board.render(list, this.tasks.items);
+      if(this.board.mode === 'table') this.table.render(list, this.tasks.items);
+      else if(this.board.mode === 'timeline'){
+        this.timeline.setHidden(this.hiddenColumns());
+        this.timeline.render(list, this.tasks.items);
+      }
+    }
+
+    /* ---------- Tabla y cronograma ---------- */
+
+    /* Cambio hecho en una celda de la tabla: se ve al momento y se guarda. */
+    patchTask(id, patch){
+      const t = this.tasks.find(id);
+      if(!t || t._undecryptable || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return false;
+      this.tasks.patchLocal(id, patch);
+      this.tasks.save(id, Object.assign({}, patch)).then(() => this.logActivity(id, 'editó la tarea'), () => toast.error('No se pudo guardar la tarea'));
+      return true;
+    }
+
+    /* Fecha límite desde la tabla ('' la quita, y con ella la hora y la repetición). */
+    setDue(id, date){
+      const t = this.tasks.find(id);
+      if(!t || (date && !Workhub.models.CustomFields.validDate(date))) return false;
+      if(date && t.startDate && t.startDate > date){
+        toast.error('La fecha límite no puede ser anterior a la fecha de inicio.');
+        return false;
+      }
+      const patch = {dueDate:date};
+      if(!date){
+        if(t.repeat) patch.repeat = '';
+        if(t.dueTime) patch.dueTime = '';
+      }
+      return this.patchTask(id, patch);
+    }
+
+    /* Intervalo de la tarea desde el cronograma (arrastre o teclado). */
+    setRange(id, start, due){
+      const t = this.tasks.find(id);
+      if(!t || t._undecryptable || !Workhub.views.team.canEdit()) return false;
+      if(start && due && start > due){
+        toast.error('La fecha de inicio no puede ser posterior a la fecha límite.');
+        return false;
+      }
+      if(!this.tasks.setRange(id, start, due)) return false;
+      this.logActivity(id, 'cambió las fechas de la tarea');
+      return true;
+    }
+
+    /* ---------- Campos personalizados ---------- */
+
+    openFields(){
+      if(!Workhub.views.team.canEdit() || !this.tasks.isReady()) return;
+      this.fields.open(this.app.controllers.projects.customFields());
+    }
+
+    /* Avisa, quita el campo del proyecto y borra su valor de las tareas. → promesa con true si se borró. */
+    removeField(field){
+      const CF = Workhub.models.CustomFields;
+      const pc = this.app.controllers.projects;
+      const n = CF.usedBy(this.tasks.items, field.id).length;
+      const text = n === 0 ? Workhub.t('Se eliminará el campo «{name}». No se puede deshacer.', {name:field.name})
+        : n === 1 ? Workhub.t('Se eliminará el campo «{name}» y el valor que tiene en 1 tarea. No se puede deshacer.', {name:field.name})
+        : Workhub.t('Se eliminará el campo «{name}» y el valor que tiene en {n} tareas. No se puede deshacer.', {name:field.name, n:n});
+      return this.columns.confirm('Eliminar campo', text, 'Eliminar campo').then((ok) => {
+        if(!ok) return false;
+        return pc.saveCustomFields(pc.customFields().filter((f) => f.id !== field.id)).then((saved) => {
+          if(!saved){ toast.error('No se pudo eliminar el campo'); return false; }
+          const now = Date.now();
+          const used = CF.usedBy(this.tasks.items, field.id).filter((t) => !t._undecryptable);
+          return Promise.all(used.map((t) => this.tasks.update(t.id, {custom:CF.without(t.custom, field.id), updatedAt:now}).catch(() => null))).then(() => {
+            toast.success('Campo eliminado');
+            return true;
+          });
+        });
+      });
     }
 
     logActivity(id, text){
@@ -164,6 +262,8 @@
     applyTeam(){
       const T = Workhub.views.team;
       this.board.setAssigneeOptions(T.members(), T.meUid());
+      /* Los campos del proyecto los define quien puede editarlo. */
+      document.getElementById('btnFields').hidden = !T.canEdit();
       this.render();
       this.refreshDetail();
     }

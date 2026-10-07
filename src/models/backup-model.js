@@ -26,6 +26,11 @@
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   }
 
+  /* Campos personalizados del proyecto abierto. */
+  function projectFields(){
+    return Workhub.views && Workhub.views.fields ? Workhub.views.fields.list() : [];
+  }
+
   class BackupModel {
     constructor(models){
       this.models = models;
@@ -53,6 +58,8 @@
             exportedAt: new Date().toISOString(),
             formatVersion: FORMAT_VERSION,
             project: projectName || '',
+            /* Definiciones de los campos personalizados (los valores van en cada tarea, en custom). */
+            customFields: projectFields(),
             clients: m.clients.items,
             tasks: tasksWithNotes,
             meetings: m.meetings.items,
@@ -95,12 +102,23 @@
         return m.clients.add(client);
       });
 
+      /* Campos personalizados: las definiciones que este proyecto no tiene se añaden; los valores de
+         cada tarea se quedan con los de los campos que existan al terminar. */
+      const CF = Workhub.models.CustomFields;
+      const had = projectFields();
+      const fields = CF.merge(had, data.customFields);
+      const fieldsSaved = fields.length > had.length && this.onCustomFields ? Promise.resolve(this.onCustomFields(fields)).catch(() => false) : Promise.resolve(true);
+
       const taskPromises = list(data.tasks).map((t) => {
         if(!t || !t.title) return Promise.resolve();
+        const extra = {};
+        if(CF.validDate(t.startDate) && (!t.dueDate || t.startDate <= t.dueDate)) extra.startDate = t.startDate;
+        const custom = CF.values(fields, t.custom);
+        if(Object.keys(custom).length) extra.custom = custom;
         /* linkedContacts/linkedVault no se importan: guardan ids de documentos
            que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
         counts.tasks++;
-        return m.tasks.add(Object.assign(t.dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') ? {dueTime:t.dueTime} : {}, {
+        return m.tasks.add(Object.assign(t.dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') ? {dueTime:t.dueTime} : {}, extra, {
           title: t.title || '',
           desc: t.desc || '',
           cliente: t.cliente || '',
@@ -157,7 +175,7 @@
         });
       });
 
-      return Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises)).then(() => {
+      return Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises, [fieldsSaved])).then(() => {
         return this.inTeam() ? null : m.vault.getMeta();
       }).then((metaSnap) => {
         const vaultData = data.vault || {};

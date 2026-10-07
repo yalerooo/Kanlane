@@ -8,6 +8,15 @@
    Cada ejecución deja su línea en la actividad de la tarea y su marca en
    plugin_data/kanlane.automations.state, para que ni el servidor ni un navegador la repitan.
 
+   Permisos: lo que autoriza una ejecución es la copia, y las reglas de Firestore solo dejan
+   escribirla al dueño. Aquí se vuelve a comprobar (la cuenta de servicio salta esas reglas): el
+   identificador y los campos tienen que decir lo mismo y, en un equipo, quien dejó la copia tiene
+   que seguir siendo su propietario. Si no, la copia se borra y no se ejecuta nada.
+
+   Dos a la vez (otra vuelta del cron, o un navegador abierto): todo lo de un proyecto se escribe
+   en una sola operación, condicionada a que ni las tareas ni las marcas hayan cambiado desde que
+   se leyeron. Si algo cambió, no se escribe nada ('conflict') y se reintenta en la vuelta siguiente.
+
    Qué no hace:
    - No toca proyectos con cifrado total: no puede leerlos (no tiene su clave) y la app no deja
      copia de sus reglas. Si aun así encuentra tareas selladas, borra la copia y no escribe nada.
@@ -148,12 +157,12 @@ export function restStore(env, deps) {
       body: body ? JSON.stringify(body) : undefined
     });
     if (res.status === 404) return null;
-    if (!res.ok) throw new Error(method + ' ' + path.slice(docs.length) + ' ' + res.status);
+    if (!res.ok) throw Object.assign(new Error(method + ' ' + path.slice(docs.length) + ' ' + res.status), {status: res.status});
     return res.json();
   };
   const idOf = (name) => name.slice(name.lastIndexOf('/') + 1);
   const query = (parent, structuredQuery) => call('POST', docs + (parent ? '/' + parent : '') + ':runQuery', {structuredQuery: structuredQuery})
-    .then((rows) => (rows || []).filter((r) => r.document).map((r) => ({id: idOf(r.document.name), data: decodeFields(r.document.fields)})));
+    .then((rows) => (rows || []).filter((r) => r.document).map((r) => ({id: idOf(r.document.name), data: decodeFields(r.document.fields), updateTime: r.document.updateTime || ''})));
   const field = (path) => ({field: {fieldPath: path}});
   return {
     /* Los siguientes `n` trabajos por orden de identificador, a partir de `after`. */
@@ -163,6 +172,8 @@ export function restStore(env, deps) {
       limit: n
     }, after ? {startAt: {values: [{referenceValue: docs + '/automation_jobs/' + after}], before: false}} : {})),
     get: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? decodeFields(doc.fields) : null)),
+    /* Como get, con la marca de la última escritura: {data, updateTime} | null. */
+    getDoc: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? {data: decodeFields(doc.fields), updateTime: doc.updateTime || ''} : null)),
     /* Tareas del proyecto con fecha límite hasta `maxDate` (incluye las vencidas). */
     tasksDue: (root, maxDate) => query(root, {
       from: [{collectionId: 'tasks'}],
@@ -172,13 +183,15 @@ export function restStore(env, deps) {
       ]}},
       limit: TASKS_PER_JOB
     }),
-    /* writes: [{path, set:{…}} | {path, patch:{…}} | {path, create:{…}} | {path, remove:true}], todo o nada. */
+    /* writes: [{path, set:{…}} | {path, patch:{…}, updateTime} | {path, create:{…}} | {path, remove:true}], todo o nada.
+       Un `patch` con `updateTime` solo entra si el documento no ha cambiado desde esa lectura. */
     commit: (writes) => call('POST', db + '/documents:commit', {writes: writes.map((w) => {
       const name = docs + '/' + w.path;
       if (w.remove) return {delete: name};
       if (w.create) return {update: {name: name, fields: encodeFields(w.create)}, currentDocument: {exists: false}};
       if (w.set) return {update: {name: name, fields: encodeFields(w.set)}};
-      return {update: {name: name, fields: encodeFields(w.patch)}, updateMask: {fieldPaths: w.mask || Object.keys(w.patch)}, currentDocument: {exists: true}};
+      return {update: {name: name, fields: encodeFields(w.patch)}, updateMask: {fieldPaths: w.mask || Object.keys(w.patch)},
+        currentDocument: w.updateTime ? {updateTime: w.updateTime} : {exists: true}};
     })})
   };
 }
@@ -210,8 +223,20 @@ function newId() {
   return b64url(bytes).replace(/[-_]/g, 'x');
 }
 
+/* ¿Sigue pudiendo quien dejó la copia cambiar las automatizaciones de ese proyecto? En uno personal
+   el identificador ya lo dice (u~uid~…: es su árbol). En un equipo hay que mirarlo: solo vale si
+   sigue siendo el propietario. → 'ok' | 'gone' (el equipo ya no existe) | 'not-owner' */
+async function ownership(job, store) {
+  if (job.kind !== 't') return 'ok';
+  const team = await store.get('teams/' + job.tid);
+  if (!team) return 'gone';
+  const member = team.members && team.members[job.uid];
+  return team.ownerUid === job.uid && member && member.role === 'owner' && list(team.memberIds).indexOf(job.uid) !== -1 ? 'ok' : 'not-owner';
+}
+
 /* Ejecuta las reglas por fecha de un proyecto. → {status, ran, warns}
-   status: 'ok' | 'bad-job' | 'no-rules' | 'encrypted' (se borra la copia) | 'idle'. */
+   status: 'ok' | 'bad-job' | 'no-rules' | 'idle' | 'conflict' (algo cambió mientras tanto: nada escrito)
+     | 'encrypted' | 'gone' | 'not-owner' (en estos tres se borra la copia). */
 export async function runJob(id, job, store, nowMs) {
   const root = rootOf(id, job);
   if (!root || job.v !== 1) return {status: 'bad-job', ran: 0, warns: []};
@@ -222,12 +247,17 @@ export async function runJob(id, job, store, nowMs) {
 
   const today = todayIn(job.tz, nowMs);
   const maxDate = addDays(today, Math.max.apply(null, due.map((r) => r.trigger.days)));
-  const [found, state] = await Promise.all([store.tasksDue(root, maxDate), store.get(root + '/' + STATE_DOC)]);
-  /* Tareas o marcas selladas: el proyecto pasó a cifrado total. No se toca y la copia sobra. */
-  if (found.some((t) => t.data.ev) || (state && state.ev)) {
+  const [found, stateDoc, owner] = await Promise.all([store.tasksDue(root, maxDate), store.getDoc(root + '/' + STATE_DOC), ownership(job, store)]);
+  const state = stateDoc && stateDoc.data;
+  const drop = async (status) => {
     await store.commit([{path: 'automation_jobs/' + id, remove: true}]);
-    return {status: 'encrypted', ran: 0, warns: []};
-  }
+    return {status: status, ran: 0, warns: []};
+  };
+  if (owner !== 'ok') return drop(owner);
+  /* Tareas o marcas selladas: el proyecto pasó a cifrado total. No se toca y la copia sobra. */
+  if (found.some((t) => t.data.ev) || (state && state.ev)) return drop('encrypted');
+  const read = {};
+  found.forEach((t) => { read[t.id] = t.updateTime || ''; });
   const tasks = found.filter((t) => DAY.test(String(t.data.dueDate || ''))).map((t) => Object.assign({}, t.data, {id: t.id}));
   let fired = {};
   try { fired = JSON.parse((state && state.values && state.values.fired) || '{}') || {}; } catch (e) { fired = {}; }
@@ -263,12 +293,20 @@ export async function runJob(id, job, store, nowMs) {
   const changed = await engine.checkDue(tasks, fired);
   if (!changed) return {status: 'idle', ran: 0, warns: warns};
 
-  const writes = Object.keys(patches).map((taskId) => ({path: root + '/tasks/' + taskId, patch: patches[taskId]}));
+  const writes = Object.keys(patches).map((taskId) => ({path: root + '/tasks/' + taskId, patch: patches[taskId], updateTime: read[taskId]}));
   notes.forEach((n, i) => writes.push({path: root + '/tasks/' + n.taskId + '/notes/' + newId(),
     create: {kind: 'activity', text: n.text, actorUid: '', actorName: '', createdAt: nowMs + i}}));
   const marks = {values: {fired: JSON.stringify(fired)}, updatedAt: nowMs};
-  writes.push(state ? {path: root + '/' + STATE_DOC, patch: marks, mask: ['values.fired', 'updatedAt']} : {path: root + '/' + STATE_DOC, set: marks});
-  await store.commit(writes);
+  /* Las marcas: si ya había documento, tal como se leyó; si no, que siga sin haberlo. */
+  writes.push(state ? {path: root + '/' + STATE_DOC, patch: marks, mask: ['values.fired', 'updatedAt'], updateTime: stateDoc.updateTime} : {path: root + '/' + STATE_DOC, create: marks});
+  try {
+    await store.commit(writes);
+  } catch (err) {
+    /* Una tarea o las marcas cambiaron después de leerlas (un navegador, otra vuelta): no se ha
+       escrito nada. La vuelta siguiente lo vuelve a mirar con los datos nuevos. */
+    if (err && (err.status === 400 || err.status === 409 || err.status === 412)) return {status: 'conflict', ran: 0, warns: warns};
+    throw err;
+  }
   return {status: 'ok', ran: notes.length, warns: warns};
 }
 
@@ -276,7 +314,7 @@ export async function runJob(id, job, store, nowMs) {
 
 export async function run(env, deps) {
   deps = Object.assign({fetch: (url, init) => fetch(url, init), now: () => Date.now()}, deps);
-  const store = restStore(env, deps);
+  const store = deps.store || restStore(env, deps);
   if (!store) return {configured: false, jobs: 0, ran: 0};
   const cursor = await store.get(CURSOR_DOC);
   const jobs = await store.jobs((cursor && cursor.after) || '', JOBS_PER_RUN);
@@ -287,9 +325,12 @@ export async function run(env, deps) {
     out.ran += res.ran;
     out.results.push({id: job.id, status: res.status, ran: res.ran, warns: res.warns});
   }
-  /* Menos de una tanda completa: se llegó al final y la próxima vuelta empieza de nuevo. */
+  /* Menos de una tanda completa: se llegó al final y la próxima vuelta empieza de nuevo.
+     Cada vuelta deja constancia (cuándo, cuántos proyectos miró y cuántas reglas ejecutó): es lo
+     que permite comprobar desde fuera, sin ningún navegador abierto, que el cron está corriendo. */
   const after = jobs.length === JOBS_PER_RUN ? jobs[jobs.length - 1].id : '';
-  if (after !== ((cursor && cursor.after) || '')) await store.commit([{path: CURSOR_DOC, set: {after: after, updatedAt: deps.now()}}]);
+  await store.commit([{path: CURSOR_DOC, set: {after: after, updatedAt: deps.now(), jobs: jobs.length, ran: out.ran,
+    runs: ((cursor && cursor.runs) || 0) + 1, errors: out.results.filter((r) => r.status === 'error').length}}]);
   return out;
 }
 

@@ -284,7 +284,10 @@ export default {
      sin el secreto FIREBASE_SERVICE_ACCOUNT, no hace nada. */
   async scheduled(event, env, ctx) {
     const job = import('./automations.mjs').then((m) => m.run(env)).then((out) => {
-      if (out.configured && out.ran) console.log('automatizaciones: ' + out.ran + ' ejecuciones en ' + out.jobs + ' proyectos');
+      /* Una línea por vuelta, haya hecho algo o no: sin identificadores de proyecto ni contenido. */
+      if (!out.configured) { console.log('automatizaciones: sin configurar (falta el secreto FIREBASE_SERVICE_ACCOUNT)'); return; }
+      const bad = out.results.filter((r) => r.status === 'error' || r.status === 'conflict').length;
+      console.log('automatizaciones: ' + out.ran + ' ejecuciones en ' + out.jobs + ' proyectos' + (bad ? ', ' + bad + ' pendientes de reintento' : ''));
     }, (err) => console.error('automatizaciones: ' + (err && err.message)));
     ctx.waitUntil(job);
     return job;

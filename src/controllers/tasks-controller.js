@@ -273,7 +273,8 @@
       const text = n
         ? 'Se eliminará la columna «' + s.label + '». Sus ' + n + (n === 1 ? ' tarjeta pasará' : ' tarjetas pasarán') + ' a la primera columna; no se borra ninguna.'
         : 'Se eliminará la columna «' + s.label + '».';
-      this.columns.confirm('Eliminar columna', text, 'Eliminar columna').then((ok) => {
+      const autos = this.app.controllers && this.app.controllers.automations;
+      (autos ? autos.warningFor({stage:status}) : Promise.resolve('')).then((warn) => this.columns.confirm('Eliminar columna', text, 'Eliminar columna', warn)).then((ok) => {
         if(!ok) return;
         /* Antes de quitarla, sus tarjetas se pasan a la primera columna que quede. */
         const target = TaskModel.STATUS.filter((x) => x.key !== status)[0];

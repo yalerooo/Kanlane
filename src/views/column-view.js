@@ -54,6 +54,7 @@
       this.confirmResolve = null;
       this.confirmOk.addEventListener('click', () => this._settle(true));
       this.confirmDlg.addEventListener('close', () => this._settle(false));
+      $('btnConfirmCancel').addEventListener('click', () => this.confirmDlg.close());
     }
 
     /* ---------- Menú ---------- */
@@ -192,10 +193,13 @@
 
     /* ---------- Confirmación ---------- */
 
-    /* Devuelve una promesa con true si se confirma. */
-    confirm(title, text, label){
+    /* Devuelve una promesa con true si se confirma. warn (opcional): una consecuencia que conviene
+       leer antes de aceptar; va en su propio párrafo. */
+    confirm(title, text, label, warn){
       $('confirmTitle').textContent = title;
       $('confirmText').textContent = text;
+      $('confirmWarn').textContent = warn || '';
+      $('confirmWarn').hidden = !warn;
       this.confirmOk.textContent = label;
       this._settle(false);
       return new Promise((resolve) => {

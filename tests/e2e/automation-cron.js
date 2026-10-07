@@ -1,6 +1,10 @@
 /* Automatizaciones, fase 2, con Auth y Firestore emulados y las reglas reales:
    - una regla por fecha la ejecuta el servidor (worker/automations.mjs, por la API REST) con el
-     navegador CERRADO, deja su línea en la actividad y no se repite;
+     navegador CERRADO, deja su línea en la actividad y no se repite: ni en la vuelta siguiente
+     del cron, ni al volver a abrir la app, ni al recargarla sin caché;
+   - cada vuelta del cron deja constancia en automation_state/cursor;
+   - si la tarea cambia entre que el servidor la lee y escribe, no se escribe nada (lo impone
+     Firestore con la condición de la escritura) y la vuelta siguiente lo hace bien;
    - un botón de tarea ejecuta sus acciones con un clic;
    - al borrar una columna que usa una regla, el aviso dice el nombre de la columna. */
 const assert = require('node:assert/strict');
@@ -130,7 +134,9 @@ async function signIn(browser, email){
       d.setDate(d.getDate() + 5);
       const stage = Workhub.models.TaskModel.STATUS[0].key;
       const ref = await tasks.save(null, {title:'Entregar el informe', desc:'', status:stage, cliente:'', contacto:'', dueDate:Workhub.utils.dates.ymd(d), labels:[], checklist:[]});
-      return {uid:app.rootDb.me.uid, pid:app.projectId, task:ref.id, due:Workhub.utils.dates.ymd(d)};
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      return {uid:app.rootDb.me.uid, pid:app.projectId, task:ref.id, due:Workhub.utils.dates.ymd(d), stage:stage, tomorrow:Workhub.utils.dates.ymd(t)};
     });
     const base = 'users/' + made.uid + (made.pid === 'main' ? '' : '/projects/' + made.pid);
     const jobPath = 'automation_jobs/u~' + made.uid + '~' + made.pid;
@@ -146,20 +152,55 @@ async function signIn(browser, email){
     /* ---------- se cierra el navegador ---------- */
     await first.close();
 
-    /* El cron de hoy: nada que hacer. */
+    /* Con todo cerrado llega (por otra vía: aquí, como administrador) una tarea que vence mañana.
+       Para ella la regla ya toca HOY, con el reloj de verdad: es la que después demuestra que la
+       app, al abrirse, no repite lo que hizo el servidor. */
+    const soon = 'vence-manana';
+    const tomorrowTask = {title:'Vence mañana', desc:'', status:made.stage, dueDate:made.tomorrow, labels:[], checklist:[], order:Date.now(), createdAt:Date.now(), updatedAt:Date.now()};
+    const created = await fetch(storeUrl + base + '/tasks?documentId=' + soon, {method:'POST', headers:{Authorization:'Bearer owner', 'Content-Type':'application/json'}, body:JSON.stringify({fields:cron.encodeFields(tomorrowTask)})});
+    assert.equal(created.status, 200, 'tarea de mañana creada');
+
+    /* El cron de hoy: la de dentro de 5 días no toca; la de mañana, sí. */
     const today = await cron.run(env, {now:() => Date.now()});
     assert.equal(today.configured, true);
     assert.ok(today.jobs >= 1, 'el servidor encuentra el trabajo');
-    assert.equal(today.results.find((r) => r.id === 'u~' + made.uid + '~' + made.pid).status, 'idle');
+    assert.deepEqual(today.results.find((r) => r.id === 'u~' + made.uid + '~' + made.pid), {id:'u~' + made.uid + '~' + made.pid, status:'ok', ran:1, warns:[]});
+    assert.ok((await stored(base + '/tasks/' + made.task)).text.indexOf('Preparar la entrega') === -1, 'la que vence dentro de 5 días sigue igual');
+    assert.equal(((await stored(base + '/tasks/' + soon)).text.match(/Preparar la entrega/g) || []).length, 1, 'la de mañana ya tiene su subtarea');
+    assert.equal(((await stored(base + '/tasks/' + soon + '/notes')).text.match(/Automatización «Entrega cerca»/g) || []).length, 1);
+    /* Otra vuelta el mismo día: nada. */
+    assert.equal((await cron.run(env, {now:() => Date.now()})).results.find((r) => r.id === 'u~' + made.uid + '~' + made.pid).status, 'idle');
+    /* Aunque no haya hecho nada, la vuelta queda apuntada: es lo que se mira para saber si el cron corre. */
+    const cursor0 = cron.decodeFields(JSON.parse((await stored('automation_state/cursor')).text).fields);
+    assert.ok(cursor0.runs >= 2 && cursor0.ran === 0 && cursor0.jobs >= 1 && Math.abs(cursor0.updatedAt - Date.now()) < 60000, JSON.stringify(cursor0));
 
     /* Cuatro días después (falta 1 para la fecha), con la app cerrada: el servidor ejecuta la regla. */
     const later = Date.now() + 4 * DAY;
+    /* Antes, una vuelta en la que alguien cambia la tarea justo después de que el servidor la lea:
+       la escritura va condicionada a la versión leída, así que Firestore la rechaza entera. */
+    const deps = {fetch:(u, init) => fetch(u, init), now:() => later};
+    const real = cron.restStore(env, deps);
+    const racing = Object.assign({}, real, {tasksDue:async (rootPath, maxDate) => {
+      const found = await real.tasksDue(rootPath, maxDate);
+      const touch = await fetch(storeUrl + base + '/tasks/' + made.task + '?updateMask.fieldPaths=desc', {method:'PATCH',
+        headers:{Authorization:'Bearer owner', 'Content-Type':'application/json'}, body:JSON.stringify({fields:{desc:{stringValue:'cambiada mientras tanto'}}})});
+      assert.equal(touch.status, 200);
+      return found;
+    }});
+    const raced = await cron.run(env, Object.assign({store:racing}, deps));
+    assert.equal(raced.results.find((r) => r.id === 'u~' + made.uid + '~' + made.pid).status, 'conflict', JSON.stringify(raced.results));
+    const untouched = await stored(base + '/tasks/' + made.task);
+    assert.ok(untouched.text.indexOf('Preparar la entrega') === -1 && untouched.text.indexOf('cambiada mientras tanto') !== -1, 'no se escribió nada y el cambio ajeno sigue ahí');
+    assert.ok((await stored(base + '/plugin_data/kanlane.automations.state')).text.indexOf(made.task) === -1, 'ni la marca');
+    assert.ok((await stored(base + '/tasks/' + made.task + '/notes')).text.indexOf('Entrega cerca') === -1, 'ni la línea de actividad');
+
     const run = await cron.run(env, {now:() => later});
     const mine = run.results.find((r) => r.id === 'u~' + made.uid + '~' + made.pid);
     assert.deepEqual(mine, {id:'u~' + made.uid + '~' + made.pid, status:'ok', ran:1, warns:[]});
     const task = await stored(base + '/tasks/' + made.task);
     assert.ok(task.text.indexOf('Preparar la entrega') !== -1, 'la subtarea está en la tarea: ' + task.text.slice(0, 300));
     assert.ok(task.text.indexOf('Entregar el informe') !== -1, 'el resto de la tarea sigue ahí');
+    assert.ok(task.text.indexOf('cambiada mientras tanto') !== -1, 'también lo que cambió otro justo antes');
     const notes = await stored(base + '/tasks/' + made.task + '/notes');
     assert.ok(notes.text.indexOf('Automatización «Entrega cerca»: añadió la subtarea «Preparar la entrega»') !== -1, 'queda la línea en la actividad');
     const state = await stored(base + '/plugin_data/kanlane.automations.state');
@@ -174,6 +215,37 @@ async function signIn(browser, email){
     const p2 = back.page;
     await p2.locator('.card').filter({hasText:'Entregar el informe'}).click({timeout:30000});
     await p2.locator('#tvNotes .tv-note.is-activity').filter({hasText:'Automatización «Entrega cerca»: añadió la subtarea «Preparar la entrega»'}).waitFor();
+    await p2.locator('#tvChecklist').getByText('Preparar la entrega').waitFor();
+    /* La app abierta mira las reglas por fecha a los pocos segundos: no repite lo que hizo el
+       servidor. Para «Vence mañana» la regla toca hoy también en el navegador, así que lo único
+       que la frena es la marca que dejó el servidor. Tampoco tras recargar sin caché. */
+    await p2.locator('#btnTvClose').click();
+    await p2.evaluate(() => Workhub.app.controllers.automations.checkDue());
+    await p2.waitForTimeout(4500);
+    const cdp = await back.context.newCDPSession(p2);
+    await cdp.send('Network.enable');
+    await cdp.send('Network.setCacheDisabled', {cacheDisabled:true});
+    await cdp.send('Network.setBypassServiceWorker', {bypass:true});
+    await p2.reload({waitUntil:'domcontentloaded'});
+    await p2.locator('.card').filter({hasText:'Entregar el informe'}).waitFor({timeout:30000});
+    await p2.waitForTimeout(4500);
+    assert.equal(((await stored(base + '/tasks/' + made.task + '/notes')).text.match(/Automatización «Entrega cerca»/g) || []).length, 1, 'una sola línea tras abrir y recargar la app');
+    assert.equal(((await stored(base + '/tasks/' + made.task)).text.match(/Preparar la entrega/g) || []).length, 1, 'y una sola subtarea');
+    assert.equal(((await stored(base + '/tasks/' + soon + '/notes')).text.match(/Automatización «Entrega cerca»/g) || []).length, 1, 'la de mañana: una sola línea');
+    assert.equal(((await stored(base + '/tasks/' + soon)).text.match(/Preparar la entrega/g) || []).length, 1, 'y una sola subtarea');
+    /* Si alguien quita esa subtarea a mano, la app no la vuelve a poner: la regla ya se ejecutó para esa fecha. */
+    await p2.evaluate(async (id) => {
+      const app = Workhub.app;
+      await app.models.tasks.update(id, {checklist:[], updatedAt:Date.now()});
+      await app.controllers.automations.load(true);
+      app.controllers.automations.checkDue();
+    }, soon);
+    await p2.waitForTimeout(4500);
+    assert.equal(((await stored(base + '/tasks/' + soon)).text.match(/Preparar la entrega/g) || []).length, 0, 'no se repite al abrir la app');
+    assert.equal(((await stored(base + '/tasks/' + soon + '/notes')).text.match(/Automatización «Entrega cerca»/g) || []).length, 1);
+    const kept = await stored(base + '/plugin_data/kanlane.automations.state');
+    assert.ok(kept.text.indexOf(made.task) !== -1 && kept.text.indexOf(made.due) !== -1 && kept.text.indexOf(soon) !== -1, 'las marcas del servidor siguen en su sitio');
+    await p2.locator('.card').filter({hasText:'Entregar el informe'}).click();
     await p2.locator('#tvChecklist').getByText('Preparar la entrega').waitFor();
 
     /* ---------- botón de tarea ---------- */
@@ -218,7 +290,8 @@ async function signIn(browser, email){
     await p2.evaluate(() => Workhub.app.controllers.projects.updateStages((stages) => { stages.splice(1, 1); }));
     await p2.locator('#btnAutomations').click();
     const broken = p2.locator('#autoBody .auto-rule.is-broken').filter({hasText:'Enviar a revisión'});
-    await broken.locator('.auto-broken').filter({hasText:'En pausa: la columna «' + second + '» ya no existe.'}).waitFor();
+    await broken.locator('.auto-broken').filter({hasText:'No se ejecuta: la columna «' + second + '» ya no existe.'}).waitFor();
+    assert.equal(await broken.locator('.auto-status').textContent(), 'En pausa');
     assert.ok((await broken.textContent()).indexOf('moverla a «' + second + '»') !== -1, 'la frase de la regla también dice el nombre');
     await p2.locator('#btnAutoClose').click();
     /* Y el botón deja de salir en la ficha. */

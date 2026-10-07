@@ -224,8 +224,110 @@ test('el aviso de una columna o una persona borrada dice su nombre, no su identi
   const renamed = ctx({stages:full.stages.map((s) => (s.key === 'doing' ? {key:'doing', label:'En marcha'} : s))});
   assert.match(A.describe(kept, renamed), /se mueve a «En marcha»/);
   assert.equal(A.withNames(kept, renamed).trigger.stageName, 'En marcha');
-  /* Una regla antigua, sin nombre guardado, enseña lo único que tiene. */
-  assert.equal(A.problem(rule({trigger:{type:'moved', stage:'doing'}, actions:[{type:'complete'}]}), noDoing), 'la columna «doing» ya no existe');
+  /* Una regla antigua, sin nombre guardado: nunca enseña la clave interna. */
+  const old = rule({trigger:{type:'moved', stage:'doing'}, actions:[{type:'move', stage:'s9x2'}]});
+  assert.equal(A.problem(old, noDoing), 'una de sus columnas ya no existe');
+  assert.equal(A.describe(old, noDoing), 'Cuando una tarea se mueve a «columna borrada»: moverla a «columna borrada».');
+  assert.equal(A.title(old, noDoing), 'Al mover a «columna borrada»');
+  assert.ok(A.describe(old, noDoing).indexOf('doing') === -1 && A.describe(old, noDoing).indexOf('s9x2') === -1);
+  /* Si la columna sigue existiendo, una regla antigua recibe su nombre al cargarla (withNames). */
+  assert.equal(A.withNames(old, full).trigger.stageName, 'En curso');
+  assert.equal(A.withNames(old, full).actions[0].stageName, undefined, 'lo que ya no existe se queda sin nombre');
+  /* Una persona sin nombre guardado. */
+  assert.equal(A.problem(rule({trigger:{type:'completed'}, cond:{assignee:'seFue'}, actions:[{type:'due', days:1}]}), full), 'la persona asignada ya no está en el proyecto');
+  assert.match(A.describe(rule({trigger:{type:'completed'}, actions:[{type:'assign', uid:'seFue'}]}), full), /asignarla a alguien que ya no está\.$/);
+  /* Una etiqueta se guarda por su nombre: borrada, se sigue pudiendo leer. */
+  const tagged = rule({trigger:{type:'completed'}, cond:{label:'Web'}, actions:[{type:'label', name:'Urgente'}]});
+  const noLabels = ctx({labels:[]});
+  assert.equal(A.problem(tagged, noLabels), 'la etiqueta «Web» ya no existe');
+  assert.match(A.describe(tagged, noLabels), /lleva la etiqueta «Web»: añadir la etiqueta «Urgente»\.$/);
+});
+
+test('estado efectivo: la casilla es la intención; en pausa es otra cosa', () => {
+  const c = ctx();
+  const ok = rule({trigger:{type:'completed'}, actions:[{type:'due', days:1}]});
+  const broken = rule({trigger:{type:'moved', stage:'borrada'}, actions:[{type:'complete'}]});
+  assert.equal(A.status(ok, A.problem(ok, c)), 'active');
+  assert.equal(A.status(broken, A.problem(broken, c)), 'paused');
+  assert.equal(broken.on, true, 'sigue activada: lo que cambia es el estado, no la intención');
+  assert.equal(A.status(Object.assign({}, ok, {on:false}), ''), 'off');
+  assert.equal(A.status(Object.assign({}, broken, {on:false}), A.problem(broken, c)), 'off');
+});
+
+test('qué reglas quedarían en pausa al borrar una columna, una etiqueta o quitar a una persona', () => {
+  const rules = [
+    rule({id:'a', trigger:{type:'moved', stage:'review'}, actions:[{type:'complete'}]}),
+    rule({id:'b', trigger:{type:'completed'}, actions:[{type:'move', stage:'review'}, {type:'label', name:'Urgente'}]}),
+    rule({id:'c', trigger:{type:'created', stage:'todo'}, cond:{label:'web', assignee:'luis'}, actions:[{type:'assign', uid:'ana'}]}),
+    rule({id:'d', name:'Botón', trigger:{type:'button'}, actions:[{type:'subtask', text:'x'}]})
+  ];
+  const ids = (gone) => A.affected(rules, gone).map((r) => r.id);
+  assert.deepEqual(ids({stage:'review'}), ['a', 'b']);
+  assert.deepEqual(ids({stage:'todo'}), ['c']);
+  assert.deepEqual(ids({stage:'doing'}), []);
+  assert.deepEqual(ids({label:'URGENTE'}), ['b'], 'sin distinguir mayúsculas, como al ejecutar');
+  assert.deepEqual(ids({label:'Web'}), ['c']);
+  assert.deepEqual(ids({member:'luis'}), ['c']);
+  assert.deepEqual(ids({member:'ana'}), ['c']);
+  assert.deepEqual(ids({member:'none'}), []);
+  /* Lo que affected() anuncia es justo lo que problem() dirá después. */
+  const c = ctx();
+  const without = ctx({stages:c.stages.filter((x) => x.key !== 'review')});
+  rules.forEach((r) => assert.equal(!!A.problem(r, without), ids({stage:'review'}).indexOf(r.id) !== -1, r.id));
+});
+
+test('límite de profundidad, en el borde: tres reglas seguidas sí, la cuarta no', async () => {
+  const c = ctx({stages:['s0', 's1', 's2', 's3', 's4', 's5'].map((k) => ({key:k, label:k}))});
+  const hop = (n) => rule({id:'r' + n, trigger:{type:'moved', stage:'s' + n}, actions:[{type:'move', stage:'s' + (n + 1)}]});
+  assert.equal(A.MAX_DEPTH, 3);
+  /* Justo el máximo: corre entera y no avisa. */
+  const exact = world([hop(1), hop(2), hop(3)], [{id:'t', status:'s1'}], c);
+  await exact.engine.handle({type:'moved', id:'t', from:'s0', to:'s1'});
+  assert.deepEqual(exact.log.map((l) => l.rule), ['r1', 'r2', 'r3']);
+  assert.deepEqual(exact.warns, []);
+  /* Una más: se corta en la cuarta, con un solo aviso. */
+  const over = world([hop(1), hop(2), hop(3), hop(4)], [{id:'t', status:'s1'}], c);
+  await over.engine.handle({type:'moved', id:'t', from:'s0', to:'s1'});
+  assert.equal(over.log.length, 3);
+  assert.deepEqual(over.warns, ['depth']);
+  /* Lo mismo cuando la cadena la empieza un botón o una fecha: esa regla cuenta como la primera. */
+  const button = (rules) => world([rule({id:'b', name:'Ir', trigger:{type:'button'}, actions:[{type:'move', stage:'s1'}]})].concat(rules), [{id:'t', status:'s0'}], c);
+  const two = button([hop(1), hop(2)]);
+  await two.engine.press('b', 't');
+  assert.deepEqual(two.log.map((l) => l.rule), ['b', 'r1', 'r2']);
+  assert.deepEqual(two.warns, []);
+  const three = button([hop(1), hop(2), hop(3)]);
+  await three.engine.press('b', 't');
+  assert.deepEqual(three.log.map((l) => l.rule), ['b', 'r1', 'r2']);
+  assert.deepEqual(three.warns, ['depth']);
+  assert.equal(three.tasks[0].status, 's3');
+});
+
+test('límite de frecuencia, en el borde y con reloj simulado: 60 en un minuto, la 61 no, y al cumplirse el minuto vuelve', async () => {
+  assert.equal(A.MAX_PER_MINUTE, 60);
+  const tasks = Array.from({length:70}, (x, i) => ({id:'t' + i, status:'todo', labels:[]}));
+  const w = world([rule({id:'a', trigger:{type:'created'}, actions:[{type:'label', name:'Web'}]})], tasks);
+  const create = (i) => w.engine.handle({type:'created', id:'t' + i, to:'todo'});
+  w.clock = 100000;
+  for(let i = 0; i < 60; i++) await create(i);
+  assert.equal(w.log.length, 60);
+  assert.deepEqual(w.warns, [], 'la número 60 entra sin aviso');
+  await create(60);
+  assert.equal(w.log.length, 60);
+  assert.deepEqual(w.warns, ['rate']);
+  assert.deepEqual(w.tasks[60].labels, [], 'la que no cabe no se ejecuta a medias');
+  /* Un milisegundo antes de cumplirse el minuto, sigue sin cupo. */
+  w.clock = 100000 + 59999;
+  await create(61);
+  assert.equal(w.log.length, 60);
+  /* Justo al minuto, las 60 primeras han caducado. */
+  w.clock = 100000 + 60000;
+  await create(62);
+  assert.equal(w.log.length, 61);
+  /* El cupo es una ventana deslizante: las de después siguen contando. */
+  w.clock = 100000 + 60001;
+  for(let i = 0; i < 59; i++) w.engine.budget();
+  assert.equal(w.engine.budget(), false);
 });
 
 test('botón de tarea: un clic ejecuta sus acciones, encadena y deja su línea', async () => {

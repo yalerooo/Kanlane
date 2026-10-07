@@ -143,6 +143,33 @@ async function t(name, fn){
     await t('y sí cambia las reglas con update', () => assertSucceeds(auto(alice).doc('kanlane.automations').update({'values.rules':'[{"id":"y"}]', updatedAt:4})));
   }
 
+  console.log('Captura por correo: solo el servidor');
+  {
+    /* Como las dejaría el servidor (sin reglas). */
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const admin = ctx.firestore();
+      await admin.collection('mail_capture').doc('h'.repeat(64)).set({v:1, key:'u~alice~main', kind:'u', uid:'alice', pid:'main', email:'alice@x.com'});
+      await admin.collection('mail_capture_cfg').doc('u~alice~main').set({v:1, id:'abcdefghijklmnop', hash:'h'.repeat(64), uid:'alice'});
+      await admin.collection('mail_capture_cfg').doc('t~t1').set({v:1, id:'abcdefghijklmnop', hash:'i'.repeat(64), uid:'alice'});
+      await admin.collection('mail_seen').doc('s'.repeat(64)).set({key:'u~alice~main', taskId:'x'});
+      await admin.collection('mail_rate').doc('u~alice~main~20261007').set({n:1});
+    });
+    const cols = ['mail_capture', 'mail_capture_cfg', 'mail_seen', 'mail_rate'];
+    const ids = {mail_capture:'h'.repeat(64), mail_capture_cfg:'u~alice~main', mail_seen:'s'.repeat(64), mail_rate:'u~alice~main~20261007'};
+    for(const col of cols){
+      await t(col + ': su dueña no lo lee', () => assertFails(alice.collection(col).doc(ids[col]).get()));
+      await t(col + ': ni lo lista', () => assertFails(alice.collection(col).get()));
+      await t(col + ': ni lo busca por su uid', () => assertFails(alice.collection(col).where('uid', '==', 'alice').get()));
+      await t(col + ': ni lo cambia', () => assertFails(alice.collection(col).doc(ids[col]).set({v:1, uid:'alice'})));
+      await t(col + ': ni lo crea', () => assertFails(alice.collection(col).doc('nuevo').set({v:1, uid:'alice', key:'u~alice~main'})));
+      await t(col + ': ni lo borra', () => assertFails(alice.collection(col).doc(ids[col]).delete()));
+      await t(col + ': otra cuenta tampoco', () => assertFails(bob.collection(col).doc(ids[col]).get()));
+    }
+    await t('un editor no lee la configuración de captura de su equipo', () => assertFails(bob.collection('mail_capture_cfg').doc('t~t1').get()));
+    await t('ni se apunta una dirección propia hacia el proyecto de otra persona', () => assertFails(bob.collection('mail_capture').doc('j'.repeat(64)).set({v:1, key:'u~alice~main', kind:'u', uid:'alice', pid:'main', email:'bob@x.com'})));
+    await t('sin sesión, nada', () => assertFails(env.unauthenticatedContext().firestore().collection('mail_capture').doc(ids.mail_capture).get()));
+  }
+
   console.log('Contraseñas compartidas');
   {
     const Timestamp = require('firebase/compat/app').default.firestore.Timestamp;

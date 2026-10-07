@@ -20,7 +20,7 @@
     // Solo las páginas pasan antes por el Worker (redirecciones entre dominios y
     // cabecera noindex del espejo). Los scripts, estilos e imágenes se sirven
     // directamente, sin gastar peticiones del Worker (100 000 al día en el plan gratuito).
-    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/kms/*"]
+    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/kms/*", "/__/capture/*"]
   },
 
   // Dominios (todos apuntan a este mismo Worker; ver worker/index.js):
@@ -51,7 +51,20 @@
   // navegadores y es mucho más difícil de deshacer.
   "vars": {
     "REDIRECT_TARGET": "https://kanlane.com",
-    "LEGACY_STATUS": "302"
+    "LEGACY_STATUS": "302",
+
+    // Captura de tareas por correo (worker/capture.mjs, docs/CAPTURA-EMAIL.md).
+    // CAPTURE_DOMAINS: dominios cuyo correo entrega Email Routing a este Worker, separados por
+    //   comas. El primero es el que enseña la app; los demás son de respaldo (la misma dirección
+    //   vale en todos). Vacío = captura apagada: la app no enseña el apartado y todo correo se rechaza.
+    //   Tienen que ser dominios raíz (Email Routing no admite la regla «Catch-all» en subdominios).
+    //   Ejemplo: "kanlane.com,yalero.net".
+    // CAPTURE_PLAN: "free" o "paid", según el plan de Workers de la cuenta. Solo cambia los topes:
+    //   "free" admite mensajes de 8 MB (con 10 ms de CPU, un correo con adjuntos grandes puede
+    //   quedarse sin ellos); "paid", de 25 MB. Al pasar la cuenta a Workers Paid, cambia esto a "paid".
+    // Además hacen falta dos secretos (NO van aquí): CAPTURE_SECRET y FIREBASE_SERVICE_ACCOUNT.
+    "CAPTURE_DOMAINS": "",
+    "CAPTURE_PLAN": "free"
   },
 
   // Solo las peticiones que pasan por este Worker. Auth y Firestore directos

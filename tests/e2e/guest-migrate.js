@@ -95,6 +95,13 @@ async function isolated(browser){
   await firstProject(page, 'Mejoras Kanlane');
   await newTask(page, 'Tarea de Berto');
   assert.deepEqual(await page.evaluate(() => Workhub.app.models.projects.list().map((p) => p.nombre)), ['Mejoras Kanlane'], 'no hereda el proyecto del invitado anterior');
+  /* Como invitado no hay automatizaciones ni tareas por correo: el diálogo explica que hacen falta cuenta. */
+  await page.locator('#btnAutomations').click();
+  await page.locator('#autoBody .auto-guest').getByText('Las automatizaciones necesitan una cuenta').waitFor();
+  await page.locator('#autoBody .auto-guest').getByText('Crear tareas enviando un correo también necesita una cuenta: solo se acepta el correo que llega desde la dirección de una cuenta de Kanlane.').waitFor();
+  assert.equal(await page.locator('#autoBody .cap').count() + await page.locator('#capAddress').count(), 0, 'sin apartado de correo ni dirección');
+  assert.equal(await page.locator('#autoBody [data-auto="upgrade"]').isVisible(), true);
+  await page.locator('#btnAutoClose').click();
   assert.equal(await page.locator('.card').count(), 1);
 
   /* Berto sale y vuelve: sus datos siguen, con «Continuar como Berto». */

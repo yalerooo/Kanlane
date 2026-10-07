@@ -456,7 +456,7 @@ Encima de todo va el selector de **proyectos**: cada proyecto es un tablero inde
 - **Pruebas con emuladores:** `tests/e2e/account.js` (archivo de tres trozos y dos imágenes, leído de vuelta byte a byte, y borrado con la nota) y `tests/e2e/crypto-smoke.js` (lo mismo cifrado: trozos sellados y nombre y tipo del archivo dentro del blob).
 
 ### Automatizaciones, fases 1 y 2 (oct-2026)
-Reglas «cuando pasa algo en una tarea, haz esto», por proyecto, botones de tarea y reglas por fecha que ejecuta el servidor. **Guía completa: `docs/AUTOMATIZACIONES.md`** (dónde corre el servidor y por qué, límites, puesta en marcha, seguridad). **Las fases 3 (correo) y 4 (Slack) no están hechas.**
+Reglas «cuando pasa algo en una tarea, haz esto», por proyecto, botones de tarea y reglas por fecha que ejecuta el servidor. **Guía completa: `docs/AUTOMATIZACIONES.md`** (dónde corre el servidor y por qué, límites, puesta en marcha, seguridad). **La fase 3 (correo) está más abajo; la 4 (Slack) no está hecha.**
 - **Dónde está:** botón del rayo en la barra de Tareas (`#btnAutomations`) → diálogo `#dlgAutomations`: lista (activar, editar, eliminar con deshacer), «Ejemplos para empezar» y el formulario «Cuando… / Solo si… / Entonces…». Los botones de tarea salen en la ficha (`#tvAutoButtons`).
 - **Regla:** `{id, name, on, trigger:{type, stage, stageName, days}, cond:{label, assignee, assigneeName}, actions:[…]}`. Disparadores: `created`, `moved`, `completed`, `due` (faltan N días o menos) y `button` (alguien lo pulsa en la ficha; el nombre es el texto del botón). Acciones: `move`, `complete`, `label`, `subtask`, `due` y, en equipos, `assign`. Hasta 30 reglas por proyecto y 6 acciones por regla.
 - **Nombres guardados:** junto a cada columna y cada persona se guarda su nombre (`stageName`, `assigneeName`, `memberName`; `Automations.withNames` los pone al guardar y al cargar). Si después se borra, el aviso, la frase y el formulario dicen ese nombre («la columna «En curso» ya no existe», «En curso (ya no existe)»), nunca su clave interna; una regla antigua sin nombre guardado dice «columna borrada». Las etiquetas se guardan por nombre.
@@ -472,6 +472,19 @@ Reglas «cuando pasa algo en una tarea, haz esto», por proyecto, botones de tar
 - **Registro:** cada ejecución deja una línea en la actividad de la tarea (nota `kind:'activity'` sin autor). Se guarda en español («Automatización «…»: …», «Botón «…»: …») y un patrón de `en.js` la traduce al enseñarla.
 - **Invitado:** no hay automatizaciones; el diálogo lo explica. Quien solo puede leer el proyecto no dispara nada ni ve botones.
 - **Pruebas:** `tests/automations`, `tests/worker/automations.test.js`, `tests/e2e/automation-cron.js` (servidor contra el emulador con el navegador cerrado), `tests/e2e/automation-team.js` (equipo con propietaria y editor), `crypto-smoke.js` (proyecto cifrado) y `tests/rules`.
+
+### Tareas por correo, fase 3 (oct-2026)
+Cada proyecto puede tener una dirección de correo que crea tareas. **Guía completa: `docs/CAPTURA-EMAIL.md`** (cómo entra el correo, límites, puesta en marcha, qué falta por comprobar en producción).
+- **Entrada:** Cloudflare Email Routing → manejador `email` de `worker/index.js` → `worker/capture.mjs` (`receive`). No es una ruta HTTP. Gestión de la dirección: `POST /__/capture/v1` con el ID token (`manage`), que en las pruebas sirve `scripts/dev.js`.
+- **Código:** `worker/mime.mjs` (lectura y saneado del correo, sin dependencias), `worker/dkim.mjs` (firma DKIM), `worker/capture.mjs`; en la app, `services/mail-capture.js` y el apartado «Tareas por correo» del diálogo de automatizaciones (`AutomationsView.captureHtml`, `AutomationsController.capture*`). Interruptor: `Workhub.features.mailCapture`.
+- **Dirección:** 16 letras al azar + 16 de HMAC con el secreto `CAPTURE_SECRET`; en Firestore solo su hash. Varios dominios en `CAPTURE_DOMAINS` (principal y respaldo). Activar o regenerar invalida la anterior.
+- **Quién:** gestiona el dueño o propietario; envía quien puede editar, desde el correo de su cuenta y con firma DKIM de ese dominio comprobada en el Worker. La lista de remitentes solo restringe.
+- **Datos (solo servidor, sin regla en `firestore.rules`):** `mail_capture`, `mail_capture_cfg`, `mail_seen` (duplicados, 30 días), `mail_rate`.
+- **Sin captura:** invitados, modo local y proyectos cifrados (el servidor recibe el correo en claro).
+- **Límites:** `CAPTURE_PLAN` `free` (8 MB por mensaje) o `paid` (25 MB); 10 adjuntos de 10 MB. Las tareas por correo no disparan las reglas «al crear».
+- **Al borrar:** `ProjectModel.removeProject` desactiva la dirección y `AccountModel.wipe` las retira todas (`op:'purge'`) antes de borrar nada.
+- **Sin comprobar:** la entrega real por Cloudflare, DKIM con proveedores reales y si los adjuntos caben en la CPU del plan gratuito.
+- **Pruebas:** `tests/worker/mime.test.js`, `tests/worker/capture.test.js` (comparten `mail-fixtures.js`), `tests/e2e/mail-capture.js`, `tests/rules`.
 
 ### Mejoras de uso diario (oct-2026)
 

@@ -323,6 +323,12 @@
         const jobId = isTeam ? 't~' + ProjectModel.teamId(id) : 'u~' + me + '~' + id;
         wipeOthers.push(rootDb.jobs.doc(jobId).delete().catch(() => null));
       }
+      /* Y su dirección de captura por correo, si la tenía: deja de aceptar correo ya. (Si esto
+         fallara, el servidor la retira igual en cuanto llegue un correo a un proyecto que no existe.) */
+      const capture = Workhub.services.capture;
+      if(capture && capture.available(rootDb) && me){
+        wipeOthers.push(capture.call(rootDb, Object.assign({op:'disable'}, capture.target(id))).catch(() => null));
+      }
       return Promise.all([wipeTasks, wipeMeta].concat(wipeOthers)).then(() => {
         /* Las imágenes son lo menos importante: si alguna falla, se sigue. */
         if(!assets || !assets.delete) return null;

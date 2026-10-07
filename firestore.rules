@@ -492,6 +492,11 @@ service cloud.firestore {
       allow read, delete: if verified() && (resource == null || resource.data.uid == request.auth.uid);
       allow create, update: if verified() && validJob(jobId);
     }
+    // Captura de tareas por correo (worker/capture.mjs, docs/CAPTURA-EMAIL.md). Sus colecciones no
+    // tienen regla a propósito: mail_capture (hash de cada dirección → proyecto), mail_capture_cfg
+    // (configuración por proyecto), mail_seen (correos ya recibidos) y mail_rate (contadores) solo las
+    // lee y escribe el servidor con su cuenta de servicio. Ningún cliente entra, ni el dueño: la
+    // dirección se pide al servidor, que comprueba quién la pide. Lo prueba tests/rules/rules-test.js.
     match /teams/{tid}/tasks/{taskId}/notes/{noteId} {
       allow read: if isMember(tid);
       allow delete: if canEdit(tid);

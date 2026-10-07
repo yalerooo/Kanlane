@@ -34,6 +34,19 @@
     rate: 'Demasiadas automatizaciones a la vez: las que faltaban se han saltado. Vuelve a intentarlo en un minuto.'
   };
 
+  const CAPTURE_ERRORS = {
+    owner: 'Solo quien es propietario puede cambiar las tareas por correo.',
+    project: 'Este proyecto ya no existe o no tienes acceso.',
+    encrypted: 'Un proyecto con cifrado total no admite tareas por correo.',
+    email: 'Tu cuenta no tiene un correo comprobado: verifícalo antes de activar las tareas por correo.',
+    stage: 'Esa columna ya no existe. Elige otra.',
+    allow: 'Revisa la lista de remitentes: como mucho 20 direcciones de correo válidas, una por línea.',
+    off: 'Las tareas por correo están desactivadas.',
+    rate: 'Demasiadas peticiones seguidas. Espera un minuto.',
+    network: 'No hay conexión con el servidor. Inténtalo de nuevo.',
+    auth: 'Tu sesión ha caducado. Vuelve a entrar.'
+  };
+
   class AutomationsController {
     constructor(app, view){
       this.app = app;
@@ -47,6 +60,7 @@
       this.writes = Promise.resolve();
       this.warnedAt = {};
       this.paused = {};
+      this.capture = null;
       this.engine = new A.Engine({
         rules: () => this.rules,
         ctx: () => this.ctx(),
@@ -73,6 +87,11 @@
         use: (i) => this.useTemplate(+i),
         save: (draft) => this.saveRule(draft),
         cancel: () => this.renderList(),
+        'cap-enable': () => this.captureDo({op:'enable'}, 'Dirección de correo activada.'),
+        'cap-copy': () => this.captureCopy(),
+        'cap-regen': () => this.captureRegenerate(),
+        'cap-off': () => this.captureDisable(),
+        'cap-save': (v) => this.captureDo({op:'configure', stage:v.stage, allow:v.allow}, 'Cambios guardados.'),
         upgrade: () => { this.view.hide(); if(this.app.controllers.auth) this.app.controllers.auth.upgradeGuest(); }
       });
     }
@@ -360,7 +379,81 @@
       }
       this.view.message(t('Cargando…'));
       this.view.show();
-      this.load(true).then(() => this.renderList());
+      this.load(true).then(() => { this.renderList(); this.loadCapture(); });
+    }
+
+    /* ---------- Tareas por correo (docs/CAPTURA-EMAIL.md) ---------- */
+
+    /* Lo que se enseña en el apartado de correo del proyecto abierto. Todo lo decide el servidor
+       (worker/capture.mjs): aquí solo se pregunta y se pinta. */
+    captureState(){
+      const cap = Workhub.services.capture;
+      if(!cap || !cap.available(this.app.rootDb) || !this.usable()) return {state:'hidden'};
+      /* Con cifrado total no hay captura: el servidor no puede guardar la tarea cifrada. */
+      if(this.app.cipher) return {state:'encrypted'};
+      const c = this.capture;
+      if(!c || c.key !== this.projectKey()) return {state:'loading'};
+      if(c.error) return {state:c.error === 'not-configured' ? 'hidden' : 'error'};
+      const d = c.data;
+      if(d.available === false) return {state:d.reason === 'encrypted' ? 'encrypted' : 'hidden'};
+      const me = this.app.rootDb.me || {};
+      return {state:d.on ? 'on' : 'off', role:d.role, team:team().enabled(), address:d.address, alt:d.alt, stage:d.stage, stageMissing:d.stageMissing, allow:d.allow,
+        limits:d.limits, busy:!!c.busy, me:me.email || '', stages:this.ctx().stages.map((s) => ({key:s.key, label:s.label}))};
+    }
+
+    captureTarget(){
+      return Workhub.services.capture.target(this.app.projectId);
+    }
+
+    loadCapture(){
+      const cap = Workhub.services.capture;
+      if(!cap || !cap.available(this.app.rootDb) || !this.usable() || this.app.cipher) return Promise.resolve();
+      const key = this.projectKey();
+      return cap.call(this.app.rootDb, Object.assign({op:'status'}, this.captureTarget())).then(
+        (data) => { if(key === this.projectKey()) this.capture = {key:key, data:data}; },
+        (err) => { if(key === this.projectKey()) this.capture = {key:key, error:(err && err.code) || 'unavailable'}; }
+      ).then(() => { if(this.view.isOpen() && !this.view.draft) this.renderList(); });
+    }
+
+    /* Una orden al servidor (activar, configurar, regenerar, desactivar) y lo que responde, a la pantalla. */
+    captureDo(body, done){
+      const cap = Workhub.services.capture;
+      if(!this.capture || this.capture.busy || this.capture.key !== this.projectKey()) return Promise.resolve();
+      const key = this.capture.key;
+      this.capture.busy = true;
+      this.renderList();
+      return cap.call(this.app.rootDb, Object.assign({}, body, this.captureTarget())).then((data) => {
+        if(key !== this.projectKey()) return;
+        this.capture = {key:key, data:data};
+        this.renderList();
+        this.view.captureNote(t(done), false);
+      }, (err) => {
+        if(key !== this.projectKey()) return;
+        this.capture.busy = false;
+        this.renderList();
+        this.view.captureNote(t(CAPTURE_ERRORS[err && err.code] || 'No se pudo completar. Inténtalo de nuevo.'), true);
+      });
+    }
+
+    captureCopy(){
+      const address = this.capture && this.capture.data && this.capture.data.address;
+      if(!address) return;
+      const done = () => this.view.captureNote(t('Dirección copiada.'), false);
+      const fallback = () => { const el = document.getElementById('capAddress'); if(el){ el.focus(); el.select(); } this.view.captureNote(t('Selecciónala y cópiala con el teclado.'), false); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(address).then(done, fallback);
+      else fallback();
+    }
+
+    captureRegenerate(){
+      this.app.controllers.tasks.columns.confirm('Regenerar la dirección',
+        'Se creará una dirección nueva y la actual dejará de funcionar al momento: quien siga escribiendo a la anterior recibirá un rechazo.', 'Regenerar')
+        .then((ok) => { if(ok) this.captureDo({op:'regenerate'}, 'Dirección nueva creada. La anterior ya no funciona.'); });
+    }
+
+    captureDisable(){
+      this.app.controllers.tasks.columns.confirm('Desactivar las tareas por correo',
+        'La dirección dejará de funcionar al momento y no se podrá recuperar: si vuelves a activarlas, será otra distinta. Las tareas ya creadas no cambian.', 'Desactivar')
+        .then((ok) => { if(ok) this.captureDo({op:'disable'}, 'Tareas por correo desactivadas.'); });
     }
 
     renderList(){
@@ -374,7 +467,8 @@
         team: team().enabled(),
         /* Con cifrado total el servidor no puede leer el proyecto: las reglas por fecha esperan a que se abra. */
         server: !this.app.cipher && !!(this.app.rootDb && this.app.rootDb.jobs),
-        max: A.MAX_RULES
+        max: A.MAX_RULES,
+        capture: this.captureState()
       });
     }
 

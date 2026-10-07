@@ -7,9 +7,15 @@
    siguen dependiendo del Worker).
    vaultTotp: ofrecer la verificación en dos pasos del gestor de contraseñas. Necesita KMS_MASTER_V1
    y el límite TOTP_RATE_LIMIT en el Worker (wrangler.jsonc). En false no se puede activar; los
-   cofres que ya la tengan siguen pidiendo el código (y siguen dependiendo del Worker). */
+   cofres que ya la tengan siguen pidiendo el código (y siguen dependiendo del Worker).
+   mailCapture: ofrecer la captura de tareas por correo en el diálogo de automatizaciones
+   (docs/CAPTURA-EMAIL.md). Necesita los secretos CAPTURE_SECRET y FIREBASE_SERVICE_ACCOUNT, la
+   variable CAPTURE_DOMAINS y Email Routing apuntando al Worker. Mientras el servidor no lo tenga
+   todo, el apartado no se enseña aunque esto esté en true. En false no se enseña ni se consulta;
+   las direcciones que ya existan siguen recibiendo correo hasta que se desactiven. */
 Workhub.features = {
   encryptedProjects: true,
   managedEncryption: true,
-  vaultTotp: true
+  vaultTotp: true,
+  mailCapture: true
 };

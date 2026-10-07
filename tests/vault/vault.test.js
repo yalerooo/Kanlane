@@ -24,8 +24,19 @@ const Workhub = {
   models:{CollectionModel:class { constructor(){ this.items = []; } find(id){ return this.items.find((item) => item.id === id); } }}
 };
 const source = fs.readFileSync(path.join(__dirname, '../../src/models/vault-model.js'), 'utf8');
-vm.runInNewContext(source, {Workhub, Date, Promise, Uint8Array});
+vm.runInNewContext(source, {Workhub, Date, Promise, Uint8Array, URL, String});
 const VaultModel = Workhub.models.VaultModel;
+
+/* Web y correo de una credencial: direcciones http(s), dominios y correos; nada que se pueda ejecutar. */
+['', '  ', 'https://cliente.com', 'http://cliente.com/panel?x=1', 'HTTPS://Cliente.com', 'cliente.com', 'panel.cliente.com/login',
+  'cliente.com:8443', '192.168.1.10', '192.168.1.10:8080/admin', 'localhost:3000', 'http://nas', 'ñandú.es', '[::1]:8080']
+  .forEach((web) => assert.equal(VaultModel.validWeb(web), true, 'vale: ' + web));
+['javascript:alert(document.domain)', 'JavaScript:alert(1)', 'data:text/html,<b>x</b>', 'file:///c:/secreto.txt', 'ftp://cliente.com',
+  'mailto:ana@cliente.com', 'tel:600100200', 'texto cualquiera', 'panel', 'https://', '//cliente.com', 'ana@cliente.com', 'javascript://cliente.com/%0aalert(1)']
+  .forEach((web) => assert.equal(VaultModel.validWeb(web), false, 'no vale: ' + web));
+['', 'ana@cliente.com', ' ana.lopez+web@sub.cliente.es '].forEach((mail) => assert.equal(VaultModel.validEmail(mail), true, 'vale: ' + mail));
+['ana', 'ana@', '@cliente.com', 'ana@cliente', 'ana lopez@cliente.com', 'javascript:alert(1)'].forEach((mail) => assert.equal(VaultModel.validEmail(mail), false, 'no vale: ' + mail));
+console.log('OK   credenciales: la web admite http(s) o un dominio y el correo, solo correos');
 
 (async () => {
   const broken = new VaultModel();

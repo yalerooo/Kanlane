@@ -57,6 +57,29 @@
       return v.order != null ? v.order : (v.createdAt || 0);
     }
 
+    /* La web de una credencial: vacía, una dirección http(s) o un dominio o host (con puerto y ruta
+       opcionales). Cualquier otro esquema (javascript:, data:, file:…) o un texto suelto no valen:
+       hoy solo se muestra como texto, pero así no hay nada que ejecutar si algún día fuese un enlace. */
+    static validWeb(text){
+      const s = String(text == null ? '' : text).trim();
+      if(!s) return true;
+      if(/\s/.test(s)) return false;
+      const full = /^https?:\/\//i.test(s);
+      if(!full && (s.indexOf('://') !== -1 || !/^[\p{L}\p{N}[]/u.test(s))) return false;
+      let url;
+      try{ url = new URL(full ? s : 'http://' + s); }catch(e){ return false; }
+      if(!url.hostname) return false;
+      if(full) return true;
+      /* Sin esquema tiene que parecer un dominio, una IP o localhost. */
+      return !url.username && !url.password && (url.hostname === 'localhost' || url.hostname.indexOf('.') !== -1 || url.hostname[0] === '[');
+    }
+
+    /* El correo de una credencial es opcional; si se escribe, con forma de correo. */
+    static validEmail(text){
+      const s = String(text == null ? '' : text).trim();
+      return !s || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    }
+
     /* ---------- Metadatos y claves ---------- */
 
     /* Dónde está mi envoltorio de la DEK. */

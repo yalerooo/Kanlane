@@ -393,7 +393,12 @@
       return {meta:meta, secret:{password:f.vPass.value, notas:f.vNotas.value}};
     }
 
-    showFormError(msg){ showMessage(this.formError, msg); }
+    /* field (opcional): 'correo' o 'web', para llevar el foco al campo que hay que corregir. */
+    showFormError(msg, field){
+      showMessage(this.formError, msg);
+      const el = field === 'web' ? (this.tipo.value === 'usuario' ? this.f.vUserWeb : this.f.vWeb) : field === 'correo' ? this.f.vCorreo : null;
+      if(el) el.focus();
+    }
 
     closeForm(){ this.dlg.close(); }
   }

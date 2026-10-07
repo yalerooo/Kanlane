@@ -120,7 +120,7 @@ Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código 
 ## ¿Y Netlify y Firebase Hosting?
 
 - **Netlify** ya no se usa: el fichero `netlify.toml` se eliminó. El sitio antiguo (`workhub-project.netlify.app`) sigue en `hostingDomains` para que, mientras exista, el acceso siga funcionando ahí; quítalo cuando lo borres, y bórralo también de los dominios autorizados.
-- **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue configurado en `firebase.json` como alternativa de emergencia: `firebase deploy --only hosting`. **No lleva las cabeceras de seguridad** de `_headers`, que son propias de Cloudflare.
+- **Firebase Hosting** (`https://workhub-26f50.web.app`, mismos datos) sigue configurado en `firebase.json` como alternativa de emergencia: `firebase deploy --only hosting`. **No lleva las cabeceras de seguridad** de `_headers`, que son propias de Cloudflare, y no publica `/.well-known/` (su `ignore` descarta lo que empieza por punto): ahí `security.txt` solo está en `/security.txt`.
 
 ## Registros y trazas
 

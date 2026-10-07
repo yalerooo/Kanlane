@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kanlane · Task and project manager for teams</title>
   <meta name="description" content="Kanlane is a task and project manager with kanban boards, calendar, clients and teamwork. A simple Trello alternative to organize your work.">
-  <meta name="last-modified" content="2026-10-03">
+  <meta name="last-modified" content="2026-10-07">
   <link rel="canonical" href="https://kanlane.com/en/">
   <link rel="alternate" hreflang="es" href="https://kanlane.com/">
   <link rel="alternate" hreflang="en" href="https://kanlane.com/en/">
@@ -53,7 +53,7 @@
         "name": "Kanlane",
         "inLanguage": "en"
       },
-      {"@type":"WebPage","@id":"https://kanlane.com/en/#pagina","url":"https://kanlane.com/en/","name":"Kanlane · Task and project manager for teams","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"en","dateModified":"2026-10-03"},
+      {"@type":"WebPage","@id":"https://kanlane.com/en/#pagina","url":"https://kanlane.com/en/","name":"Kanlane · Task and project manager for teams","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"en","dateModified":"2026-10-07"},
       {
         "@type": "SoftwareApplication",
         "@id": "https://kanlane.com/#aplicacion",
@@ -76,6 +76,7 @@
           "Subtasks and recurring tasks",
           "Shared projects with roles",
           "GitHub Projects sync",
+          "MCP server to connect assistants like Claude to a project's tasks",
           "Installable app that works offline"
         ]
       },
@@ -89,7 +90,8 @@
           {"@type": "Question", "name": "Can a whole project be encrypted?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, you choose it when you create each project. With “Full encryption”, the content (tasks, notes, clients, contacts, meetings, passwords, images and plugin data) is encrypted in your browser with AES-256 and a password only you know: Kanlane doesn't have it and can't read that content, and if you lose the password and the recovery key the project can't be recovered. With “Managed by Kanlane” there is no extra password: it protects you if someone copies the database, but Kanlane holds the key and could technically decrypt the project. In both cases the project name, columns, labels, dates and task status are not encrypted, and those projects can't be synced with GitHub."}},
           {"@type": "Question", "name": "Can I work in a team?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. You can share a project, invite people by email and assign tasks. Each person has a role: owner, editor or viewer."}},
           {"@type": "Question", "name": "Can I take my data with me?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. You can export tasks, notes, clients, contacts, meetings and encrypted passwords. There are also local versions and optional encrypted copies in your account. The export doesn't include original images or plugin data; keep separately what you need."}},
-          {"@type": "Question", "name": "What are plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Small extensions that add features, like per-project hour tracking or a timer. They run isolated and only access what you allow them to."}}
+          {"@type": "Question", "name": "What are plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Small extensions that add features, like per-project hour tracking or a timer. They run isolated and only access what you allow them to."}},
+          {"@type": "Question", "name": "Can I connect Claude or another AI assistant?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Kanlane has an MCP server: you create a token in Settings → Integrations and your assistant can read the tasks of that project, move them between columns, add notes to them and create new tasks. The token is valid for a single project, it can be read-only and you can revoke it whenever you want. It does not work with encrypted projects, and Kanlane does not include an assistant of its own."}}
         ]
       },
       {
@@ -439,6 +441,10 @@
           <summary>What are plugins?</summary>
           <p>Small extensions that add features, like per-project hour tracking or a timer. They run isolated and only access what you allow them to.</p>
         </details>
+        <details>
+          <summary>Can I connect Claude or another AI assistant?</summary>
+          <p>Yes. Kanlane has an MCP server: you create a token in Settings → Integrations and your assistant can read the tasks of that project, move them between columns, add notes to them and create new tasks. The token is valid for a single project, it can be read-only and you can revoke it whenever you want. It does not work with encrypted projects, and Kanlane does not include an assistant of its own.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -488,6 +494,7 @@
         <a href="/en/client-manager/">Client manager</a>
         <a href="/en/freelancer-crm/">Freelancer CRM</a>
         <a href="/en/client-password-manager/">Client password manager</a>
+        <a href="/en/mcp-server/">MCP server for Claude</a>
       </div>
       <div>
         <h2>Legal</h2>

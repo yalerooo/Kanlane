@@ -1,4 +1,4 @@
-/* Comprueba el SEO estructurado de las 16 páginas indexables y llms.txt, sin navegador:
+/* Comprueba el SEO estructurado de las 18 páginas indexables y llms.txt, sin navegador:
    - construye dist/ con scripts/build-public.js;
    - cada página lleva JSON-LD válido y un WebPage cuyo `about` es una referencia por @id
      (https://kanlane.com/#aplicacion), que declara la portada en su SoftwareApplication;
@@ -6,7 +6,7 @@
      respuestas (mismo texto, mismo orden); las que no, no llevan FAQPage;
    - `dateModified` del JSON-LD coincide con <meta name="last-modified">, y el build falla con un
      mensaje claro si no coinciden;
-   - el pie de la portada enlaza a las 7 páginas de captación de SU idioma (y solo a esas), todas en el sitemap;
+   - el pie de la portada enlaza a las 8 páginas de captación de SU idioma (y solo a esas), todas en el sitemap;
    - dist/llms.txt existe, sus URLs de kanlane.com son exactamente las del sitemap, no lleva noindex
      ni está en el sitemap, y el service worker lo precachea como el resto de archivos públicos.
    No necesita navegador: node tests/e2e/seo-check.js */
@@ -21,8 +21,8 @@ const {jsonLd} = require('../../scripts/site-pages');
 const ROOT = path.join(__dirname, '../..');
 const ORIGIN = 'https://kanlane.com/';
 const APP_ID = ORIGIN + '#aplicacion';
-const ES = ['alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes'];
-const EN = ['trello-alternative', 'asana-alternative', 'notion-alternative', 'project-management', 'client-manager', 'freelancer-crm', 'client-password-manager'];
+const ES = ['alternativa-a-trello', 'alternativa-a-asana', 'alternativa-a-notion', 'gestion-de-proyectos', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'servidor-mcp'];
+const EN = ['trello-alternative', 'asana-alternative', 'notion-alternative', 'project-management', 'client-manager', 'freelancer-crm', 'client-password-manager', 'mcp-server'];
 const PAGES = ['index.html', 'en/index.html'].concat(ES.map(s => s + '/index.html'), EN.map(s => 'en/' + s + '/index.html'));
 
 const ok = (m) => console.log('OK   ' + m);
@@ -35,9 +35,9 @@ assert.equal(run.status, 0, 'el build termina bien:\n' + run.stdout + run.stderr
 
 const sitemap = readText(path.join(ROOT, 'dist/sitemap.xml'));
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
-assert.equal(locs.length, 16, 'el sitemap tiene 16 URLs');
+assert.equal(locs.length, 18, 'el sitemap tiene 18 URLs');
 const urlOf = (f) => ORIGIN + f.slice(0, -'index.html'.length);
-assert.deepEqual(PAGES.map(urlOf).sort(), locs.slice().sort(), 'las 16 páginas son las del sitemap');
+assert.deepEqual(PAGES.map(urlOf).sort(), locs.slice().sort(), 'las 18 páginas son las del sitemap');
 
 const decode = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 const meta = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([^"]*)"/i) || [])[1];
@@ -81,7 +81,7 @@ for(const f of PAGES){
     assert.deepEqual(qa, details, f + ': preguntas y respuestas idénticas a las visibles');
   }
 }
-ok('JSON-LD válido en las 16 páginas: about por @id, FAQPage = <details> visibles, dateModified = meta');
+ok('JSON-LD válido en las 18 páginas: about por @id, FAQPage = <details> visibles, dateModified = meta');
 
 /* ---------- Pie de la portada ---------- */
 for(const [file, lang, expected] of [['index.html', 'es', ES.map(s => '/' + s + '/')], ['en/index.html', 'en', EN.map(s => '/en/' + s + '/')]]){
@@ -89,11 +89,11 @@ for(const [file, lang, expected] of [['index.html', 'es', ES.map(s => '/' + s + 
   const foot = html.match(/<footer class="foot">[\s\S]*?<\/footer>/)[0];
   const links = [...foot.matchAll(/<a\s+[^>]*href="([^"#]+)"/g)].map(m => m[1]);
   const guides = links.filter(h => /^\/(en\/)?[a-z-]+\/$/.test(h) && h !== '/' && h !== '/en/');
-  assert.deepEqual(guides, expected, file + ': el pie enlaza exactamente a las 7 páginas de ' + lang);
+  assert.deepEqual(guides, expected, file + ': el pie enlaza exactamente a las 8 páginas de ' + lang);
   for(const h of guides) assert.ok(locs.includes('https://kanlane.com' + h), file + ': ' + h + ' está en el sitemap');
   assert.equal(guides.some(h => lang === 'es' ? h.startsWith('/en/') : !h.startsWith('/en/')), false, file + ': el pie no enlaza a otro idioma (salvo el selector)');
 }
-ok('el pie de / y de /en/ enlaza a las 7 páginas de su idioma, todas del sitemap');
+ok('el pie de / y de /en/ enlaza a las 8 páginas de su idioma, todas del sitemap');
 
 /* ---------- llms.txt ---------- */
 const llmsPath = path.join(ROOT, 'dist/llms.txt');

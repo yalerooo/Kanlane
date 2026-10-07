@@ -1986,6 +1986,9 @@
     [/^Límite: (\d+) tarjetas$/, 'Limit: $1 cards'],
     [/^Creada desde un correo de (\S+)\. La columna elegida para el correo ya no existe: se creó en «(.+)»\.$/, 'Created from an email from $1. The column chosen for email no longer exists: it was created in “$2”.'],
     [/^Creada desde un correo de (\S+)\.$/, 'Created from an email from $1.'],
+    /* Lo que apunta el servidor MCP (worker/mcp.mjs) en la actividad de una tarea. */
+    [/^Movida de «(.+)» a «(.+)» por (.+) \(token «(.+)»\)\.$/, 'Moved from “$1” to “$2” by $3 (token “$4”).'],
+    [/^Creada por (.+) \(token «(.+)»\)\.$/, 'Created by $1 (token “$2”).'],
     [/^No se pudieron guardar los adjuntos del correo \((\d+)\)\.$/, 'The attachments of the email could not be stored ($1).'],
     [/^Adjuntos del correo que no se guardaron: (.+)\.$/, (m, list) => 'Attachments of the email that were not stored: ' + list
       .replace(/\(tipo no permitido\)/g, '(type not allowed)').replace(/\(más de 10 MB\)/g, '(over 10 MB)').replace(/\(vacío\)/g, '(empty)')

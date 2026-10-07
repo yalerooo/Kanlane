@@ -118,6 +118,8 @@ html{-webkit-text-size-adjust:100%;scroll-padding-top:92px;}
 .seo-compare .no{color:var(--ink-faint);}
 .seo-compare svg{display:inline-block;vertical-align:-3px;}
 .seo-content .seo-compare-note{margin-top:12px;font-size:13.5px;color:var(--ink-faint);}
+.seo-command{max-width:760px;margin:16px 0 0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);box-shadow:var(--shadow-sm);overflow-x:auto;}
+.seo-command code{font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;}
 .seo-compare-text th:not(:first-child),.seo-compare-text td:not(:first-child){text-align:left;}
 .seo-compare-text td{vertical-align:top;font-size:14.5px;line-height:1.5;}
 .seo-compare-text td.is-kanlane{color:var(--ink);}

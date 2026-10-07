@@ -46,7 +46,7 @@ const path = require('node:path');
     assert.ok(wrangler.includes('"' + route + '"'), route + ' pasa antes por el Worker');
   }
   ok('las rutas del Worker (/__/auth, /__/firebase, /__/kms) pasan antes por él');
-  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm', 'en/client-password-manager']){
+  for(const landing of ['alternativa-a-trello', 'gestion-de-proyectos', 'alternativa-a-asana', 'alternativa-a-notion', 'gestor-de-clientes', 'crm-para-autonomos', 'gestor-de-contrasenas-para-clientes', 'servidor-mcp', 'en', 'en/trello-alternative', 'en/asana-alternative', 'en/notion-alternative', 'en/project-management', 'en/client-manager', 'en/freelancer-crm', 'en/client-password-manager', 'en/mcp-server']){
     const top = landing.split('/')[0];
     assert.ok(wrangler.includes('"/' + top + '"'), top + ' sin barra final pasa por el Worker');
     assert.ok(wrangler.includes('"/' + top + '/*"'), landing + ' pasa por el Worker');

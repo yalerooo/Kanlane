@@ -22,6 +22,7 @@ const PAIRS = {
   'gestor-de-clientes/': 'en/client-manager/',
   'crm-para-autonomos/': 'en/freelancer-crm/',
   'gestor-de-contrasenas-para-clientes/': 'en/client-password-manager/',
+  'servidor-mcp/': 'en/mcp-server/',
 };
 
 const ok = (m) => console.log('OK   ' + m);

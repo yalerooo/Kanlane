@@ -68,6 +68,8 @@ const load = (name) => import(pathToFileURL(path.join(__dirname, '../../worker/'
     const out = M.cleanText(dirty, 20000);
     assert.equal(out, 'Hola mundo\n[Tu banco] (https://malo.test) ! [x] (https://rastreo.test/p.png) [ref] [1]\n[1] : https://malo.test\n\n\nfin');
     assert.equal(M.cleanText('<script>alert(1)</script>', 100), '<script>alert(1)</script>', 'el HTML en texto plano se queda como texto: la app lo escapa al pintarlo');
+    assert.equal(M.cleanText('\r\n   - uno\r\n   - dos\r\n', 100), '- uno\n- dos', 'una lista sangrada (texto plano de Gmail) no queda anidada');
+    assert.equal(M.cleanText('   - uno\n      - sub\n   - dos\n\nSaludos', 100), '   - uno\n      - sub\n   - dos\n\nSaludos', 'la jerarquía se conserva');
     const long = M.cleanText('a'.repeat(30000), 20000);
     assert.equal(long.length, 20000);
     assert.ok(long.endsWith('[…]'));

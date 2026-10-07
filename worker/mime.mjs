@@ -171,7 +171,12 @@ export function cleanLine(text, max) {
 export function cleanText(text, max) {
   let s = String(text == null ? '' : text).replace(/\r\n?/g, '\n').replace(HIDDEN, '');
   s = s.replace(/!\[/g, '! [').replace(/\]\(/g, '] (').replace(/\]\[/g, '] [').replace(/^(\s*\[[^\]\n]*\]):/gm, '$1 :');
-  s = s.split('\n').map((line) => line.replace(/[ \t]+$/, '')).join('\n').replace(/\n{4,}/g, '\n\n\n').trim();
+  /* Del principio se quitan las líneas en blanco y la sangría común, no la de la primera línea
+     sola: Gmail sangra las listas en su texto plano («   - uno») y, quitándosela solo a la
+     primera, las demás quedaban anidadas dentro de ella. */
+  const lines = s.split('\n').map((line) => line.replace(/[ \t]+$/, ''));
+  const pad = lines.reduce((min, line) => (line ? Math.min(min, /^[ \t]*/.exec(line)[0].length) : min), Infinity);
+  s = lines.map((line) => line.slice(pad)).join('\n').replace(/\n{4,}/g, '\n\n\n').replace(/^\n+|\n+$/g, '');
   const tail = '\n\n[…]';
   return s.length > max ? s.slice(0, max - tail.length).replace(/[\ud800-\udbff]$/, '') + tail : s;
 }

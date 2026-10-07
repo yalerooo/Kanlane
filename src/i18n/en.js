@@ -1683,6 +1683,8 @@
     'No hay miembros.':'No members.',
     'La fecha límite no puede ser anterior a la fecha de inicio.':'The due date can\'t be earlier than the start date.',
     'La fecha de inicio no puede ser posterior a la fecha límite.':'The start date can\'t be later than the due date.',
+    'El título es obligatorio.':'The title is required.',
+    'Elige un cliente o proyecto.':'Choose a client or project.',
     'Fecha de inicio':'Start date',
     'Fecha de inicio (opcional)':'Start date (optional)',
     'Pulsa Intro para abrir la tarea. Con Alt y las flechas izquierda o derecha se mueve un día; con Alt, Mayús y las flechas cambia su fecha límite.':'Press Enter to open the task. Alt plus the left or right arrow moves it one day; Alt, Shift and the arrows change its due date.',

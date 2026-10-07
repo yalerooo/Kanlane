@@ -905,12 +905,13 @@
 </div>
 
 <dialog id="dlg">
-  <form class="dlg-inner" id="form" method="dialog">
+  <form class="dlg-inner" id="form" method="dialog" novalidate>
     <h2 id="dlgTitle">Nueva tarea</h2>
     <input type="hidden" id="taskId">
     <div class="field">
       <label for="fTitle">Título</label>
-      <input id="fTitle" required maxlength="140" placeholder="p. ej. Preparar la presentación">
+      <input id="fTitle" required maxlength="140" placeholder="p. ej. Preparar la presentación" aria-describedby="fTitleError">
+      <p class="lock-error" id="fTitleError" role="alert" hidden></p>
     </div>
     <div class="field">
       <label for="fDesc">Descripción / notas</label>
@@ -938,6 +939,7 @@
           <input id="fClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
           <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
         </div>
+        <p class="lock-error" id="fClienteError" role="alert" hidden></p>
       </div>
       <div class="field">
         <label for="fEstado">Estado</label>

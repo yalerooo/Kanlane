@@ -313,6 +313,8 @@ async function t(name, fn){
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea admite fecha de inicio y campos personalizados', () => assertSucceeds(own.collection('tasks').doc('ranged').set({title:'a', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:10, f2:'texto', f3:true}})));
   await t('una fecha de inicio que no es AAAA-MM-DD se rechaza', () => assertFails(own.collection('tasks').doc('ranged2').set({title:'a', startDate:'2026-10-06T00:00:00Z'})));
+  await t('una tarea que se repite admite el día original de la repetición', () => assertSucceeds(own.collection('tasks').doc('anchored').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30'})));
+  await t('un día original de la repetición demasiado largo se rechaza', () => assertFails(own.collection('tasks').doc('anchored2').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30T00:00'})));
   await t('unos campos personalizados que no son un mapa se rechazan', () => assertFails(own.collection('tasks').doc('ranged3').set({title:'a', custom:['x']})));
   await t('más de 50 campos personalizados en una tarea se rechazan', () => assertFails(own.collection('tasks').doc('ranged4').set({title:'a', custom:Object.fromEntries(Array.from({length:51}, (_, i) => ['f' + i, i]))})));
   await t('un proyecto admite la definición de sus campos', () => assertSucceeds(own.collection('projects').doc('pcf').set({nombre:'P', createdAt:1, customFields:[{id:'f1', name:'Presupuesto', type:'number', card:true}]})));

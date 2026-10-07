@@ -8,13 +8,13 @@
    marca en amarillo como «[completar: …]» y `node scripts/build-public.js` avisa. */
 window.WORKHUB_LEGAL = {
   /* Nombre y apellidos si eres persona física (autónomo o particular), o razón social. */
-  titular: '',
+  titular: 'Kanlane',
   /* NIF o CIF. */
-  nif: '',
+  nif: 'C56228166',
   /* Domicilio completo (calle, número, código postal, localidad, provincia, país). */
-  domicilio: '',
+  domicilio: 'Calle Valladolid 2, 01002 Vitoria-Gasteiz, Álava, España',
   /* Correo de contacto, también para ejercer derechos de protección de datos. */
-  email: '',
+  email: 'info@kanlane.com',
   /* Dirección de la web. */
   sitio: 'https://kanlane.com',
   /* Dónde se guardan los datos de las cuentas. Comprueba la región con la que creaste
@@ -24,5 +24,5 @@ window.WORKHUB_LEGAL = {
   /* Fecha de la última revisión de los textos (AAAA-MM-DD) y número de versión. Súbela
      cuando cambies algo de fondo en las páginas legales. */
   actualizado: '2026-10-07',
-  version: 11
+  version: 12
 };

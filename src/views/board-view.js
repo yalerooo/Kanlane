@@ -51,6 +51,17 @@
       this._applyMode();
       this._bindFilterPanel();
 
+      /* Selección de varias tareas (para eliminarlas de una vez): los ids marcados y si el
+         tablero está en «modo selección», en el que pulsar una tarea la marca en vez de abrirla. */
+      this.selected = new Set();
+      this.selecting = false;
+      this.anchorId = null;
+      this.visibleIds = [];
+      this.selectBtn = document.getElementById('btnTaskSelect');
+      this.selectBar = document.getElementById('taskSelectBar');
+      this.selectCount = document.getElementById('taskSelectCount');
+      this.selectDelete = document.getElementById('btnSelectDelete');
+
       /* Línea que marca dónde caerá la tarea al soltarla. */
       this.indicator = document.createElement('div');
       this.indicator.className = 'drop-indicator';
@@ -166,6 +177,99 @@
     /* Al cambiar de proyecto. */
     resetQuick(){
       this.week = false;
+      this.setSelecting(false);
+    }
+
+    /* ---------- Selección de varias tareas ---------- */
+
+    /* handlers: {remove(ids)}. Se entra en el modo con el botón de la barra o con Ctrl/Cmd + clic
+       en una tarea; Mayús + clic marca todas las que hay entre la anterior y esa. */
+    bindSelect(handlers){
+      if(!this.selectBtn || !this.selectBar) return;
+      this.selectReady = true;
+      this.selectBtn.addEventListener('click', () => this.setSelecting(!this.selecting));
+      document.getElementById('btnSelectCancel').addEventListener('click', () => { this.setSelecting(false); this.selectBtn.focus(); });
+      document.getElementById('btnSelectAll').addEventListener('click', () => {
+        const all = this.visibleIds.length && this.visibleIds.every((id) => this.selected.has(id));
+        this.selected = new Set(all ? [] : this.visibleIds);
+        this._paintSelection();
+      });
+      this.selectDelete.addEventListener('click', () => { if(this.selected.size) handlers.remove(Array.from(this.selected)); });
+      document.addEventListener('keydown', (ev) => {
+        if(ev.key !== 'Escape' || !this.selecting || document.querySelector('dialog[open], .dd.is-open')) return;
+        this.setSelecting(false);
+      });
+    }
+
+    canSelect(){
+      return !!this.selectReady && Workhub.views.team.canEdit();
+    }
+
+    setSelecting(on){
+      on = !!on && this.canSelect();
+      if(!on) this.selected = new Set();
+      if(on === this.selecting && !this.selected.size){ this._paintSelection(); return; }
+      this.selecting = on;
+      this.anchorId = null;
+      this._paintSelection();
+      this.fitHeight();
+    }
+
+    /* Un clic (o Intro) sobre una tarea: ¿es para marcarla? true si se ha tratado como selección. */
+    _selectClick(id, ev){
+      if(!this.canSelect()) return false;
+      const modifier = ev && (ev.ctrlKey || ev.metaKey || (ev.shiftKey && this.selecting));
+      if(!this.selecting && !modifier) return false;
+      const wasOff = !this.selecting;
+      this.selecting = true;
+      if(ev && ev.shiftKey && this.anchorId && this.visibleIds.indexOf(this.anchorId) !== -1){
+        /* El tramo, en el orden en que se ven. */
+        const order = this._domOrder();
+        const a = order.indexOf(this.anchorId), b = order.indexOf(id);
+        if(a !== -1 && b !== -1) order.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((x) => this.selected.add(x));
+      }else{
+        if(this.selected.has(id)) this.selected.delete(id);
+        else this.selected.add(id);
+        this.anchorId = id;
+      }
+      this._paintSelection();
+      if(wasOff) this.fitHeight();
+      return true;
+    }
+
+    /* Los ids de las tareas en el orden de la vista que se está viendo (tablero o lista). */
+    _domOrder(){
+      const root = this.mode === 'list' && this.list ? this.list : this.board;
+      return Array.from(root.querySelectorAll('.card, .tl-row')).map((el) => el.getAttribute('data-id'));
+    }
+
+    /* Marca en pantalla lo seleccionado y pone al día la barra. Lo que ya no se ve (se borró, o un
+       filtro lo esconde) deja de estar seleccionado: nunca se elimina algo que no está a la vista. */
+    _paintSelection(){
+      if(!this.selectReady) return;
+      const visible = new Set(this.visibleIds);
+      Array.from(this.selected).forEach((id) => { if(!visible.has(id)) this.selected.delete(id); });
+      if(!this.canSelect()){ this.selecting = false; this.selected = new Set(); }
+      const paint = (el) => {
+        const on = this.selected.has(el.getAttribute('data-id'));
+        el.classList.toggle('is-selected', on);
+        if(this.selecting) el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        else el.removeAttribute('aria-pressed');
+      };
+      this.board.querySelectorAll('.card').forEach(paint);
+      if(this.list) this.list.querySelectorAll('.tl-row').forEach(paint);
+      if(this.wrap) this.wrap.classList.toggle('is-selecting', this.selecting);
+      const n = this.selected.size;
+      this.selectBar.hidden = !this.selecting;
+      this.selectBtn.hidden = !this.canSelect();
+      this.selectBtn.setAttribute('aria-pressed', this.selecting ? 'true' : 'false');
+      this.selectCount.textContent = n === 0 ? 'Ninguna tarea seleccionada' : n === 1 ? '1 tarea seleccionada' : n + ' tareas seleccionadas';
+      this.selectDelete.disabled = !n;
+      this.selectDelete.textContent = n > 1 ? 'Eliminar ' + n : 'Eliminar';
+      const all = this.visibleIds.length > 0 && this.visibleIds.every((id) => this.selected.has(id));
+      const allBtn = document.getElementById('btnSelectAll');
+      allBtn.textContent = all ? 'Quitar la selección' : 'Seleccionar todas';
+      allBtn.disabled = !this.visibleIds.length;
     }
 
     _applyMode(){
@@ -228,26 +332,28 @@
       if(this.list){
         this.list.addEventListener('click', (ev) => {
           const row = closest(ev.target, '.tl-row');
-          if(row) handler(row.getAttribute('data-id'));
+          if(row && !this._selectClick(row.getAttribute('data-id'), ev)) handler(row.getAttribute('data-id'));
         });
         this.list.addEventListener('keydown', (ev) => {
           const row = closest(ev.target, '.tl-row');
           if(row && (ev.key === 'Enter' || ev.key === ' ')){
             ev.preventDefault();
-            handler(row.getAttribute('data-id'));
+            if(!this._selectClick(row.getAttribute('data-id'), ev)) handler(row.getAttribute('data-id'));
           }
         });
       }
       this.board.addEventListener('click', (ev) => {
         const card = closest(ev.target, '.card');
         if(!card || consumeDragClick(card)) return;
-        handler(card.getAttribute('data-id'));
+        if(!this._selectClick(card.getAttribute('data-id'), ev)) handler(card.getAttribute('data-id'));
       });
       this.board.addEventListener('keydown', (ev) => {
         const card = closest(ev.target, '.card');
-        if(card && (ev.key === 'Enter' || ev.key === ' ')){
+        /* Alt + flecha mueve la tarea (bindMove): aquí solo Intro y espacio. */
+        if(card && !ev.altKey && (ev.key === 'Enter' || ev.key === ' ')){
           ev.preventDefault();
-          handler(card.getAttribute('data-id'));
+          this.focusCardId = card.getAttribute('data-id');
+          if(!this._selectClick(card.getAttribute('data-id'), ev)) handler(card.getAttribute('data-id'));
         }
       });
     }
@@ -583,6 +689,8 @@
           '<span class="dot"></span><span translate="no">' + esc(s.label) + '</span><span class="count">' + count + '</span></button>';
       }).join('');
       this.syncTabs();
+      this.visibleIds = tasks.map((t) => t.id);
+      this._paintSelection();
       this.fitHeight();
     }
   }

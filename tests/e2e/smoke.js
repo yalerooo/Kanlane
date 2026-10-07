@@ -210,6 +210,114 @@ async function newProject(page, name){
     await page.locator('#dlgTaskView').waitFor({state:'hidden'});
     await page.locator('#taskMode [data-task-mode="board"]').click();
     assert.equal(await page.locator('#board').isVisible(), true);
+
+    /* ---- Seleccionar varias tareas y eliminarlas de una vez ---- */
+    const before = await page.locator('.card').count();
+    await page.evaluate(async () => {
+      const tasks = Workhub.app.models.tasks;
+      for(const [i, name] of ['Borrar A', 'Borrar B', 'Borrar C', 'Borrar D'].entries()){
+        await tasks.add({title:name, status:'todo', order:1000 + i, createdAt:Date.now(), updatedAt:Date.now()});
+      }
+    });
+    const cardOf = (name) => page.locator('.card').filter({hasText:name});
+    await cardOf('Borrar D').waitFor();
+    const selectedNames = () => page.locator('.card.is-selected h3').allTextContents();
+    const countText = () => page.locator('#taskSelectCount').textContent();
+    assert.equal(await page.locator('#btnTaskSelect').isVisible(), true);
+    assert.equal(await page.locator('#taskSelectBar').isVisible(), false, 'la barra no sale hasta que se selecciona');
+    /* Ctrl + clic marca la tarea sin abrirla, y entra en el modo selección. */
+    await cardOf('Borrar A').click({modifiers:['Control']});
+    assert.equal(await page.locator('#dlgTaskView').isVisible(), false, 'no abre la ficha');
+    assert.equal(await page.locator('#taskSelectBar').isVisible(), true);
+    assert.equal(await countText(), '1 tarea seleccionada');
+    assert.equal(await cardOf('Borrar A').getAttribute('aria-pressed'), 'true');
+    assert.equal(await cardOf('Borrar B').getAttribute('aria-pressed'), 'false', 'las demás dicen que no están marcadas');
+    assert.equal(await page.locator('#btnTaskSelect').getAttribute('aria-pressed'), 'true');
+    /* Mayús + clic marca el tramo. */
+    await cardOf('Borrar C').click({modifiers:['Shift']});
+    assert.deepEqual(await selectedNames(), ['Borrar A', 'Borrar B', 'Borrar C']);
+    assert.equal(await countText(), '3 tareas seleccionadas');
+    assert.equal(await page.locator('#btnSelectDelete').textContent(), 'Eliminar 3');
+    /* En el modo selección, un clic normal marca o desmarca; con el teclado, Intro o espacio. */
+    await cardOf('Borrar B').click();
+    assert.deepEqual(await selectedNames(), ['Borrar A', 'Borrar C']);
+    await cardOf('Borrar D').focus();
+    await page.keyboard.press('Space');
+    assert.deepEqual(await selectedNames(), ['Borrar A', 'Borrar C', 'Borrar D']);
+    assert.equal(await page.locator('#dlgTaskView').isVisible(), false);
+    /* La selección sobrevive a repintar el tablero y se ve igual en la lista. */
+    await page.evaluate(() => Workhub.app.controllers.tasks.render());
+    assert.deepEqual(await selectedNames(), ['Borrar A', 'Borrar C', 'Borrar D']);
+    await page.locator('#taskMode [data-task-mode="list"]').click();
+    assert.deepEqual(await page.locator('.tl-row.is-selected .tl-title').allTextContents(), ['Borrar A', 'Borrar C', 'Borrar D']);
+    await page.locator('.tl-row').filter({hasText:'Borrar D'}).click();
+    assert.equal(await countText(), '2 tareas seleccionadas', 'en la lista también se marca con un clic');
+    await page.locator('#taskMode [data-task-mode="board"]').click();
+    /* Lo que un filtro esconde deja de estar seleccionado: no se borra nada que no se vea. */
+    await page.locator('#search').fill('Borrar A');
+    await page.waitForFunction(() => document.querySelectorAll('.card').length === 1);
+    assert.equal(await countText(), '1 tarea seleccionada');
+    await page.locator('#search').fill('');
+    await page.waitForFunction((n) => document.querySelectorAll('.card').length === n, before + 4);
+    assert.deepEqual(await selectedNames(), ['Borrar A']);
+    /* «Seleccionar todas» marca lo que se ve; otra vez, lo quita todo. */
+    await page.locator('#btnSelectAll').click();
+    assert.equal(await page.locator('.card.is-selected').count(), before + 4);
+    assert.equal(await page.locator('#btnSelectAll').textContent(), 'Quitar la selección');
+    await page.locator('#btnSelectAll').click();
+    assert.equal(await countText(), 'Ninguna tarea seleccionada');
+    assert.equal(await page.locator('#btnSelectDelete').isDisabled(), true, 'sin nada marcado no se puede eliminar');
+    /* Eliminar: pide confirmación; cancelar no borra ni desmarca. */
+    await cardOf('Borrar A').click();
+    await cardOf('Borrar B').click();
+    await page.locator('#btnSelectDelete').click();
+    await page.locator('#dlgConfirm').waitFor({state:'visible'});
+    assert.equal(await page.locator('#confirmTitle').textContent(), 'Eliminar tareas');
+    assert.equal(await page.locator('#confirmText').textContent(), 'Se eliminarán las 2 tareas seleccionadas. Podrás deshacerlo desde el aviso que sale después.');
+    await page.locator('#btnConfirmCancel').click();
+    await page.locator('#dlgConfirm').waitFor({state:'hidden'});
+    assert.deepEqual(await selectedNames(), ['Borrar A', 'Borrar B']);
+    await page.locator('#btnSelectDelete').click();
+    await page.locator('#btnConfirmOk').click();
+    await page.waitForFunction((n) => document.querySelectorAll('.card').length === n, before + 2);
+    assert.deepEqual((await page.locator('.card h3').allTextContents()).filter((t) => t.indexOf('Borrar') === 0), ['Borrar C', 'Borrar D'], 'solo se van las marcadas');
+    assert.equal(await page.locator('#taskSelectBar').isVisible(), false, 'al terminar se sale del modo selección');
+    assert.equal(await page.locator('.card[aria-pressed]').count(), 0);
+    /* Se puede deshacer, como al eliminar una. */
+    const undo = page.locator('.toast').filter({hasText:'2 tareas eliminadas'});
+    await undo.waitFor();
+    await undo.locator('.toast-action').click();
+    await page.waitForFunction((n) => document.querySelectorAll('.card').length === n, before + 4);
+    await page.locator('.toast').filter({hasText:'Tareas restauradas'}).waitFor();
+    /* Con el botón de la barra, y Escape para salir sin tocar nada. */
+    await page.locator('#btnTaskSelect').click();
+    assert.equal(await page.locator('#taskSelectBar').isVisible(), true);
+    await cardOf('Borrar C').click();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#taskSelectBar').isVisible(), false);
+    assert.equal(await page.locator('.card.is-selected').count(), 0);
+    /* Fuera del modo, un clic vuelve a abrir la ficha. */
+    await cardOf('Borrar C').click();
+    await page.locator('#dlgTaskView').waitFor({state:'visible'});
+    await page.locator('#btnTvClose').click();
+    await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+    /* En móvil cabe, y se limpia lo de esta prueba eliminándolo todo de una vez. */
+    const wide = page.viewportSize();
+    await page.setViewportSize({width:375, height:812});
+    await page.locator('#btnTaskSelect').click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'la barra de selección no desborda en móvil');
+    await page.setViewportSize(wide);
+    await page.evaluate(() => {
+      const board = Workhub.app.controllers.tasks.board;
+      board.selected = new Set(Workhub.app.models.tasks.items.filter((t) => t.title.indexOf('Borrar') === 0).map((t) => t.id));
+      board._paintSelection();
+    });
+    assert.equal(await countText(), '4 tareas seleccionadas');
+    await page.locator('#btnSelectDelete').click();
+    await page.locator('#btnConfirmOk').click();
+    await page.waitForFunction((n) => document.querySelectorAll('.card').length === n, before);
+    await page.locator('.toast').filter({hasText:'4 tareas eliminadas'}).locator('.toast-close').click();
+
     /* Panel de filtros: se abre y se cierra con Escape. */
     await page.locator('#btnTaskFilter').click();
     assert.equal(await page.locator('#taskFilterPanel').isVisible(), true);

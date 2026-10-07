@@ -61,6 +61,12 @@ ok(/const INCLUDE = [^;]*'src'/.test(fs.readFileSync(path.join(repo, 'scripts', 
   ['src/services/project-crypto.js', 'src/services/keystore.js'].every((s) => appScripts.includes(s)) &&
   appScripts.every((s) => fs.existsSync(path.join(repo, s))), 'los ' + appScripts.length + ' scripts de app/index.html existen y entran en el precache (con project-crypto.js y keystore.js)');
 
+/* El service worker se registra con el mismo alcance que declara el manifiesto. */
+const manifest = JSON.parse(fs.readFileSync(path.join(repo, 'manifest.webmanifest'), 'utf8'));
+const pwa = fs.readFileSync(path.join(repo, 'src', 'services', 'pwa.js'), 'utf8');
+ok(manifest.scope === '/app/' && manifest.start_url.indexOf(manifest.scope) === 0 && pwa.indexOf("register(root + 'sw.js', {scope: root + 'app/'})") !== -1,
+  'el registro del service worker y el manifiesto comparten alcance (/app/)');
+
 (async () => {
   stores['workhub-shell-viejo'] = new Map();
   failPath = '/src/a.js';

@@ -50,6 +50,8 @@
       };
       this.controllers.crypto = new C.ProjectCryptoController(this, new V.ProjectLockView());
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
+      /* Una copia importada puede traer campos personalizados que el proyecto no tiene. */
+      this.models.backup.onCustomFields = (list) => this.controllers.projects.saveCustomFields(list);
       this.controllers.teamCrypto = new C.TeamCryptoController(this, new V.JoinView());
       this.controllers.rotation = new C.KeyRotationController(this, this.controllers.crypto.view);
       this.controllers.convert = new C.ProjectConvertController(this, this.controllers.crypto.view);
@@ -188,6 +190,7 @@
       if(Array.isArray(p.stages)) data.stages = p.stages;
       if(typeof p.clients === 'boolean') data.clients = p.clients;
       if(Array.isArray(p.labels)) data.labels = p.labels.slice(0, 1000);
+      if(Array.isArray(p.customFields)) data.customFields = p.customFields.slice(0, 50);
       /* Cifrado total: para no conectar los datos antes de tener la clave. */
       if(M.ProjectModel.isEncrypted(p) || p.enc === true) data.enc = true;
       prefs.write(PROJECT_PREF, JSON.stringify(data));

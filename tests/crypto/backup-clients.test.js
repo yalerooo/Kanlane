@@ -54,7 +54,7 @@ const Workhub = {
 };
 ['src/core/emitter.js', 'src/utils/dates.js', 'src/utils/pool.js', 'src/services/crypto.js',
   'src/services/project-crypto.js', 'src/models/enc-schema.js', 'src/models/project-cipher.js',
-  'src/models/collection-model.js', 'src/models/project-templates.js', 'src/models/task-model.js',
+  'src/models/collection-model.js', 'src/models/project-templates.js', 'src/models/custom-fields.js', 'src/models/task-model.js',
   'src/models/client-model.js', 'src/models/vault-model.js', 'src/models/backup-model.js', 'src/services/backup-history.js'
 ].forEach((rel) => new Function('Workhub', 'window', 'crypto', 'indexedDB', read(rel))(Workhub, {crypto:globalThis.crypto}, globalThis.crypto, idb));
 

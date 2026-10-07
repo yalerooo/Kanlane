@@ -211,6 +211,104 @@ async function newProject(page, name){
     await page.locator('#taskMode [data-task-mode="board"]').click();
     assert.equal(await page.locator('#board').isVisible(), true);
 
+    /* ---- Tabla, cronograma y campos personalizados: otras vistas de las mismas tareas ---- */
+    const taskBy = (title) => page.evaluate((x) => { const t = Workhub.app.models.tasks.items.find((i) => i.title === x); return t ? JSON.parse(JSON.stringify(t)) : null; }, title);
+    const rowOf = (title) => page.locator('#taskTable tbody tr').filter({has:page.locator('input.tt-title[value="' + title + '"]')});
+    await page.locator('#taskMode [data-task-mode="table"]').click();
+    assert.equal(await page.locator('#board').isVisible(), false);
+    assert.equal(await page.locator('#taskTable tbody tr').count(), 2, 'una fila por tarea');
+    /* Edición directa: el título con Intro y la fecha límite en su celda. */
+    await rowOf('Vence hoy').locator('input.tt-title').fill('Vence hoy (tabla)');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy (tabla)'));
+    assert.equal(await page.evaluate(() => Workhub.app.models.tasks.items.length), 2, 'editar no duplica la tarea');
+    await rowOf('Vence hoy (tabla)').locator('input.tt-title').fill('Vence hoy');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy'));
+    /* Ordenar por título: ascendente y descendente. */
+    await page.locator('#taskTable button[data-sort="title"]').click();
+    assert.deepEqual(await page.locator('#taskTable input.tt-title').evaluateAll((els) => els.map((e) => e.value)), ['Vence dentro de un mes', 'Vence hoy']);
+    await page.locator('#taskTable button[data-sort="title"]').click();
+    assert.deepEqual(await page.locator('#taskTable input.tt-title').evaluateAll((els) => els.map((e) => e.value)), ['Vence hoy', 'Vence dentro de un mes']);
+    assert.equal(await page.locator('#taskTable th.tt-col-title').getAttribute('aria-sort'), 'descending');
+    /* La búsqueda es la misma del tablero y no toca los datos. */
+    await page.locator('#search').fill('un mes');
+    assert.equal(await page.locator('#taskTable tbody tr').count(), 1);
+    await page.locator('#search').fill('nada que coincida');
+    await page.locator('#taskTable .view-empty').waitFor();
+    await page.locator('#search').fill('');
+    assert.equal(await page.locator('#taskTable tbody tr').count(), 2);
+    assert.equal(await page.evaluate(() => Workhub.app.models.tasks.items.length), 2, 'filtrar no modifica ni duplica tareas');
+    /* Abrir la ficha desde la fila. */
+    await rowOf('Vence hoy').locator('button[data-open]').click();
+    await page.locator('#dlgTaskView').waitFor({state:'visible'});
+    await page.keyboard.press('Escape');
+    await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+
+    /* Cronograma: la tarea de hoy es un hito de un día; con el teclado se mueve y se alarga. */
+    await page.locator('#taskMode [data-task-mode="timeline"]').click();
+    const todayBar = page.locator('#taskTimeline .tml-task').filter({hasText:'Vence hoy'});
+    await todayBar.waitFor();
+    assert.match(await todayBar.getAttribute('class'), /is-day/);
+    assert.equal(await page.locator('#taskTimeline .tml-task').count(), 1, 'lo que cae fuera de estas fechas no se pinta');
+    await todayBar.focus();
+    await page.keyboard.press('Alt+ArrowRight');
+    await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.dueDate === d), await ymdOf(1));
+    await page.keyboard.press('Alt+ArrowLeft');
+    await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.dueDate === d), todayKey);
+    await page.keyboard.press('Alt+Shift+ArrowRight');
+    await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.startDate === d[0] && t.dueDate === d[1]), [todayKey, await ymdOf(1)]);
+    assert.doesNotMatch(await page.locator('#taskTimeline .tml-task').filter({hasText:'Vence hoy'}).getAttribute('class'), /is-day/, 'ya es una barra de dos días');
+    /* Un intervalo al revés no se guarda. */
+    assert.equal(await page.evaluate(([id, a, b]) => Workhub.app.controllers.tasks.setRange(id, a, b), [(await taskBy('Vence hoy')).id, await ymdOf(3), todayKey]), false);
+    assert.equal((await taskBy('Vence hoy')).dueDate, await ymdOf(1));
+    /* Sin fecha: a «Sin programar». */
+    await page.evaluate(async () => { await Workhub.app.models.tasks.add({title:'Sin fechas', status:'todo', order:3, createdAt:Date.now(), updatedAt:Date.now()}); });
+    await page.locator('#taskTimeline .tml-loose-item').filter({hasText:'Sin fechas'}).waitFor();
+    await page.locator('#taskTimeline [data-scale="month"]').click();
+    assert.ok(await page.locator('#taskTimeline .tml-head .tml-day').count() >= 28, 'la escala de mes pinta el mes entero');
+    await page.locator('#taskTimeline [data-scale="week"]').click();
+
+    /* Campos personalizados: definir, rellenar con validación, ver en la tarjeta y borrar con aviso. */
+    await page.locator('#btnFields').click();
+    await page.locator('#dlgFields').waitFor({state:'visible'});
+    await page.locator('#cfNewName').fill('Horas');
+    await page.evaluate(() => { const s = document.getElementById('cfNewType'); s.value = 'number'; s.dispatchEvent(new Event('change', {bubbles:true})); });
+    await page.locator('#cfNewAdd').click();
+    await page.locator('#cfList .cf-card-box').check();
+    await page.locator('#btnFieldsSave').click();
+    await page.locator('#dlgFields').waitFor({state:'hidden'});
+    await page.evaluate((id) => Workhub.app.controllers.tasks.openEdit(id), (await taskBy('Sin fechas')).id);
+    await page.locator('#fCustom input[data-cf]').fill('muchas');
+    await page.locator('#btnSave').click();
+    await page.locator('#fFormError').waitFor({state:'visible'});
+    assert.equal(await page.locator('#dlg').evaluate((d) => d.open), true, 'un número que no vale no se guarda');
+    await page.locator('#fCustom input[data-cf]').fill('7,5');
+    await page.locator('#btnSave').click();
+    await page.locator('#dlg').waitFor({state:'hidden'});
+    assert.deepEqual(Object.values((await taskBy('Sin fechas')).custom), [7.5]);
+    await page.locator('#taskMode [data-task-mode="board"]').click();
+    assert.match(await page.locator('.card').filter({hasText:'Sin fechas'}).locator('.cf-badge').textContent(), /Horas\s*7,5/);
+    /* Tras recargar siguen ahí la definición, el valor y las fechas. */
+    await page.reload();
+    await page.locator('.card').filter({hasText:'Sin fechas'}).locator('.cf-badge').waitFor();
+    assert.equal((await taskBy('Vence hoy')).startDate, todayKey);
+    await page.locator('#btnFields').click();
+    await page.locator('#cfList [data-act="del"]').click();
+    assert.match(await page.locator('#confirmText').textContent(), /«Horas».*1 tarea/);
+    await page.locator('#btnConfirmOk').click();
+    await page.waitForFunction(() => Workhub.app.controllers.projects.customFields().length === 0 && !Workhub.app.models.tasks.items.some((t) => t.custom && Object.keys(t.custom).length));
+    await page.locator('#btnFieldsCancel').click();
+    assert.equal(await page.locator('.cf-badge').count(), 0);
+    /* Se deja todo como estaba para lo que sigue. */
+    await page.evaluate(async () => {
+      const tasks = Workhub.app.models.tasks;
+      await tasks.remove(tasks.items.find((t) => t.title === 'Sin fechas').id);
+      const t = tasks.items.find((x) => x.title === 'Vence hoy');
+      tasks.setRange(t.id, '', Workhub.utils.dates.todayYmd());
+    });
+    await page.waitForFunction(() => Workhub.app.models.tasks.items.length === 2);
+
     /* ---- Seleccionar varias tareas y eliminarlas de una vez ---- */
     const before = await page.locator('.card').count();
     await page.evaluate(async () => {
@@ -401,7 +499,7 @@ async function newProject(page, name){
     assert.deepEqual(await en.locator('.backup-version-actions button').allInnerTexts(), ['Download', 'Import', 'Delete']);
     assert.deepEqual(await en.evaluate(() => Workhub.i18n.missing().filter((text) => /[áéíóúñ¿¡]/i.test(text))), [], 'sin textos en español sin traducir');
     await english.close();
-    console.log('OK   navegador: proyectos, tareas, teclado, copia, cofre, filtros, lista, navegación y móvil');
+    console.log('OK   navegador: proyectos, tareas, teclado, copia, cofre, filtros, lista, tabla, cronograma, campos, navegación y móvil');
   }finally{
     await browser.close();
   }

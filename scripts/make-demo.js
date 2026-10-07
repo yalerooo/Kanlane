@@ -43,8 +43,12 @@ side = side.slice(0, side.indexOf('    <div class="sidebar-foot">')) +
 /* Barra de la vista: solo el título y las herramientas de Tareas. */
 let head = cut('  <header class="page-head top glass">', '</header>');
 head = head.slice(0, head.indexOf('    <div class="bar-tools" data-bar="calendar"')) + '  </header>';
+/* Tabla, cronograma y campos personalizados son de la aplicación completa: la demo no los trae. */
+head = head.replace(/\n {8}<button type="button" role="radio" data-task-mode="(table|timeline)"[^\n]*/g, '');
+head = head.replace(/\n {6}<button type="button" class="icon-only" id="btnFields"[^\n]*/, '');
 
-const tasks = cut('  <section id="viewTasks">', '</section>');
+const tasks = cut('  <section id="viewTasks">', '</section>')
+  .split('\n').filter((line) => !/id="(taskTable|tableStatus|taskTimeline|timelineHelp|timelineStatus)"/.test(line)).join('\n');
 const detail = cut('<dialog id="dlgTaskView"', '</dialog>');
 
 const CSS = ['fonts', 'tokens', 'base', 'layout', 'components/skeleton', 'components/sumi', 'components/buttons', 'components/forms',

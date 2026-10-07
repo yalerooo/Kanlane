@@ -236,6 +236,7 @@
       /* La integración con GitHub sobrevive a los cambios de nombre, color y tipo. */
       if(current.github && !data.github) data.github = current.github;
       if(current.labels && !data.labels) data.labels = current.labels;
+      if(current.customFields && !data.customFields) data.customFields = current.customFields;
       /* El cifrado del proyecto no se puede quitar ni cambiar (las reglas tampoco lo dejan). */
       if(current.enc) data.enc = current.enc;
       if(data.enc && data.github) return Promise.reject(new Error('encrypted-github'));

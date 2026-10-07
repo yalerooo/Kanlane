@@ -14,7 +14,7 @@
   const COPY_COLLECTIONS = ['clients', 'contacts', 'meetings', 'plugin_data', 'tasks'];
   const TeamVault = () => Workhub.models.TeamVault;
   /* 'github' lleva el enlace con el GitHub Project (sin ningún token): cada miembro conecta su cuenta. */
-  const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels', 'github'];
+  const CONFIG_KEYS = ['tipo', 'stages', 'clients', 'labels', 'customFields', 'github'];
   /* Escrituras a la vez al copiar. No se usan lotes (batch): las reglas consultan el
      documento del equipo en cada escritura y Firestore limita esas consultas a unas
      20 por lote entero, así que un proyecto con más de unas pocas tareas fallaba con

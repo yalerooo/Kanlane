@@ -32,6 +32,17 @@
     return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   }
 
+  /* Días de una fecha AAAA-MM-DD a otra, y una fecha desplazada n días. */
+  function daysBetween(a, b){
+    const {parseYmd} = Workhub.utils.dates;
+    return Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+  }
+  function shiftYmd(date, n){
+    const {parseYmd, ymd} = Workhub.utils.dates;
+    const d = parseYmd(date);
+    return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n));
+  }
+
   function addPeriod(date, repeat, day){
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     if(repeat === 'daily') d.setDate(d.getDate() + 1);
@@ -80,6 +91,18 @@
       /* Con hora, pasada esa hora de hoy ya está vencida. */
       if(t.dueDate === today) return t.dueTime && t.dueTime < nowHm() ? 'overdue' : 'today';
       return 'future';
+    }
+
+    /* Intervalo de la tarea para el cronograma: {start, end} en AAAA-MM-DD, o null si no tiene
+       ninguna fecha. Solo fecha límite (o solo inicio): un día. Un inicio posterior a la fecha
+       límite (datos antiguos o de fuera) se trata como ese mismo día. */
+    static rangeOf(t){
+      const ok = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
+      const start = ok(t && t.startDate) ? t.startDate : '';
+      const end = ok(t && t.dueDate) ? t.dueDate : '';
+      if(!start && !end) return null;
+      if(!end) return {start:start, end:start};
+      return {start:start && start <= end ? start : end, end:end};
     }
 
     /* Próxima fecha límite de una tarea que se repite: la siguiente que no esté ya en el pasado. */
@@ -170,6 +193,9 @@
         updatedAt:Date.now()
       };
       if(t.dueTime) copy.dueTime = t.dueTime;
+      /* La siguiente dura lo mismo y conserva los campos personalizados. */
+      if(t.startDate && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, daysBetween(t.dueDate, next));
+      if(t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
       if(Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
       return Promise.all([this._create(copy), this.update(t.id, {repeatSpawned:true})]).then(() => {
         this.emit('recurred', {date:next, title:t.title});
@@ -270,8 +296,27 @@
     reschedule(id, dueDate){
       const t = this.find(id);
       if(!t || t.dueDate === dueDate || !this.isReady()) return;
-      this.patchLocal(id, {dueDate:dueDate});
-      this.update(id, {dueDate:dueDate, updatedAt:Date.now()}).catch(() => {});
+      const patch = {dueDate:dueDate};
+      /* El inicio nunca queda después de la fecha límite: si lo haría, se mueve con ella. */
+      if(t.startDate && dueDate && t.startDate > dueDate) patch.startDate = t.dueDate && t.startDate <= t.dueDate ? shiftYmd(t.startDate, daysBetween(t.dueDate, dueDate)) : dueDate;
+      this.patchLocal(id, patch);
+      this.update(id, Object.assign({updatedAt:Date.now()}, patch)).catch(() => {});
+    }
+
+    /* Cambia el intervalo de la tarea (cronograma). '' = sin esa fecha. Devuelve false si el
+       intervalo no vale (inicio posterior a la fecha límite, o ninguna fecha) o no cambia nada. */
+    setRange(id, startDate, dueDate){
+      const t = this.find(id);
+      startDate = startDate || '';
+      dueDate = dueDate || '';
+      if(!t || !this.isReady() || (!startDate && !dueDate) || (startDate && dueDate && startDate > dueDate)) return false;
+      if((t.startDate || '') === startDate && (t.dueDate || '') === dueDate) return false;
+      const patch = {dueDate:dueDate};
+      /* Las tareas sin inicio no llevan el campo. */
+      if(startDate || t.startDate) patch.startDate = startDate;
+      this.patchLocal(id, patch);
+      this.update(id, Object.assign({updatedAt:Date.now()}, patch)).catch(() => {});
+      return true;
     }
 
     saveLinks(id, linkedContacts, linkedVault){
@@ -426,6 +471,8 @@
 
   TaskModel.STATUS = STATUS;
   TaskModel.REPEATS = REPEATS;
+  TaskModel.daysBetween = daysBetween;
+  TaskModel.shiftYmd = shiftYmd;
   TaskModel.setStages(Workhub.models.ProjectTemplates.stagesOf(Workhub.models.ProjectTemplates.DEFAULT_TYPE));
   Workhub.models.TaskModel = TaskModel;
 })();

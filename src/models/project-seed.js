@@ -41,9 +41,9 @@
         updatedAt:t.updatedAt || now
       };
       if(dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '')) body.dueTime = t.dueTime;
+      if(/^\d{4}-\d{2}-\d{2}$/.test(t.startDate || '') && (!dueDate || t.startDate <= dueDate)) body.startDate = t.startDate;
       /* PENDIENTE: campos que el importador de Trello ya lee y Kanlane aún no guarda. Al crear cada
          uno (aquí, en validData('tasks') de firestore.rules y en EncSchema), descomentar su línea.
-      if(t.startDate) body.startDate = t.startDate;
       if(t.dueComplete) body.dueComplete = true;
       if(t.dueReminder != null) body.dueReminder = t.dueReminder;
       if(list(t.attachments).length) body.attachments = t.attachments.slice(0, 50);

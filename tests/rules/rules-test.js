@@ -84,6 +84,10 @@ async function t(name, fn){
   await t('carol (lector) no escribe tareas', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('c').set({title: 'z'})));
   await t('carol (lector) no borra tareas', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('b').delete()));
   await t('bob (editor) cambia la configuración', () => assertSucceeds(teamRef(bob).update({nombre: 'Equipo 2', labels: [{name: 'a', color: 'fff'}]})));
+  await t('un editor del equipo guarda fechas y campos en una tarea', () => assertSucceeds(bob.collection('teams').doc('t1').collection('tasks').doc('rango').set({title:'y', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:1}})));
+  await t('un lector del equipo no cambia las fechas de una tarea', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('rango').update({startDate:'2026-10-01'})));
+  await t('bob (editor) define los campos personalizados del proyecto', () => assertSucceeds(teamRef(bob).update({customFields: [{id: 'f1', name: 'Presupuesto', type: 'number', card: false}]})));
+  await t('carol (lector) no define campos personalizados', () => assertFails(teamRef(carol).update({customFields: []})));
   await t('carol (lector) no cambia la configuración', () => assertFails(teamRef(carol).update({nombre: 'Nada'})));
   await t('bob (editor) no cambia roles', () => assertFails(teamRef(bob).update({['members.bob.role']: 'owner'})));
   await t('bob (editor) no expulsa a carol', () => assertFails(teamRef(bob).update({memberIds: FVc.arrayRemove('carol'), ['members.carol']: FVc.delete()})));
@@ -286,6 +290,12 @@ async function t(name, fn){
   await t('una tarea admite hora en la fecha límite', () => assertSucceeds(own.collection('tasks').doc('timed').set({title:'a', dueDate:'2026-10-09', dueTime:'16:30'})));
   await t('una hora que no es HH:MM se rechaza', () => assertFails(own.collection('tasks').doc('timed2').set({title:'a', dueDate:'2026-10-09', dueTime:'16:30:00'})));
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
+  await t('una tarea admite fecha de inicio y campos personalizados', () => assertSucceeds(own.collection('tasks').doc('ranged').set({title:'a', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:10, f2:'texto', f3:true}})));
+  await t('una fecha de inicio que no es AAAA-MM-DD se rechaza', () => assertFails(own.collection('tasks').doc('ranged2').set({title:'a', startDate:'2026-10-06T00:00:00Z'})));
+  await t('unos campos personalizados que no son un mapa se rechazan', () => assertFails(own.collection('tasks').doc('ranged3').set({title:'a', custom:['x']})));
+  await t('más de 50 campos personalizados en una tarea se rechazan', () => assertFails(own.collection('tasks').doc('ranged4').set({title:'a', custom:Object.fromEntries(Array.from({length:51}, (_, i) => ['f' + i, i]))})));
+  await t('un proyecto admite la definición de sus campos', () => assertSucceeds(own.collection('projects').doc('pcf').set({nombre:'P', createdAt:1, customFields:[{id:'f1', name:'Presupuesto', type:'number', card:true}]})));
+  await t('un proyecto con más de 50 campos se rechaza', () => assertFails(own.collection('projects').doc('pcf2').set({nombre:'P', createdAt:1, customFields:Array.from({length:51}, (_, i) => ({id:'f' + i, name:'c', type:'text'}))})));
   await t('una tarea con campos ajenos se rechaza', () => assertFails(own.collection('tasks').doc('unknown').set({title:'x', permisoInventado:true})));
   await t('una nota demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('q').collection('notes').doc('oversize').set({text:'a'.repeat(20001)})));
   /* Notas con varios adjuntos: `attachments` (qué son) y `assetIds` (los documentos de assets que enlazan). */

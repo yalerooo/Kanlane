@@ -94,7 +94,7 @@
 
     setSecretBusy(busy){
       this.keySubmit.disabled = busy;
-      this.keySubmit.textContent = busy ? 'Comprobando…' : 'Importar';
+      Workhub.views.sumi.busyLabel(this.keySubmit, busy, busy ? 'Comprobando…' : 'Importar');
     }
 
     showSecretError(msg){
@@ -171,7 +171,7 @@
 
     revealCloudKey(key){ this.cloudKey.value = key; this.cloudKeyWrap.hidden = false; }
     clearImportedKey(){ this.cloudImportKey.value = ''; }
-    setCloudBusy(busy){ this.cloudSave.disabled = busy; this.cloudSave.textContent = busy ? 'Guardando…' : 'Guardar en la nube'; }
+    setCloudBusy(busy){ this.cloudSave.disabled = busy; Workhub.views.sumi.busyLabel(this.cloudSave, busy, busy ? 'Guardando…' : 'Guardar en la nube'); }
 
     renderHistory(entries){
       this.history.replaceChildren();
@@ -209,7 +209,7 @@
       });
     }
 
-    setSavingVersion(busy){ this.btnSaveVersion.disabled = busy; this.btnSaveVersion.textContent = busy ? 'Guardando…' : 'Guardar versión'; }
+    setSavingVersion(busy){ this.btnSaveVersion.disabled = busy; Workhub.views.sumi.busyLabel(this.btnSaveVersion, busy, busy ? 'Guardando…' : 'Guardar versión'); }
 
     /* handler(parsedJson); los errores de lectura se muestran aquí mismo. */
     bindImport(handler){
@@ -237,7 +237,7 @@
     setExporting(busy){
       this.btnExport.disabled = busy;
       this.btnExportPlain.disabled = busy;
-      this.btnExport.textContent = busy ? 'Preparando…' : this.exportText();
+      Workhub.views.sumi.busyLabel(this.btnExport, busy, busy ? 'Preparando…' : this.exportText());
     }
 
     /* Permite volver a elegir el mismo archivo. */

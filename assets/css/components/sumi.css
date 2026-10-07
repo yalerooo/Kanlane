@@ -33,6 +33,7 @@
 /* Los tres carriles, sin Sumi: corto, largo, medio. Para cargas cortas, donde una cara sobra. */
 .rails{display:inline-flex;align-items:flex-start;gap:.25em;height:1.15em;vertical-align:-.15em;flex:none;}
 .rails i{width:.5em;border-radius:.25em;background:currentColor;transform-origin:top;}
+.rails.is-lead{margin-right:.55em;}
 .rails i:nth-child(1){height:56%;}
 .rails i:nth-child(2){height:100%;}
 .rails i:nth-child(3){height:78%;}

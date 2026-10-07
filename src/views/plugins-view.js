@@ -142,7 +142,7 @@
     setAdding(busy, msg, isError){
       this.formBtn.disabled = busy || this.fileMode;
       this.urlInput.disabled = busy || this.fileMode;
-      this.formBtn.textContent = busy ? 'Comprobando…' : 'Añadir';
+      Workhub.views.sumi.busyLabel(this.formBtn, busy, busy ? 'Comprobando…' : 'Añadir');
       this.formMsg.hidden = !msg;
       this.formMsg.textContent = msg || '';
       this.formMsg.classList.toggle('is-error', !!isError);

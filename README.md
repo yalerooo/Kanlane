@@ -127,6 +127,13 @@ docs/                 guías
 - **Diseño:** minimalista, plano (sin sombras ni degradados), sin emojis; todo responsive.
 - **Idiomas:** el código está escrito en español y `src/i18n/en.js` traduce por coincidencia exacta del texto. `node scripts/check-i18n.js` avisa de lo que falte.
 
+### Marca
+
+El símbolo y la mascota de Kanlane es **Sumi**, un pulpo de tres brazos (corto, largo, medio) que son los carriles de un tablero. «Sumi» es tinta en japonés y, escrito de otra forma, «hecho».
+
+- La forma tiene una única definición, `src/views/sumi.js`. De ella salen los SVG de la marca y el favicon (`node scripts/make-brand.js`), los iconos de la aplicación instalable (`node scripts/make-icons.js`) y la imagen para redes (`node scripts/make-og.js`).
+- Las normas de uso (una sola tinta, tamaños, gestos, dónde va y dónde no) están en [`docs/marca/cuaderno-sumi.html`](docs/marca/cuaderno-sumi.html), y los archivos, en `docs/marca/svg/`.
+
 ### Ejecutarlo en local
 
 No necesitas instalar nada más que Node:
@@ -271,6 +278,13 @@ docs/                 guides
 - **Models** extend `CollectionModel` (kept in sync in memory, emits `change`). **Views** expose `bind…(handler)` methods. **Controllers** wire them together.
 - **Design:** minimal and flat (no shadows or gradients), no emojis, fully responsive.
 - **Languages:** the code is written in Spanish and `src/i18n/en.js` translates by exact text match. `node scripts/check-i18n.js` reports anything missing.
+
+### Brand
+
+Kanlane's symbol and mascot is **Sumi**, a three-armed octopus (short, long, medium) whose arms are the lanes of a board. "Sumi" is Japanese for ink and, written differently, for "done".
+
+- The shape has a single definition, `src/views/sumi.js`. The brand SVGs and the favicon (`node scripts/make-brand.js`), the installable app icons (`node scripts/make-icons.js`) and the social image (`node scripts/make-og.js`) are generated from it.
+- The usage rules (single ink, sizes, expressions, where it goes and where it does not) are in [`docs/marca/cuaderno-sumi.html`](docs/marca/cuaderno-sumi.html), in Spanish, and the files are in `docs/marca/svg/`.
 
 ### Run it locally
 

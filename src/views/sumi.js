@@ -234,6 +234,14 @@
     doc.addEventListener('sumi:done', () => marks.forEach((el) => { if(el.isConnected) play(el, 'dip'); }));
   }
 
+  /* Texto de un botón que espera: con busy, los tres carriles en marcha delante del texto. */
+  function busyLabel(el, busy, text){
+    if(!el) return;
+    el.textContent = text;
+    if(busy) el.insertAdjacentHTML('afterbegin', '<span class="rails is-run is-lead" aria-hidden="true"><i></i><i></i><i></i></span>');
+  }
+
+  api.busyLabel = busyLabel;
   api.setMood = setMood; api.play = play; api.follow = follow; api.mount = mount;
   root.KanlaneSumi = api;
   if(root.Workhub && root.Workhub.views) root.Workhub.views.sumi = api;

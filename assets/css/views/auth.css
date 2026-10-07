@@ -180,11 +180,10 @@ html.auth-gate .app{display:none !important;}
 .auth-meter[hidden]{display:none;}
 
 /* Indicador de carga dentro del botón que se ha pulsado. */
-.auth-spin{display:none;flex:none;width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:auth-spin .7s linear infinite;}
-.is-busy > .auth-spin{display:block;}
+/* Son los tres carriles de Sumi (.rails, en components/sumi.css). */
+.auth-spin{display:none;font-size:13px;}
+.is-busy > .auth-spin{display:inline-flex;}
 .auth-provider.is-busy > svg{display:none;}
-@keyframes auth-spin{to{transform:rotate(360deg);}}
-@media (prefers-reduced-motion: reduce){.auth-spin{animation-duration:1.6s;}}
 /* Mientras se espera la respuesta no se cambia de modo. */
 #authPanel.is-busy .auth-forgot,#authPanel.is-busy .auth-switch a{pointer-events:none;opacity:.55;}
 

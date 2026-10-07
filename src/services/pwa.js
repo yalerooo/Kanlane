@@ -64,9 +64,16 @@
       if(!hadController || reloading) return;
       toast().success(t('Hay una versión nueva de Kanlane'), {duration: 15000, action: {label: t('Recargar'), run: () => { reloading = true; location.reload(); }}});
     });
-    navigator.serviceWorker.register(Workhub.utils.urls.rootUrl('sw.js')).then((reg) => {
+    /* El mismo alcance que el manifiesto (/app/): sw.js está en la raíz, pero solo controla la
+       aplicación, no la portada ni las páginas legales o de captación. */
+    const root = Workhub.utils.urls.rootUrl('');
+    navigator.serviceWorker.register(root + 'sw.js', {scope: root + 'app/'}).then((reg) => {
       /* Comprueba si hay versión nueva al volver a la pestaña. */
       document.addEventListener('visibilitychange', () => { if(!document.hidden) reg.update().catch(() => {}); });
+      /* Antes el alcance era todo el sitio (/): ese registro se retira cuando el nuevo ya está
+         activo, para no quedarse sin copia sin conexión entre medias. */
+      return navigator.serviceWorker.ready.then(() => navigator.serviceWorker.getRegistration(root))
+        .then((old) => { if(old && old.scope === root) return old.unregister(); });
     }).catch(() => {});
   }
 

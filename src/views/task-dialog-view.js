@@ -29,8 +29,11 @@
       this.customField = $('fCustomField');
       this.customEl = $('fCustom');
       this.formError = $('fFormError');
-      this.form.addEventListener('input', () => { this.formError.hidden = true; });
-      this.form.addEventListener('change', () => { this.formError.hidden = true; });
+      /* Los avisos del título y del cliente van junto a su campo: el general queda al final del formulario, fuera de la vista. */
+      this.titleError = $('fTitleError');
+      this.clienteError = $('fClienteError');
+      this.form.addEventListener('input', () => { this._clearErrors(); });
+      this.form.addEventListener('change', () => { this._clearErrors(); });
       /* Subtareas: [{id, text, done}]. */
       this.checklist = [];
       this.checkList = $('fChecklist');
@@ -186,7 +189,8 @@
         if(at && this.checkList.contains(at) && at.matches('input[type=text]')){ this.checkNew.focus(); return; }
         const extra = this._extras();
         if(extra.error){
-          showMessage(this.formError, extra.error);
+          this._clearErrors();
+          showMessage(extra.at || this.formError, extra.error);
           if(extra.el && extra.el.focus) extra.el.focus();
           return;
         }
@@ -194,8 +198,22 @@
       });
     }
 
-    /* Fecha de inicio y campos personalizados: {startDate, custom} o {error, el} si algo no vale. */
+    _clearErrors(){
+      this.formError.hidden = true;
+      this.titleError.hidden = true;
+      this.clienteError.hidden = true;
+    }
+
+    /* Fecha de inicio y campos personalizados: {startDate, custom} o {error, el} si algo no vale.
+       El título y el cliente también se comprueban aquí: el formulario no usa la validación del navegador. */
     _extras(){
+      if(!this.fields.title.value.trim()) return {error:'Escribe un título para la tarea.', el:this.fields.title, at:this.titleError};
+      /* Con los clientes desactivados el campo está oculto y no se exige. */
+      const field = this.cliente.select.closest('.field');
+      if(!field.classList.contains('clients-off') && !this.cliente.value()){
+        const el = this.cliente.newWrap.hidden ? field.querySelector('.dd-trigger') || this.cliente.select : this.cliente.newInput;
+        return {error:'Elige un cliente o proyecto.', el:el, at:this.clienteError};
+      }
       const start = this.fields.inicio.value || '';
       const due = this.fields.fecha.value || '';
       if(start && due && start > due){
@@ -421,7 +439,7 @@
       this.fields.id.value = '';
       this.hadTime = false;
       this.hadStart = this.hadCustom = false;
-      this.formError.hidden = true;
+      this._clearErrors();
       this._renderCustom({});
       this.checklist = [];
       this._renderChecklist();
@@ -454,7 +472,7 @@
       this.fields.inicio.value = t.startDate || '';
       this.hadStart = !!t.startDate;
       this.hadCustom = !!(t.custom && Object.keys(t.custom).length);
-      this.formError.hidden = true;
+      this._clearErrors();
       this._renderCustom(t.custom || {});
       this.fields.repeat.value = t.repeat || '';
       this.checklist = (Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text || '', done:!!c.done}));

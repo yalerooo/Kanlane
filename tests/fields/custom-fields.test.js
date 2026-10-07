@@ -178,7 +178,7 @@ const FIELDS = [
   /* Una copia antigua, sin campos, se importa como siempre. */
   added.length = 0;
   await backup.import({tasks:[{title:'Antigua', dueDate:'2025-01-01'}]});
-  assert.deepEqual(Object.keys(added[0]).sort(), ['cliente', 'contacto', 'createdAt', 'desc', 'dueDate', 'labels', 'order', 'status', 'title', 'updatedAt']);
+  assert.deepEqual(Object.keys(added[0]).sort(), ['checklist', 'cliente', 'contacto', 'createdAt', 'desc', 'dueDate', 'labels', 'order', 'status', 'title', 'updatedAt']);
   ok('copia: no duplica definiciones y las copias antiguas siguen valiendo');
 
   console.log('\nTodo correcto.');

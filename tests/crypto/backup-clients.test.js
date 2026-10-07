@@ -242,7 +242,7 @@ const noPlain = (db, col, words) => {
     await settle(m2);
     const result = await new BackupModel(m2).import(await BackupModel.open(parsed, {secret:PASSWORD}));
     await settle(m2);
-    assert.deepEqual(result.counts, {clients:1, tasks:1, notes:1, meetings:1, contacts:1, vault:0});
+    assert.deepEqual(result.counts, {clients:1, tasks:1, notes:1, meetings:1, contacts:1, vault:0, files:0, filesSkipped:0});
     const t2 = m2.tasks.items[0];
     assert.deepEqual([t2.title, t2.desc, t2.cliente, t2.status, t2.dueDate, t2.labels], ['Tarea secreta', 'Descripción reservada', 'Cliente Reservado', 'proceso', '2026-11-01', ['urgente']]);
     const notes = db2.rawAll('tasks/' + t2.id + '/notes');

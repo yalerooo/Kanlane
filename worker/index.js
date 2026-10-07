@@ -17,7 +17,13 @@
    /__/kms/v1/totp: la verificación en dos pasos del gestor de contraseñas.
 
    Y, sin atender ninguna petición, ejecuta cada 30 minutos las automatizaciones por fecha de los
-   proyectos (cron de wrangler.jsonc → `scheduled` → worker/automations.mjs). */
+   proyectos (cron de wrangler.jsonc → `scheduled` → worker/automations.mjs).
+
+   Captura de tareas por correo (docs/CAPTURA-EMAIL.md, worker/capture.mjs):
+   - /__/capture/v1: activar, desactivar, regenerar y configurar la dirección de un proyecto, con el
+     mismo «Authorization» que /__/kms/. Lo que se pide va en el cuerpo: {op, pid | tid, stage, allow}.
+   - `email`: el correo que Cloudflare Email Routing entrega a un dominio de captura. No es una
+     ruta: no se puede llamar desde fuera. */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -86,6 +92,9 @@ const TOTP_SECRET_BYTES = 20;
 const TOTP_CODE = /^[0-9]{6}$/;
 const TOTP_TOKEN = /^[A-Za-z0-9_-]{64}$/;
 
+const CAPTURE_PATH = '/__/capture/v1';
+const CAPTURE_BODY_MAX = 4096;
+
 const text = new TextEncoder();
 let jwks = {keys: null, until: 0};
 
@@ -124,6 +133,12 @@ async function signingKeys(force) {
 
 /* Devuelve el uid de un ID token de Firebase válido, o null. */
 async function verifiedUid(token) {
+  const claims = await verifiedClaims(token);
+  return claims ? claims.sub : null;
+}
+
+/* Los datos de un ID token de Firebase válido ({sub, email, email_verified…}), o null. */
+async function verifiedClaims(token) {
   const parts = String(token).split('.');
   if (parts.length !== 3) return null;
   let header, claims, signature;
@@ -154,7 +169,7 @@ async function verifiedUid(token) {
   /* Como las reglas de Firestore: con correo y contraseña, el correo tiene que estar verificado. */
   const provider = claims.firebase && claims.firebase.sign_in_provider;
   if (provider === 'password' && claims.email_verified !== true) return null;
-  return claims.sub;
+  return claims;
 }
 
 /* Lo que comparten las rutas de /__/kms/: solo POST, solo desde la propia web, con el secreto
@@ -184,6 +199,41 @@ async function kmsCaller(request, env, url) {
   }
   if (!uid) return {error: json(401, {error: 'auth'})};
   return {uid, master};
+}
+
+/* Gestión de la dirección de captura de un proyecto. Quién llama sale del token verificado (uid y
+   correo comprobado), nunca del cuerpo; qué puede hacer lo decide worker/capture.mjs mirando el proyecto. */
+async function capture(request, env, url) {
+  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+  if (env.AUTH_RATE_LIMIT) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+  }
+  const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
+  let claims = null;
+  try {
+    claims = auth ? await verifiedClaims(auth[1]) : null;
+  } catch (e) {
+    return json(503, {error: 'unavailable'});
+  }
+  if (!claims) return json(401, {error: 'auth'});
+  let body = null;
+  try {
+    const raw = await request.text();
+    if (raw.length <= CAPTURE_BODY_MAX) body = JSON.parse(raw);
+  } catch (e) { body = null; }
+  if (!body || typeof body !== 'object') return json(400, {error: 'request'});
+  try {
+    const m = await import('./capture.mjs');
+    const out = await m.manage({uid: claims.sub, email: typeof claims.email === 'string' ? claims.email : '', emailVerified: claims.email_verified === true}, body, env);
+    return json(out.status, out.body);
+  } catch (e) {
+    console.error('captura: ' + (e && e.message));
+    return json(503, {error: 'unavailable'});
+  }
 }
 
 async function jsonBody(request) {
@@ -293,6 +343,19 @@ export default {
     return job;
   },
 
+  /* Correo entrante (Cloudflare Email Routing → este Worker). Lo que no se puede atender se
+     rechaza con setReject dentro de receive; un fallo inesperado se lanza y el servidor que envía
+     lo reintenta. En los registros no queda ni la dirección ni el contenido. */
+  async email(message, env, ctx) {
+    const m = await import('./capture.mjs');
+    try {
+      await m.receive(message, env);
+    } catch (err) {
+      console.error('captura: ' + (err && err.message));
+      throw err;
+    }
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
@@ -324,6 +387,7 @@ export default {
     /* Modo gestionado: la clave que envuelve la del proyecto (ver más abajo). */
     if (url.pathname === KMS_PATH) return kms(request, env, url);
     if (url.pathname === TOTP_PATH) return totp(request, env, url);
+    if (url.pathname === CAPTURE_PATH) return capture(request, env, url);
 
     if (METHODS.indexOf(request.method) === -1) {
       return new Response('Método no permitido', {status: 405});

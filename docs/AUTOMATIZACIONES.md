@@ -1,6 +1,6 @@
 # Automatizaciones
 
-Reglas «cuando pasa algo en una tarea, haz esto», por proyecto. Este documento explica cómo funcionan por dentro, qué hace el servidor y cómo se pone en marcha. Las fases 3 (correo) y 4 (Slack) no están hechas.
+Reglas «cuando pasa algo en una tarea, haz esto», por proyecto. Este documento explica cómo funcionan por dentro, qué hace el servidor y cómo se pone en marcha. La fase 3 (tareas por correo) tiene su propia guía: `docs/CAPTURA-EMAIL.md`. La fase 4 (Slack) no está hecha.
 
 ## Qué hay
 

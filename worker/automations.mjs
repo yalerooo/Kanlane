@@ -68,6 +68,7 @@ export function encode(v) {
   if (typeof v === 'boolean') return {booleanValue: v};
   if (typeof v === 'number') return Number.isInteger(v) ? {integerValue: String(v)} : {doubleValue: v};
   if (typeof v === 'string') return {stringValue: v};
+  if (v instanceof Date) return {timestampValue: v.toISOString()};
   if (Array.isArray(v)) return {arrayValue: {values: v.map(encode)}};
   return {mapValue: {fields: encodeFields(v)}};
 }
@@ -172,6 +173,9 @@ export function restStore(env, deps) {
       limit: n
     }, after ? {startAt: {values: [{referenceValue: docs + '/automation_jobs/' + after}], before: false}} : {})),
     get: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? decodeFields(doc.fields) : null)),
+    /* Documentos de una colección raíz con un campo igual a un valor: [{id, data}]. */
+    where: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
+      where: {fieldFilter: Object.assign(field(path), {op: 'EQUAL', value: encode(value)})}, limit: n}),
     /* Como get, con la marca de la última escritura: {data, updateTime} | null. */
     getDoc: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? {data: decodeFields(doc.fields), updateTime: doc.updateTime || ''} : null)),
     /* Tareas del proyecto con fecha límite hasta `maxDate` (incluye las vencidas). */
@@ -183,15 +187,19 @@ export function restStore(env, deps) {
       ]}},
       limit: TASKS_PER_JOB
     }),
-    /* writes: [{path, set:{…}} | {path, patch:{…}, updateTime} | {path, create:{…}} | {path, remove:true}], todo o nada.
-       Un `patch` con `updateTime` solo entra si el documento no ha cambiado desde esa lectura. */
+    /* writes: [{path, set:{…}} | {path, patch:{…}} | {path, create:{…}} | {path, remove:true}], todo o nada.
+       - `create` solo entra si el documento no existe; `patch`, si existe (salvo `upsert`).
+       - Con `updateTime`, un `set` o un `patch` solo entran si el documento no ha cambiado desde esa lectura.
+       - `increments: {campo: n}` suma en el servidor (sin leer antes: no se pisan dos a la vez). */
     commit: (writes) => call('POST', db + '/documents:commit', {writes: writes.map((w) => {
       const name = docs + '/' + w.path;
       if (w.remove) return {delete: name};
-      if (w.create) return {update: {name: name, fields: encodeFields(w.create)}, currentDocument: {exists: false}};
-      if (w.set) return {update: {name: name, fields: encodeFields(w.set)}};
-      return {update: {name: name, fields: encodeFields(w.patch)}, updateMask: {fieldPaths: w.mask || Object.keys(w.patch)},
-        currentDocument: w.updateTime ? {updateTime: w.updateTime} : {exists: true}};
+      const out = {update: {name: name, fields: encodeFields(w.create || w.set || w.patch)}};
+      if (w.patch) out.updateMask = {fieldPaths: w.mask || Object.keys(w.patch)};
+      const pre = w.updateTime ? {updateTime: w.updateTime} : w.create ? {exists: false} : w.patch && !w.upsert ? {exists: true} : null;
+      if (pre) out.currentDocument = pre;
+      if (w.increments) out.updateTransforms = Object.keys(w.increments).map((f) => ({fieldPath: f, increment: {integerValue: String(w.increments[f])}}));
+      return out;
     })})
   };
 }

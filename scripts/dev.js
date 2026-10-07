@@ -18,6 +18,9 @@ const {pageDirs} = require('./site-pages');
 const args = process.argv.slice(2);
 const cloud = args.indexOf('--nube') !== -1;
 const emulator = args.indexOf('--emulador') !== -1;
+/* Entorno de la captura por correo con los emuladores (las pruebas de tests/e2e usan el mismo). */
+const CAPTURE_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT: 'demo-workhub', CAPTURE_SECRET: Buffer.alloc(32, 9).toString('base64'),
+  CAPTURE_DOMAINS: 'in.kanlane.test,respaldo.kanlane.test', CAPTURE_PLAN: 'paid'};
 const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
@@ -88,6 +91,32 @@ const server = http.createServer((req, res) => {
       }catch(e){
         send(401, {error: 'auth'});
       }
+    });
+    return;
+  }
+
+  /* Gestión de la captura por correo, SOLO con los emuladores: el mismo código que el Worker
+     (worker/capture.mjs) contra el Firestore emulado, con un secreto fijo y sin verificar la firma
+     del token. Los correos de las pruebas no pasan por aquí: llaman a `receive` directamente. */
+  if(url === '/__/capture/v1' && emulator){
+    const send = (status, body) => { res.writeHead(status, {'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store'}); res.end(JSON.stringify(body)); };
+    if(req.method !== 'POST') return send(405, {error: 'method'});
+    let raw = '';
+    req.on('data', (chunk) => { if(raw.length <= 4096) raw += chunk; });
+    req.on('end', () => {
+      let who, body;
+      try{
+        const token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '');
+        const claims = JSON.parse(Buffer.from(token[1].split('.')[1], 'base64url').toString('utf8'));
+        who = {uid: claims.user_id || claims.sub, email: claims.email || '', emailVerified: claims.email_verified === true};
+        body = JSON.parse(raw);
+        if(!who.uid) throw new Error('auth');
+      }catch(e){
+        return send(401, {error: 'auth'});
+      }
+      import(require('url').pathToFileURL(path.join(ROOT, 'worker/capture.mjs')).href)
+        .then((m) => m.manage(who, body, CAPTURE_ENV))
+        .then((out) => send(out.status, out.body), () => send(503, {error: 'unavailable'}));
     });
     return;
   }

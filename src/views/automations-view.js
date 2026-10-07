@@ -34,6 +34,8 @@
           const last = rows[rows.length - 1];
           const focus = action === 'add-action' && last ? last.querySelector('.dd button, select') : this.body.querySelector('[data-auto="add-action"]');
           if(focus) focus.focus();
+        } else if(action === 'cap-save'){
+          this.on['cap-save'](this.readCapture());
         } else if(this.on[action]) this.on[action](btn.getAttribute('data-id'));
       });
       this.body.addEventListener('change', (ev) => {
@@ -52,7 +54,8 @@
       });
     }
 
-    /* handlers: {open, close, create, edit(id), remove(id), toggle(id, on), use(i), save(draft), cancel, upgrade} */
+    /* handlers: {open, close, create, edit(id), remove(id), toggle(id, on), use(i), save(draft), cancel, upgrade,
+       'cap-enable', 'cap-copy', 'cap-regen', 'cap-off', 'cap-save'({stage, allow})} */
     bind(handlers){
       this.on = handlers;
       $('btnAutomations').addEventListener('click', () => handlers.open());
@@ -76,11 +79,79 @@
       this.foot.hidden = false;
       this.btnNew.hidden = true;
       this.body.innerHTML = '<div class="auto-guest"><p>' + esc(t('Las automatizaciones necesitan una cuenta: se guardan con el proyecto y se ejecutan en tu nombre, también desde otros dispositivos.')) + '</p>' +
+        '<p>' + esc(t('Crear tareas enviando un correo también necesita una cuenta: solo se acepta el correo que llega desde la dirección de una cuenta de Kanlane.')) + '</p>' +
         '<p>' + esc(t('Crea una cuenta y tus datos de invitado se copian a ella.')) + '</p>' +
         '<button type="button" class="btn btn-primary" data-auto="upgrade">' + esc(t('Crear cuenta y llevarme mis datos')) + '</button></div>';
     }
 
-    /* s: {rules:[{rule, text, problem}], templates:[{name, text}], canManage, team, max}
+    /* Lo escrito en el apartado de correo: {stage, allow:[correos]}. */
+    readCapture(){
+      const stage = $('capStage'), allow = $('capAllow');
+      return {stage:stage ? stage.value : '', allow:(allow ? allow.value : '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean)};
+    }
+
+    /* Aviso corto dentro del apartado de correo (dirección copiada, cambios guardados, error). */
+    captureNote(text, isError){
+      const el = $('capNote');
+      if(!el) return;
+      el.textContent = text;
+      el.className = isError ? 'lock-error' : 'auto-note cap-ok';
+      el.hidden = !text;
+    }
+
+    /* Apartado «Tareas por correo». c: lo que dice el controlador:
+       {state:'hidden'|'loading'|'error'|'encrypted'|'off'|'on', role, address, alt:[…], stage,
+        stageMissing, allow:[…], limits:{messageMb, fileMb, files}, busy, stages:[{key, label}], me} */
+    captureHtml(c){
+      if(!c || c.state === 'hidden') return '';
+      const head = '<h3 class="auto-sub" id="capTitle">' + esc(t('Tareas por correo')) + '</h3>';
+      const p = (text, cls) => '<p class="auto-note' + (cls ? ' ' + cls : '') + '">' + esc(text) + '</p>';
+      const open = '<section class="cap" aria-labelledby="capTitle">' + head;
+      if(c.state === 'loading') return open + p(t('Cargando…')) + '</section>';
+      if(c.state === 'error') return open + p(t('No se pudo consultar la captura por correo. Cierra y vuelve a abrir este diálogo para intentarlo otra vez.')) + '</section>';
+      if(c.state === 'encrypted'){
+        return open + p(t('Este proyecto tiene cifrado total y no admite tareas por correo. Un correo llega sin cifrar al servidor de Kanlane, que no tiene la clave del proyecto: guardarlo así rompería lo que el cifrado promete.')) + '</section>';
+      }
+      const owner = c.role === 'owner';
+      const busy = c.busy ? ' disabled' : '';
+      if(c.state === 'off'){
+        return open + p(t('Activa una dirección de correo para este proyecto: cada correo que le envíes crea una tarea. El asunto es el título y el cuerpo, la descripción.')) +
+          (owner ? '<button type="button" class="btn btn-ghost btn-sm" data-auto="cap-enable"' + busy + '>' + esc(t('Activar la dirección de correo')) + '</button>'
+            : p(t(c.team ? 'Solo quien es propietario del equipo puede activarla.' : 'No tienes permiso para activarla.'))) +
+          '<p id="capNote" role="status" hidden></p></section>';
+      }
+      /* Activada. Quien solo puede leer el proyecto no envía correo, así que no ve la dirección. */
+      if(!c.address){
+        return open + p(t('Este proyecto crea tareas a partir del correo que le envían quienes pueden editarlo.')) + '</section>';
+      }
+      const limits = c.limits || {};
+      const stages = '<option value=""' + (c.stage ? '' : ' selected') + '>' + esc(t('La primera columna')) + '</option>' +
+        (c.stageMissing ? option(c.stage, t('{name} (ya no existe)', {name:t('columna borrada')}), true) : '') +
+        c.stages.map((s) => option(s.key, s.label, s.key === c.stage && !c.stageMissing)).join('');
+      return open +
+        '<div class="field"><label for="capAddress">' + esc(t('Dirección de este proyecto')) + '</label>' +
+          '<div class="cap-row"><input id="capAddress" class="cap-address" readonly translate="no" spellcheck="false" value="' + esc(c.address) + '" aria-describedby="capSecret">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-auto="cap-copy">' + esc(t('Copiar')) + '</button></div></div>' +
+        (c.alt && c.alt.length ? '<p class="auto-note cap-alt">' + esc(t('Dirección de respaldo, por si la principal fallara:')) + ' <span translate="no" class="cap-mono">' + esc(c.alt.join(', ')) + '</span></p>' : '') +
+        '<p class="auto-note" id="capSecret">' + esc(t('Trátala como una contraseña: no la publiques. Aun así, conocerla no basta: solo se acepta el correo de quien puede editar el proyecto, enviado desde la dirección de su cuenta de Kanlane y firmado por su proveedor de correo.')) + '</p>' +
+        (c.me ? '<p class="auto-note">' + esc(t('Tú envías desde:')) + ' <span translate="no" class="cap-mono">' + esc(c.me) + '</span></p>' : '') +
+        p(t('Hasta {files} adjuntos de {file} MB cada uno; el mensaje entero, {message} MB como mucho. No se guardan programas ni otros archivos que puedan ejecutarse. El mismo correo dos veces en 30 días crea una sola tarea.',
+          {files:limits.files, file:limits.fileMb, message:limits.messageMb})) +
+        p(t('El correo pasa sin cifrar por Cloudflare y por el servidor de Kanlane antes de guardarse como tarea.')) +
+        (owner
+          ? '<div class="field"><label for="capStage">' + esc(t('Columna donde se crean las tareas')) + '</label><select id="capStage"' + busy + '>' + stages + '</select></div>' +
+            (c.stageMissing ? '<p class="auto-broken" role="note">' + esc(t('La columna elegida ya no existe: mientras no elijas otra, las tareas se crean en la primera.')) + '</p>' : '') +
+            '<div class="field"><label for="capAllow">' + esc(t('Remitentes permitidos (opcional)')) + '</label>' +
+            '<textarea id="capAllow" rows="2" spellcheck="false" autocomplete="off" aria-describedby="capAllowHelp"' + busy + '>' + esc((c.allow || []).join('\n')) + '</textarea>' +
+            '<p class="auto-note" id="capAllowHelp">' + esc(t('Un correo por línea. Vacío: cualquiera que pueda editar el proyecto. La lista solo restringe: no deja entrar a quien no es miembro.')) + '</p></div>' +
+            '<div class="cap-actions"><button type="button" class="btn btn-ghost btn-sm" data-auto="cap-save"' + busy + '>' + esc(t('Guardar cambios')) + '</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-auto="cap-regen"' + busy + '>' + esc(t('Regenerar la dirección')) + '</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm is-danger" data-auto="cap-off"' + busy + '>' + esc(t('Desactivar')) + '</button></div>'
+          : p(t('Solo quien es propietario del equipo puede cambiarla o desactivarla.'))) +
+        '<p id="capNote" role="status" hidden></p></section>';
+    }
+
+    /* s: {rules:[{rule, text, problem}], templates:[{name, text}], canManage, team, max, capture}
        La casilla es la intención (activada o no). El estado efectivo va escrito al lado, con
        palabras: «Activa», «En pausa» o «Desactivada»; la casilla lo lleva como descripción. */
     showList(s){
@@ -113,7 +184,9 @@
         templates +
         (s.rules.some((r) => r.rule.on && r.problem) ? '<p class="auto-note">' + esc(t('La casilla dice si quieres que la automatización se ejecute. Una automatización marcada puede estar en pausa porque le falta algo: mientras tanto no hace nada.')) + '</p>' : '') +
         '<p class="auto-note">' + esc(t(s.server ? 'Las automatizaciones por fecha se ejecutan aunque nadie tenga Kanlane abierto: el servidor las revisa cada media hora.'
-          : 'En este proyecto las automatizaciones por fecha solo se ejecutan mientras alguien que puede editarlo tiene Kanlane abierto.')) + '</p>';
+          : 'En este proyecto las automatizaciones por fecha solo se ejecutan mientras alguien que puede editarlo tiene Kanlane abierto.')) + '</p>' +
+        this.captureHtml(s.capture);
+      Workhub.views.Dropdown.enhanceAll(this.body);
     }
 
     /* Formulario de una regla (nueva o existente). ctx: el de Automations. */

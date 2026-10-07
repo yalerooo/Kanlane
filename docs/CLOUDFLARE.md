@@ -132,3 +132,7 @@ Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código 
 - **El acceso da error de redirección**: falta alguno de los pasos del apartado 3, o los cambios de Google tardan unos minutos en aplicarse.
 - **`/__/auth/handler` da 404**: el Worker no se desplegó o no se ejecuta. Mira el registro de la última compilación y que `wrangler.jsonc` esté en la raíz del repositorio.
 - **La web carga sin estilos o sin scripts**: casi siempre es la CSP. Abre la consola del navegador: el mensaje dice qué dominio se bloqueó; añádelo a `CSP` en `scripts/build-public.js`.
+
+## Tareas por correo
+
+El mismo Worker recibe el correo de los proyectos que activan las tareas por correo (Cloudflare Email Routing → manejador `email`). Necesita el secreto `CAPTURE_SECRET`, las variables `CAPTURE_DOMAINS` y `CAPTURE_PLAN` de `wrangler.jsonc` y una regla de Email Routing por dominio. Pasos, límites y costes: `docs/CAPTURA-EMAIL.md`.

@@ -36,6 +36,7 @@
 - **Clientes y contactos** en una sola sección: cada cliente con sus personas, tareas y reuniones. Colores propios por cliente.
 - **Búsqueda global (`Ctrl K`)** entre tareas, notas, clientes, contactos y reuniones, con acciones rápidas.
 - **Automatizaciones** por proyecto: reglas «cuando pasa algo en una tarea, haz esto» (al crearla, al moverla a una columna, al completarla o al acercarse su fecha, también con Kanlane cerrado), botones en la tarea que ejecutan varias acciones con un clic y ejemplos listos para usar.
+- **Tareas por correo** (opcional): una dirección por proyecto; un mensaje enviado desde el correo de tu cuenta crea una tarea con su asunto, su texto y sus adjuntos. Necesita configurar el servidor ([docs/CAPTURA-EMAIL.md](docs/CAPTURA-EMAIL.md)); no está disponible en proyectos con cifrado total.
 - **Recordatorios** de tareas que vencen y de reuniones que van a empezar, dentro de la app y con notificaciones del navegador.
 - **Deshacer** al borrar una tarea, un cliente, un contacto, una reunión o una credencial.
 
@@ -181,6 +182,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 - **Clients and contacts** in a single section: each client with its people, tasks and meetings. Per-client colors.
 - **Global search (`Ctrl K`)** across tasks, notes, clients, contacts and meetings, with quick actions.
 - **Automations** per project: rules like “when something happens to a task, do this” (when it is created, moved to a column, completed or close to its due date, even with Kanlane closed), buttons on the task that run several actions in one click, and ready-made examples.
+- **Tasks by email** (optional): one address per project; a message sent from your account's email creates a task with its subject, text and attachments. It needs server setup ([docs/CAPTURA-EMAIL.md](docs/CAPTURA-EMAIL.md), in Spanish) and is not available in fully encrypted projects.
 - **Reminders** for tasks that are due and meetings about to start, in the app and as browser notifications.
 - **Undo** when deleting a task, client, contact, meeting or credential.
 

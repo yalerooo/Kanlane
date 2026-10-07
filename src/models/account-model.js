@@ -109,8 +109,16 @@
         return col.get().then((snap) => pool.run(snap.docs, LIMIT, (d) => col.doc(d.id).delete()));
       };
 
+      /* Primero, las direcciones de captura por correo que haya dejado en sus proyectos y equipos:
+         desde aquí ya no crean tareas. Si el servidor no responde, la cuenta no se elimina (se
+         puede repetir); si no tiene la captura puesta en marcha, no hay nada que retirar. */
+      const capture = Workhub.services.capture;
+      const purge = capture && capture.available(db)
+        ? capture.call(db, {op:'purge'}).catch((err) => { if(err && err.code === 'not-configured') return null; throw err; })
+        : Promise.resolve();
+
       step('Saliendo de tus equipos…');
-      return each(teams.filter((p) => p.role !== 'owner'), (p) => this.team.leave(p)).then(() => {
+      return purge.then(() => each(teams.filter((p) => p.role !== 'owner'), (p) => this.team.leave(p))).then(() => {
         step('Eliminando tus equipos…');
         return each(teams.filter((p) => p.role === 'owner'), (p) => this.projects.removeProject(p.id, db, null));
       }).then(() => {

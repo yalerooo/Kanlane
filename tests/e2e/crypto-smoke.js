@@ -173,6 +173,20 @@ function assertSealed(res, what){
     });
     await page.locator('.card').filter({hasText:'Descripción reservada'}).waitFor();
 
+    /* ---------- un proyecto cifrado no admite tareas por correo: lo dice la pantalla y lo impone el servidor ---------- */
+    await page.locator('#btnAutomations').click();
+    await page.locator('#autoBody .cap').getByText('Este proyecto tiene cifrado total y no admite tareas por correo.').waitFor({timeout:30000});
+    await page.locator('#autoBody .cap').getByText('Un correo llega sin cifrar al servidor de Kanlane, que no tiene la clave del proyecto').waitFor();
+    assert.equal(await page.locator('#capAddress').count() + await page.locator('#autoBody [data-auto="cap-enable"]').count(), 0, 'ni dirección ni botón para activarla');
+    await page.locator('#btnAutoClose').click();
+    const captureTry = await page.evaluate(async () => {
+      const cap = Workhub.services.capture, target = cap.target(Workhub.app.projectId);
+      const status = await cap.call(Workhub.app.rootDb, Object.assign({op:'status'}, target));
+      const enable = await cap.call(Workhub.app.rootDb, Object.assign({op:'enable'}, target)).then(() => 'activada', (e) => e.code);
+      return {available:status.available, reason:status.reason, on:status.on, enable:enable};
+    });
+    assert.deepEqual(captureTry, {available:false, reason:'encrypted', on:false, enable:'encrypted'});
+
     assertSealed(await storedWhen(base + '/tasks', hasSeal), 'tareas');
     assertSealed(await storedWhen(base + '/tasks/' + taskId + '/notes', hasSeal), 'notas');
     assertSealed(await storedWhen(base + '/clients', hasSeal), 'clientes');

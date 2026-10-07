@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kanlane · Gestor de tareas y proyectos para equipos</title>
   <meta name="description" content="Kanlane es un gestor de tareas y proyectos con tableros kanban, calendario, clientes y trabajo en equipo. Una alternativa sencilla a Trello para organizar tu trabajo.">
-  <meta name="last-modified" content="2026-10-03">
+  <meta name="last-modified" content="2026-10-07">
   <link rel="canonical" href="https://kanlane.com/">
   <link rel="alternate" hreflang="es" href="https://kanlane.com/">
   <link rel="alternate" hreflang="en" href="https://kanlane.com/en/">
@@ -52,7 +52,7 @@
         "name": "Kanlane",
         "inLanguage": "es"
       },
-      {"@type":"WebPage","@id":"https://kanlane.com/#pagina","url":"https://kanlane.com/","name":"Kanlane · Gestor de tareas y proyectos para equipos","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"es","dateModified":"2026-10-03"},
+      {"@type":"WebPage","@id":"https://kanlane.com/#pagina","url":"https://kanlane.com/","name":"Kanlane · Gestor de tareas y proyectos para equipos","isPartOf":{"@id":"https://kanlane.com/#sitio"},"about":{"@id":"https://kanlane.com/#aplicacion"},"inLanguage":"es","dateModified":"2026-10-07"},
       {
         "@type": "SoftwareApplication",
         "@id": "https://kanlane.com/#aplicacion",
@@ -75,6 +75,7 @@
           "Subtareas y tareas que se repiten",
           "Proyectos compartidos con roles",
           "Sincronización con GitHub Projects",
+          "Servidor MCP para conectar asistentes como Claude a las tareas de un proyecto",
           "Aplicación instalable que funciona sin conexión"
         ]
       },
@@ -88,7 +89,8 @@
           {"@type": "Question", "name": "¿Se puede cifrar todo el contenido de un proyecto?", "acceptedAnswer": {"@type": "Answer", "text": "Sí, se elige al crear cada proyecto. Con «Cifrado total», el contenido (tareas, notas, clientes, contactos, reuniones, contraseñas, imágenes y datos de plugins) se cifra en tu navegador con AES-256 y una contraseña que solo tú conoces: Kanlane no la tiene y no puede leer ese contenido, y si pierdes la contraseña y la clave de recuperación el proyecto no se puede recuperar. Con «Gestionado por Kanlane» no hay contraseña extra: protege si alguien copia la base de datos, pero Kanlane custodia la clave y podría técnicamente descifrar el proyecto. En los dos casos quedan sin cifrar el nombre del proyecto, las columnas, las etiquetas, las fechas y el estado de las tareas, y esos proyectos no se sincronizan con GitHub."}},
           {"@type": "Question", "name": "¿Puedo trabajar en equipo?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes compartir un proyecto, invitar a otras personas por correo y asignar tareas. Cada persona tiene un rol: propietario, editor o lector."}},
           {"@type": "Question", "name": "¿Puedo llevarme mis datos?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Puedes exportar tareas, notas, clientes, contactos, reuniones y contraseñas cifradas. También hay versiones locales y copias cifradas opcionales en tu cuenta. La exportación no incluye imágenes originales ni datos de plugins; conserva por separado lo que necesites."}},
-          {"@type": "Question", "name": "¿Qué son los plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Pequeñas extensiones que añaden funciones, como un registro de horas por proyecto o un temporizador. Se ejecutan aisladas y solo acceden a lo que tú les permitas."}}
+          {"@type": "Question", "name": "¿Qué son los plugins?", "acceptedAnswer": {"@type": "Answer", "text": "Pequeñas extensiones que añaden funciones, como un registro de horas por proyecto o un temporizador. Se ejecutan aisladas y solo acceden a lo que tú les permitas."}},
+          {"@type": "Question", "name": "¿Puedo conectar Claude u otro asistente de IA?", "acceptedAnswer": {"@type": "Answer", "text": "Sí. Kanlane tiene un servidor MCP: creas un token en Ajustes → Integraciones y tu asistente puede leer las tareas de ese proyecto, moverlas de columna, añadirles notas y crear tareas nuevas. El token vale para un solo proyecto, puede ser de solo lectura y lo revocas cuando quieras. No funciona con proyectos cifrados, y Kanlane no incluye un asistente propio."}}
         ]
       },
       {
@@ -438,6 +440,10 @@
           <summary>¿Qué son los plugins?</summary>
           <p>Pequeñas extensiones que añaden funciones, como un registro de horas por proyecto o un temporizador. Se ejecutan aisladas y solo acceden a lo que tú les permitas.</p>
         </details>
+        <details>
+          <summary>¿Puedo conectar Claude u otro asistente de IA?</summary>
+          <p>Sí. Kanlane tiene un servidor MCP: creas un token en Ajustes → Integraciones y tu asistente puede leer las tareas de ese proyecto, moverlas de columna, añadirles notas y crear tareas nuevas. El token vale para un solo proyecto, puede ser de solo lectura y lo revocas cuando quieras. No funciona con proyectos cifrados, y Kanlane no incluye un asistente propio.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -487,6 +493,7 @@
         <a href="/gestor-de-clientes/">Gestor de clientes</a>
         <a href="/crm-para-autonomos/">CRM para autónomos</a>
         <a href="/gestor-de-contrasenas-para-clientes/">Gestor de contraseñas para clientes</a>
+        <a href="/servidor-mcp/">Servidor MCP para Claude</a>
       </div>
       <div>
         <h2>Legal</h2>

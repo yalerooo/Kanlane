@@ -2,7 +2,7 @@
 
 Kanlane tiene un servidor MCP (Model Context Protocol): un asistente como Claude Code puede leer las tareas de **un proyecto**, moverlas de columna, añadirles notas y crear tareas nuevas. Este documento explica cómo entra una llamada, qué se guarda, quién puede qué, cómo se pone en marcha y qué está comprobado y qué no.
 
-**Estado:** el servidor y el apartado de Ajustes para crear y revocar tokens están hechos. La página pública que lo explica va en una entrega aparte.
+**Estado:** hecho y desplegado: el servidor, el apartado de Ajustes para crear y revocar tokens y la página pública que lo explica (`servidor-mcp/` y `en/mcp-server/`). Si cambia lo que hace el servidor (herramientas, permisos, límites), hay que revisar esas dos páginas, la pregunta de la portada (`/` y `/en/`, visible y en su `FAQPage`) y `llms.txt`.
 
 ## Cómo entra una llamada y dónde corre el código
 
@@ -126,9 +126,15 @@ Después, en una conversación: «lista las tareas pendientes de Kanlane», «pa
 
 El conector de claude.ai en la web no se ha probado: es posible que exija OAuth en lugar de un token fijo.
 
-## Comprobación en producción (pendiente)
+## Comprobado con un cliente real
 
-Las pruebas no pasan por Cloudflare ni por un cliente MCP real. Antes de anunciarlo, en un proyecto creado para la prueba:
+- **Cliente oficial del protocolo** (`@modelcontextprotocol/sdk` 1.32.1, transporte HTTP): contra el servidor de desarrollo con los emuladores, se conecta (negocia `2025-06-18`), lista las cinco herramientas, mueve, anota, crea y lee, recibe los errores de herramienta como tales y un token inventado no entra. Tras conectar, ese cliente intenta abrir un canal de eventos por `GET`; recibe el 405 y sigue sin él, como prevé el protocolo.
+- **En producción** (7-oct-2026), con un token real y ese mismo cliente: conexión en unos 600 ms y `list_tasks` en unos 120 ms sobre un proyecto con 16 tareas abiertas. Solo se probó la lectura.
+- **Sin probar:** Claude Code con el comando tal cual (`claude mcp add …`) y las herramientas que escriben en producción.
+
+## Comprobación en producción (a medias)
+
+La conexión y la lectura ya están comprobadas (apartado anterior). Queda, en un proyecto creado para la prueba:
 
 1. Crear un token y conectarlo desde Claude Code. Debe listar las herramientas.
 2. Listar, mover una tarea a «En curso» y luego a una columna de hechas, y añadir una nota. Con la app abierta, los cambios deben verse sin recargar.

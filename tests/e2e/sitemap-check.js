@@ -1,10 +1,10 @@
 /* Comprueba el sitemap.xml que genera el build (no hay copia manual en la raíz):
    - construye dist/ con scripts/build-public.js;
-   - están las 16 URLs, todas con https://kanlane.com/ y barra final, sin app/demo/legal;
+   - están las 18 URLs, todas con https://kanlane.com/ y barra final, sin app/demo/legal;
    - cada xhtml:link es recíproco y apunta a una URL del propio sitemap;
    - el XML está bien formado y las fechas, si las hay, son YYYY-MM-DD;
-   - las 16 páginas llevan <meta name="last-modified"> con una fecha YYYY-MM-DD válida;
-   - una copia SIN .git (git archive), como el clon de Cloudflare, genera <lastmod> en las 16 URLs
+   - las 18 páginas llevan <meta name="last-modified"> con una fecha YYYY-MM-DD válida;
+   - una copia SIN .git (git archive), como el clon de Cloudflare, genera <lastmod> en las 18 URLs
      con la fecha de esa meta;
    - en negativo: una copia sin canonical, con canonical equivocado, duplicado o con hreflang
      no recíproco, o con una meta last-modified mal formada, hace fallar el build; sin la meta solo avisa.
@@ -18,8 +18,8 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '../..');
 const ORIGIN = 'https://kanlane.com/';
-const EXPECTED = ['', 'alternativa-a-asana/', 'alternativa-a-notion/', 'alternativa-a-trello/', 'crm-para-autonomos/', 'gestion-de-proyectos/', 'gestor-de-clientes/', 'gestor-de-contrasenas-para-clientes/',
-  'en/', 'en/asana-alternative/', 'en/client-manager/', 'en/client-password-manager/', 'en/freelancer-crm/', 'en/notion-alternative/', 'en/project-management/', 'en/trello-alternative/'].map(r => ORIGIN + r);
+const EXPECTED = ['', 'alternativa-a-asana/', 'alternativa-a-notion/', 'alternativa-a-trello/', 'crm-para-autonomos/', 'gestion-de-proyectos/', 'gestor-de-clientes/', 'gestor-de-contrasenas-para-clientes/', 'servidor-mcp/',
+  'en/', 'en/asana-alternative/', 'en/client-manager/', 'en/client-password-manager/', 'en/freelancer-crm/', 'en/mcp-server/', 'en/notion-alternative/', 'en/project-management/', 'en/trello-alternative/'].map(r => ORIGIN + r);
 
 const ok = (m) => console.log('OK   ' + m);
 const build = (root, env) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}, env), encoding: 'utf8'});
@@ -27,7 +27,7 @@ const build = (root, env) => cp.spawnSync(process.execPath, [path.join(ROOT, 'sc
 /* ---------- Positivo: el repositorio actual ---------- */
 const run = build(ROOT);
 assert.equal(run.status, 0, 'el build termina bien:\n' + run.stdout + run.stderr);
-assert.match(run.stdout, /sitemap\.xml: 16 URLs \(fecha de git: \d+, de meta last-modified: \d+, sin fecha: \d+\)/, 'el log resume el origen de las fechas');
+assert.match(run.stdout, /sitemap\.xml: 18 URLs \(fecha de git: \d+, de meta last-modified: \d+, sin fecha: \d+\)/, 'el log resume el origen de las fechas');
 ok('build correcto: ' + run.stdout.split('\n').find(l => l.startsWith('sitemap.xml')));
 
 const xml = fs.readFileSync(path.join(ROOT, 'dist/sitemap.xml'), 'utf8');
@@ -54,10 +54,10 @@ const urls = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(m => {
     alternates: [...block.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"\/>/g)].map(a => [a[1], a[2]]),
   };
 });
-assert.deepEqual(urls.map(u => u.loc).sort(), EXPECTED.slice().sort(), 'las 16 URLs actuales');
+assert.deepEqual(urls.map(u => u.loc).sort(), EXPECTED.slice().sort(), 'las 18 URLs actuales');
 assert.equal(urls[0].loc, ORIGIN, 'la portada va primero');
 assert.equal(new Set(urls.map(u => u.loc)).size, urls.length, 'sin URLs repetidas');
-ok('16 URLs, portada primero');
+ok('18 URLs, portada primero');
 
 for(const u of urls){
   assert.ok(u.loc.startsWith(ORIGIN) && u.loc.endsWith('/'), u.loc + ' es https://kanlane.com/... con barra final');
@@ -77,7 +77,7 @@ for(const u of urls){
 }
 ok('xhtml:link recíprocos (' + urls.reduce((n, u) => n + u.alternates.length, 0) + ' enlaces)');
 
-/* ---------- last-modified en las 16 páginas ---------- */
+/* ---------- last-modified en las 18 páginas ---------- */
 const PAGE_FILES = EXPECTED.map(u => u.slice(ORIGIN.length) + 'index.html');
 const metaOf = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([^"]*)"/i) || [])[1];
 const validDate = (v) => /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v || '') && new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
@@ -149,7 +149,7 @@ try{
     assert.ok(!fs.existsSync(path.join(bare, '.git')), 'la copia no tiene .git');
     const r = build(bare, {});
     assert.equal(r.status, 0, 'el build de la copia sin .git termina bien:\n' + r.stdout + r.stderr);
-    assert.match(r.stdout, /sitemap\.xml: 16 URLs \(fecha de git: 0, de meta last-modified: 16, sin fecha: 0\)/, 'las 16 fechas vienen de la meta');
+    assert.match(r.stdout, /sitemap\.xml: 18 URLs \(fecha de git: 0, de meta last-modified: 18, sin fecha: 0\)/, 'las 18 fechas vienen de la meta');
     const bareXml = fs.readFileSync(path.join(bare, 'dist/sitemap.xml'), 'utf8');
     for(const f of PAGE_FILES){
       const loc = ORIGIN + f.slice(0, -'index.html'.length);
@@ -159,7 +159,7 @@ try{
       assert.ok(m, loc + ' lleva <lastmod> sin .git');
       assert.equal(m[1], metas[f], 'lastmod de ' + loc + ' es la fecha de su meta');
     }
-    ok('sin .git: <lastmod> en las 16 URLs con la fecha de su meta');
+    ok('sin .git: <lastmod> en las 18 URLs con la fecha de su meta');
   }
 }finally{
   fs.rmSync(tmp, {recursive: true, force: true});

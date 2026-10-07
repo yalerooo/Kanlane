@@ -23,6 +23,7 @@ Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvi
 - [Gestor de clientes](https://kanlane.com/gestor-de-clientes/): clientes, contactos, tareas y reuniones relacionados en un solo sitio.
 - [CRM para autónomos](https://kanlane.com/crm-para-autonomos/): un CRM ligero para quien trabaja por cuenta propia.
 - [Gestor de contraseñas para clientes](https://kanlane.com/gestor-de-contrasenas-para-clientes/): los accesos de cada cliente junto a su trabajo, con la contraseña y las notas cifradas en el navegador (AES-256, PBKDF2) y lo que no cubre: sin autocompletado, sin extensión y sin compartir con el equipo.
+- [Servidor MCP](https://kanlane.com/servidor-mcp/): conecta Claude Code u otro asistente compatible con MCP a las tareas de un proyecto (listar, leer, mover, anotar y crear) con un token por proyecto, revocable y opcionalmente de solo lectura; sin proyectos cifrados y sin asistente propio.
 
 ## English
 
@@ -33,6 +34,7 @@ Kanlane es una aplicación web que se instala como aplicación (PWA) en el móvi
 - [Client manager](https://kanlane.com/en/client-manager/): clients, contacts, tasks and meetings in one place.
 - [CRM for freelancers](https://kanlane.com/en/freelancer-crm/): a lightweight CRM for freelancers.
 - [Client password manager](https://kanlane.com/en/client-password-manager/): store client credentials next to their work, with passwords and notes encrypted in the browser; no autofill, no browser extension and no team sharing.
+- [MCP server](https://kanlane.com/en/mcp-server/): connect Claude Code or another MCP-compatible assistant to a project's tasks (list, read, move, annotate and create) with a per-project token, revocable and optionally read-only; no encrypted projects and no built-in assistant.
 
 ## Documentación
 

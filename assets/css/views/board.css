@@ -244,6 +244,10 @@ body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--sh
   border-radius:var(--r-lg);
 }
 .empty-col span{font-size:12px;}
+/* El tablero entero está vacío: Sumi dormido, una sola vez, en la primera columna. */
+.empty-col.is-board-empty{display:flex;flex-direction:column;align-items:center;gap:2px;padding:22px 10px 20px;}
+.empty-col.is-board-empty .sumi{margin-bottom:8px;color:var(--ink);}
+.empty-col.is-board-empty b{font-size:13.5px;font-weight:600;color:var(--ink);}
 .col.drag-over .empty-col{border-color:var(--accent-solid);color:var(--ink);}
 
 .drop-indicator{

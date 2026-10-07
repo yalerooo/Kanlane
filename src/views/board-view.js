@@ -661,7 +661,9 @@
         const countTxt = s.limit ? total + '/' + s.limit : String(items.length);
         const cardsHtml = items.length
           ? items.map(cardHtml).join('')
-          : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>';
+          : (!all.length && si === 0
+            ? '<div class="empty-col is-board-empty">' + Workhub.views.sumi.svg({mood:'dormido', size:64, cls:'is-sleep'}) + '<b>' + esc(Workhub.t('Nada pendiente')) + '</b><span>' + esc(Workhub.t('Crea una tarea para empezar.')) + '</span></div>'
+            : '<div class="empty-col">Sin tareas<br><span>Suelta aquí una tarjeta</span></div>');
         return '<section class="col' + state + (s.done ? ' is-final' : '') + '" data-status="' + esc(s.key) + '" style="--st:' + s.dot + '">' +
           '<header class="col-head" draggable="' + (Workhub.views.team.canEdit() ? 'true' : 'false') + '" title="Arrastra para mover la columna">' +
             '<span class="name"><span class="dot"></span><span class="col-label" translate="no">' + esc(s.label) + '</span><span class="count" title="' + (s.limit ? 'Límite: ' + s.limit + ' tarjetas' : '') + '">' + countTxt + '</span></span>' +

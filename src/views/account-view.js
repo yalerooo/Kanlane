@@ -137,7 +137,7 @@
 
     setPasswordBusy(busy){
       this.pwSubmit.disabled = busy;
-      this.pwSubmit.textContent = Workhub.t(busy ? 'Cambiando…' : 'Cambiar contraseña');
+      Workhub.views.sumi.busyLabel(this.pwSubmit, busy, Workhub.t(busy ? 'Cambiando…' : 'Cambiar contraseña'));
     }
 
     /* field: 'current' pone el cursor en la contraseña actual. */

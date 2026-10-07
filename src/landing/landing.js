@@ -260,6 +260,18 @@
   var counts = win ? all('[data-count]', win).map(function(el){ return {el:el, base:+el.textContent - (el.getAttribute('data-count') === '0' ? 1 : 0)}; }) : [];
   var doneLabel = en ? 'Done' : 'Hecha';
   var movePill = mover && mover.querySelector('.mpill');
+  /* Sumi, asomado al borde del tablero: sigue el cursor con los ojos, baja el brazo central
+     cada vez que la tarjeta avanza y se alegra cuando llega a «Completada». */
+  var Sumi = window.KanlaneSumi, heroSumi = null;
+  if(win && Sumi){
+    var perch = document.createElement('span');
+    perch.className = 'win-sumi';
+    perch.setAttribute('aria-hidden', 'true');
+    perch.innerHTML = Sumi.svg({size:88, cls:'is-alive'});
+    win.appendChild(perch);
+    heroSumi = perch.firstChild;
+    Sumi.follow(heroSumi);
+  }
   var pillHtml = movePill ? movePill.innerHTML : '';
   function setPhase(phase){
     if(!mover || +win.getAttribute('data-phase') === phase) return;
@@ -269,6 +281,7 @@
     var before = cards.map(function(c){ return c.getBoundingClientRect(); });
     slots[phase].appendChild(mover);
     win.setAttribute('data-phase', String(phase));
+    if(heroSumi){ Sumi.setMood(heroSumi, phase === 2 ? 'contento' : 'normal'); Sumi.play(heroSumi, 'dip'); }
     counts.forEach(function(c, i){ c.el.textContent = String(c.base + (i === phase ? 1 : 0)); });
     mover.classList.toggle('is-done', phase === 2);
     movePill.className = 'mpill' + (phase === 2 ? ' ok' : ' late');

@@ -42,10 +42,10 @@
   /* Conexión: un aviso al perderla y otro al recuperarla (no al arrancar con conexión). */
   function watchConnection(){
     let wasOffline = !navigator.onLine;
-    if(wasOffline) setTimeout(() => toast().error(t('Sin conexión: verás los últimos datos guardados.')), 2500);
+    if(wasOffline) setTimeout(() => toast().error(t('Sin conexión: verás los últimos datos guardados.'), {mood:'aviso'}), 2500);
     window.addEventListener('offline', () => {
       wasOffline = true;
-      toast().error(t('Sin conexión: verás los últimos datos guardados y los cambios se enviarán al volver.'), {duration: 6000});
+      toast().error(t('Sin conexión: verás los últimos datos guardados y los cambios se enviarán al volver.'), {duration: 6000, mood:'aviso'});
     });
     window.addEventListener('online', () => {
       if(wasOffline) toast().success(t('De nuevo en línea'), {important:true});

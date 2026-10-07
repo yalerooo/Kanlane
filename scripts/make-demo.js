@@ -47,14 +47,14 @@ head = head.slice(0, head.indexOf('    <div class="bar-tools" data-bar="calendar
 const tasks = cut('  <section id="viewTasks">', '</section>');
 const detail = cut('<dialog id="dlgTaskView"', '</dialog>');
 
-const CSS = ['fonts', 'tokens', 'base', 'layout', 'components/skeleton', 'components/buttons', 'components/forms',
+const CSS = ['fonts', 'tokens', 'base', 'layout', 'components/skeleton', 'components/sumi', 'components/buttons', 'components/forms',
   'components/dropdown', 'components/toolbar', 'components/cards', 'components/dialogs', 'components/overlays',
   'components/projects', 'components/extensions', 'views/board', 'views/task-detail', 'components/rich', 'views/calendar', 'views/vault',
   'views/clients', 'views/github', 'components/plugin-form', 'views/team', 'views/plugins', 'views/settings',
   'responsive', 'components/appearance'];
 const JS = ['core/namespace', 'i18n/i18n', 'core/emitter', 'utils/html', 'utils/dates', 'utils/urls', 'utils/markdown', 'utils/autoscroll',
   'utils/ui', 'demo/demo-stubs', 'models/collection-model', 'models/project-templates', 'models/task-model',
-  'views/client-colors', 'views/labels', 'views/attachments', 'views/team-ui', 'views/plugin-icons', 'views/extensions', 'views/dropdown',
+  'views/client-colors', 'views/labels', 'views/attachments', 'views/team-ui', 'views/plugin-icons', 'views/extensions', 'views/sumi', 'views/dropdown',
   'views/client-select', 'views/board-view', 'views/task-detail-view', 'views/toast-view', 'demo/demo'];
 
 const html = `<!doctype html>

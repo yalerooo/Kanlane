@@ -110,6 +110,10 @@
 .cal-day-actions{display:flex;gap:6px;margin-bottom:4px;flex-wrap:wrap;}
 .cal-day-label{font-size:12px;font-weight:500;color:var(--ink-faint);margin:20px 0 4px;}
 .cal-empty{font-size:13px;color:var(--ink-faint);margin:14px 0 2px;}
+/* Día sin nada: Sumi dormido encima del texto. */
+.cal-empty-box{display:flex;flex-direction:column;align-items:center;padding:22px 0 8px;text-align:center;}
+.cal-empty-box .sumi{color:var(--ink);}
+.cal-empty-box .cal-empty{margin:8px 0 0;}
 /* Cada elemento: la hora (o el anillo de estado) a la izquierda y el contenido a la derecha. */
 .agenda-item{
   display:grid;

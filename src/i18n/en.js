@@ -784,6 +784,8 @@
     'Esperando al cliente':'Waiting on client',
     'Completada':'Done',
     'Sin tareas':'No tasks',
+    'Crea una tarea para empezar.':'Create a task to get started.',
+    'Todo completado. No queda nada pendiente.':'All done. Nothing left pending.',
     'Suelta aquí una tarjeta':'Drop a card here',
     'abierta':'open',
     'abiertas':'open',

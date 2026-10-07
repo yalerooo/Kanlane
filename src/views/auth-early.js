@@ -24,7 +24,7 @@
     reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
   };
 
-  var SPIN = '<span class="auth-spin" aria-hidden="true"></span>';
+  var SPIN = '<span class="auth-spin rails is-run" aria-hidden="true"><i></i><i></i><i></i></span>';
 
   /* Los botones de los proveedores. t: traductor (los textos de ayuda); sin él, en español. */
   function providersHtml(list, t){

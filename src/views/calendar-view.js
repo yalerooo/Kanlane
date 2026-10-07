@@ -261,7 +261,7 @@
           '<button type="button" class="btn btn-ghost btn-sm" data-action="new-task">' + PLUS_ICON + 'Tarea con esta fecha</button>' +
         '</div>';
       if(!b.meetings.length && !b.tasks.length){
-        html += '<p class="cal-empty">Nada programado este día.</p>';
+        html += '<div class="cal-empty-box">' + Workhub.views.sumi.svg({mood:'dormido', size:56, cls:'is-sleep'}) + '<p class="cal-empty">Nada programado este día.</p></div>';
       }
       if(b.meetings.length){
         html += '<p class="cal-day-label">Reuniones</p>' + b.meetings.map((m) => agendaMeetingHtml(m)).join('');

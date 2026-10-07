@@ -78,7 +78,8 @@ dialog.cmdk[open]{display:flex;animation:cmdk-in .18s cubic-bezier(.2,.8,.2,1);}
 .cmdk-enter{flex:none;display:none;}
 .cmdk-item.is-active .cmdk-enter{display:inline-flex;}
 .cmdk-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:38px 16px 34px;text-align:center;color:var(--ink-faint);font-size:13px;}
-.cmdk-empty-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:11px;color:var(--ink-soft);background:var(--surface-2);}
+/* Sin resultados: Sumi dormido, en la tinta del texto. */
+.cmdk-empty .sumi{color:var(--ink);}
 .cmdk-foot{
   display:flex;
   align-items:center;
@@ -131,8 +132,7 @@ dialog.cmdk[open]{display:flex;animation:cmdk-in .18s cubic-bezier(.2,.8,.2,1);}
 }
 .toast.is-error{border-color:var(--danger);border-color:color-mix(in srgb, var(--danger) 45%, transparent);}
 .toast.is-leaving{animation:toast-out .16s ease forwards;}
-.toast-icon{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;flex:none;color:var(--ink-soft);background:var(--surface-2);}
-.toast.is-error .toast-icon{color:var(--danger);background:var(--danger-bg);}
+.toast-sumi{color:var(--ink);}
 .toast-text{flex:1;min-width:0;overflow-wrap:anywhere;}
 .toast-action{
   pointer-events:auto;

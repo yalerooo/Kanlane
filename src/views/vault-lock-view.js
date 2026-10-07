@@ -152,7 +152,7 @@
 
     setPassBusy(busy){
       this.vpSubmit.disabled = busy;
-      this.vpSubmit.textContent = busy ? 'Comprobando…' : 'Cambiar contraseña';
+      Workhub.views.sumi.busyLabel(this.vpSubmit, busy, busy ? 'Comprobando…' : 'Cambiar contraseña');
     },
 
     closePass(){
@@ -192,7 +192,7 @@
 
     setTotpChecking(busy){
       this.btnTotp.disabled = busy;
-      this.btnTotp.textContent = busy ? 'Comprobando…' : 'Verificar';
+      Workhub.views.sumi.busyLabel(this.btnTotp, busy, busy ? 'Comprobando…' : 'Verificar');
     },
 
     /* handlers: {verify(código), back()} */
@@ -245,7 +245,7 @@
     setTotpBusy(busy){
       this.vtSubmit.disabled = busy;
       this.vtCodes.disabled = busy;
-      this.vtSubmit.textContent = busy ? 'Comprobando…' : (this.totpMode === 'off' ? 'Desactivar' : 'Activar');
+      Workhub.views.sumi.busyLabel(this.vtSubmit, busy, busy ? 'Comprobando…' : (this.totpMode === 'off' ? 'Desactivar' : 'Activar'));
     },
 
     closeTotp(){
@@ -279,7 +279,7 @@
     setUnlocking(busy, state){
       if(state) this.lockMode = state;
       this.btnUnlock.disabled = busy;
-      this.btnUnlock.textContent = busy ? 'Comprobando…' : (LOCK_TEXT[this.lockMode] || LOCK_TEXT.current).button;
+      Workhub.views.sumi.busyLabel(this.btnUnlock, busy, busy ? 'Comprobando…' : (LOCK_TEXT[this.lockMode] || LOCK_TEXT.current).button);
     },
 
     showLockError(msg){ showMessage(this.lockError, msg); },
@@ -318,7 +318,7 @@
 
     setRecovering(busy){
       this.btnRecover.disabled = busy;
-      this.btnRecover.textContent = busy ? 'Restableciendo…' : 'Restablecer con la clave';
+      Workhub.views.sumi.busyLabel(this.btnRecover, busy, busy ? 'Restableciendo…' : 'Restablecer con la clave');
     },
 
     /* kind: 'new' (cofre recién creado), 'reset' (restablecido con la clave anterior), 'totp-on' o

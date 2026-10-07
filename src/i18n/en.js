@@ -1645,6 +1645,7 @@
     'Repetir':'Repeat',
     'No se repite':'Doesn\'t repeat',
     'La repetición necesita una fecha límite. Pon una fecha o elige «No se repite».':'Repeating needs a due date. Set a date or choose “Doesn\'t repeat”.',
+    'Esta tarea se repite y necesita una fecha límite. Para quitarla, elige antes «No se repite».':'This task repeats and needs a due date. To remove it, choose “Doesn\'t repeat” first.',
     'Cada día':'Every day',
     'Cada semana':'Every week',
     'Cada 2 semanas':'Every 2 weeks',

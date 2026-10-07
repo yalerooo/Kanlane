@@ -52,6 +52,8 @@
       this.controllers.projects = new C.ProjectsController(this, new V.ProjectView());
       /* Una copia importada puede traer campos personalizados que el proyecto no tiene. */
       this.models.backup.onCustomFields = (list) => this.controllers.projects.saveCustomFields(list);
+      /* Y adjuntos en sus notas: se copian a archivos nuevos del proyecto abierto. */
+      this.models.backup.files = {read: (att) => platform.fileBlob(att), image: (blob) => platform.uploadAsset(blob), file: (blob) => platform.uploadFile(blob)};
       this.controllers.teamCrypto = new C.TeamCryptoController(this, new V.JoinView());
       this.controllers.rotation = new C.KeyRotationController(this, this.controllers.crypto.view);
       this.controllers.convert = new C.ProjectConvertController(this, this.controllers.crypto.view);

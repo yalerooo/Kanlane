@@ -336,6 +336,9 @@
       this.backup.import(data).then((result) => {
         const c = result.counts;
         let msg = 'Importado: ' + c.clients + ' clientes, ' + c.tasks + ' tareas (' + c.notes + ' notas), ' + c.meetings + ' reuniones, ' + c.contacts + ' contactos, ' + c.vault + ' contraseñas.';
+        if(c.filesSkipped){
+          msg += ' No se pudieron copiar ' + c.filesSkipped + ' archivos adjuntos: ya no están disponibles o no se pudieron subir.';
+        }
         if(result.vaultOutcome === 'skipped'){
           msg += ' Las contraseñas del archivo no se importaron porque este tablero ya tiene una contraseña maestra propia.';
         }

@@ -1683,7 +1683,7 @@
     'No hay miembros.':'No members.',
     'La fecha límite no puede ser anterior a la fecha de inicio.':'The due date can\'t be earlier than the start date.',
     'La fecha de inicio no puede ser posterior a la fecha límite.':'The start date can\'t be later than the due date.',
-    'Escribe un título para la tarea.':'Give the task a title.',
+    'El título es obligatorio.':'The title is required.',
     'Elige un cliente o proyecto.':'Choose a client or project.',
     'Fecha de inicio':'Start date',
     'Fecha de inicio (opcional)':'Start date (optional)',

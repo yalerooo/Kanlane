@@ -207,7 +207,7 @@
     /* Fecha de inicio y campos personalizados: {startDate, custom} o {error, el} si algo no vale.
        El título y el cliente también se comprueban aquí: el formulario no usa la validación del navegador. */
     _extras(){
-      if(!this.fields.title.value.trim()) return {error:'Escribe un título para la tarea.', el:this.fields.title, at:this.titleError};
+      if(!this.fields.title.value.trim()) return {error:'El título es obligatorio.', el:this.fields.title, at:this.titleError};
       /* Con los clientes desactivados el campo está oculto y no se exige. */
       const field = this.cliente.select.closest('.field');
       if(!field.classList.contains('clients-off') && !this.cliente.value()){

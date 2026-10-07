@@ -232,7 +232,26 @@
       Workhub.views.DatePicker.enhanceAll(this.customEl);
     }
 
-    bindCancel(handler){ this.btnCancel.addEventListener('click', handler); }
+    /* Escape pasa por el mismo cierre que Cancelar y la ×, para que el controlador pueda
+       preguntar antes de descartar lo escrito. */
+    bindCancel(handler){
+      this.btnCancel.addEventListener('click', handler);
+      this.dlg.addEventListener('cancel', (ev) => { ev.preventDefault(); handler(); });
+    }
+
+    /* Lo que hay escrito en el formulario, para saber si ha cambiado desde que se abrió. */
+    _snapshot(){
+      const controls = Array.prototype.filter.call(this.form.elements, (el) => el.tagName !== 'BUTTON' && el.tagName !== 'FIELDSET')
+        .map((el, i) => [el.id || el.name || i, el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value]);
+      return JSON.stringify([controls, this.checklist, this.selected, this.assigned]);
+    }
+
+    /* Da por guardado lo que hay ahora: a partir de aquí, cualquier cambio cuenta. */
+    markClean(){ this.clean = this._snapshot(); }
+
+    isDirty(){ return this.dlg.open && this._snapshot() !== this.clean; }
+
+    isOpen(){ return this.dlg.open; }
 
     bindDelete(handler){
       this.btnDelete.addEventListener('click', () => handler(this.fields.id.value));

@@ -423,6 +423,18 @@ const address = (page) => page.locator('#capAddress').inputValue();
     assert.deepEqual(owner.errors, [], 'sin excepciones JavaScript (sesión nueva)');
     await owner.context.close();
 
+    /* ---------- la limpieza del cron, contra Firestore de verdad (emulado) ---------- */
+    const marks = times((await stored('mail_seen')).text, '"expireAt"');
+    assert.ok(marks >= 4, 'hay marcas de los correos recibidos: ' + marks);
+    assert.deepEqual(await capture.sweep(ENV, {now:() => Date.now()}), {configured:true, seen:0, rate:0}, 'hoy no hay nada caducado');
+    assert.equal(times((await stored('mail_seen')).text, '"expireAt"'), marks);
+    const later = () => Date.now() + 31 * 86400000;
+    const swept = await capture.sweep(ENV, {now:later});
+    assert.ok(swept.seen >= 4 && swept.rate >= 1, JSON.stringify(swept));
+    let left = await capture.sweep(ENV, {now:later});
+    for(let i = 0; i < 10 && (left.seen || left.rate); i++) left = await capture.sweep(ENV, {now:later});
+    assert.equal(times((await stored('mail_seen')).text, '"expireAt"') + times((await stored('mail_rate')).text, '"day"'), 0, 'pasados 31 días no queda ninguna marca ni contador');
+
     console.log('OK   Firebase emulado: captura por correo (activar, tarea con adjunto, duplicados, remitentes, columna, regenerar, equipo, inglés, eliminar)');
   }finally{
     await browser.close();

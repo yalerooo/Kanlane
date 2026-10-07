@@ -338,7 +338,12 @@ export default {
       if (!out.configured) { console.log('automatizaciones: sin configurar (falta el secreto FIREBASE_SERVICE_ACCOUNT)'); return; }
       const bad = out.results.filter((r) => r.status === 'error' || r.status === 'conflict').length;
       console.log('automatizaciones: ' + out.ran + ' ejecuciones en ' + out.jobs + ' proyectos' + (bad ? ', ' + bad + ' pendientes de reintento' : ''));
-    }, (err) => console.error('automatizaciones: ' + (err && err.message)));
+    }, (err) => console.error('automatizaciones: ' + (err && err.message)))
+      /* Después, la limpieza de la captura por correo: marcas y contadores caducados. Va detrás
+         (no a la vez) para no competir por las subpeticiones de la vuelta. */
+      .then(() => import('./capture.mjs')).then((m) => m.sweep(env)).then((out) => {
+        if (out.configured && (out.seen || out.rate)) console.log('captura: limpieza, ' + out.seen + ' marcas y ' + out.rate + ' contadores caducados');
+      }, (err) => console.error('captura: limpieza, ' + (err && err.message)));
     ctx.waitUntil(job);
     return job;
   },

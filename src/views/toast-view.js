@@ -47,7 +47,7 @@
     /* Sumi acompaña al texto con el gesto que le toca: triste en un error, contento en una
        confirmación y el normal cuando solo se ofrece una acción. opts.mood lo cambia. */
     const mood = opts.mood || (opts.error ? 'triste' : opts.important ? 'contento' : 'normal');
-    el.innerHTML = Workhub.views.sumi.svg({mini:true, size:26, mood:mood, cls:'toast-sumi is-pop'}) + '<span class="toast-text"></span>';
+    el.innerHTML = Workhub.views.sumi.svg({mini:true, size:mood === 'fiesta' ? 34 : 26, mood:mood, cls:'toast-sumi is-pop'}) + '<span class="toast-text"></span>';
     el.querySelector('.toast-text').textContent = message;
     if(opts.action){
       const btn = document.createElement('button');

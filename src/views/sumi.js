@@ -19,6 +19,13 @@
   const ARM_TOP = 34;    /* los brazos empiezan dentro del cuerpo… */
   const ARM_ROOT = 40;   /* …y asoman a esta altura; los de fuera giran aquí, para que la unión quede lisa */
   const SPLAY = 7;       /* grados que se abren los brazos de fuera (la versión reducida, 0) */
+  /* Un detalle por estación, arriba a la derecha y en la tinta del cuerpo. {c} es ese color. */
+  const SEASONS = {
+    spring: '<g fill="{c}"><circle cx="54" cy="4.2" r="1.9"/><circle cx="56.7" cy="6.2" r="1.9"/><circle cx="55.7" cy="9.4" r="1.9"/><circle cx="52.3" cy="9.4" r="1.9"/><circle cx="51.3" cy="6.2" r="1.9"/></g>',
+    summer: '<circle cx="54" cy="7" r="2.6" fill="{c}"/><path d="M54 .8v1.4M54 11.8v1.4M47.8 7h1.4M58.8 7h1.4M49.6 2.6l1 1M57.4 10.4l1 1M58.4 2.6l-1 1M50.6 10.4l-1 1" fill="none" stroke="{c}" stroke-width="1.6" stroke-linecap="round"/>',
+    autumn: '<path d="M49.5 11Q49 3 58.5 2.5Q59 11 49.5 11Z" fill="{c}"/><path d="M49.5 11l-2 2" fill="none" stroke="{c}" stroke-width="1.6" stroke-linecap="round"/>',
+    winter: '<path d="M54 1.5v11M49.2 4.2l9.6 5.6M58.8 4.2l-9.6 5.6" fill="none" stroke="{c}" stroke-width="1.7" stroke-linecap="round"/>'
+  };
   const MOODS = ['normal', 'contento', 'guino', 'aviso', 'concentrado', 'dormido', 'triste', 'fiesta', 'cerrado'];
 
   function geometry(mini){
@@ -86,6 +93,9 @@
      - body: color del cuerpo ('currentColor' si falta).
      - eye: color de los ojos. Si falta, los ojos se RECORTAN y asoma lo que haya detrás, sea
        lo que sea (cristal, velo, una tarjeta).
+     - season: 'spring' | 'summer' | 'autumn' | 'winter' añade el detalle de esa estación; false lo
+       quita. Si falta, se usa la estación de la aplicación (<html data-season>). Nunca lo llevan
+       el logotipo, los iconos ni la versión reducida, ni los gestos que ya ocupan esa esquina.
      - bg: color de un cuadrado de fondo con las esquinas a 14; Sumi ocupa entonces el 62 % del
        ancho. Con bg hay que dar también eye (normalmente el mismo color). */
   function svg(o){
@@ -96,11 +106,15 @@
     const parts = face(o.mood, g, cut ? '#000' : o.eye);
     const shape = '<path d="' + bodyPath(g) + '"/>' + armsMarkup(g);
     const extra = '<path class="sumi-extra" d="' + parts.extra + '" fill="none" stroke="' + body + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
+    /* Solo el Sumi suelto y completo: ni el logotipo (lleva eye) ni los iconos (bg) ni el reducido. */
+    const auto = cut && !o.bg && !o.mini && !parts.extra;
+    const season = o.season === false ? '' : (o.season || (auto && root.document ? root.document.documentElement.getAttribute('data-season') : ''));
+    const deco = auto && season && SEASONS[season] ? '<g class="sumi-season">' + SEASONS[season].replace(/\{c\}/g, body) + '</g>' : '';
     let inner;
     if(cut){
       const id = 'sumi-m' + (++serial);
       inner = '<mask id="' + id + '" maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80"><rect x="-8" y="-8" width="80" height="80" fill="#fff"/><g class="sumi-face">' + parts.face + '</g></mask>' +
-        '<g mask="url(#' + id + ')" fill="' + body + '">' + shape + '</g>' + extra;
+        '<g mask="url(#' + id + ')" fill="' + body + '">' + shape + '</g>' + extra + deco;
     } else {
       inner = '<g fill="' + body + '">' + shape + '</g><g class="sumi-face">' + parts.face + '</g>' + extra;
     }
@@ -132,6 +146,9 @@
     const f = el.querySelector('.sumi-face'), x = el.querySelector('.sumi-extra');
     if(f) f.innerHTML = parts.face;
     if(x) x.setAttribute('d', parts.extra);
+    /* La zeta y los destellos ocupan la esquina del detalle de temporada. */
+    const s = el.querySelector('.sumi-season');
+    if(s) s.style.display = parts.extra ? 'none' : '';
   }
 
   /* Reproduce una vez un movimiento: wink, look, dip, wave, nod o pop. */

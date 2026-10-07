@@ -591,6 +591,44 @@ const keys = {'ejemplo.test': dkimKey(), 'otra.test': dkimKey()};
     assert.equal((await w.manage(ana, {op: 'enable', tid: 't3'})).status, 409);
   });
 
+  await test('limpieza desde el cron: borra las marcas a los 30 días y los contadores a los 3, y nada antes', async () => {
+    const w = world();
+    const address = await personal(w);
+    await w.send(address, {subject: 'Primero', text: 'uno', messageId: 'a@ejemplo.test'});
+    w.clock = NOW + 10 * 86400000;
+    await w.send(address, {subject: 'Segundo', text: 'dos', messageId: 'b@ejemplo.test'});
+    assert.equal(w.store.paths('mail_seen/').length, 4);
+    assert.deepEqual(w.store.paths('mail_rate/'), ['mail_rate/u~ana~p1~20261007', 'mail_rate/u~ana~p1~20261017']);
+    const sweep = () => C.sweep(ENV, w.deps);
+    /* Han pasado diez días desde el primer correo: su contador ya sobra; el de hoy, no. */
+    assert.deepEqual(await sweep(), {configured: true, seen: 0, rate: 1});
+    assert.deepEqual(w.store.paths('mail_rate/'), ['mail_rate/u~ana~p1~20261017']);
+    assert.deepEqual(await sweep(), {configured: true, seen: 0, rate: 0}, 'el mismo día no hay nada más que borrar');
+    /* El contador de un día sigue tres días después y se borra al cuarto. */
+    w.clock = NOW + 13 * 86400000;
+    assert.deepEqual(await sweep(), {configured: true, seen: 0, rate: 0});
+    w.clock = NOW + 14 * 86400000;
+    assert.deepEqual(await sweep(), {configured: true, seen: 0, rate: 1});
+    assert.deepEqual(w.store.paths('mail_rate/'), []);
+    /* Un instante antes de los 30 días del primero, sus marcas aún valen; pasados, se borran. */
+    w.clock = NOW + 30 * 86400000 - 1;
+    assert.equal((await sweep()).seen, 0);
+    assert.equal((await w.send(address, {subject: 'Primero', text: 'uno', messageId: 'a@ejemplo.test'})).code, 'duplicate');
+    w.clock = NOW + 30 * 86400000 + 1;
+    assert.deepEqual(await sweep(), {configured: true, seen: 2, rate: 0});
+    assert.equal(w.store.paths('mail_seen/').length, 2, 'las del segundo correo siguen');
+    assert.equal((await w.send(address, {subject: 'Segundo', text: 'dos', messageId: 'b@ejemplo.test'})).code, 'duplicate');
+    /* No toca nada más: ni tareas, ni la dirección. */
+    assert.equal(w.tasks('users/ana/projects/p1').length, 2);
+    assert.equal(w.store.paths('mail_capture').length, 2);
+    /* De cien en cien por vuelta. */
+    for (let i = 0; i < 250; i++) w.store.put('mail_seen/viejo' + i, {key: 'u~x~y', expireAt: 5});
+    assert.equal((await sweep()).seen, 100);
+    assert.equal((await sweep()).seen, 100);
+    assert.equal((await sweep()).seen, 50);
+    assert.deepEqual(await C.sweep({}, {now: () => NOW}), {configured: false, seen: 0, rate: 0}, 'sin cuenta de servicio no hace nada');
+  });
+
   await test('los registros no llevan direcciones, tokens ni contenido', async () => {
     const w = world();
     const address = await personal(w);

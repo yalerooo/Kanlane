@@ -472,4 +472,25 @@ export async function receive(message, env, deps) {
   return {result: 'created', code: resumed ? 'files-resumed' : 'created', taskId: taskId, files: accepted.length, refused: refused.length};
 }
 
+/* ---------- Limpieza (la lanza el cron del Worker) ---------- */
+
+const SWEEP_BATCH = 100;
+const RATE_DAYS = 3;
+
+/* Borra lo caducado: las marcas de correos recibidos (30 días) y los contadores (3 días). Lo hace
+   el cron porque el borrado automático de Firestore (TTL) exige tener la facturación activada.
+   Como mucho SWEEP_BATCH de cada por vuelta: lo que quede, en la siguiente. → {seen, rate} */
+export async function sweep(env, deps) {
+  deps = Object.assign({fetch: (url, init) => fetch(url, init), now: () => Date.now()}, deps);
+  const store = deps.store || restStore(env, deps);
+  if (!store) return {configured: false, seen: 0, rate: 0};
+  const now = deps.now();
+  const cut = new Date(now - RATE_DAYS * DAY_MS);
+  const day = cut.getUTCFullYear() + pad(cut.getUTCMonth() + 1) + pad(cut.getUTCDate());
+  const [seen, rate] = await Promise.all([store.olderThan('mail_seen', 'expireAt', now, SWEEP_BATCH), store.olderThan('mail_rate', 'day', day, SWEEP_BATCH)]);
+  const writes = seen.map((id) => ({path: 'mail_seen/' + id, remove: true})).concat(rate.map((id) => ({path: 'mail_rate/' + id, remove: true})));
+  if (writes.length) await store.commit(writes);
+  return {configured: true, seen: seen.length, rate: rate.length};
+}
+
 export const LIMITS = {plans: PLANS, rate: RATE, seenDays: SEEN_DAYS, allowMax: ALLOW_MAX};

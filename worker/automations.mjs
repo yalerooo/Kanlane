@@ -176,6 +176,9 @@ export function restStore(env, deps) {
     /* Documentos de una colección raíz con un campo igual a un valor: [{id, data}]. */
     where: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
       where: {fieldFilter: Object.assign(field(path), {op: 'EQUAL', value: encode(value)})}, limit: n}),
+    /* Identificadores de los documentos de una colección raíz con un campo menor que un valor. */
+    olderThan: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
+      where: {fieldFilter: Object.assign(field(path), {op: 'LESS_THAN', value: encode(value)})}, limit: n}).then((rows) => rows.map((r) => r.id)),
     /* Como get, con la marca de la última escritura: {data, updateTime} | null. */
     getDoc: (path) => call('GET', docs + '/' + path).then((doc) => (doc ? {data: decodeFields(doc.fields), updateTime: doc.updateTime || ''} : null)),
     /* Tareas del proyecto con fecha límite hasta `maxDate` (incluye las vencidas). */

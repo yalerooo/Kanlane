@@ -1,0 +1,11 @@
+/* Ajustes → Integraciones → Asistentes de IA (MCP). Comparte la caja y las filas con GitHub (github.css). */
+.mcp-list{list-style:none;margin:0;padding:0;}
+.mcp-list b{font-size:13.5px;font-weight:550;color:var(--ink);overflow-wrap:anywhere;}
+.mcp-list .btn{flex:none;}
+.mcp-form{display:flex;flex-direction:column;gap:12px;max-width:600px;}
+.mcp-form .field{margin-bottom:0;}
+.mcp-form input:not([type="checkbox"]){width:100%;}
+.mcp-fresh{gap:12px;}
+.mcp-fresh .field{margin-bottom:0;gap:6px;}
+.mcp-command{width:100%;resize:vertical;font-family:var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);font-size:12.5px;line-height:1.5;overflow-wrap:anywhere;}
+#mcpNote{margin:0;}

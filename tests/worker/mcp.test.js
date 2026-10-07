@@ -342,6 +342,24 @@ const STAGES = [{key: 'todo', label: 'Por hacer'}, {key: 'doing', label: 'En cur
     assert.equal((await w.rpc(tBob, 'ping')).status, 200, 'los de otras personas siguen');
   });
 
+  await test('al borrar un proyecto se retiran todos sus tokens: solo quien puede borrarlo', async () => {
+    const w = world();
+    team(w);
+    const tAna = (await w.manage(ana, {op: 'create', tid: 't1', name: 'de Ana'})).body.token;
+    await w.manage(bob, {op: 'create', tid: 't1', name: 'de Bob'});
+    assert.deepEqual([(await w.manage(bob, {op: 'clear', tid: 't1'})).status, w.store.paths('mcp_tokens/').length], [403, 2], 'un editor no');
+    assert.deepEqual((await w.manage(ana, {op: 'clear', tid: 't1'})).body, {v: 1, removed: 2});
+    assert.equal((await w.rpc(tAna, 'ping')).status, 401);
+    /* Un proyecto personal que ya no existe: su dueña aún puede retirarlos; otra cuenta, no los suyos. */
+    const w2 = world();
+    await personal(w2);
+    w2.store.docs.delete(ROOT);
+    assert.equal((await w2.manage(ana, {op: 'list', pid: 'p1'})).status, 404);
+    assert.deepEqual((await w2.manage(bob, {op: 'clear', pid: 'p1'})).body, {v: 1, removed: 0});
+    assert.equal(w2.store.paths('mcp_tokens/').length, 1);
+    assert.deepEqual((await w2.manage(ana, {op: 'clear', pid: 'p1'})).body, {v: 1, removed: 1});
+  });
+
   await test('ruta /__/mcp/v1: lo que se rechaza antes de mirar nada', async () => {
     const source = fs.readFileSync(path.join(__dirname, '../../worker/index.js'), 'utf8');
     const {default: worker} = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));

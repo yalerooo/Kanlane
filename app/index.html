@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="../assets/css/views/vault.css">
   <link rel="stylesheet" href="../assets/css/views/clients.css">
   <link rel="stylesheet" href="../assets/css/views/github.css">
+  <link rel="stylesheet" href="../assets/css/views/mcp.css">
   <link rel="stylesheet" href="../assets/css/components/plugin-form.css">
   <link rel="stylesheet" href="../assets/css/views/team.css">
   <link rel="stylesheet" href="../assets/css/views/privacy.css">
@@ -786,6 +787,18 @@
               </div>
             </div>
             <div class="gh-body" id="ghBody"></div>
+          </div>
+          <div class="settings-card gh-card" id="mcpCard" hidden>
+            <div class="settings-row">
+              <div class="settings-icon-row">
+                <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="2.5"/><path d="M10.2 11.2h.01M13.8 11.2h.01" stroke-width="2.4"/><path d="M10.2 14h3.6"/></svg></span>
+                <div>
+                  <h3>Asistentes de IA (MCP)</h3>
+                  <p>Deja que Claude u otro asistente lea y mueva las tareas de este proyecto.</p>
+                </div>
+              </div>
+            </div>
+            <div class="gh-body" id="mcpBody"></div>
           </div>
         </div>
 
@@ -2045,6 +2058,7 @@
 <script src="../src/services/crypto.js"></script>
 <script src="../src/services/vault-totp.js"></script>
 <script src="../src/services/mail-capture.js"></script>
+<script src="../src/services/mcp-tokens.js"></script>
 <script src="../src/services/project-crypto.js"></script>
 <script src="../src/services/keystore.js"></script>
 <script src="../src/services/firebase-backend.js"></script>
@@ -2115,6 +2129,7 @@
 <script src="../src/views/plugins-view.js"></script>
 <script src="../src/views/plugin-form-view.js"></script>
 <script src="../src/views/github-view.js"></script>
+<script src="../src/views/mcp-view.js"></script>
 <script src="../src/views/share-view.js"></script>
 <script src="../src/views/join-view.js"></script>
 <script src="../src/views/reminders-view.js"></script>
@@ -2136,6 +2151,7 @@
 <script src="../src/controllers/reminders-controller.js"></script>
 <script src="../src/controllers/automations-controller.js"></script>
 <script src="../src/controllers/github-controller.js"></script>
+<script src="../src/controllers/mcp-controller.js"></script>
 <script src="../src/controllers/team-crypto-controller.js"></script>
 <script src="../src/controllers/key-rotation-controller.js"></script>
 <script src="../src/controllers/project-convert-controller.js"></script>

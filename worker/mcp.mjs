@@ -115,7 +115,7 @@ function block(value, max) {
 /* ---------- Gestión de tokens (ruta /__/mcp/v1/tokens, con el ID token ya verificado) ---------- */
 
 /* who: {uid} (del token de Firebase, nunca del cuerpo). body: {op, pid | tid, name, readOnly, id}.
-   op: 'list' | 'create' | 'revoke' | 'purge'. → {status, body}. El token solo se devuelve al crearlo. */
+   op: 'list' | 'create' | 'revoke' | 'clear' | 'purge'. → {status, body}. El token solo se devuelve al crearlo. */
 export async function manage(who, body, env, deps) {
   deps = Object.assign({fetch: (url, init) => fetch(url, init), now: () => Date.now()}, deps);
   const secret = secretOf(env);
@@ -135,11 +135,23 @@ export async function manage(who, body, env, deps) {
   const ref = isTeam ? {kind: 't', tid: body.tid} : {kind: 'u', uid: who.uid, pid: body.pid};
   const project = await loadProject(ref, store);
   const role = project.gone ? '' : isTeam ? roleIn(project.team, who.uid) : 'owner';
+  const key = keyOf(ref);
+  /* Un proyecto personal ya borrado: su dueño aún puede retirar los tokens que dejó. */
+  if (project.gone && !isTeam && body.op === 'clear') {
+    const left = await store.where('mcp_tokens', 'key', key, TOKENS_MAX * 2);
+    if (left.length) await store.commit(left.map((t) => ({path: 'mcp_tokens/' + t.id, remove: true})));
+    return reply(200, {v: 1, removed: left.length});
+  }
   /* Lo mismo para «no existe» y «no es tuyo»: no se dice cuál. */
   if (!role) return reply(404, {error: 'project'});
 
-  const key = keyOf(ref);
   const all = await store.where('mcp_tokens', 'key', key, TOKENS_MAX * 2);
+  /* Al borrar el proyecto: fuera todos sus tokens. Solo quien puede borrarlo. */
+  if (body.op === 'clear') {
+    if (role !== 'owner') return reply(403, {error: 'owner'});
+    if (all.length) await store.commit(all.map((t) => ({path: 'mcp_tokens/' + t.id, remove: true})));
+    return reply(200, {v: 1, removed: all.length});
+  }
   if (project.enc) {
     /* Si quedaban tokens de antes de cifrarlo, se retiran. */
     if (all.length) await store.commit(all.map((t) => ({path: 'mcp_tokens/' + t.id, remove: true})));

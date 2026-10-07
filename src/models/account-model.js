@@ -117,8 +117,14 @@
         ? capture.call(db, {op:'purge'}).catch((err) => { if(err && err.code === 'not-configured') return null; throw err; })
         : Promise.resolve();
 
+      /* Y los tokens del servidor MCP que creó: ningún asistente sigue entrando con ellos. */
+      const mcp = Workhub.services.mcp;
+      const purgeMcp = () => (mcp && mcp.available(db)
+        ? mcp.call(db, {op:'purge'}).catch((err) => { if(err && err.code === 'not-configured') return null; throw err; })
+        : Promise.resolve());
+
       step('Saliendo de tus equipos…');
-      return purge.then(() => each(teams.filter((p) => p.role !== 'owner'), (p) => this.team.leave(p))).then(() => {
+      return purge.then(purgeMcp).then(() => each(teams.filter((p) => p.role !== 'owner'), (p) => this.team.leave(p))).then(() => {
         step('Eliminando tus equipos…');
         return each(teams.filter((p) => p.role === 'owner'), (p) => this.projects.removeProject(p.id, db, null));
       }).then(() => {

@@ -2,7 +2,7 @@
 
 Kanlane tiene un servidor MCP (Model Context Protocol): un asistente como Claude Code puede leer las tareas de **un proyecto**, moverlas de columna, añadirles notas y crear tareas nuevas. Este documento explica cómo entra una llamada, qué se guarda, quién puede qué, cómo se pone en marcha y qué está comprobado y qué no.
 
-**Estado:** el servidor (este documento) está hecho. La pantalla de Ajustes para crear y revocar tokens y la página pública que lo explica van en entregas aparte; hasta entonces los tokens solo se pueden crear llamando a la ruta de gestión.
+**Estado:** el servidor y el apartado de Ajustes para crear y revocar tokens están hechos. La página pública que lo explica va en una entrega aparte.
 
 ## Cómo entra una llamada y dónde corre el código
 
@@ -40,6 +40,17 @@ asistente → POST https://kanlane.com/__/mcp/v1   (Authorization: Bearer kl_…
 - **Gestionar** (`manage`, ruta `/__/mcp/v1/tokens`) pide el ID token de Firebase, como `/__/kms/` y `/__/capture/v1`: quién llama sale del token verificado, nunca del cuerpo. A quien no es miembro se le responde lo mismo que si el proyecto no existiera.
 - **Lo que puede hacer un token se decide en cada llamada**, con el papel que tiene en ese momento quien lo creó: propietario o editor leen y escriben; lector, solo lee. Si esa persona pasa a lectora, su token deja de escribir sin tocarlo; si sale del equipo, el token deja de valer y se retira.
 - Un token de solo lectura no ve las herramientas que escriben (no salen en `tools/list`) y, si las llama, se le dice que es de solo lectura.
+
+## En la app
+
+**Ajustes → Integraciones → Asistentes de IA (MCP)**, con el proyecto abierto.
+
+- **Crear:** un nombre y, si se quiere, «Solo lectura». Al crearlo aparece el token y el comando para Claude Code, cada uno con su botón de copiar. Siguen a la vista hasta pulsar «Ya lo he copiado» o cambiar de proyecto; recargar la página tampoco los devuelve.
+- **Lista:** cada token con su nombre, si es de solo lectura, cuándo se creó y cuándo se usó por última vez. En un equipo, la propietaria ve además de quién es cada uno.
+- **Revocar:** pide confirmación y corta el acceso al momento.
+- **Cuándo no aparece:** como invitado o en modo local (no hay cuenta que identifique a quien lo pide), con `mcp: false` en `src/config/features.js`, o mientras el servidor no tenga `MCP_SECRET`. En un proyecto cifrado aparece, pero solo para explicar por qué no se puede.
+- **Al borrar:** eliminar un proyecto retira sus tokens (`op: 'clear'`, solo quien puede borrarlo) y eliminar la cuenta, todos los que creó (`op: 'purge'`).
+- **Código:** `src/services/mcp-tokens.js`, `src/views/mcp-view.js`, `src/controllers/mcp-controller.js` y `assets/css/views/mcp.css`.
 
 ## Herramientas
 
@@ -129,6 +140,7 @@ Las pruebas no pasan por Cloudflare ni por un cliente MCP real. Antes de anuncia
 
 Ninguna toca proyectos reales.
 
-- `tests/worker/mcp.test.js` (18): tokens, permisos y herramientas con una base de datos en memoria que impone las mismas condiciones de escritura que Firestore; y lo que la ruta rechaza antes de mirar nada (método, origen, token sin forma de token, tamaño, límite por token).
+- `tests/e2e/mcp-settings.js`: con los emuladores y un navegador, el apartado de Ajustes. Crear con el teclado, el token y el comando, lo que hace un asistente visto en el tablero sin recargar, «usado hace…», recargar, solo lectura, revocar, inglés y móvil.
+- `tests/worker/mcp.test.js` (19): tokens, permisos y herramientas con una base de datos en memoria que impone las mismas condiciones de escritura que Firestore; y lo que la ruta rechaza antes de mirar nada (método, origen, token sin forma de token, tamaño, límite por token).
 - `tests/e2e/mcp.js`: por HTTP contra el Firestore emulado, sin navegador. Las consultas por columna y por exclusión, las notas ordenadas, las escrituras con condición, la tarea que se repite y el contador las resuelve el emulador.
 - `tests/rules/rules-test.js`: ningún cliente lee ni escribe `mcp_tokens` ni `mcp_rate`.

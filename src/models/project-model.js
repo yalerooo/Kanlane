@@ -330,6 +330,12 @@
       if(capture && capture.available(rootDb) && me){
         wipeOthers.push(capture.call(rootDb, Object.assign({op:'disable'}, capture.target(id))).catch(() => null));
       }
+      /* Y sus tokens del servidor MCP. (Si esto fallara, el servidor retira cada uno en cuanto se
+         use con un proyecto que no existe.) */
+      const mcp = Workhub.services.mcp;
+      if(mcp && mcp.available(rootDb) && me){
+        wipeOthers.push(mcp.call(rootDb, Object.assign({op:'clear'}, mcp.target(id))).catch(() => null));
+      }
       return Promise.all([wipeTasks, wipeMeta].concat(wipeOthers)).then(() => {
         /* Las imágenes son lo menos importante: si alguna falla, se sigue. */
         if(!assets || !assets.delete) return null;

@@ -12,10 +12,15 @@
    (docs/CAPTURA-EMAIL.md). Necesita los secretos CAPTURE_SECRET y FIREBASE_SERVICE_ACCOUNT, la
    variable CAPTURE_DOMAINS y Email Routing apuntando al Worker. Mientras el servidor no lo tenga
    todo, el apartado no se enseña aunque esto esté en true. En false no se enseña ni se consulta;
-   las direcciones que ya existan siguen recibiendo correo hasta que se desactiven. */
+   las direcciones que ya existan siguen recibiendo correo hasta que se desactiven.
+   mcp: ofrecer en Ajustes → Integraciones los tokens del servidor MCP (docs/MCP.md). Necesita los
+   secretos MCP_SECRET y FIREBASE_SERVICE_ACCOUNT en el Worker. Mientras el servidor no los tenga,
+   el apartado no se enseña aunque esto esté en true. En false no se enseña ni se consulta; los
+   tokens que ya existan siguen funcionando hasta que se revoquen. */
 Workhub.features = {
   encryptedProjects: true,
   managedEncryption: true,
   vaultTotp: true,
-  mailCapture: true
+  mailCapture: true,
+  mcp: true
 };

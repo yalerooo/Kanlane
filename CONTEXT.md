@@ -494,8 +494,10 @@ Cada proyecto puede tener una dirección de correo que crea tareas. **Guía comp
 
 ### Servidor MCP (oct-2026)
 Un asistente (Claude Code u otro cliente MCP) lee, mueve, anota y crea tareas de **un proyecto**. **Guía completa: `docs/MCP.md`** (protocolo, permisos, límites, puesta en marcha, qué falta por comprobar).
-- **Hecho:** el servidor. **Pendiente:** la pantalla de Ajustes para crear y revocar tokens (hoy solo por la ruta de gestión), llamar a `op:'purge'` al eliminar la cuenta y la página pública.
-- **Entrada:** `POST /__/mcp/v1` con `Authorization: Bearer kl_…` → `worker/index.js` (`mcp`) → `worker/mcp.mjs` (`rpc`). JSON-RPC sin estado: `initialize`, `ping`, `tools/list`, `tools/call`. Gestión de tokens: `POST /__/mcp/v1/tokens` con el ID token (`manage`: `list`, `create`, `revoke`, `purge`). En las pruebas las dos las sirve `scripts/dev.js`.
+- **Hecho:** el servidor y el apartado **Ajustes → Integraciones → Asistentes de IA (MCP)** (`services/mcp-tokens.js`, `views/mcp-view.js`, `controllers/mcp-controller.js`, `assets/css/views/mcp.css`; interruptor `Workhub.features.mcp`). **Pendiente:** la página pública.
+- **En la app:** el token y el comando para Claude Code se enseñan una vez, al crearlo. El apartado no aparece como invitado, en modo local ni mientras el servidor no tenga `MCP_SECRET`. `McpController.onShow` pregunta al servidor al entrar en Ajustes; `onProjectChange` olvida lo del proyecto anterior.
+- **Al borrar:** `ProjectModel.removeProject` retira los tokens del proyecto (`op:'clear'`) y `AccountModel.wipe` los de la cuenta (`op:'purge'`).
+- **Entrada:** `POST /__/mcp/v1` con `Authorization: Bearer kl_…` → `worker/index.js` (`mcp`) → `worker/mcp.mjs` (`rpc`). JSON-RPC sin estado: `initialize`, `ping`, `tools/list`, `tools/call`. Gestión de tokens: `POST /__/mcp/v1/tokens` con el ID token (`manage`: `list`, `create`, `revoke`, `clear`, `purge`). En las pruebas las dos las sirve `scripts/dev.js`.
 - **Token:** `kl_` + 16 letras al azar + 16 de HMAC con el secreto `MCP_SECRET`; en Firestore solo su hash. Uno por proyecto, hasta 10, con nombre y opción de solo lectura.
 - **Permisos:** en cada llamada, el papel actual de quien creó el token (propietario o editor escriben; lector solo lee; quien sale del equipo lo pierde).
 - **Herramientas:** `list_tasks`, `get_task`, `move_task`, `add_note`, `create_task`. Trabajan con las columnas reales del proyecto. Completar una tarea que se repite crea la siguiente (como `TaskModel.spawnNext`); las reglas «al crear» y «al mover» no se disparan.
@@ -504,7 +506,7 @@ Un asistente (Claude Code u otro cliente MCP) lee, mueve, anota y crea tareas de
 - **Límites:** 60 llamadas por token y minuto (`MCP_RATE_LIMIT` en `wrangler.jsonc`), 2 000 cambios por proyecto y día, 500 tareas leídas por llamada.
 - **Reutiliza de la captura:** `loadProject`, `roleIn` y `keyOf` (exportadas de `worker/capture.mjs`) y `restStore` (`worker/automations.mjs`, con el método nuevo `list`).
 - **Sin comprobar:** un cliente MCP real (Claude Code, claude.ai), el despliegue en Cloudflare y la CPU del plan gratuito.
-- **Pruebas:** `tests/worker/mcp.test.js`, `tests/e2e/mcp.js` (emulador, sin navegador), `tests/rules`.
+- **Pruebas:** `tests/worker/mcp.test.js`, `tests/e2e/mcp.js` (emulador, sin navegador), `tests/e2e/mcp-settings.js` (el apartado de Ajustes), `tests/rules`.
 
 ### Mejoras de uso diario (oct-2026)
 

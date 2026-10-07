@@ -388,14 +388,33 @@
         });
         return;
       }
-      this.projects.save(id, nombre, color, config).then(() => {
-        this.view.closeDialog();
-        this.render();
-        toast.success('Proyecto guardado');
+      this.confirmStages(id, config).then((ok) => {
+        if(!ok){ this.view.setBusy(false); return null; }
+        return this.projects.save(id, nombre, color, config).then(() => {
+          this.view.closeDialog();
+          this.render();
+          toast.success('Proyecto guardado');
+        });
       }).catch(() => {
         this.view.setBusy(false);
         this.view.showError('No se pudo guardar el proyecto. Inténtalo de nuevo.');
       });
+    }
+
+    /* Al guardar el proyecto abierto sin alguna de sus columnas: si una automatización la usaba, se
+       avisa antes (quedará en pausa). → Promise<bool>: seguir o no. */
+    confirmStages(id, config){
+      const autos = this.app.controllers.automations;
+      const p = this.projects.get(id);
+      if(!autos || !p || id !== this.app.projectId) return Promise.resolve(true);
+      const next = Workhub.models.ProjectTemplates.resolve(Object.assign({}, p, config)).stages.map((s) => s.key);
+      const gone = this.projects.configOf(p).stages.filter((s) => next.indexOf(s.key) === -1);
+      if(!gone.length) return Promise.resolve(true);
+      return autos.warningFor(gone.map((s) => ({stage:s.key}))).then((warn) => (warn
+        ? this.app.controllers.tasks.columns.confirm(gone.length === 1 ? 'Quitar una columna' : 'Quitar columnas',
+          gone.length === 1 ? 'El proyecto se guardará sin la columna «' + gone[0].label + '».' : 'El proyecto se guardará sin ' + gone.length + ' de sus columnas.',
+          'Guardar', warn)
+        : true));
     }
 
     remove(id){

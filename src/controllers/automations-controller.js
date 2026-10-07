@@ -113,6 +113,22 @@
       return this.rules.map((r) => Object.assign({}, r, {broken:A.problem(r, ctx)}));
     }
 
+    /* Aviso para el diálogo que va a borrar una columna, una etiqueta o quitar a una persona del
+       proyecto ABIERTO: qué automatizaciones la usan y qué les pasará. '' si ninguna (o si no se
+       pueden leer). gone: {stage:clave} | {label:nombre} | {member:uid}; también una lista. */
+    warningFor(gone){
+      if(!this.usable()) return Promise.resolve('');
+      const list = Array.isArray(gone) ? gone : [gone];
+      return this.load().then(() => {
+        const hit = this.rules.filter((r) => list.some((g) => A.uses(r, g)));
+        if(!hit.length) return '';
+        const names = hit.map((r) => '«' + r.name + '»').join(', ');
+        return hit.length === 1
+          ? t('La automatización {names} dejará de poder ejecutarse: quedará en pausa hasta que alguien con permiso la edite.', {names:names})
+          : t('{n} automatizaciones dejarán de poder ejecutarse y quedarán en pausa hasta que alguien con permiso las edite: {names}.', {n:hit.length, names:names});
+      }, () => '');
+    }
+
     /* ---------- Guardado ---------- */
 
     bucket(name){
@@ -281,7 +297,7 @@
       this.live().forEach((r) => {
         if(!r.on || !r.broken || this.paused[this.key + r.id]) return;
         this.paused[this.key + r.id] = true;
-        toast.error(t('La automatización «{name}» está en pausa: {why}.', {name:r.name, why:r.broken}), {important:true});
+        toast.error(t('La automatización «{name}» está en pausa y no se ejecuta: {why}.', {name:r.name, why:r.broken}), {important:true});
       });
     }
 
@@ -297,11 +313,20 @@
         const tasks = this.tasks.items.filter((x) => !x._undecryptable);
         return this.engine.checkDue(tasks, this.fired).then((changed) => {
           if(!changed) return null;
-          /* Solo se guardan las marcas de tareas que siguen existiendo. */
-          const alive = {};
-          this.tasks.items.forEach((x) => { alive[x.id] = true; });
-          Object.keys(this.fired).forEach((k) => { if(!alive[k.slice(k.indexOf(':') + 1)]) delete this.fired[k]; });
-          return this.write(STATE, 'fired', this.fired).catch(() => null);
+          /* El servidor (u otro navegador) pudo apuntar marcas mientras tanto: se suman a las de
+             aquí antes de guardar, para no borrárselas. Las de aquí mandan en lo que acaba de pasar. */
+          const key = this.key;
+          return this.bucket(STATE).read().catch(() => ({})).then((got) => {
+            if(key !== this.key) return null;
+            let theirs = {};
+            try{ theirs = JSON.parse(got.fired) || {}; }catch(e){ theirs = {}; }
+            if(theirs && typeof theirs === 'object' && !Array.isArray(theirs)) this.fired = Object.assign({}, theirs, this.fired);
+            /* Solo se guardan las marcas de tareas que siguen existiendo. */
+            const alive = {};
+            this.tasks.items.forEach((x) => { alive[x.id] = true; });
+            Object.keys(this.fired).forEach((k) => { if(!alive[k.slice(k.indexOf(':') + 1)]) delete this.fired[k]; });
+            return this.write(STATE, 'fired', this.fired).catch(() => null);
+          });
         });
       });
     }

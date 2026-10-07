@@ -7,7 +7,11 @@
    - Condición opcional: que lleve una etiqueta y/o quién la tiene asignada ('none' = nadie).
    - Acciones: 'move', 'complete', 'assign', 'label', 'subtask' y 'due' (fecha a N días de hoy).
    - Junto a cada columna y cada persona se guarda su nombre (stageName, assigneeName, memberName):
-     si después se borra, los avisos la pueden nombrar.
+     si después se borra, los avisos la pueden nombrar. Una etiqueta se guarda por su nombre, así
+     que siempre se puede leer. Una regla antigua, sin nombre guardado, dice «columna borrada»:
+     nunca enseña la clave interna.
+   - `on` es la intención de quien la configuró (la casilla). El estado efectivo lo da status():
+     'off' (desactivada), 'paused' (activada, pero le falta algo y no se ejecuta) o 'active'.
    Aquí no hay DOM ni base de datos: son funciones puras y un motor (Engine) al que se le dice cómo
    leer y escribir tareas. Lo usan igual el navegador (controllers/automations-controller.js) y el
    servidor (worker/automations.mjs), y se prueba sin ninguno de los dos (tests/automations). */
@@ -73,7 +77,7 @@
   const stageOf = (ctx, key) => ctx.stages.find((s) => s.key === key) || null;
   const memberOf = (ctx, uid) => ctx.members.find((x) => x.uid === uid) || null;
   /* El nombre de ahora; si ya no existe, el que se guardó con la regla. */
-  const stageName = (ctx, key, kept) => { const s = stageOf(ctx, key); return s ? s.label : (kept || key); };
+  const stageName = (ctx, key, kept) => { const s = stageOf(ctx, key); return s ? s.label : (kept || t('columna borrada')); };
   const memberName = (ctx, uid, kept) => { const m = memberOf(ctx, uid); return m ? m.name : (kept || t('alguien que ya no está')); };
 
   /* La regla con los nombres de sus columnas y personas apuntados (los que existan ahora). */
@@ -93,7 +97,7 @@
   /* Qué le falta a la regla para poder ejecutarse ('' si nada): una columna, una etiqueta o una
      persona que ya no existe. Una regla así queda en pausa y se avisa; no falla en silencio. */
   function problem(rule, ctx){
-    const noStage = (key, kept) => (key && !stageOf(ctx, key) ? t('la columna «{name}» ya no existe', {name:kept || key}) : '');
+    const noStage = (key, kept) => (key && !stageOf(ctx, key) ? (kept ? t('la columna «{name}» ya no existe', {name:kept}) : t('una de sus columnas ya no existe')) : '');
     const noLabel = (name) => (name && !ctx.labels.some((l) => same(l, name)) ? t('la etiqueta «{name}» ya no existe', {name:name}) : '');
     const noMember = (uid, kept) => (uid && uid !== 'none' && !memberOf(ctx, uid)
       ? (kept ? t('{name} ya no está en el proyecto', {name:kept}) : t('la persona asignada ya no está en el proyecto')) : '');
@@ -105,6 +109,24 @@
       if(a.type === 'complete' && !ctx.stages.some((s) => s.done)) found.push(t('el proyecto no tiene ninguna etapa final'));
     });
     return found.filter(Boolean)[0] || '';
+  }
+
+  /* Estado efectivo de una regla. why: su problema de ahora ('' si ninguno). */
+  function status(rule, why){
+    return !rule.on ? 'off' : why ? 'paused' : 'active';
+  }
+
+  /* ¿Usa la regla esto que va a desaparecer? gone: {stage:clave} | {label:nombre} | {member:uid}. */
+  function uses(rule, gone){
+    if(gone.stage) return rule.trigger.stage === gone.stage || rule.actions.some((a) => a.type === 'move' && a.stage === gone.stage);
+    if(gone.label) return (!!rule.cond.label && same(rule.cond.label, gone.label)) || rule.actions.some((a) => a.type === 'label' && same(a.name, gone.label));
+    if(gone.member) return rule.cond.assignee === gone.member || rule.actions.some((a) => a.type === 'assign' && a.uid === gone.member);
+    return false;
+  }
+
+  /* Las reglas que quedarían en pausa al borrar una columna, una etiqueta o quitar a una persona. */
+  function affected(rules, gone){
+    return rules.filter((r) => uses(r, gone));
   }
 
   const assignedTo = (task) => (Array.isArray(task.assignees) ? task.assignees : []);
@@ -348,7 +370,7 @@
 
   Workhub.models.Automations = {
     TRIGGERS, ACTIONS, MAX_RULES, MAX_ACTIONS, MAX_DEPTH, MAX_PER_MINUTE,
-    newId, normalize, normalizeAll, withNames, problem, matches, meets, plan, logText, describe, title, templates,
+    newId, normalize, normalizeAll, withNames, problem, status, uses, affected, matches, meets, plan, logText, describe, title, templates,
     stageKey, isDone, Engine
   };
 })();

@@ -117,6 +117,30 @@ async function t(name, fn){
     await t('otra cuenta no lee el trabajo', () => assertFails(jobs(bob).doc('u~alice~main').get()));
     await t('ni lo borra', () => assertFails(jobs(bob).doc('t~t1').delete()));
     await t('su dueña lo borra', () => assertSucceeds(jobs(alice).doc('u~alice~p2').delete()));
+    /* Escritura directa con credenciales de editor, saltándose la interfaz: cada camino por el que
+       un editor podría cambiar qué se ejecuta en el equipo. */
+    await t('editor: no cambia las reglas con update', () => assertFails(auto(bob).doc('kanlane.automations').update({'values.rules':'[{"id":"x"}]'})));
+    await t('editor: no las cambia dentro de un lote junto a una tarea que sí puede escribir', async () => {
+      const b = bob.batch();
+      b.set(bob.collection('teams').doc('t1').collection('tasks').doc('lote'), {title:'lote'});
+      b.set(auto(bob).doc('kanlane.automations'), {values:{rules:'[]'}, updatedAt:3});
+      await assertFails(b.commit());
+    });
+    await t('editor: el lote rechazado no dejó la tarea', async () => {
+      const snap = await assertSucceeds(bob.collection('teams').doc('t1').collection('tasks').doc('lote').get());
+      if(snap.exists) throw new Error('la tarea del lote se escribió');
+    });
+    await t('editor: no cambia la copia del servidor que dejó la propietaria', () => assertFails(jobs(bob).doc('t~t1').update({rules:[{id:'mia'}]})));
+    await t('editor: no la sustituye haciéndose pasar por la propietaria', () => assertFails(jobs(bob).doc('t~t1').set(job({kind:'t', tid:'t1', uid:'alice', ctx:{stages:[], labels:[], members:[], team:true}}))));
+    await t('editor: no la lee', () => assertFails(jobs(bob).doc('t~t1').get()));
+    await t('editor: no lista las copias', () => assertFails(jobs(bob).get()));
+    await t('nadie escribe el estado del cron, ni la propietaria', () => assertFails(alice.collection('automation_state').doc('cursor').set({after:'', updatedAt:1})));
+    await t('ni lo lee', () => assertFails(bob.collection('automation_state').doc('cursor').get()));
+    await t('una lectora no apunta marcas de ejecución', () => assertFails(auto(carol).doc('kanlane.automations.state').set({values:{fired:'{}'}, updatedAt:2})));
+    await t('alguien de fuera no lee las reglas del equipo', () => assertFails(auto(dave).doc('kanlane.automations').get()));
+    await t('ni apunta marcas', () => assertFails(auto(dave).doc('kanlane.automations.state').set({values:{fired:'{}'}, updatedAt:2})));
+    await t('la propietaria sí cambia la copia del servidor', () => assertSucceeds(jobs(alice).doc('t~t1').set(job({kind:'t', tid:'t1', rules:[{id:'r2'}], ctx:{stages:[], labels:[], members:[], team:true}}))));
+    await t('y sí cambia las reglas con update', () => assertSucceeds(auto(alice).doc('kanlane.automations').update({'values.rules':'[{"id":"y"}]', updatedAt:4})));
   }
 
   console.log('Contraseñas compartidas');

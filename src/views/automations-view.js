@@ -80,20 +80,26 @@
         '<button type="button" class="btn btn-primary" data-auto="upgrade">' + esc(t('Crear cuenta y llevarme mis datos')) + '</button></div>';
     }
 
-    /* s: {rules:[{rule, text, problem}], templates:[{name, text}], canManage, team, max} */
+    /* s: {rules:[{rule, text, problem}], templates:[{name, text}], canManage, team, max}
+       La casilla es la intención (activada o no). El estado efectivo va escrito al lado, con
+       palabras: «Activa», «En pausa» o «Desactivada»; la casilla lo lleva como descripción. */
     showList(s){
       this.draft = null;
       this.foot.hidden = false;
       this.btnNew.hidden = !s.canManage;
       this.btnNew.disabled = s.rules.length >= s.max;
-      const rules = s.rules.map((r) => {
+      const STATUS = {active:'Activa', paused:'En pausa', off:'Desactivada'};
+      const rules = s.rules.map((r, i) => {
         const rule = r.rule;
-        return '<li class="auto-rule' + (rule.on ? '' : ' is-off') + (r.problem ? ' is-broken' : '') + '">' +
+        const state = A.status(rule, r.problem);
+        return '<li class="auto-rule' + (rule.on ? '' : ' is-off') + (r.problem ? ' is-broken' : '') + '" data-status="' + state + '">' +
           '<input type="checkbox" data-auto-toggle="' + esc(rule.id) + '"' + (rule.on ? ' checked' : '') + (s.canManage ? '' : ' disabled') +
-          ' aria-label="' + esc(t('Activar «{name}»', {name:rule.name})) + '">' +
+          ' aria-label="' + esc(t('Activar «{name}»', {name:rule.name})) + '" aria-describedby="autoStatus' + i + (r.problem ? ' autoWhy' + i : '') + '">' +
           '<div class="auto-rule-main"><b translate="no">' + esc(rule.name) + '</b>' + (rule.trigger.type === 'button' ? ' <span class="auto-tag">' + esc(t('Botón')) + '</span>' : '') +
+          ' <span class="auto-status is-' + state + '" id="autoStatus' + i + '">' + esc(t(STATUS[state])) + '</span>' +
           '<p translate="no">' + esc(r.text) + '</p>' +
-          (r.problem ? '<p class="auto-broken">' + esc(t('En pausa: {why}.', {why:r.problem})) + '</p>' : '') + '</div>' +
+          (r.problem ? '<p class="auto-broken" id="autoWhy' + i + '">' + esc(t(rule.on ? 'No se ejecuta: {why}.' : 'Aunque la actives no se ejecutará: {why}.', {why:r.problem})) +
+            (s.canManage ? ' ' + esc(t('Edítala para arreglarlo.')) : '') + '</p>' : '') + '</div>' +
           (s.canManage ? '<div class="auto-rule-actions"><button type="button" class="icon-btn" data-auto="edit" data-id="' + esc(rule.id) + '">' + esc(t('Editar')) + '</button>' +
             '<button type="button" class="icon-btn" data-auto="remove" data-id="' + esc(rule.id) + '">' + esc(t('Eliminar')) + '</button></div>' : '') +
           '</li>';
@@ -105,6 +111,7 @@
         (s.rules.length ? '<ul class="auto-rules">' + rules + '</ul>' : '<p class="auto-empty">' + esc(t('Todavía no hay ninguna automatización en este proyecto.')) + '</p>') +
         (s.canManage ? '' : '<p class="auto-note">' + esc(t(s.team ? 'Solo quien es propietario del equipo puede crear o cambiar las automatizaciones.' : 'No tienes permiso para cambiar las automatizaciones de este proyecto.')) + '</p>') +
         templates +
+        (s.rules.some((r) => r.rule.on && r.problem) ? '<p class="auto-note">' + esc(t('La casilla dice si quieres que la automatización se ejecute. Una automatización marcada puede estar en pausa porque le falta algo: mientras tanto no hace nada.')) + '</p>' : '') +
         '<p class="auto-note">' + esc(t(s.server ? 'Las automatizaciones por fecha se ejecutan aunque nadie tenga Kanlane abierto: el servidor las revisa cada media hora.'
           : 'En este proyecto las automatizaciones por fecha solo se ejecutan mientras alguien que puede editarlo tiene Kanlane abierto.')) + '</p>';
     }
@@ -130,15 +137,23 @@
       const d = this.draft;
       if(!d || !$('autoForm')) return d;
       const val = (id) => { const el = $(id); return el ? el.value : ''; };
+      /* El nombre guardado de una columna o una persona sigue con ella mientras no se elija otra:
+         si ya no existe, es lo único que queda para decir cuál era. */
+      const old = {trigger:d.trigger || {}, cond:d.cond || {}, actions:d.actions || []};
+      const kept = (name, same) => (same && name ? name : undefined);
       d.name = val('autoName');
       d.trigger = {type:val('autoTrigger'), stage:val('autoStage'), days:val('autoDays')};
+      d.trigger.stageName = kept(old.trigger.stageName, old.trigger.stage === d.trigger.stage);
       d.cond = {label:val('autoCondLabel'), assignee:val('autoCondAssignee')};
-      d.actions = Array.prototype.map.call(this.body.querySelectorAll('.auto-action'), (row) => {
+      d.cond.assigneeName = kept(old.cond.assigneeName, old.cond.assignee === d.cond.assignee);
+      d.actions = Array.prototype.map.call(this.body.querySelectorAll('.auto-action'), (row, i) => {
         const type = row.querySelector('.auto-a-type').value;
         const el = row.querySelector('.auto-a-val');
         const value = el ? el.value : '';
-        return type === 'move' ? {type:type, stage:value} : type === 'assign' ? {type:type, uid:value}
-          : type === 'label' ? {type:type, name:value} : type === 'subtask' ? {type:type, text:value}
+        const was = old.actions[i] || {};
+        if(type === 'move') return {type:type, stage:value, stageName:kept(was.stageName, was.type === type && was.stage === value)};
+        if(type === 'assign') return {type:type, uid:value, memberName:kept(was.memberName, was.type === type && was.uid === value)};
+        return type === 'label' ? {type:type, name:value} : type === 'subtask' ? {type:type, text:value}
           : type === 'due' ? {type:type, days:value} : {type:type};
       });
       return d;
@@ -146,7 +161,14 @@
 
     renderForm(){
       const d = this.draft, ctx = this.ctx;
-      const stages = (selected, any) => (any ? option('', t('Cualquier columna'), !selected) : '') + ctx.stages.map((s) => option(s.key, s.label, s.key === selected)).join('');
+      /* Lo que la regla tenía elegido y ya no existe sigue en su lista, dicho con su nombre: así
+         se ve qué falta y hay que elegir otra cosa a propósito (no se cambia sola por la primera). */
+      const gone = (value, name) => option(value, t('{name} (ya no existe)', {name:name}), true);
+      const stages = (selected, any, name) => (any ? option('', t('Cualquier columna'), !selected) : '') +
+        (selected && !ctx.stages.some((s) => s.key === selected) ? gone(selected, name || t('columna borrada')) : '') +
+        ctx.stages.map((s) => option(s.key, s.label, s.key === selected)).join('');
+      const hasLabel = (name) => ctx.labels.some((l) => l.trim().toLowerCase() === String(name).trim().toLowerCase());
+      const hasMember = (uid) => ctx.members.some((m) => m.uid === uid);
       const tr = d.trigger || {};
       const triggers = [['moved', 'una tarea se mueve a una columna'], ['created', 'se crea una tarea'], ['completed', 'una tarea se completa'], ['due', 'se acerca la fecha límite'], ['button', 'alguien pulsa su botón en la tarea']];
       const isButton = tr.type === 'button';
@@ -154,11 +176,12 @@
         .concat(ctx.team ? [['assign', 'Asignar a']] : []);
       const param = (a, i) => {
         const label = ' aria-label="' + esc(t('Valor de la acción {n}', {n:i + 1})) + '"';
-        if(a.type === 'move') return '<select class="auto-a-val"' + label + '>' + stages(a.stage || (ctx.stages[0] || {}).key) + '</select>';
-        if(a.type === 'label') return ctx.labels.length
-          ? '<select class="auto-a-val"' + label + '>' + ctx.labels.map((l) => option(l, l, l === a.name)).join('') + '</select>'
+        if(a.type === 'move') return '<select class="auto-a-val"' + label + '>' + stages(a.stage || (ctx.stages[0] || {}).key, false, a.stageName) + '</select>';
+        if(a.type === 'label') return ctx.labels.length || a.name
+          ? '<select class="auto-a-val"' + label + '>' + (a.name && !hasLabel(a.name) ? gone(a.name, a.name) : '') + ctx.labels.map((l) => option(l, l, l === a.name)).join('') + '</select>'
           : '<span class="auto-hint">' + esc(t('El proyecto no tiene etiquetas todavía.')) + '</span>';
-        if(a.type === 'assign') return '<select class="auto-a-val"' + label + '>' + ctx.members.map((m) => option(m.uid, m.name, m.uid === a.uid)).join('') + '</select>';
+        if(a.type === 'assign') return '<select class="auto-a-val"' + label + '>' + (a.uid && !hasMember(a.uid) ? gone(a.uid, a.memberName || t('alguien que ya no está')) : '') +
+          ctx.members.map((m) => option(m.uid, m.name, m.uid === a.uid)).join('') + '</select>';
         if(a.type === 'subtask') return '<input type="text" class="auto-a-val" maxlength="120" value="' + esc(a.text || '') + '" placeholder="' + esc(t('Texto de la subtarea')) + '"' + label + '>';
         if(a.type === 'due') return '<span class="auto-days"><input type="number" class="auto-a-val" min="0" max="365" value="' + esc(a.days == null || a.days === '' ? 7 : a.days) + '"' + label + '><span>' + esc(t('días desde hoy')) + '</span></span>';
         return '';
@@ -173,13 +196,14 @@
         '<div class="field"><label for="autoName">' + esc(t(isButton ? 'Texto del botón' : 'Nombre (opcional)')) + '</label><input id="autoName" maxlength="' + (isButton ? 40 : 80) + '" autocomplete="off" value="' + esc(d.name || '') + '" placeholder="' + esc(t('Por ejemplo: Enviar a revisión')) + '"></div>' +
         '<fieldset class="auto-block"><legend>' + esc(t('Cuando…')) + '</legend>' +
           '<select id="autoTrigger" aria-label="' + esc(t('Qué tiene que pasar')) + '">' + triggers.map((x) => option(x[0], t(x[1]), x[0] === tr.type)).join('') + '</select>' +
-          (tr.type === 'moved' || tr.type === 'created' ? '<select id="autoStage" aria-label="' + esc(t('Columna')) + '">' + stages(tr.stage || (tr.type === 'moved' ? (ctx.stages[0] || {}).key : ''), tr.type === 'created') + '</select>' : '') +
+          (tr.type === 'moved' || tr.type === 'created' ? '<select id="autoStage" aria-label="' + esc(t('Columna')) + '">' + stages(tr.stage || (tr.type === 'moved' ? (ctx.stages[0] || {}).key : ''), tr.type === 'created', tr.stageName) + '</select>' : '') +
           (tr.type === 'due' ? '<span class="auto-days"><input type="number" id="autoDays" min="0" max="365" value="' + esc(tr.days == null || tr.days === '' ? 2 : tr.days) + '" aria-label="' + esc(t('Días antes de la fecha límite')) + '"><span>' + esc(t('días antes (0 = el mismo día)')) + '</span></span>' : '') +
         '</fieldset>' +
         (isButton ? '<p class="auto-note auto-note-form">' + esc(t('El botón sale en la ficha de cada tarea, para quien puede editar el proyecto.')) + '</p>' : '') +
         '<fieldset class="auto-block"' + (isButton ? ' hidden' : '') + '><legend>' + esc(t('Solo si… (opcional)')) + '</legend>' +
-          '<select id="autoCondLabel" aria-label="' + esc(t('Etiqueta que tiene que llevar')) + '">' + option('', t('Con cualquier etiqueta o sin ninguna'), !d.cond.label) + ctx.labels.map((l) => option(l, t('Lleva la etiqueta «{name}»', {name:l}), l === d.cond.label)).join('') + '</select>' +
+          '<select id="autoCondLabel" aria-label="' + esc(t('Etiqueta que tiene que llevar')) + '">' + option('', t('Con cualquier etiqueta o sin ninguna'), !d.cond.label) + (d.cond.label && !hasLabel(d.cond.label) ? gone(d.cond.label, d.cond.label) : '') + ctx.labels.map((l) => option(l, t('Lleva la etiqueta «{name}»', {name:l}), l === d.cond.label)).join('') + '</select>' +
           (ctx.team ? '<select id="autoCondAssignee" aria-label="' + esc(t('Quién la tiene asignada')) + '">' + option('', t('La tenga quien la tenga'), !d.cond.assignee) + option('none', t('No tiene a nadie asignado'), d.cond.assignee === 'none') +
+            (d.cond.assignee && d.cond.assignee !== 'none' && !hasMember(d.cond.assignee) ? gone(d.cond.assignee, d.cond.assigneeName || t('alguien que ya no está')) : '') +
             ctx.members.map((m) => option(m.uid, t('Está asignada a {name}', {name:m.name}), m.uid === d.cond.assignee)).join('') + '</select>' : '') +
         '</fieldset>' +
         '<fieldset class="auto-block"><legend>' + esc(t('Entonces…')) + '</legend>' + actions +

@@ -227,7 +227,10 @@
         ? Workhub.t('{nombre} dejará de poder abrir el proyecto, pero lo que ya haya visto o descargado no se le puede quitar. Después conviene cambiar la clave del proyecto para que la que tenía deje de servir.', {nombre:m.name})
         : Workhub.t('«{name}» dejará de ver este proyecto.', {name:m.name});
       const vaultText = this.hasVault ? ' ' + Workhub.t('Si tenía acceso a las contraseñas, pudo copiarlas: conviene cambiar las más importantes.') : '';
-      this.confirm(Workhub.t('Quitar del equipo'), text + vaultText, Workhub.t('Quitar'))
+      /* Las automatizaciones son las del proyecto abierto: solo se avisa si es este. */
+      const autos = this.app.controllers.automations;
+      (autos && this.app.projectId === p.id ? autos.warningFor({member:uid}) : Promise.resolve(''))
+        .then((warn) => this.confirm(Workhub.t('Quitar del equipo'), text + vaultText, Workhub.t('Quitar'), warn))
         .then((ok) => {
           if(!ok) return;
           this.run(this.team.removeMember(p, uid), 'No se pudo quitar a esa persona.').then((done) => {
@@ -256,8 +259,8 @@
         });
     }
 
-    confirm(title, text, label){
-      return this.app.controllers.tasks.columns.confirm(title, text, label);
+    confirm(title, text, label, warn){
+      return this.app.controllers.tasks.columns.confirm(title, text, label, warn);
     }
 
     /* Proyecto personal → equipo. El proyecto se MUEVE: se crea el equipo con todo lo que tiene y,

@@ -22,6 +22,10 @@
 .auto-tag{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--ink-soft);font-size:11px;font-weight:500;vertical-align:1px;}
 .auto-rule-main b{display:inline;}
 .auto-note-form{margin:-4px 0 14px;}
+/* Estado efectivo de la regla, con palabras (la casilla solo dice si está activada). */
+.auto-status{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:999px;border:1px solid var(--line-strong);font-size:11px;font-weight:500;color:var(--ink-soft);vertical-align:1px;white-space:nowrap;}
+.auto-status.is-paused{border-color:var(--late);color:var(--late);}
+.auto-status.is-off{color:var(--ink-faint);}
 .auto-block[hidden]{display:none;}
 
 /* Botones de automatización en la ficha de la tarea. */

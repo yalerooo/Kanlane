@@ -107,6 +107,8 @@ jobs:
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-team.js"
       - name: Automatizaciones por fecha en el servidor con Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/automation-cron.js"
+      - name: Automatizaciones de un equipo (propietaria y editor) con Firebase emulado
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/automation-team.js"
       - name: Contraseñas compartidas de un equipo en Firebase emulado
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/team-vault.js"
       - name: Cambio de clave de un proyecto cifrado en Firebase emulado

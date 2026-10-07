@@ -40,6 +40,7 @@ jobs:
           node tests/backup/backup.test.js
           node tests/fields/custom-fields.test.js
           node tests/tasks/repeat.test.js
+          node tests/local/local-store.test.js
           node tests/trello/trello-import.test.js
           node tests/assets/limits.test.js
           node tests/markdown/markdown.test.js

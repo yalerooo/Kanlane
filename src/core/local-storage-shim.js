@@ -88,10 +88,21 @@ if(!window.claude){
        registro, así que dos seguidas no deben pisarse (Firestore las aplica
        de forma atómica; aquí se imita haciéndolas de una en una). */
     var writeQueues = {};
+    /* Escrituras sin terminar en cada colección. Mientras quede alguna, lo que hay guardado va por
+       detrás de lo que la app ya enseña: si esa lectura se entregase, pisaría el cambio recién hecho
+       (y la siguiente acción partiría de un dato viejo). Se descarta; la escritura avisa al terminar,
+       con el dato bueno. Firestore hace lo mismo: no entrega nada anterior a una escritura pendiente. */
+    var writesPending = {};
+    function collOf(path){ return path.slice(0, path.lastIndexOf('/')); }
+    function settled(coll){ return !writesPending[coll]; }
     function queued(path, fn){
+      var coll = collOf(path);
+      writesPending[coll] = (writesPending[coll] || 0) + 1;
+      var done = function(){ writesPending[coll]--; };
       var prev = writeQueues[path] || Promise.resolve();
       var next = prev.catch(function(){}).then(fn);
       writeQueues[path] = next;
+      next.then(done, done);
       next.then(function(){ if(writeQueues[path] === next) delete writeQueues[path]; }, function(){ if(writeQueues[path] === next) delete writeQueues[path]; });
       return next;
     }
@@ -108,7 +119,7 @@ if(!window.claude){
         },
         set: function(data){
           return queued(path, function(){ return idbPut(DOCS_STORE, {path:path, data:data}); })
-            .then(function(){ notify(collPath); notify(path); });
+            .then(function(){ notify(collPath); notify(path); }, function(e){ notify(collPath); notify(path); throw e; });
         },
         update: function(patch){
           return queued(path, function(){
@@ -116,15 +127,16 @@ if(!window.claude){
               var merged = Object.assign({}, rec ? rec.data : {}, patch);
               return idbPut(DOCS_STORE, {path:path, data:merged});
             });
-          }).then(function(){ notify(collPath); notify(path); });
+          }).then(function(){ notify(collPath); notify(path); }, function(e){ notify(collPath); notify(path); throw e; });
         },
         delete: function(){
           return queued(path, function(){ return idbDelete(DOCS_STORE, path); })
-            .then(function(){ notify(collPath); notify(path); });
+            .then(function(){ notify(collPath); notify(path); }, function(e){ notify(collPath); notify(path); throw e; });
         },
         onSnapshot: function(next, err){
           function fire(){
             idbGet(DOCS_STORE, path).then(function(rec){
+              if(!settled(collPath)) return;
               next({ exists: !!rec, id: id, data: function(){ return rec ? rec.data : undefined; } });
             }).catch(function(e){ if(err) err({code:'unavailable', message:String(e)}); });
           }
@@ -186,6 +198,7 @@ if(!window.claude){
         onSnapshot: function(next, err){
           function fire(){
             snapshotDocs().then(function(docs){
+              if(!settled(collPath)) return;
               next({ docs:docs, size:docs.length, empty:docs.length===0, docChanges:function(){ return []; } });
             }).catch(function(e){ if(err) err({code:'unavailable', message:String(e)}); });
           }

@@ -83,7 +83,9 @@
       this.dialog.bindCreateLabel((name, color) => app.controllers.projects.addLabel(name, color));
       this.dialog.setLabelCatalog(Workhub.views.labels.catalog());
       this.dialog.bindSubmit((id, values) => this.save(id, values));
-      this.dialog.bindCancel(() => this.closeDialog(true));
+      this.dialog.bindCancel(() => this.requestClose());
+      /* Si el formulario se cierra por otra vía (cambio de proyecto), la pregunta pendiente se retira. */
+      this.dialog.dlg.addEventListener('close', () => { if(this.discarding && this.columns.confirmDlg.open) this.columns.confirmDlg.close(); });
       this.dialog.bindDelete((id) => this.remove(id));
       this.dialog.bindAddNote((text, files) => this.addNote(text, files));
       this.dialog.bindDeleteNote((noteId) => {
@@ -499,6 +501,7 @@
       const items = this.tasks.items;
       const deflt = items.length && items[0].cliente ? items[0].cliente : '';
       this.dialog.openNew(this.app.clientNames(), deflt, status);
+      this.dialog.markClean();
     }
 
     /* Nueva tarea con fecha (y cliente) ya elegidos, desde el calendario. */
@@ -506,6 +509,7 @@
       this.openNew();
       this.dialog.setDueDate(date);
       if(cliente) this.dialog.setCliente(this.app.clientNames(), cliente);
+      this.dialog.markClean();
     }
 
     openEdit(id, fromDetail){
@@ -518,6 +522,7 @@
       this.linkedVault = Array.isArray(t.linkedVault) ? t.linkedVault.slice() : [];
       this.renderLinks();
       this.dialog.openEdit(t, this.app.clientNames());
+      this.dialog.markClean();
 
       try{
         this.currentId = t.id;
@@ -535,6 +540,17 @@
       this.currentId = null;
       this.linkedContacts = [];
       this.linkedVault = [];
+    }
+
+    /* Cancelar, la × o Escape: si hay cambios sin guardar, pregunta antes de perderlos. */
+    requestClose(){
+      if(!this.dialog.isDirty()){ this.closeDialog(true); return; }
+      if(this.discarding) return;
+      this.discarding = true;
+      this.columns.confirm('Descartar cambios', 'Hay cambios sin guardar en esta tarea. Si cierras ahora, se pierden.', 'Descartar').then((ok) => {
+        this.discarding = false;
+        if(ok && this.dialog.isOpen()) this.closeDialog(true);
+      });
     }
 
     /* back: volver a la ficha si el formulario se abrió desde ella. */

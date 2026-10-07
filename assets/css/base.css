@@ -94,4 +94,8 @@ html.i18n-pending body{visibility:hidden;}
 /* El acceso ya traducido se enseña sin esperar al resto de la página (src/views/auth-early.js). */
 html.i18n-pending.auth-early .auth-screen{visibility:visible;}
 /* Texto solo para lectores de pantalla. */
+/* Enlace para saltar al contenido: solo se ve al recibir el foco con el teclado. */
+.skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:8px 14px;border-radius:var(--r-md);background:var(--accent-solid);color:var(--accent-ink);text-decoration:none;}
+.skip-link:focus{top:12px;}
+#contenido:focus{outline:none;}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}

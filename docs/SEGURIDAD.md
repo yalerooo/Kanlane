@@ -12,7 +12,8 @@ Cualquiera puede crearse una cuenta en Kanlane; cada persona solo ve y toca sus 
 | Un plugin de terceros intenta leer tus datos o tu sesión | Cada plugin corre en un `<iframe sandbox>` sin `allow-same-origin`: no ve la página, ni la sesión, ni el almacenamiento de Kanlane. Solo habla por mensajes, cada llamada se comprueba contra los permisos aprobados, ninguno da acceso a las contraseñas, y hay un límite de escrituras por minuto. Ver [PLUGINS.md](PLUGINS.md). |
 | Tras cerrar sesión, los datos quedan en el ordenador | Al cerrar sesión se borra la copia local de Firestore (IndexedDB) y el último proyecto recordado. **No** se borran las versiones locales de la copia de seguridad (`workhub-backup-history`, en IndexedDB y **sin cifrar**), la clave de las copias cifradas de la cuenta ni el acceso a GitHub de ese navegador: en un ordenador compartido, borra las versiones desde *Copia de seguridad*, quita el acceso desde *Ajustes → GitHub Projects* o borra los datos del sitio en el navegador. |
 | Otra web mete Kanlane en un marco invisible para robarte clics (*clickjacking*) | Cabeceras `X-Frame-Options: DENY` y `frame-ancestors 'none'` (`scripts/build-public.js`, que genera `_headers` para Cloudflare). |
-| Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Kanlane y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. |
+| Inyección de código (XSS) | Todo lo que escribe el usuario se escapa antes de pintarse. Además, la **política de seguridad de contenido (CSP)** solo permite scripts de Kanlane y del SDK de Firebase/Google. Prohíbe scripts en línea y `eval`, así que aunque se colara HTML, no ejecutaría nada. Tampoco se aplica una hoja de estilos en línea (`<style>`): `style-src-elem 'self'`; los atributos `style="…"` sí, porque las vistas los usan para colores y anchos. |
+| Una página del sitio carga en un marco una web ajena | Solo la aplicación (`/app/`) puede abrir marcos de otros dominios, y es por los plugins de terceros (aislados, ver arriba), reCAPTCHA y el acceso de Firebase. La portada, las páginas de captación, la demo y las legales solo pueden enmarcar al propio dominio (`frame-src 'self'`). |
 | Nombre o foto del perfil de Google/GitHub manipulados | El nombre se pinta como texto y la foto solo se acepta si es `https:`. |
 | Conexión sin cifrar | HTTPS obligatorio (`Strict-Transport-Security`). |
 | Contraseñas débiles | Mínimo de 8 caracteres para cuentas nuevas. La contraseña maestra de las contraseñas pide 12 o más y rechaza las fáciles de adivinar (muy comunes, secuencias y repeticiones); el campo lleva un medidor, que avisa además si contiene tu correo o el nombre del proyecto, y un generador. Las contraseñas maestras creadas antes de este cambio siguen valiendo. |
@@ -127,6 +128,49 @@ Quien entre en tu cuenta de Google o GitHub entra también en Kanlane. Activa la
 - GitHub: **Settings** → **Password and authentication** → **Two-factor authentication**
 
 Es la protección más importante de todas.
+
+### 9. Correo de verificación desde `kanlane.com` (SPF, DKIM y DMARC)
+
+Hoy los correos de Firebase (verificar la dirección, restablecer la contraseña, cambio de correo) salen de `noreply@workhub-26f50.firebaseapp.com` y su enlace lleva a `https://workhub-26f50.firebaseapp.com/__/auth/action`: un nombre antiguo y un dominio que no es el de la web, que es justo lo que se enseña a desconfiar. El código no decide nada de esto (`sendEmailVerification()` usa la plantilla del proyecto): se cambia en la consola y en el DNS.
+
+Estado comprobado el 7-oct-2026 con una consulta de DNS pública: `kanlane.com` tiene `v=spf1 include:_spf.mx.cloudflare.net ~all` (lo puso Email Routing para las tareas por correo), **no** tiene los registros DKIM de Firebase (`firebase1._domainkey`, `firebase2._domainkey`) y **no** tiene DMARC (`_dmarc.kanlane.com`).
+
+1. **Firebase → Authentication → Templates** → lápiz de cualquier plantilla → **Personalizar dominio** (*Customize domain*) → `kanlane.com`. La consola enseña los registros que hay que crear; **copia los valores de la consola**, no los de esta guía. Son de este tipo:
+   - Un TXT de verificación en `kanlane.com` (`firebase=workhub-26f50`).
+   - SPF: `include:_spf.firebasemail.com`. **Un dominio solo puede tener un registro SPF**: no añadas otro TXT, edita el que ya hay para que quede `v=spf1 include:_spf.mx.cloudflare.net include:_spf.firebasemail.com ~all`. Con dos registros SPF fallan los dos, y con ellos las tareas por correo.
+   - DKIM: dos CNAME, `firebase1._domainkey` y `firebase2._domainkey`. En Cloudflare tienen que ir **sin proxy** («Solo DNS», nube gris).
+2. Espera a que la consola marque el dominio como verificado (puede tardar hasta 48 h) y elige el remitente, por ejemplo `noreply@kanlane.com`. Los MX de `kanlane.com` son de Email Routing y su regla «Catch-all» entrega al Worker, que rechaza lo que no es una dirección de captura: una respuesta a `noreply@` rebota, que es lo esperado.
+3. En la misma pantalla, **Personalizar URL de acción** (*Customize action URL*): `https://kanlane.com/__/auth/action`. El Worker ya reenvía `/__/auth/*` a Firebase, así que la página de «correo verificado» se abre en `kanlane.com`. **Pruébalo antes de darlo por bueno** (paso 5): si esa página no cargara a través del Worker, vuelve a dejar la URL por defecto.
+4. DMARC: crea el TXT `_dmarc.kanlane.com` con `v=DMARC1; p=none; rua=mailto:UNA-DIRECCIÓN-QUE-LEAS` y, tras un par de semanas de informes sin fallos, súbelo a `p=quarantine`. La dirección de los informes la tienes que elegir tú; no puede ser de `kanlane.com` mientras todo su correo vaya al Worker.
+5. Comprobar: crear una cuenta de prueba con correo y contraseña, mirar en las cabeceras del mensaje recibido `spf=pass`, `dkim=pass` y `dmarc=pass` con `kanlane.com`, pulsar el enlace, y ver que la app deja de pedir la verificación. Repetir con «¿La has olvidado?». Enviar también una tarea por correo para confirmar que el SPF fusionado no ha roto la captura.
+
+### 10. `security.txt`
+
+`scripts/build-public.js` publica `/.well-known/security.txt` (y una copia en `/security.txt`) con el contacto que haya en `SECURITY.contact`: los avisos privados del repositorio en GitHub, `https://github.com/yalerooo/Kanlane/security/advisories/new` (lo eligió el dueño el 7-oct-2026; no publica ningún correo). **Ese enlace solo funciona si el repositorio tiene activado «Private vulnerability reporting»** (GitHub → el repositorio → *Settings* → *Advanced Security* / *Code security* → *Private vulnerability reporting* → *Enable*), y el 7-oct-2026 estaba desactivado: actívalo antes de publicar o quien quiera avisar verá un 404. Para cambiar de contacto vale una dirección que alguien lea (`mailto:…`) u otra página (`https://…`); sin contacto, el archivo no se publica y el build avisa. La fecha `Expires` se pone a 330 días de cada publicación: si pasa casi un año sin publicar, hay que volver a hacerlo para que no caduque. Tras publicar, comprueba que `https://kanlane.com/.well-known/security.txt` responde 200 con texto plano.
+
+## reCAPTCHA y el aviso de cookies
+
+`firebase-backend.js` activa App Check con reCAPTCHA Enterprise en cuanto se abre la aplicación con Firebase (pantalla de acceso incluida), **antes y al margen** de lo que se elija en el aviso de cookies. Es deliberado: se trata como medida de seguridad imprescindible, no como analítica, porque si dependiera del consentimiento no se podría hacer obligatorio (quien rechazara se quedaría sin poder entrar). No se carga en la portada, la demo, las páginas legales ni el modo invitado. Las políticas de cookies y de privacidad lo describen así (versión 11).
+
+Dos cosas pendientes de decidir, las dos tuyas:
+
+- **Hoy no protege nada y aun así se carga.** App Check no es obligatorio y la clave de reCAPTCHA no incluye `kanlane.com` (ver [ROBUSTEZ.md](ROBUSTEZ.md)), así que cada visita descarga el script de Google, le envía señales del navegador y termina en `appCheck/recaptcha-error`. O se termina de configurar (añadir los dominios a la clave y activar la obligatoriedad poco a poco), o se deja `appCheckSiteKey` vacío hasta entonces para no enviar nada a Google sin necesidad.
+- **Si prefieres pedir consentimiento** antes de cargarlo, hay que renunciar a hacer App Check obligatorio, añadir una categoría al aviso (`src/consent/consent.js`) y subir su `VERSION` para volver a preguntar a todo el mundo. Conviene que lo valore un abogado: hay autoridades de protección de datos que no consideran reCAPTCHA exento de consentimiento.
+
+## Restos del nombre «Workhub»
+
+El producto se llamaba Workhub. Lo que sigue con ese nombre se queda así **a propósito**: cambiarlo borraría o dejaría inaccesibles datos de quien ya usa Kanlane.
+
+| Dónde | Qué | Por qué no se toca |
+|---|---|---|
+| Navegador, `localStorage` y `sessionStorage` | `workhub_session`, `workhub_guest`, `workhub_guests`, `workhub_guest_migrate`, `workhub_lang`, `workhub_lang_adopted`, `workhub_theme`, `workhub_accent`, `workhub_accent_v`, `workhub_nav`, `workhub_project`, `workhub_hidden_…`, `workhub_cal_mode`, `workhub_task_mode`, `workhub_timeline`, `workhub_reminders`, `workhub_reminded`, `workhub_gh_token`, `workhub_cloud_backup_key:…`, `workhub_vault_link`, `workhub-vault-attempts:…`, `workhub_account_deleted`, `workhub_consent` | Son la sesión, las preferencias y, sobre todo, **claves**: sin `workhub_cloud_backup_key:…` las copias cifradas de la cuenta no se abren, y sin `workhub_guest` un invitado deja de ver sus datos. Renombrarlas exige copiar cada una al nombre nuevo en todos los navegadores antes de dejar de leer la antigua, y actualizar la tabla de `legal/cookies/`. |
+| Navegador, IndexedDB | `workhub-keys` (claves de los proyectos con cifrado total, no exportables), `workhub-backup-history` (versiones locales) | Una base de IndexedDB no se puede renombrar, y las claves de `workhub-keys` no se pueden copiar a otra: habría que pedir la contraseña de cifrado otra vez a todo el mundo. |
+| Navegador, cachés | `workhub-shell-…`, `workhub-runtime` (service worker) | No guardan datos de nadie, pero cambiarles el nombre obliga a que el service worker nuevo borre las antiguas; no aporta nada. |
+| Código | `window.Workhub`, `WORKHUB_FIREBASE`, `WorkhubConsent`, `WorkhubPlugin`, `workhub-plugin.js`, ids `workhub.*` de los plugins oficiales | Es la interfaz que usan los plugins ya publicados e instalados. |
+| Firebase | Proyecto `workhub-26f50` y lo que cuelga de él: `workhub-26f50.firebaseapp.com`, `workhub-26f50.web.app`, `workhub-26f50.firebasestorage.app` | El identificador de un proyecto de Firebase no se puede cambiar. La única forma es crear otro proyecto y migrar cuentas y datos. Lo que sí se puede es que **no se vea**: el paso 9 de arriba (correo) y el acceso en el propio dominio, que ya está hecho. |
+| Firebase y Google Cloud, consolas | Dominios autorizados, restricción de la clave de API y dominios de la clave de reCAPTCHA: `workhub.yalero.net`, `workhub-project.netlify.app` | Ver el paso 6. `workhub-project.netlify.app` **seguía respondiendo** el 7-oct-2026: mientras exista, se puede entrar por ahí. Al borrar el sitio de Netlify, quítalo de las tres listas y de `hostingDomains` en `firebase-config.js`. `workhub.yalero.net` solo redirige (salvo `/__/`), así que se puede quitar de las listas cuando `LEGACY_STATUS` pase a `301`. |
+| Cloudflare | Worker `workhub` (`wrangler.jsonc`), dominio `workhub.yalero.net` | El nombre del Worker tiene que coincidir con el del panel y con la regla de Email Routing; renombrarlo es crear otro Worker y volver a poner secretos, dominios y reglas. |
+| Pruebas | Proyecto de emulador `demo-workhub`, `start-workhub.bat`, variable `WORKHUB_HEALTH_ORIGIN` | Internos; no llegan a nadie. |
 
 ## Si cambias algo
 

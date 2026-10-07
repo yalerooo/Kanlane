@@ -44,6 +44,7 @@ jobs:
           node tests/markdown/markdown.test.js
           node tests/automations/automations.test.js
           node tests/build/bundle.test.js
+          node tests/build/headers.test.js
           node tests/season/season.test.js
           node tests/worker/rate-limit.test.js
           node tests/worker/kms.test.js

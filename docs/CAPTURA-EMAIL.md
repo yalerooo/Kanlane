@@ -34,7 +34,9 @@ El límite de 10 MB por archivo y de 10 adjuntos por nota es el del producto y v
 
 `CAPTURE_DOMAINS` admite una lista: el primero es el principal (el que enseña la app) y los demás son de respaldo. **La misma dirección vale en todos**: si el principal falla, se puede escribir al de respaldo sin cambiar nada. La app enseña las dos.
 
-Conviene usar **subdominios dedicados** (por ejemplo `in.kanlane.com` e `in.kanlane.yalero.net`) para no tocar el correo de los dominios principales. **Sin comprobar:** que Email Routing admita la regla «todo a un Worker» en un subdominio de la cuenta; hay que verlo en el panel al configurarlo. Si no lo admitiera, habría que usar un dominio entero dedicado.
+**Tienen que ser dominios raíz, no subdominios.** Según la documentación de Cloudflare, la regla «Catch-all» de Email Routing solo existe en el dominio raíz de la zona (`kanlane.com`), no en sus subdominios (`in.kanlane.com`), y la captura la necesita: cada proyecto tiene una dirección distinta y al azar. Así que las direcciones son `…@kanlane.com`.
+
+Eso es compatible con tener buzones normales en el mismo dominio **siempre que ese correo lo lleve también Email Routing**: una regla con una dirección concreta (`hola@kanlane.com` → reenviar a tu buzón) va antes que la «Catch-all», y el Worker rechaza todo lo que no sea una dirección de captura. Si el correo del dominio lo lleva otro proveedor (Google Workspace, Zoho…), activar Email Routing cambia los registros MX y ese correo dejaría de llegar: en ese caso hace falta un dominio aparte para la captura.
 
 ## La dirección
 
@@ -167,7 +169,7 @@ Mientras falte algo, la app no enseña el apartado y todo correo se rechaza. Nad
    ```
 
    **Si se cambia, todas las direcciones existentes dejan de valer** (cada proyecto tendría que mirar la nueva en la app). Si se filtra, eso es justo lo que hay que hacer.
-3. **Dominios.** En Cloudflare → el dominio → Email → Email Routing: activarlo (añade los registros MX y SPF) y, en Reglas de enrutamiento, la regla «Catch-all» con la acción **Enviar a un Worker** → `workhub`. Repetir en el dominio de respaldo. Si el dominio ya recibe correo en otro sitio, **no lo actives ahí**: usa un subdominio o un dominio dedicado.
+3. **Dominios.** Primero hay que desplegar el Worker con esta versión (para que tenga el manejador de correo). Después, en Cloudflare → el dominio raíz → Email Routing: activarlo (añade los registros MX y SPF) y, en Routing Rules, activar la regla «Catch-all» con la acción **Send to a Worker** → `workhub`. Repetir en el dominio de respaldo. Si el dominio ya recibe correo con otro proveedor, **no lo actives ahí**: usa un dominio dedicado (un subdominio no sirve, no admite «Catch-all»).
 4. **Variables.** En `wrangler.jsonc`, `CAPTURE_DOMAINS` con los dominios (el principal primero) y `CAPTURE_PLAN` según el plan de Workers. Desplegar.
 5. **Borrado automático.** En la consola de Google Cloud → Firestore → TTL, crear una política para el campo `ttl` de la colección `mail_seen` y otra para el de `mail_rate`. Sin esto la deduplicación funciona igual (la caducidad se comprueba al leer), pero las marcas no se borran solas y la política de privacidad dice que sí.
 6. **No hay reglas de Firestore que publicar**: el cambio en `firestore.rules` es solo un comentario.

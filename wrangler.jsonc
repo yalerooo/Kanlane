@@ -57,7 +57,8 @@
     // CAPTURE_DOMAINS: dominios cuyo correo entrega Email Routing a este Worker, separados por
     //   comas. El primero es el que enseña la app; los demás son de respaldo (la misma dirección
     //   vale en todos). Vacío = captura apagada: la app no enseña el apartado y todo correo se rechaza.
-    //   Ejemplo: "in.kanlane.com,in.kanlane.yalero.net".
+    //   Tienen que ser dominios raíz (Email Routing no admite la regla «Catch-all» en subdominios).
+    //   Ejemplo: "kanlane.com,yalero.net".
     // CAPTURE_PLAN: "free" o "paid", según el plan de Workers de la cuenta. Solo cambia los topes:
     //   "free" admite mensajes de 8 MB (con 10 ms de CPU, un correo con adjuntos grandes puede
     //   quedarse sin ellos); "paid", de 25 MB. Al pasar la cuenta a Workers Paid, cambia esto a "paid".

@@ -87,6 +87,9 @@ const PAGE = {
    OJO: no bloquear /legal/ en robots.txt. Si el robot no puede leer la página, no ve
    el noindex y Google puede indexar igualmente la dirección. */
 const LEGAL = Object.assign({}, PAGE, {'X-Robots-Tag': 'noindex, nofollow, noarchive'});
+/* Las legales en inglés cuelgan de /en/legal/: ya reciben las cabeceras de página de /en/*, así que
+   aquí solo se suma el noindex (las rutas que coinciden se suman). */
+const LEGAL_EN = {'X-Robots-Tag': LEGAL['X-Robots-Tag']};
 
 /* La aplicación (/app/) necesita sesión: no tiene nada que indexar. A diferencia de las
    páginas legales NO se bloquea en robots.txt, para que el robot pueda leer el noindex. */
@@ -120,7 +123,7 @@ function headersFile(){
      cambia tiene otro nombre, así que el navegador puede guardarlos sin volver a preguntar. */
   const BUNDLES = {'Cache-Control': 'public, max-age=31536000, immutable'};
   /* Una entrada por página de captación o idioma, detectadas de las carpetas (PAGES). */
-  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].concat(PAGES.map((p) => block('/' + p + '/*', PAGE)), [block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/sw.js', SW), block('/manifest.webmanifest', SW), block('/' + BUNDLE_DIR + '/*', BUNDLES)]).join('\n');
+  return [block('/*', ALL), block('/', PAGE), block('/index.html', PAGE)].concat(PAGES.map((p) => block('/' + p + '/*', PAGE)), [block('/app/*', APP), block('/demo/*', DEMO), block('/legal/*', LEGAL), block('/en/legal/*', LEGAL_EN), block('/sw.js', SW), block('/manifest.webmanifest', SW), block('/' + BUNDLE_DIR + '/*', BUNDLES)]).join('\n');
 }
 
 /* ---------- dist/ ---------- */

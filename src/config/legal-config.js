@@ -21,6 +21,8 @@ window.WORKHUB_LEGAL = {
      la base de datos de Firestore (consola de Firebase → Firestore → Datos; la guía
      docs/FIREBASE.md recomienda «eur3», que es la Unión Europea). */
   ubicacionDatos: 'la Unión Europea (región «eur3» de Google Cloud Firestore)',
+  /* Lo mismo, para las páginas en inglés (en/legal/). */
+  ubicacionDatosEn: 'the European Union (Google Cloud Firestore "eur3" region)',
   /* Fecha de la última revisión de los textos (AAAA-MM-DD) y número de versión. Súbela
      cuando cambies algo de fondo en las páginas legales. */
   actualizado: '2026-10-07',

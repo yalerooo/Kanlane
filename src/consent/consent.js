@@ -78,6 +78,8 @@
     return /^en/i.test(l) ? 'en' : 'es';
   }
   function t(key){ return TEXT[lang()][key]; }
+  /* Las páginas legales en inglés cuelgan de /en/legal/. */
+  function legalHref(es, en){ return lang() === 'en' ? '/en/legal/' + en + '/' : '/legal/' + es + '/'; }
 
   /* ---------- Estado ---------- */
 
@@ -132,9 +134,9 @@
         h('p', {'class': 'consent-title', text: t('title')}),
         h('p', {'class': 'consent-text', text: t('body')}),
         h('p', {'class': 'consent-links'}, [
-          h('a', {href: '/legal/cookies/', text: t('cookies')}),
+          h('a', {href: legalHref('cookies', 'cookies'), text: t('cookies')}),
           h('span', {'aria-hidden': 'true', text: ' · '}),
-          h('a', {href: '/legal/privacidad/', text: t('privacy')})
+          h('a', {href: legalHref('privacidad', 'privacy'), text: t('privacy')})
         ]),
         actions
       ])
@@ -183,9 +185,9 @@
           h('p', {'class': 'consent-text', id: 'consentAnalyticsText', text: t('analyticsText')})
         ]),
         h('p', {'class': 'consent-links'}, [
-          h('a', {href: '/legal/cookies/', text: t('cookies')}),
+          h('a', {href: legalHref('cookies', 'cookies'), text: t('cookies')}),
           h('span', {'aria-hidden': 'true', text: ' · '}),
-          h('a', {href: '/legal/privacidad/', text: t('privacy')})
+          h('a', {href: legalHref('privacidad', 'privacy'), text: t('privacy')})
         ]),
         h('div', {'class': 'consent-actions is-dialog'}, [
           h('button', {type: 'button', 'class': 'consent-btn', 'data-act': 'rejectAll', text: t('rejectAll')}),

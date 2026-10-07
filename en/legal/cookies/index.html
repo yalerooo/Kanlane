@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cookie policy · Kanlane</title>
+  <meta name="description" content="Which cookies and similar technologies Kanlane uses, what they are for, how long they last and how to manage them.">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="googlebot" content="noindex, nofollow, noarchive">
+  <link rel="alternate" hreflang="es" href="https://kanlane.com/legal/cookies/">
+  <link rel="alternate" hreflang="en" href="https://kanlane.com/en/legal/cookies/">
+  <link rel="alternate" hreflang="x-default" href="https://kanlane.com/legal/cookies/">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
+  <link rel="stylesheet" href="/assets/css/fonts.css">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/legal.css">
+  <link rel="stylesheet" href="/assets/css/components/consent.css">
+</head>
+<body class="legal" data-page="cookies">
+<div class="legal-wrap">
+  <div id="legalTop"></div>
+  <main class="legal">
+    <h1>Cookie policy</h1>
+    <p class="legal-lead">This policy explains which cookies and similar technologies Kanlane uses, what they are for and how you can manage them. It complies with article 22.2 of Spanish Law 34/2002 (LSSI-CE) and the guidance of the Spanish Data Protection Agency (AEPD).</p>
+    <p class="legal-meta">Last updated: <span data-legal="actualizado"></span></p>
+
+    <section id="que-son">
+      <h2>1. What cookies and local storage are</h2>
+      <p>Cookies are small files that a website stores on your device. Kanlane, like almost every modern web application, mostly uses other equivalent browser technologies: <strong>local storage</strong> (<code>localStorage</code>), <strong>browser databases</strong> (<code>IndexedDB</code>) and the <strong>service worker cache</strong>. In this policy we refer to all of them as "cookies".</p>
+    </section>
+
+    <section id="resumen">
+      <h2>2. What we use, in short</h2>
+      <div class="legal-box">
+        <ul>
+          <li><strong>Technical storage only.</strong> It is essential so that you can sign in, use the application and have it remember what you choose (language, theme, open project…).</li>
+          <li><strong>No analytics, advertising or tracking cookies</strong>, our own or third-party.</li>
+          <li><strong>No third parties following you.</strong> Fonts are served from this same site and no advertising script is loaded.</li>
+        </ul>
+      </div>
+      <p>Technical storage, and storage that keeps an option you have chosen, is exempt from the duty to ask for consent (art. 22.2 LSSI-CE), which is why nothing is blocked while waiting for your answer. Even so, we give you control: you can <button type="button" class="legal-link-btn is-inline" data-cookie-settings>set your preferences</button> at any time, and if in the future we added something that does require consent (such as analytics), it would not be turned on without your permission.</p>
+    </section>
+
+    <section id="tabla">
+      <h2>3. What exactly we store</h2>
+      <p>Every item is <strong>first-party</strong> (Kanlane stores it in your browser) and belongs to the <strong>technical category or to personalisation you have chosen</strong>. None is shared with third parties or used to identify you outside the application.</p>
+      <div class="legal-table"><table>
+        <thead><tr><th>Name</th><th>Type</th><th>What it is for</th><th>Duration</th></tr></thead>
+        <tbody>
+          <tr><td><code>firebaseLocalStorageDb</code> (key <code>firebase:authUser…</code>)</td><td>IndexedDB, created by Firebase Authentication (Google)</td><td>Keeping you signed in.</td><td>Until you sign out.</td></tr>
+          <tr><td><code>firestore/…</code></td><td>IndexedDB, created by Cloud Firestore (Google)</td><td>A local copy of your data so that it loads quickly and you can work offline.</td><td>Until you sign out (it is deleted when you do).</td></tr>
+          <tr><td><code>workhub_session</code></td><td>localStorage</td><td>Remembering that you had already signed in on this browser, to show the right loading screen.</td><td>Until you sign out.</td></tr>
+          <tr><td><code>tablero_local_db</code></td><td>IndexedDB</td><td>Storing your data in guest mode and in local mode.</td><td>Until you clear the browser's data.</td></tr>
+          <tr><td><code>workhub_guest</code></td><td>localStorage</td><td>Remembering your guest name.</td><td>Until you leave guest mode.</td></tr>
+          <tr><td><code>workhub_lang</code>, <code>workhub_lang_adopted</code></td><td>localStorage</td><td>The language you have chosen.</td><td>Persistent (until you delete it).</td></tr>
+          <tr><td><code>workhub_theme</code>, <code>workhub_accent</code>, <code>workhub_accent_v</code>, <code>workhub_nav</code></td><td>localStorage</td><td>The theme (light or dark), the accent colour and where you want the navigation (on the side or at the top).</td><td>Persistent.</td></tr>
+          <tr><td><code>workhub_project</code>, <code>tablero_tab</code></td><td>localStorage</td><td>The last project and section you had open.</td><td>Persistent (<code>workhub_project</code> is deleted when you sign out).</td></tr>
+          <tr><td><code>workhub_hidden_…</code>, <code>workhub_cal_mode</code>, <code>workhub_task_mode</code></td><td>localStorage</td><td>The columns you have hidden, the calendar view (month, week or day) and the task view (board or list).</td><td>Persistent.</td></tr>
+          <tr><td><code>workhub_reminders</code>, <code>workhub_reminded</code></td><td>localStorage</td><td>Your reminder settings and the notices already shown, so they are not repeated.</td><td>Persistent (notices already shown, 10 days).</td></tr>
+          <tr><td><code>workhub_gh_token</code></td><td>localStorage</td><td>Access to GitHub, only if you connect the integration. It never leaves your browser for our servers: it is only sent to the GitHub API.</td><td>Until you remove it in Settings.</td></tr>
+          <tr><td><code>workhub_cloud_backup_key:…</code></td><td>localStorage</td><td>Encryption key for your account's backups, only if you turn them on. The key is not sent to Firebase.</td><td>Until you turn backups off on this browser or clear its data.</td></tr>
+          <tr><td><code>workhub-backup-history</code></td><td>IndexedDB</td><td>Keeping up to seven local versions per project.</td><td>Until you delete a version or the browser's data.</td></tr>
+          <tr><td><code>workhub-keys</code></td><td>IndexedDB</td><td>Encryption key for projects with "Full encryption", so that you are not asked for the encryption password every time. The key cannot be copied out of the browser and is not sent to our servers.</td><td>Until you sign out; if you tick "This device is trusted", until you forget it from the project or clear the browser's data.</td></tr>
+          <tr><td><code>workhub_consent</code></td><td>localStorage</td><td>Storing your decision about this cookie policy.</td><td>12 months.</td></tr>
+          <tr><td><code>workhub-shell-…</code>, <code>workhub-runtime</code></td><td>Service worker cache</td><td>Storing the application's files and Firebase's so that it opens faster and works offline (installable application).</td><td>Until there is a new version or you clear the site's data.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="terceros">
+      <h2>4. Third parties</h2>
+      <ul>
+        <li><strong>Google (Firebase and reCAPTCHA Enterprise/App Check).</strong> When you open the application to sign in, the browser downloads Firebase's code from <code>www.gstatic.com</code> and reCAPTCHA Enterprise's from <code>www.google.com</code>, and talks to Google's servers. App Check uses reCAPTCHA to process technical signals from the browser and stop automated access; to do so, Google may store a technical cookie (<code>_GRECAPTCHA</code>) on its own domain. It is a security measure, not analytics or advertising, and so it does not depend on the cookie notice. None of this is loaded in guest mode. The session and data storage in the table above is used to keep you signed in, protect access and keep your data.</li>
+        <li><strong>Google and GitHub when signing in.</strong> If you choose to sign in with Google or GitHub, those companies may use their own cookies in their sign-in window. They are governed by their policies, not by this one.</li>
+        <li><strong>Cloudflare.</strong> It hosts the website. If its security protections are turned on, it may use a technical cookie (for example, <code>__cf_bm</code>) to tell legitimate traffic from bots; it is not used to identify you or for advertising.</li>
+      </ul>
+    </section>
+
+    <section id="consentimiento">
+      <h2>5. Your consent and your preferences</h2>
+      <p>The first time you visit we show you a notice so that you can choose. You can <strong>accept</strong>, <strong>reject</strong> what is not essential or <strong>set</strong> the categories. Rejecting does not take any feature away from you: what is essential keeps working because the law does not require your consent for it.</p>
+      <div class="legal-table"><table>
+        <thead><tr><th>Category</th><th>Status</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Technical and personalisation you have chosen</td><td>Always on</td><td>Everything in the table in section 3. Without them you cannot sign in or have your options remembered.</td></tr>
+          <tr><td>Analytics and measurement</td><td>Not used · off</td><td>Kanlane does not use any today. If one were ever added, it would only be turned on if you accept it.</td></tr>
+          <tr><td>Advertising</td><td>Not used</td><td>Kanlane does not show advertising or use advertising cookies.</td></tr>
+        </tbody>
+      </table></div>
+      <p>We keep your choice for 12 months and will ask you again after that time, if we change something relevant or if you clear the site's data. You can change or withdraw it whenever you like with the "Cookie settings" button you will find at the bottom of every legal page, on the sign-in screen and in <em>Settings → Privacy</em>.</p>
+      <p><button type="button" class="legal-link-btn is-inline" data-cookie-settings>Open cookie settings</button></p>
+    </section>
+
+    <section id="gestion">
+      <h2>6. How to delete or block cookies from your browser</h2>
+      <p>You can also delete the site's storage or block it from your browser. Bear in mind that, if you do, you will have to sign in again and your preferences will be lost; and, in guest mode, so will <strong>the data that is only in the browser</strong>, so export a backup first. Official guides:</p>
+      <ul>
+        <li><a href="https://support.google.com/chrome/answer/95647" rel="noopener noreferrer">Google Chrome</a></li>
+        <li><a href="https://support.mozilla.org/en-US/kb/clear-cookies-and-site-data-firefox" rel="noopener noreferrer">Mozilla Firefox</a></li>
+        <li><a href="https://support.apple.com/guide/safari/sfri11471/mac" rel="noopener noreferrer">Safari</a></li>
+        <li><a href="https://support.microsoft.com/en-us/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" rel="noopener noreferrer">Microsoft Edge</a></li>
+      </ul>
+    </section>
+
+    <section id="cambios">
+      <h2>7. Changes to this policy</h2>
+      <p>If we change the cookies we use, we will update this page and the date above and, if your consent is needed, we will ask you for it again. More information about how we process your data is in the <a href="/en/legal/privacy/">privacy policy</a>.</p>
+    </section>
+  </main>
+  <footer id="legalBottom" class="legal-foot"></footer>
+</div>
+<script src="/src/config/legal-config.js"></script>
+<script src="/src/legal/legal.js"></script>
+<script src="/src/consent/consent.js"></script>
+</body>
+</html>

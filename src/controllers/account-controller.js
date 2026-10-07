@@ -23,6 +23,9 @@
     'auth/popup-blocked': 'El navegador bloqueó la ventana de acceso. Permite las ventanas emergentes para este sitio.',
     'auth/requires-recent-login': 'Por seguridad, cierra sesión, vuelve a entrar y repítelo.'
   };
+  /* Hay red y aun así no se llega al servicio de acceso: no se le echa la culpa a la conexión. */
+  const BLOCKED = 'No se pudo contactar con el servicio de acceso aunque tu conexión funciona. Puede estar bloqueado temporalmente, o por una extensión del navegador o un filtro de red. Espera unos minutos y vuelve a intentarlo.';
+  const textFor = (err) => (firebase.accessFailure(err, firebase.isOnline()) === 'blocked' ? BLOCKED : ERRORS[err && err.code]);
   /* Cerrar la ventana de confirmación no es un error. */
   const SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
   const WRONG_PASSWORD = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/missing-password'];
@@ -108,7 +111,7 @@
       }).then(() => {
         this.view.showProfileMessage('Nombre guardado.');
         this.paint();
-      }).catch((err) => this.view.showProfileMessage(ERRORS[err && err.code] || 'No se pudo guardar el nombre. Inténtalo de nuevo.', true))
+      }).catch((err) => this.view.showProfileMessage(textFor(err) || 'No se pudo guardar el nombre. Inténtalo de nuevo.', true))
         .finally(() => this.view.setProfileBusy(false));
     }
 
@@ -172,7 +175,7 @@
       }).catch((err) => {
         this.view.setPasswordBusy(false);
         const code = err && err.code;
-        this.view.showPasswordError(ERRORS[code] || 'No se pudo cambiar la contraseña. Inténtalo de nuevo.',
+        this.view.showPasswordError(textFor(err) || 'No se pudo cambiar la contraseña. Inténtalo de nuevo.',
           WRONG_PASSWORD.indexOf(code) !== -1 ? 'current' : 'new');
       });
     }
@@ -229,7 +232,7 @@
           this.view.showDeleteError('No se pudo borrar todo tu contenido. Tu cuenta sigue existiendo: comprueba la conexión y vuelve a intentarlo para terminar.');
           return;
         }
-        this.view.showDeleteError(ERRORS[code] ? (WRONG_PASSWORD.indexOf(code) !== -1 ? 'La contraseña no es correcta.' : ERRORS[code])
+        this.view.showDeleteError(textFor(err) ? (WRONG_PASSWORD.indexOf(code) !== -1 ? 'La contraseña no es correcta.' : textFor(err))
           : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.', WRONG_PASSWORD.indexOf(code) !== -1 ? 'password' : '');
       });
     }

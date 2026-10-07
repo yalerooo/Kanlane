@@ -107,8 +107,12 @@
   /* Cerrar la ventana de acceso no es un error. */
   const SILENT = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
 
+  /* Hay red y aun así no se llega al servicio de acceso: no se le echa la culpa a la conexión. */
+  const BLOCKED = 'No se pudo contactar con el servicio de acceso aunque tu conexión funciona. Puede estar bloqueado temporalmente, o por una extensión del navegador o un filtro de red. Espera unos minutos y vuelve a intentarlo.';
+
   function messageFor(err){
     const code = err && err.code;
+    if(firebase.accessFailure(err, firebase.isOnline()) === 'blocked') return BLOCKED;
     if(ERRORS[code]) return ERRORS[code];
     return 'No se pudo iniciar sesión' + (code ? ' (' + code + ')' : '') + '. Inténtalo de nuevo.';
   }
@@ -316,7 +320,12 @@
       firebase.init().then(() => {
         firebase.redirectResult().catch((err) => this.showError(err));
         firebase.onAuthChange((user) => this.onUser(user));
-      }).catch(() => this.view.showLoadError(() => location.reload()));
+      }).catch((err) => this.loadError(err));
+    }
+
+    /* No se llegó al servicio de acceso: se distingue estar sin red de que el servicio no conteste. */
+    loadError(err){
+      this.view.showLoadError(() => location.reload(), firebase.accessFailure(err, firebase.isOnline()) === 'blocked');
     }
 
     onUser(user){
@@ -374,7 +383,7 @@
           this.reportMigration();
         });
         /* Firestore se carga aparte del acceso (firebase.init): si no llegó, se avisa. */
-      }, () => this.view.showLoadError(() => location.reload()));
+      }, (err) => this.loadError(err));
     }
 
     /* Cuenta de correo sin verificar: no llega a la app hasta que pulse el

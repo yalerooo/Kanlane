@@ -74,6 +74,22 @@
     });
   }
 
+  /* Firebase llama «fallo de red» (auth/network-request-failed) a cualquier petición que no
+     llega, también cuando la red funciona y es el servicio el que la rechaza (App Check con 403,
+     un bloqueador, un filtro). Devuelve 'offline' si el navegador está sin red, 'blocked' si hay
+     red y aun así no se llega al servicio, y null si el error es de otra clase. */
+  const UNREACHABLE = ['auth/network-request-failed', 'sdk-load', 'unavailable'];
+  function accessFailure(err, online){
+    const code = String((err && (err.code || err.message)) || '');
+    if(/app-?check/i.test(code)) return 'blocked';
+    if(UNREACHABLE.indexOf(code) === -1) return null;
+    return online === false ? 'offline' : 'blocked';
+  }
+
+  function isOnline(){
+    return !(typeof navigator !== 'undefined' && navigator.onLine === false);
+  }
+
   /* Carga el SDK e inicializa el proyecto. La promesa se cumple en cuanto el acceso está listo
      (app + auth): para saber si hay sesión y enseñar el formulario no hace falta Firestore, que
      es el archivo más pesado y se sigue cargando a la vez (storeReady). */
@@ -586,6 +602,7 @@
   Workhub.services.firebase = {
     isEnabled, init, githubToken, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
     resetPassword, signOut, hasPassword, updateName, reauthenticate, changePassword, deleteUser, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
+    accessFailure, isOnline,
     currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),
     /* false oculta "Crear una cuenta" (solo entran cuentas ya creadas). */

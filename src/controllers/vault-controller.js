@@ -600,6 +600,14 @@
         const prev = id ? this.vault.find(id) : null;
         values.meta.cliente = prev ? (prev.cliente || '') : '';
       }
+      if(!VaultModel.validEmail(values.meta.correo)){
+        this.view.showFormError('El correo no tiene un formato válido.', 'correo');
+        return;
+      }
+      if(!VaultModel.validWeb(values.meta.web)){
+        this.view.showFormError('La web tiene que ser una dirección http(s) o un dominio, por ejemplo https://cliente.com.', 'web');
+        return;
+      }
       if(!id && !values.secret.password){
         this.view.showFormError('La contraseña es obligatoria.');
         return;

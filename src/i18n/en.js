@@ -1282,6 +1282,8 @@
     'No se pudo descifrar el valor anterior; revisa lo que guardas antes de guardar.':'Couldn\'t decrypt the previous value; check what you\'re saving before you save.',
     'El vault no está desbloqueado.':'The vault isn\'t unlocked.',
     'La contraseña es obligatoria.':'The password is required.',
+    'El correo no tiene un formato válido.':'The email address is not valid.',
+    'La web tiene que ser una dirección http(s) o un dominio, por ejemplo https://cliente.com.':'The website must be an http(s) address or a domain, for example https://client.com.',
     'Credencial actualizada':'Credential updated',
     'Credencial guardada':'Credential saved',
     'No se pudo cifrar y guardar. Inténtalo de nuevo.':'Couldn\'t encrypt and save. Try again.',

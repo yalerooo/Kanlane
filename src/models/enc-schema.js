@@ -30,7 +30,7 @@
 
   /* El servidor ya no ve el contenido: los límites de validData() se aplican aquí antes de cifrar. */
   const TEXT_MAX = {
-    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10},
+    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10, repeatAnchor: 13},
     notes: {text: 20000, actorName: 200},
     clients: {nombre: 200},
     contacts: {nombre: 200, email: 320, notas: 10000},

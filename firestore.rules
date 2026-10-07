@@ -87,9 +87,10 @@ service cloud.firestore {
             'checklist', 'labels', 'assignees', 'linkedContacts', 'linkedVault',
             'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
-            'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom'
+            'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom', 'repeatAnchor'
           ]) && textWithin(data, 'title', 500)
           && textWithin(data, 'startDate', 10)
+          && textWithin(data, 'repeatAnchor', 13)
           && data.get('custom', {}) is map && data.get('custom', {}).size() <= 50
           && textWithin(data, 'desc', 20000)
           && textWithin(data, 'cliente', 200)

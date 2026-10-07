@@ -229,12 +229,19 @@ function validDate(s) {
 const parseYmd = (s) => { const p = String(s).split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])); };
 const shiftYmd = (s, days) => ymdOf(new Date(parseYmd(s).getTime() + days * DAY_MS));
 
+/* Día del mes original de una repetición cuya fecha quedó recortada: lo mismo que TaskModel.repeatDay. */
+export function repeatDay(t) {
+  const m = /^(\d{1,2})@(\d{4}-\d{2}-\d{2})$/.exec((t && t.repeatAnchor) || '');
+  return m && m[2] === t.dueDate && +m[1] >= 1 && +m[1] <= 31 ? +m[1] : 0;
+}
+
 /* Próxima fecha de una tarea que se repite: la siguiente que no esté ya en el pasado. Lo mismo que
-   TaskModel.nextDue (src/models/task-model.js), con el día de hoy en UTC. */
-export function nextDue(dueDate, repeat, today) {
+   TaskModel.nextDue (src/models/task-model.js), con el día de hoy en UTC. day (opcional): el día
+   del mes original, si la fecha actual quedó recortada. */
+export function nextDue(dueDate, repeat, today, day) {
   if (!validDate(dueDate) || REPEATS.indexOf(repeat) === -1) return '';
   const first = parseYmd(dueDate);
-  const day = first.getUTCDate();
+  day = day || first.getUTCDate();
   let d = first, guard = 0;
   do {
     if (repeat === 'daily' || repeat === 'weekly' || repeat === 'biweekly') {
@@ -389,7 +396,8 @@ async function moveTask(who, args, store, now) {
     w.activity(path, 'Movida de «' + from.label + '» a «' + to.label + '» por ' + w.via + ' (token «' + who.tokenName + '»).', now), w.count];
   /* Al completar una tarea que se repite, la siguiente: lo mismo que TaskModel.spawnNext. */
   let next = '';
-  if (!from.done && to.done && !t.repeatSpawned) next = nextDue(t.dueDate, t.repeat, ymdOf(new Date(now)));
+  const day = repeatDay(t) || +String(t.dueDate || '').slice(8);
+  if (!from.done && to.done && !t.repeatSpawned) next = nextDue(t.dueDate, t.repeat, ymdOf(new Date(now)), day);
   if (next) {
     const copy = {title: t.title || '', desc: t.desc || '', cliente: t.cliente || '', contacto: t.contacto || '', status: stages[0].key, dueDate: next, repeat: t.repeat,
       labels: list(t.labels).slice(), linkedContacts: list(t.linkedContacts).slice(), linkedVault: list(t.linkedVault).slice(),
@@ -398,6 +406,7 @@ async function moveTask(who, args, store, now) {
     if (validDate(t.startDate) && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, Math.round((parseYmd(next) - parseYmd(t.dueDate)) / DAY_MS));
     if (t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
     if (Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
+    if ((t.repeat === 'monthly' || t.repeat === 'yearly') && day !== +next.slice(8)) copy.repeatAnchor = day + '@' + next;
     patch.repeatSpawned = true;
     writes.push({path: who.project.root + '/tasks/' + newId(), create: copy});
   }

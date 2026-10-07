@@ -105,13 +105,23 @@
       return {start:start && start <= end ? start : end, end:end};
     }
 
-    /* Próxima fecha límite de una tarea que se repite: la siguiente que no esté ya en el pasado. */
-    static nextDue(dueDate, repeat){
+    /* Día del mes del que parte la repetición mensual o anual de una tarea. Una tarea del día 31
+       cae el 30 en noviembre: la siguiente guarda en repeatAnchor («31@2026-11-30») el día original
+       y la fecha para la que se calculó, y así diciembre vuelve al 31. Si alguien cambia la fecha
+       a mano, la marca deja de coincidir y manda el día de la fecha nueva. */
+    static repeatDay(t){
+      const m = /^(\d{1,2})@(\d{4}-\d{2}-\d{2})$/.exec((t && t.repeatAnchor) || '');
+      return m && m[2] === t.dueDate && +m[1] >= 1 && +m[1] <= 31 ? +m[1] : 0;
+    }
+
+    /* Próxima fecha límite de una tarea que se repite: la siguiente que no esté ya en el pasado.
+       day (opcional): el día del mes original, si la fecha actual quedó recortada (repeatDay). */
+    static nextDue(dueDate, repeat, day){
       if(!dueDate || REPEAT_KEYS.indexOf(repeat) === -1) return '';
       const {parseYmd, ymd} = Workhub.utils.dates;
       const first = parseYmd(dueDate);
       if(isNaN(first)) return '';
-      const day = first.getDate();
+      day = day || first.getDate();
       const today = todayYmd();
       let d = first, guard = 0;
       do { d = addPeriod(d, repeat, day); } while(ymd(d) < today && ++guard < 800);
@@ -181,7 +191,8 @@
 
     /* Al terminar una tarea que se repite, crea la siguiente (sin subtareas marcadas). Una sola vez por tarea. */
     spawnNext(t){
-      const next = TaskModel.nextDue(t.dueDate, t.repeat);
+      const day = TaskModel.repeatDay(t) || +String(t.dueDate || '').slice(8);
+      const next = TaskModel.nextDue(t.dueDate, t.repeat, day);
       if(!next || t.repeatSpawned || !STATUS.length || !this.isReady()) return Promise.resolve(null);
       const copy = {
         title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', contacto:t.contacto || '',
@@ -197,7 +208,12 @@
       if(t.startDate && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, daysBetween(t.dueDate, next));
       if(t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
       if(Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
-      return Promise.all([this._create(copy), this.update(t.id, {repeatSpawned:true})]).then(() => {
+      /* El mes no tiene ese día: la siguiente recuerda cuál era (ver repeatDay). */
+      if((t.repeat === 'monthly' || t.repeat === 'yearly') && day !== +next.slice(8)) copy.repeatAnchor = day + '@' + next;
+      /* Si las reglas publicadas aún no admiten repeatAnchor, la tarea se crea sin él, como antes. */
+      const create = () => this._create(copy);
+      const made = copy.repeatAnchor ? create().catch(() => { delete copy.repeatAnchor; return create(); }) : create();
+      return Promise.all([made, this.update(t.id, {repeatSpawned:true})]).then(() => {
         this.emit('recurred', {date:next, title:t.title});
         return next;
       });

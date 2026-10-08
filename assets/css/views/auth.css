@@ -476,47 +476,105 @@ html.scene-off .auth-sumi{display:none;}
   html.scene-off .auth-sumi{display:block;}
 }
 
-/* ---------- Tinta de fondo (.auth-ink) ----------
+/* ---------- Agua de fondo (.auth-ink) ----------
    Sin paisaje (html.scene-off) y en móviles y tabletas, donde nunca lo hay, el fondo liso
-   quedaba soso (lo dijo el dueño). Detrás de la tarjeta va ahora lo de Sumi, que es tinta: tres
-   manchas de color que derivan despacio, burbujas que suben y un Sumi grande y muy tenue que
-   flota y mece los brazos (sumi.css, .is-drift). Todo se mueve solo con transform y opacity, que
-   el navegador anima sin repintar la página: esta pantalla es la de quien no quiere, o no puede,
-   mover el paisaje. Con «reducir movimiento» se queda quieto. */
-.auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;}
+   quedaba soso (lo dijo el dueño). Detrás de la tarjeta va ahora el sitio de Sumi, que es un
+   pulpo: agua. De arriba abajo, la superficie vista desde dentro (reflejos que se deslizan), los
+   rayos de luz que entran inclinados y se mecen, el agua más clara arriba y más honda abajo,
+   burbujas que suben haciendo eses y, flotando, un Sumi grande y tenue con los brazos sueltos
+   (sumi.js, flow). En escritorio queda medio escondido tras el cristal del panel derecho, que
+   lo desenfoca, y los brazos le asoman por debajo de la tarjeta.
+   Todo se mueve solo con transform y opacity, que el navegador anima sin repintar la página
+   (los brazos de Sumi, no: son tres trazos). Con «reducir movimiento» se queda quieto.
+   --water y --water-2: el azul y el verde del agua (tono, saturación y claridad). */
+.auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;--water:199 92% 56%;--water-2:176 72% 44%;}
 html.scene-off .auth-ink{display:block;}
-.auth-ink-blob{position:absolute;left:-24vmax;top:-28vmax;width:72vmax;height:72vmax;border-radius:50%;background:radial-gradient(closest-side, color-mix(in srgb, var(--accent-solid) 22%, transparent), transparent);will-change:transform;}
-.auth-ink-blob:nth-child(2){left:auto;top:auto;right:-28vmax;bottom:-32vmax;background:radial-gradient(closest-side, color-mix(in srgb, var(--st-proc, var(--accent-solid)) 17%, transparent), transparent);}
-.auth-ink-blob:nth-child(3){left:26vw;top:34vh;width:46vmax;height:46vmax;background:radial-gradient(closest-side, color-mix(in srgb, var(--st-done, var(--accent-solid)) 11%, transparent), transparent);}
-.auth-ink-sumi{position:absolute;right:-110px;bottom:-128px;width:min(560px, 62vmin);color:var(--ink);opacity:.065;will-change:transform;}
+/* El agua: clara y azul arriba, por donde entra la luz, y más honda hacia el fondo. */
+.auth-ink{background:linear-gradient(180deg, hsl(var(--water) / .20), hsl(var(--water) / .07) 36%, transparent 62%), linear-gradient(0deg, hsl(222 70% 22% / .30), transparent 48%);}
+/* La superficie, vista desde abajo: dos filas de reflejos que se cruzan despacio. */
+.auth-ink-surface{position:absolute;left:-260px;right:-260px;top:0;height:70px;opacity:.9;background:radial-gradient(ellipse 70px 13px at 50% 0, hsl(var(--water) / .50), transparent 72%) 0 0 / 190px 70px repeat-x;-webkit-mask-image:linear-gradient(#000, transparent);mask-image:linear-gradient(#000, transparent);will-change:transform;}
+.auth-ink-surface:nth-of-type(2){height:46px;opacity:.7;background-size:128px 46px;background-position:40px 0;}
+/* Los rayos: franjas de luz que cuelgan de la superficie, cada una con su inclinación. */
+.auth-ink-ray{position:absolute;top:-12%;left:10%;width:15vmax;height:120%;transform-origin:50% 0;transform:rotate(17deg);background:linear-gradient(180deg, hsl(var(--water) / .17), hsl(var(--water) / .05) 55%, transparent 82%);-webkit-mask-image:linear-gradient(90deg, transparent, #000 38%, #000 62%, transparent);mask-image:linear-gradient(90deg, transparent, #000 38%, #000 62%, transparent);will-change:transform, opacity;--a:17deg;--b:22deg;}
+.auth-ink-ray:nth-of-type(4){left:34%;width:9vmax;--a:13deg;--b:19deg;}
+.auth-ink-ray:nth-of-type(5){left:58%;width:20vmax;--a:20deg;--b:15deg;}
+.auth-ink-ray:nth-of-type(6){left:82%;width:11vmax;--a:15deg;--b:23deg;}
+/* Dos manchas de color que derivan, para que el agua no sea un degradado quieto. */
+.auth-ink-blob{position:absolute;left:-24vmax;top:-30vmax;width:74vmax;height:74vmax;border-radius:50%;background:radial-gradient(closest-side, hsl(var(--water-2) / .16), transparent);will-change:transform;}
+.auth-ink-blob:nth-of-type(8){left:auto;top:auto;right:-30vmax;bottom:-34vmax;background:radial-gradient(closest-side, hsl(var(--water) / .15), transparent);}
+/* Sumi: tras el panel de cristal, con los brazos colgando por debajo de la tarjeta. La tarjeta
+   va centrada, así que se coloca desde el centro de la ventana. */
+.auth-ink-sumi{position:absolute;left:calc(50% + 170px);top:calc(50% + 4px);width:clamp(300px, 46vmin, 430px);color:var(--ink);opacity:.085;will-change:transform;}
 .auth-ink-sumi .sumi{width:100%;height:auto;}
-.auth-ink-bubbles i{position:absolute;left:8%;bottom:-40px;width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink);opacity:0;will-change:transform, opacity;--dx:26px;--t:13s;--d:0s;}
-.auth-ink-bubbles i:nth-child(2){left:19%;width:8px;height:8px;--dx:-18px;--t:10s;--d:-3s;}
-.auth-ink-bubbles i:nth-child(3){left:33%;width:20px;height:20px;--dx:34px;--t:16s;--d:-7s;}
-.auth-ink-bubbles i:nth-child(4){left:48%;width:10px;height:10px;--dx:-22px;--t:11s;--d:-5s;}
-.auth-ink-bubbles i:nth-child(5){left:61%;width:16px;height:16px;--dx:20px;--t:14s;--d:-9s;}
-.auth-ink-bubbles i:nth-child(6){left:73%;width:7px;height:7px;--dx:-14px;--t:9s;--d:-1s;}
-.auth-ink-bubbles i:nth-child(7){left:84%;width:12px;height:12px;--dx:24px;--t:12s;--d:-6s;}
-.auth-ink-bubbles i:nth-child(8){left:93%;width:18px;height:18px;--dx:-28px;--t:17s;--d:-11s;}
+/* Burbujas: un aro con su brillo. */
+.auth-ink-bubbles i{position:absolute;left:6%;bottom:-48px;width:16px;height:16px;border-radius:50%;opacity:0;will-change:transform, opacity;
+  background:radial-gradient(circle at 31% 29%, hsl(0 0% 100% / .75) 0 9%, transparent 12%), radial-gradient(circle, hsl(var(--water) / .10) 52%, hsl(var(--water) / .75) 60% 68%, transparent 72%);
+  --dx:22px;--t:12s;--d:0s;}
+.auth-ink-bubbles i:nth-child(2){left:15%;width:8px;height:8px;--dx:-14px;--t:9s;--d:-3s;}
+.auth-ink-bubbles i:nth-child(3){left:27%;width:24px;height:24px;--dx:30px;--t:15s;--d:-7s;}
+.auth-ink-bubbles i:nth-child(4){left:39%;width:11px;height:11px;--dx:-20px;--t:10s;--d:-5s;}
+.auth-ink-bubbles i:nth-child(5){left:52%;width:18px;height:18px;--dx:18px;--t:13s;--d:-9s;}
+.auth-ink-bubbles i:nth-child(6){left:63%;width:7px;height:7px;--dx:-12px;--t:8s;--d:-1s;}
+.auth-ink-bubbles i:nth-child(7){left:71%;width:13px;height:13px;--dx:20px;--t:11s;--d:-6s;}
+.auth-ink-bubbles i:nth-child(8){left:80%;width:21px;height:21px;--dx:-26px;--t:16s;--d:-11s;}
+.auth-ink-bubbles i:nth-child(9){left:88%;width:9px;height:9px;--dx:14px;--t:9.5s;--d:-4s;}
+.auth-ink-bubbles i:nth-child(10){left:95%;width:15px;height:15px;--dx:-18px;--t:14s;--d:-8s;}
 @media (prefers-reduced-motion: no-preference){
+  .auth-ink-surface{animation:ink-surface 17s linear infinite;}
+  .auth-ink-surface:nth-of-type(2){animation-duration:11s;animation-direction:reverse;}
+  .auth-ink-ray{animation:ink-ray 9s ease-in-out infinite alternate;}
+  .auth-ink-ray:nth-of-type(4){animation-duration:12s;animation-delay:-4s;}
+  .auth-ink-ray:nth-of-type(5){animation-duration:14s;animation-delay:-7s;}
+  .auth-ink-ray:nth-of-type(6){animation-duration:10s;animation-delay:-2s;}
   .auth-ink-blob{animation:ink-drift 26s ease-in-out infinite alternate;}
-  .auth-ink-blob:nth-child(2){animation-duration:32s;animation-direction:alternate-reverse;}
-  .auth-ink-blob:nth-child(3){animation-duration:21s;animation-delay:-8s;}
-  .auth-ink-sumi{animation:ink-float 15s ease-in-out infinite;}
+  .auth-ink-blob:nth-of-type(8){animation-duration:33s;animation-direction:alternate-reverse;}
+  .auth-ink-sumi{animation:ink-float 13s ease-in-out infinite;}
   .auth-ink-bubbles i{animation:ink-rise var(--t) linear var(--d) infinite;}
 }
 html[data-motion="reduced"] .auth-ink *{animation:none !important;}
+@keyframes ink-surface{to{transform:translate3d(190px, 0, 0);}}
+@keyframes ink-ray{from{transform:rotate(var(--a));opacity:.55;}to{transform:rotate(var(--b));opacity:1;}}
 @keyframes ink-drift{from{transform:translate3d(0, 0, 0) scale(1);}to{transform:translate3d(9vmax, 7vmax, 0) scale(1.14);}}
-@keyframes ink-float{0%,100%{transform:translate3d(0, 0, 0) rotate(-5deg);}50%{transform:translate3d(-30px, -38px, 0) rotate(3deg);}}
-@keyframes ink-rise{0%{transform:translate3d(0, 0, 0) scale(.6);opacity:0;}12%{opacity:.17;}80%{opacity:.10;}100%{transform:translate3d(var(--dx), -112vh, 0) scale(1.1);opacity:0;}}
-@media (max-width: 860px), (hover: none) and (pointer: coarse){
-  /* En el móvil la tarjeta ocupa casi todo: Sumi asoma por arriba, a la derecha, y se ve más. */
-  .auth-ink{display:block;}
-  .auth-ink-sumi{right:-22vmin;bottom:auto;top:-10vmin;width:78vmin;opacity:.085;}
-  .auth-ink-blob{width:110vmax;height:110vmax;left:-50vmax;top:-46vmax;}
-  .auth-ink-blob:nth-child(2){right:-56vmax;bottom:-52vmax;}
-  .auth-ink-blob:nth-child(3){left:-10vw;top:44vh;width:80vmax;height:80vmax;}
+/* Sube, se ladea, baja: como algo que flota, no como algo que gira sobre un eje. */
+@keyframes ink-float{0%,100%{transform:translate3d(0, 0, 0) rotate(-4deg);}33%{transform:translate3d(-16px, -22px, 0) rotate(1deg);}66%{transform:translate3d(10px, -34px, 0) rotate(4deg);}}
+/* Suben haciendo eses y crecen un poco, que arriba hay menos presión. */
+@keyframes ink-rise{
+  0%{transform:translate3d(0, 0, 0) scale(.55);opacity:0;}
+  8%{opacity:.75;}
+  25%{transform:translate3d(var(--dx), -28vh, 0) scale(.7);}
+  50%{transform:translate3d(calc(var(--dx) * -.6), -56vh, 0) scale(.85);}
+  75%{transform:translate3d(var(--dx), -84vh, 0) scale(1);opacity:.6;}
+  100%{transform:translate3d(0, -114vh, 0) scale(1.1);opacity:0;}
 }
+@media (max-width: 860px), (hover: none) and (pointer: coarse){
+  /* En el móvil la tarjeta ocupa casi todo: Sumi asoma por arriba, a la derecha, y los brazos
+     le bajan por detrás de ella. */
+  .auth-ink{display:block;}
+  .auth-ink-sumi{left:auto;right:-14vmin;top:-6vmin;width:74vmin;opacity:.10;}
+  .auth-ink-ray{width:30vmax;}
+  .auth-ink-ray:nth-of-type(4){width:18vmax;}
+  .auth-ink-ray:nth-of-type(5){width:36vmax;}
+  .auth-ink-ray:nth-of-type(6){width:22vmax;}
+}
+
+/* El panel derecho, sin paisaje: un cristal delante del agua. Lo de detrás (los rayos, las
+   burbujas que pasan, Sumi) se ve desenfocado a través de él; tiene su reflejo fijo y un
+   destello que lo cruza de vez en cuando. Donde el navegador no sabe desenfocar lo de detrás,
+   queda más opaco para que el tablero se siga leyendo. */
+html.scene-off .auth-aside{position:relative;overflow:hidden;background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 62%, transparent), color-mix(in srgb, var(--surface-solid) 40%, transparent));border-left:1px solid color-mix(in srgb, var(--ink) 11%, transparent);box-shadow:inset 0 1px 0 hsl(0 0% 100% / .14), inset 1px 0 0 hsl(0 0% 100% / .06);}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  html.scene-off .auth-aside{background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 34%, transparent), color-mix(in srgb, var(--surface-solid) 14%, transparent));-webkit-backdrop-filter:blur(13px) saturate(1.6);backdrop-filter:blur(13px) saturate(1.6);}
+}
+html.scene-off .auth-aside::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg, hsl(0 0% 100% / .11), transparent 30%, transparent 70%, hsl(var(--water, 199 92% 56%) / .07));}
+html.scene-off .auth-aside::after{content:"";position:absolute;top:-30%;left:-55%;width:42%;height:160%;pointer-events:none;background:linear-gradient(100deg, transparent, hsl(0 0% 100% / .09), transparent);transform:skewX(-14deg);will-change:transform;}
+@media (prefers-reduced-motion: no-preference){
+  html.scene-off .auth-aside::after{animation:glass-glint 11s ease-in-out infinite;}
+}
+html[data-motion="reduced"] .auth-aside::after{animation:none !important;}
+@keyframes glass-glint{0%,55%{transform:translate3d(0, 0, 0) skewX(-14deg);}85%,100%{transform:translate3d(420%, 0, 0) skewX(-14deg);}}
+html.scene-off .auth-desk{position:relative;z-index:1;}
+/* Las columnas del tablero, también de cristal, un punto más claro que el panel. */
+html.scene-off .auth-desk-col{background:color-mix(in srgb, var(--surface-solid) 34%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);}
 
 /* El tablero de Sumi (AuthView.playDesk): su sombra en el suelo, que respira con él; la tarjeta
    que vuela va por encima de las demás; al llegar a «Hecho» suelta un anillo verde y el punto de

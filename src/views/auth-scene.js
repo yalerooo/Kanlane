@@ -430,7 +430,8 @@
     /* ve: queda tras las sierras y solo asoma su resplandor. */
     /* A pleno día el sol está alto, pero sigue al fondo: la hierba se ve siempre a contraluz. */
     'vec3 sunDir(){ return normalize(mix(mix(vec3(.21, .108, .97), vec3(.26, .50, .83), uDay), vec3(.17, .235, .955), uNight)); }',
-    /* Nivel del agua del lago. */
+    /* El nivel del agua del lago que hubo al fondo a la derecha: ya no se pinta, pero su
+       hondonada sigue ahí y en ella no crecen árboles ni flores. */
     'const float WATER_Y = .62;',
     /* El cielo sin nubes ni estrellas: el degradado y el resplandor del sol. Es barato: lo usan */
     /* la bruma, los reflejos y la hierba. */
@@ -797,7 +798,7 @@
   const COMP = [
     /* ---------- La escena: lo que se pone en cada fotograma ---------- */
     /* Lee la imagen intermedia que pintan las partes (ver FRAG) y le pone el final: el cerezo, */
-    /* el halo, el revelado y la profundidad (del lago, uScene trae cuánto hay en el píxel). */
+    /* el halo, el revelado y la profundidad. */
     'uniform sampler2D uGeo;',
     'uniform sampler2D uShade;',
     'uniform sampler2D uScene;',
@@ -822,14 +823,14 @@
     '  vec3 col = px.rgb;',
     '  float glass = texelFetch(uShade, at, 0).y;',
     '  float tGround = tHit > 0. ? tHit : -1.;',
-    '  float tFin = tGround > 0. ? mix(tGround, (WATER_Y - ro.y) / min(rd.y, -1e-4), px.a) : -1.;',
+    '  float tFin = tGround;',
     '  if(tObj > 0. && (tGround < 0. || tObj < tGround)) tFin = tObj;',
     '  vec3 treeB = vec3(gTree.x, TREE_H + .22 * treeSc, gTree.y);',
     '  vec3 fogCol = fogColor(rd, L);'
   ].concat(TAIL, ['}']).join('\n');
   const FRAG = [
     /* La escena va por partes, una por cada cosa que puede haber en un píxel: el cielo con sus */
-    /* sierras (PART 1), el suelo con el lago (PART 2), la carcasa del ordenador (PART 3) y su */
+    /* sierras (PART 1), el suelo (PART 2), la carcasa del ordenador (PART 3) y su */
     /* pantalla (GLASS). Cada una descarta los píxeles que no son suyos, así que entre todas */
     /* pintan la pantalla entera sin pisarse. No pintan en el lienzo, sino en una imagen */
     /* intermedia (uScene), sin el cerezo ni el revelado final: eso lo pone COMP encima, en cada */
@@ -927,8 +928,6 @@
     '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
     '  float glass = 0.;',
-    /* Cuánto lago hay en el píxel (0 si no hay). */
-    '  float wet = 0.;',
 
     /* ---------- Hierba y suelo ---------- */
     '  vec3 gcol = vec3(0.);',
@@ -1113,30 +1112,9 @@
     '#endif',
     '    col = gcol;',
     '    tFin = tGround;',
-    /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
-    /* finas. */
-    '    float tW = (WATER_Y - ro.y) / min(rd.y, -1e-4);',
-    '    if(rd.y < 0. && tW < tGround){',
-    '      vec3 pw = ro + rd * tW;',
-    '      float depth = WATER_Y - terrain(pw.xz);',
-    '      float rip = noise(pw.xz * vec2(1.2, 5.) + vec2(uTime * .25, uTime * .1)) + .5 * noise(pw.xz * vec2(3., 11.) - uTime * .3);',
-    '      vec3 wn = normalize(vec3((rip - .75) * .05, 1., (noise(pw.xz * vec2(1.5, 6.) + 5. - uTime * .2) - .5) * .09));',
-    '      vec3 wr = reflect(rd, wn);',
-    '      wr.y = abs(wr.y);',
-    '      vec3 wc = sky(wr, L) * mix(.80, .92, uNight);',
-    /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
-    '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
-    '      wc += pal(vec3(1.2, .78, .40), vec3(.90, .90, .84), vec3(.40, .46, .70)) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
-    /* Agua, solo de la colina hacia el fondo: el terreno también queda por debajo de su nivel */
-    /* al pie de la colina, pegado a la cámara, y ahí asomaba un charco en la esquina de abajo */
-    /* a la izquierda de las ventanas anchas; eso es hierba. */
-    '      float shore = smoothstep(0., .10, depth) * smoothstep(0., 6., pw.z);',
-    '      wet = shore;',
-    '      col = mix(col, wc, shore * .94);',
-    /* Un filo claro en la orilla. */
-    '      col += pal(vec3(.50, .32, .20), vec3(.50, .56, .60), vec3(.10, .12, .20)) * smoothstep(.06, .0, abs(depth - .03)) * .5;',
-    '      tFin = mix(tGround, tW, shore);',
-    '    }',
+    /* Aquí había un lago, donde el terreno queda bajo WATER_Y: reflejaba el cielo entero, con
+       sus nubes y sus estrellas, y solo por eso este programa tardaba una cuarta parte más
+       en compilar. Se quitó (lo pidió el dueño): la hondonada es ahora pradera. */
     '  }',
     '#endif',
 
@@ -1276,7 +1254,7 @@
     '    col = mix(col, mistColor(), mist * mix(.42, .56, uDawn * (1. - uDay)) * (1. - .45 * uDay));',
     '  }',
     '#if PART != 0',
-    '  fragColor = vec4(col, wet);',
+    '  fragColor = vec4(col, 0.);',
     '#else'
   ].concat(TAIL, ['#endif', '}']).join('\n');
   const TREES_VERT = [

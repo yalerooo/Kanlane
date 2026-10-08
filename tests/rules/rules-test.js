@@ -82,6 +82,8 @@ async function t(name, fn){
   await t('bob (editor) escribe notas', () => assertSucceeds(bob.collection('teams').doc('t1').collection('tasks').doc('b').collection('notes').doc('n').set({text: 'y'})));
   await t('carol (lector) lee tareas', () => assertSucceeds(carol.collection('teams').doc('t1').collection('tasks').doc('b').get()));
   await t('carol (lector) no escribe tareas', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('c').set({title: 'z'})));
+  await t('bob (editor) vota una tarea', () => assertSucceeds(bob.collection('teams').doc('t1').collection('tasks').doc('b').update({votes: ['bob']})));
+  await t('carol (lector) no vota', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('b').update({votes: ['bob', 'carol']})));
   await t('carol (lector) no borra tareas', () => assertFails(carol.collection('teams').doc('t1').collection('tasks').doc('b').delete()));
   await t('bob (editor) cambia la configuración', () => assertSucceeds(teamRef(bob).update({nombre: 'Equipo 2', labels: [{name: 'a', color: 'fff'}]})));
   await t('un editor del equipo guarda fechas y campos en una tarea', () => assertSucceeds(bob.collection('teams').doc('t1').collection('tasks').doc('rango').set({title:'y', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:1}})));
@@ -323,6 +325,11 @@ async function t(name, fn){
   await t('quitar las relaciones deja las listas vacías', () => assertSucceeds(own.collection('tasks').doc('rel1').update({relatedTo:[], blockedBy:[]})));
   await t('unas relaciones que no son una lista se rechazan', () => assertFails(own.collection('tasks').doc('rel2').set({title:'a', blockedBy:'t3'})));
   await t('más de 50 dependencias se rechazan', () => assertFails(own.collection('tasks').doc('rel3').set({title:'a', blockedBy:Array.from({length:51}, (_, i) => 't' + i)})));
+  await t('una tarea admite votos y ubicación', () => assertSucceeds(own.collection('tasks').doc('vote1').set({title:'a', votes:['zed'], location:'Puerta del Sol, Madrid'})));
+  await t('quitar el voto y la ubicación los deja vacíos', () => assertSucceeds(own.collection('tasks').doc('vote1').update({votes:[], location:''})));
+  await t('unos votos que no son una lista se rechazan', () => assertFails(own.collection('tasks').doc('vote2').set({title:'a', votes:3})));
+  await t('una ubicación de más de 200 caracteres se rechaza', () => assertFails(own.collection('tasks').doc('vote3').set({title:'a', location:'x'.repeat(201)})));
+  await t('una ubicación que no es texto se rechaza', () => assertFails(own.collection('tasks').doc('vote4').set({title:'a', location:{lat:40.4, lng:-3.7}})));
   await t('una tarea admite la marca de archivada', () => assertSucceeds(own.collection('tasks').doc('archived').set({title:'a', status:'todo', archivedAt:1759900000000})));
   await t('restaurar una tarea archivada deja la marca a cero', () => assertSucceeds(own.collection('tasks').doc('archived').update({archivedAt:0})));
   await t('una marca de archivada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('archived2').set({title:'a', archivedAt:'ayer'})));

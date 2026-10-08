@@ -88,8 +88,11 @@ service cloud.firestore {
             'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
             'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom', 'repeatAnchor',
-            'archivedAt', 'followers', 'cover', 'relatedTo', 'blockedBy'
+            'archivedAt', 'followers', 'cover', 'relatedTo', 'blockedBy',
+            'votes', 'location'
           ]) && textWithin(data, 'title', 500)
+          && listWithin(data, 'votes', 200)
+          && textWithin(data, 'location', 200)
           && listWithin(data, 'relatedTo', 50)
           && listWithin(data, 'blockedBy', 50)
           && data.get('cover', {}) is map && data.get('cover', {}).size() <= 2

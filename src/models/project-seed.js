@@ -42,6 +42,7 @@
       };
       if(dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '')) body.dueTime = t.dueTime;
       if(/^\d{4}-\d{2}-\d{2}$/.test(t.startDate || '') && (!dueDate || t.startDate <= dueDate)) body.startDate = t.startDate;
+      if(typeof t.location === 'string' && t.location.trim()) body.location = cut(t.location.trim(), 200);
       /* Portada: solo de color (una semilla no trae imágenes adjuntas). */
       const color = t.cover && typeof t.cover.color === 'string' ? t.cover.color : '';
       if(color && Workhub.models.ProjectTemplates.COLORS.some((c) => c.key === color)) body.cover = {color:color};
@@ -50,8 +51,6 @@
       if(t.dueComplete) body.dueComplete = true;
       if(t.dueReminder != null) body.dueReminder = t.dueReminder;
       if(list(t.attachments).length) body.attachments = t.attachments.slice(0, 50);
-      if(t.location) body.location = t.location;
-      if(t.votes) body.votes = t.votes;
       if(list(t.customFields).length) body.customFields = t.customFields;
       if(t.trelloUrl) body.sourceUrl = t.trelloUrl;
       */

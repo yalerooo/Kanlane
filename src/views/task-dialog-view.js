@@ -23,6 +23,7 @@
         desc: $('fDesc'),
         estado: $('fEstado'),
         contacto: $('fContacto'),
+        ubicacion: $('fUbicacion'),
         fecha: $('fFecha'),
         inicio: $('fInicio'),
         repeat: $('fRepeat')
@@ -532,6 +533,8 @@
       /* Lo mismo con el inicio y los campos personalizados: una tarea que no los usa no los lleva. */
       if(extra.startDate || this.hadStart) values.startDate = extra.startDate || '';
       if(extra.custom && (Object.keys(extra.custom).length || this.hadCustom)) values.custom = extra.custom;
+      const ubicacion = this.fields.ubicacion.value.trim();
+      if(ubicacion || this.hadLocation) values.location = ubicacion;
       /* Y con la portada: {} quita la que tenía. */
       if(this.cover || this.hadCover) values.cover = this.cover || {};
       return values;
@@ -545,7 +548,7 @@
       this.resetNoteForm();
       this.fields.id.value = '';
       this.hadTime = false;
-      this.hadStart = this.hadCustom = false;
+      this.hadStart = this.hadCustom = this.hadLocation = false;
       this.cover = null;
       this.hadCover = false;
       this.coverImages = [];
@@ -579,6 +582,8 @@
       this.fields.desc.value = t.desc || '';
       this.fields.estado.value = Workhub.models.TaskModel.stageKey(t);
       this.fields.contacto.value = t.contacto || '';
+      this.fields.ubicacion.value = typeof t.location === 'string' ? t.location : '';
+      this.hadLocation = !!this.fields.ubicacion.value;
       this.fields.fecha.value = t.dueDate || '';
       this._hora().value = t.dueDate ? (t.dueTime || '') : '';
       this.hadTime = !!t.dueTime;

@@ -14,6 +14,8 @@
   const $ = (id) => document.getElementById(id);
 
   const FACT_ICONS = {
+    location: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+    votes: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Z"/><path d="M7 10l4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.6 21H7"/></svg>',
     repeat: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
     due: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
     contact: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
@@ -147,6 +149,14 @@
     bindAssignMe(handler){
       this.facts.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-action="assign-me"]');
+        if(b && this.taskId) handler(this.taskId);
+      });
+    }
+
+    /* «Votar» / «Quitar mi voto» en la ficha. */
+    bindVote(handler){
+      this.facts.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-action="vote"]');
         if(b && this.taskId) handler(this.taskId);
       });
     }
@@ -335,6 +345,8 @@
         fact('due', 'Fecha límite', dueHtml(t)),
         assigneesFact(t),
         t.contacto ? fact('contact', 'Contacto', '<span translate="no">' + esc(t.contacto) + '</span>') : '',
+        locationFact(t),
+        votesFact(t, ctx),
         fact('repeat', 'Se repite', t.repeat ? esc(Workhub.t((TaskModel.REPEATS.find((r) => r.key === t.repeat) || {}).label || '')) : '<span class="tv-muted">' + esc(Workhub.t('No se repite')) + '</span>'),
         ghFact(t)
       ].join('') + (Workhub.views.fields ? Workhub.views.fields.filled(t).map((f) =>
@@ -538,6 +550,33 @@
   }
 
   /* Propiedad de la franja derecha: icono y etiqueta encima, y el valor debajo. */
+  /* Ubicación: el texto tal cual; si es un enlace (p. ej. a un mapa), se puede abrir. */
+  function locationFact(t){
+    const place = typeof t.location === 'string' ? t.location.trim() : '';
+    if(!place) return '';
+    const url = /^https?:\/\//i.test(place) ? Workhub.utils.urls.safeUrl(place) : '';
+    return fact('location', 'Ubicación', url
+      ? '<a class="tv-location" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" translate="no">' + esc(place) + '</a>'
+      : '<span class="tv-location" translate="no">' + esc(place) + '</span>');
+  }
+
+  /* Votos: cuántos, de quién (en un equipo) y el botón para votar o quitar mi voto.
+     ctx.voter: con qué id voto yo (sin él, p. ej. en la demo, no se enseñan). */
+  function votesFact(t, ctx){
+    const voter = ctx && ctx.voter;
+    if(!voter) return '';
+    const team = Workhub.views.team;
+    const votes = TaskModel.votesOf(t);
+    const mine = votes.indexOf(voter) !== -1;
+    const names = team.enabled() ? votes.map((uid) => team.name(uid)).filter(Boolean) : [];
+    const count = votes.length === 1 ? Workhub.t('1 voto') : Workhub.t('{n} votos', {n:votes.length});
+    const btn = team.canEdit()
+      ? '<button type="button" class="btn btn-ghost btn-sm tv-assign-me tv-vote" data-action="vote" aria-pressed="' + mine + '">' + esc(Workhub.t(mine ? 'Quitar mi voto' : 'Votar')) + '</button>'
+      : '';
+    return fact('votes', 'Votos', '<span class="tv-vote-box"><span class="tv-votes' + (votes.length ? '' : ' tv-muted') + '"' + (names.length ? ' title="' + esc(names.join(', ')) + '"' : '') + '>' +
+      esc(votes.length ? count : Workhub.t('Sin votos')) + (names.length ? ' <small translate="no">· ' + esc(names.join(', ')) + '</small>' : '') + '</span>' + btn + '</span>');
+  }
+
   function fact(icon, label, valueHtml){
     return '<div class="tv-prop tv-fact"><span class="tv-prop-label tv-fact-label">' + (FACT_ICONS[icon] || '') + esc(label) + '</span>' +
       '<div class="tv-prop-value tv-fact-value">' + valueHtml + '</div></div>';

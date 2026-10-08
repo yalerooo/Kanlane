@@ -132,6 +132,7 @@
       this.detail.bindArchive((id) => this.archiveTasks([id]));
       this.detail.bindDuplicate((id) => this.duplicateTask(id));
       this.detail.bindFollow((id) => this.toggleFollow(id));
+      this.detail.bindVote((id) => this.toggleVote(id));
       this.bindTaskLinks();
       this.detail.bindStatus((id, status) => {
         this.moveWithActivity(id, status);
@@ -319,6 +320,20 @@
       this.tasks.update(id, {followers:next}).then(
         () => toast.success(on ? 'Sigues esta tarea' : 'Ya no sigues esta tarea'),
         () => { this.tasks.patchLocal(id, {followers:now}); toast.error('No se pudo cambiar el seguimiento'); });
+    }
+
+    /* ---------- Votos ---------- */
+
+    /* Con qué id voto yo: el de mi cuenta; sin cuenta (modo local), uno fijo. Un voto por persona. */
+    voterId(){
+      return Workhub.views.team.meUid() || 'me';
+    }
+
+    /* Pongo o quito mi voto en una tarea. Puede votar quien puede editar el proyecto. */
+    toggleVote(id){
+      const t = this.tasks.find(id);
+      if(!t || t._undecryptable || !Workhub.views.team.canEdit() || !this.tasks.isReady()) return;
+      this.tasks.toggleVote(id, this.voterId()).catch(() => toast.error('No se pudo guardar el voto'));
     }
 
     /* Avisa al servidor de lo que acaba de pasar en una tarea, para que mande los avisos push
@@ -743,7 +758,7 @@
 
     detailContext(){
       const autos = this.app.controllers && this.app.controllers.automations;
-      return {contacts:this.contacts.items, vault:this.vault, tasks:this.tasks, buttons:autos ? autos.buttons() : []};
+      return {contacts:this.contacts.items, vault:this.vault, tasks:this.tasks, voter:this.voterId(), buttons:autos ? autos.buttons() : []};
     }
 
     openDetail(id){

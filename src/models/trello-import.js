@@ -87,6 +87,16 @@
     return base;
   }
 
+  /* Ubicación de una tarjeta como texto: el nombre del sitio y su dirección; si solo hay
+     coordenadas, las coordenadas. '' si no tiene. */
+  function placeOf(c){
+    const named = [text(c.locationName).trim(), text(c.address).trim()].filter((x, i, all) => x && all.indexOf(x) === i).join(' · ');
+    if(named) return named.slice(0, 200);
+    const k = c.coordinates;
+    if(k && typeof k === 'object' && isFinite(k.latitude) && isFinite(k.longitude) && k.latitude !== null && k.longitude !== null) return k.latitude + ', ' + k.longitude;
+    return typeof k === 'string' && /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(k.trim()) ? k.trim() : '';
+  }
+
   /* Color de una portada de Trello → el color de Kanlane que más se le parece. */
   const COVER_COLOR = {green:'green', lime:'green', yellow:'orange', orange:'orange', red:'red', pink:'red',
     purple:'violet', blue:'blue', sky:'blue', black:'gray'};
@@ -237,7 +247,7 @@
       const tc = c.cover && typeof c.cover === 'object' ? c.cover : {};
       const coverColor = COVER_COLOR[text(tc.color)];
       if(!coverColor && (tc.idAttachment || tc.idUploadedBackground || (Array.isArray(tc.scaled) && tc.scaled.length))) imageCovers++;
-      return Object.assign(coverColor ? {cover:{color:coverColor}} : {}, {
+      return Object.assign(coverColor ? {cover:{color:coverColor}} : {}, placeOf(c) ? {location:placeOf(c)} : {}, {
         title:text(c.name).trim() || Workhub.t('(sin título)'),
         desc:text(c.desc),
         status:status,
@@ -262,9 +272,8 @@
         /* Adjuntos (CSV «Attachment Count» y «Attachment Links»). Los archivos subidos a Trello piden
            iniciar sesión para bajarlos; los que son enlaces se pueden guardar tal cual.
         , attachments:list(c.attachments).map((a) => ({name:a.name, url:a.url, mimeType:a.mimeType, bytes:a.bytes, isUpload:!!a.isUpload, createdAt:time(a.date)})) */
-        /* Ubicación:
-        , location:c.coordinates ? {name:c.locationName, address:c.address, lat:c.coordinates.latitude, lng:c.coordinates.longitude} : null */
-        /* Votos (CSV «Vote Count»):
+        /* Votos (CSV «Vote Count»): los de Trello son de sus miembros, que no son cuentas de Kanlane;
+           como las personas asignadas, no se pueden traer hasta poder emparejarlos.
         , votes:list(c.idMembersVoted).length */
         /* Valores de los campos personalizados: ver el mapa `customFields` de arriba.
         , customFields:list(c.customFieldItems).map((v) => ({field:customFields[v.idCustomField], value:v.value, idValue:v.idValue})) */

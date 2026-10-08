@@ -263,6 +263,45 @@ async function newProject(page, name){
       await page.evaluate((id) => Workhub.app.controllers.tasks.moveWithActivity(id, 'done'), todayId);
       await page.waitForFunction(() => Workhub.models.TaskModel.isDone(Workhub.app.models.tasks.items.find((t) => t.title === 'Vence hoy')));
     }
+    /* Ubicación desde el formulario y voto desde la ficha: siguen tras recargar y se quitan. */
+    {
+      const title = 'Vence dentro de un mes';
+      const stored = () => page.evaluate((x) => { const t = Workhub.app.models.tasks.items.find((i) => i.title === x); return [t.location || '', Workhub.models.TaskModel.votesOf(t).length]; }, title);
+      const openForm = async () => {
+        await page.evaluate((x) => Workhub.app.controllers.tasks.openEdit(Workhub.app.models.tasks.items.find((t) => t.title === x).id), title);
+        await page.locator('#dlg').waitFor({state:'visible'});
+      };
+      await openForm();
+      assert.equal(await page.locator('#fUbicacion').inputValue(), '');
+      await page.locator('#fUbicacion').fill('Puerta del Sol, Madrid');
+      await page.locator('#btnSave').click();
+      await page.locator('#dlg').waitFor({state:'hidden'});
+      await page.locator('.card').filter({hasText:title}).click();
+      await page.locator('#dlgTaskView').waitFor({state:'visible'});
+      assert.match(await page.locator('#tvFacts').textContent(), /Puerta del Sol, Madrid/);
+      await page.locator('#tvFacts [data-action="vote"]').click();
+      await page.locator('#tvFacts [data-action="vote"][aria-pressed="true"]').waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+      await page.locator('.card').filter({hasText:title}).locator('.votes-badge').waitFor();
+      assert.equal(await page.locator('.votes-badge').count(), 1, 'la otra tarea sigue sin votos');
+      await page.reload();
+      await page.locator('.card').filter({hasText:title}).locator('.votes-badge').waitFor();
+      assert.deepEqual(await stored(), ['Puerta del Sol, Madrid', 1]);
+      await page.locator('.card').filter({hasText:title}).click();
+      await page.locator('#tvFacts [data-action="vote"][aria-pressed="true"]').click();
+      await page.locator('#tvFacts [data-action="vote"][aria-pressed="false"]').waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+      await openForm();
+      await page.locator('#fUbicacion').fill('');
+      await page.locator('#btnSave').click();
+      await page.locator('#dlg').waitFor({state:'hidden'});
+      await page.keyboard.press('Escape');
+      await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+      assert.deepEqual(await stored(), ['', 0]);
+      assert.equal(await page.locator('.votes-badge').count(), 0);
+    }
     /* Portada de color desde el formulario: se ve en la tarjeta y en la ficha, sigue tras recargar y se quita. */
     const coverOf = (title) => page.evaluate((x) => Workhub.models.TaskModel.coverOf(Workhub.app.models.tasks.items.find((t) => t.title === x)), title);
     const editTask = async (title) => {

@@ -35,6 +35,7 @@
 - **Duplicar.** Duplica una tarea o una columna entera con sus tarjetas. Las copias conservan subtareas, etiquetas y personas asignadas, y son independientes de la original.
 - **Menciones, seguir y avisos.** En los equipos, `@Nombre` en un comentario avisa a esa persona, «Seguir» una tarea te avisa de sus comentarios y movimientos, y las asignaciones también avisan: como notificaciones del sistema aunque Kanlane esté cerrado, si las activas en Ajustes.
 - **Relaciones y dependencias.** Relaciona una tarea con otras o marca que está bloqueada por otra: la tarjeta y la ficha avisan mientras la que la bloquea siga sin terminar.
+- **Votos y ubicación.** Vota las tareas (un voto por persona) y apunta dónde es cada una con un campo de ubicación opcional.
 - **Portadas.** Pon a una tarea una portada de color o una de las imágenes adjuntas en sus notas: se ve en lo alto de la tarjeta y de la ficha.
 - **Subtareas y tareas que se repiten.** Divide una tarea en pasos con su progreso, y haz que se repita cada día, semana, mes o año: al terminarla se crea la siguiente.
 - **Calendario** de fechas límite y reuniones en vista de mes, semana y día. Arrastra una tarea o una reunión a otro día para moverla. Las tareas con fecha de inicio muestran su intervalo en la tarjeta y en todos los días que ocupan.
@@ -193,6 +194,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 - **Duplicate.** Duplicate a task or a whole column with its cards. Copies keep subtasks, labels and assigned people, and are independent of the original.
 - **Mentions, following and notifications.** In teams, `@Name` in a comment notifies that person, following a task notifies you of its comments and moves, and assignments notify too: as system notifications even when Kanlane is closed, if you turn them on in Settings.
 - **Relations and dependencies.** Relate a task to others or mark it as blocked by another one: the card and the task view warn you while the blocking task is unfinished.
+- **Votes and location.** Vote on tasks (one vote per person) and note where each one takes place with an optional location field.
 - **Covers.** Give a task a color cover or one of the images attached to its notes: it shows at the top of the card and of the task view.
 - **Subtasks and recurring tasks.** Split a task into steps with progress, and make it repeat daily, weekly, monthly or yearly: finishing it creates the next one.
 - **Calendar** of due dates and meetings in month, week and day views. Drag a task or a meeting to another day to move it. Tasks with a start date show their range on the card and on every day they span.

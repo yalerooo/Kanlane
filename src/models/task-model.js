@@ -19,8 +19,10 @@
   const ORDER_STEP = 1024;
   /* Relaciones de cada tipo que guarda una tarea, como mucho (el tope de firestore.rules). */
   const RELATIONS_MAX = 50;
+  /* Votos que guarda una tarea, como mucho (el tope de firestore.rules). */
+  const VOTES_MAX = 200;
   /* Campos de una tarea que no pasan a su copia (ver copyOf). */
-  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned', 'relatedTo', 'blockedBy',
+  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned', 'relatedTo', 'blockedBy', 'votes',
     'ghItemId', 'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels', 'ghPrs', 'ghSyncedAt', 'ghRemoteAt'];
   /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
   const DUE_SPAN = {day:1, week:7, month:30};
@@ -215,6 +217,24 @@
       if(typeof c.asset === 'string' && c.asset && c.asset.length <= 200) return {asset:c.asset};
       if(typeof c.color === 'string' && Workhub.models.ProjectTemplates.COLORS.some((x) => x.key === c.color)) return {color:c.color};
       return null;
+    }
+
+    /* Quién ha votado la tarea: ids de persona sin repetir (un voto por persona). */
+    static votesOf(t){
+      return (Array.isArray(t && t.votes) ? t.votes : []).filter((id, i, all) => typeof id === 'string' && id && all.indexOf(id) === i);
+    }
+
+    /* Pone o quita el voto de `voter` en la tarea. No toca updatedAt: votar no cambia el contenido.
+       Promesa con true si ahora la vota y false si ya no; se rechaza (y lo local se deshace) si no
+       se pudo guardar. */
+    toggleVote(id, voter){
+      const t = this.find(id);
+      if(!t || !voter || !this.isReady()) return Promise.reject(new Error('not-found'));
+      const now = TaskModel.votesOf(t);
+      const on = now.indexOf(voter) === -1;
+      const next = on ? now.concat(voter).slice(-VOTES_MAX) : now.filter((u) => u !== voter);
+      this.patchLocal(id, {votes:next});
+      return this.update(id, {votes:next}).then(() => on, (err) => { this.patchLocal(id, {votes:now}); throw err; });
     }
 
     /* Ids de una lista de relaciones tal como se guardó: cadenas no vacías y sin repetir. */
@@ -420,6 +440,8 @@
       if(t.startDate && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, daysBetween(t.dueDate, next));
       if(t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
       if(Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
+      /* El sitio es el mismo; los votos eran de la que se acaba de terminar. */
+      if(typeof t.location === 'string' && t.location) copy.location = t.location;
       /* La portada de color se conserva; la de imagen no, porque la imagen es de una nota de la original. */
       const cover = TaskModel.coverOf(t);
       if(cover && cover.color) copy.cover = cover;

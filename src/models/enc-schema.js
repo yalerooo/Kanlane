@@ -30,7 +30,7 @@
 
   /* El servidor ya no ve el contenido: los límites de validData() se aplican aquí antes de cifrar. */
   const TEXT_MAX = {
-    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10, repeatAnchor: 13},
+    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10, repeatAnchor: 13, location: 200},
     notes: {text: 20000, actorName: 200},
     clients: {nombre: 200},
     contacts: {nombre: 200, email: 320, notas: 10000},
@@ -38,7 +38,7 @@
     vault: {label: 500}
   };
   const LIST_MAX = {
-    tasks: {labels: 1000, checklist: 200, assignees: 50, followers: 50, relatedTo: 50, blockedBy: 50},
+    tasks: {labels: 1000, checklist: 200, assignees: 50, followers: 50, relatedTo: 50, blockedBy: 50, votes: 200},
     notes: {attachments: 20, assetIds: 400}
   };
 

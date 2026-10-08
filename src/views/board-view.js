@@ -822,6 +822,12 @@
     return '<span class="card-tag" translate="no" title="' + esc(list.join(', ')) + '">' + esc(list.slice(0, 2).join(' · ')) + (list.length > 2 ? ' +' + (list.length - 2) : '') + '</span>';
   }
 
+  /* Votos de la tarea (solo si tiene alguno). */
+  function votesHtml(t){
+    const n = TaskModel.votesOf(t).length;
+    return n ? '<span class="links votes-badge" title="' + esc(n === 1 ? Workhub.t('1 voto') : Workhub.t('{n} votos', {n:n})) + '">' + iconSpan('vote') + n + '</span>' : '';
+  }
+
   /* Portada de la tarjeta: una franja de color o una imagen, arriba y de lado a lado. La imagen
      no ocupa sitio hasta que tiene su URL (y si ya no existe, no se ve nada). */
   function coverHtml(t){
@@ -842,6 +848,7 @@
       blockedHtml(t),
       dueHtml(t),
       progressHtml(t),
+      votesHtml(t),
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
       t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '',
       t.ghItemId ? '<span class="gh-tag" title="GitHub">' + GH_ICON + (t.ghNumber ? '#' + t.ghNumber : '') + '</span>' : '',

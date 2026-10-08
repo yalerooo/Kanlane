@@ -122,4 +122,10 @@ const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meet
   assert.ok(made.tasks.every((t) => !('blockedBy' in t) && !('relatedTo' in t)), 'la tarea se crea sin ids del archivo');
   assert.deepEqual(JSON.parse(JSON.stringify(patches)), {t1:{relatedTo:['t3'], blockedBy:['t2']}});
   console.log('OK   copia: las relaciones entre tareas siguen a las tareas importadas');
+
+  /* Ubicación y votos: la ubicación se conserva; los votos son de las personas del otro proyecto y no. */
+  made.tasks.length = 0;
+  await plain.import({tasks:[{title:'Con sitio', location:'  Puerta del Sol  ', votes:['uid-de-otro']}, {title:'Sitio raro', location:{lat:1}}, {title:'Sin nada'}]});
+  assert.deepEqual(JSON.parse(JSON.stringify(made.tasks.map((t) => [t.location || null, 'votes' in t]))), [['Puerta del Sol', false], [null, false], [null, false]]);
+  console.log('OK   copia: la ubicación se conserva y los votos no se importan');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

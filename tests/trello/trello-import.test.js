@@ -118,7 +118,17 @@ function board(){
   console.log('OK   trello: checklists → subtareas y comentarios → notas');
 
   /* Lo que Kanlane aún no tiene no se cuela en la tarea (está leído, pero comentado). */
-  ['startDate', 'dueReminder', 'members', 'attachments', 'location', 'votes'].forEach((k) => assert.ok(!(k in first), k));
+  ['startDate', 'dueReminder', 'members', 'attachments', 'votes'].forEach((k) => assert.ok(!(k in first), k));
+
+  /* Ubicación: pasa como texto (el nombre del sitio y su dirección o, si no hay, las coordenadas). */
+  assert.equal(first.location, '40.4, -3.7', 'solo coordenadas');
+  assert.ok(!('location' in second), 'sin ubicación');
+  const placed = board();
+  Object.assign(placed.cards[1], {locationName:'Puerta del Sol', address:'Puerta del Sol, Madrid', idMembersVoted:[id(20)]});
+  const withPlace = TrelloImport.parse(placed).tasks.find((t) => t.title === 'Primera');
+  assert.equal(withPlace.location, 'Puerta del Sol · Puerta del Sol, Madrid');
+  assert.ok(!('votes' in withPlace), 'los votos de Trello no se importan');
+  console.log('OK   trello: la ubicación se conserva como texto y los votos no se importan');
 
   /* Portadas: la de color pasa al color de Kanlane más parecido; la de imagen no viene en el archivo y se avisa. */
   assert.deepEqual(plain(first.cover), {color:'blue'}, 'celeste → azul');
@@ -156,7 +166,7 @@ function board(){
   assert.equal(plain(ProjectTemplates.resolve(config)).stages[1].limit, 3);
   assert.equal(config.labels.length, 4);
   const ALLOWED = ['title', 'desc', 'cliente', 'status', 'contacto', 'dueDate', 'dueTime', 'repeat', 'checklist', 'labels', 'assignees',
-    'linkedContacts', 'linkedVault', 'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'cover'];
+    'linkedContacts', 'linkedVault', 'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'cover', 'location'];
   const written = [];
   const notes = [];
   const model = {

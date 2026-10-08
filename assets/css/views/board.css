@@ -181,6 +181,13 @@ body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--sh
 .card-cover{display:block;height:28px;margin:-12px -12px 10px;border-radius:calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;background:var(--cv, var(--surface-2));}
 .card-cover.is-image{width:calc(100% + 24px);height:112px;object-fit:cover;background:var(--surface-2);}
 .card-cover.is-image:not([src]){display:none;}
+/* Ubicación y votos en la ficha. */
+.tv-location{overflow-wrap:anywhere;}
+a.tv-location{color:inherit;text-decoration:underline;text-underline-offset:2px;}
+.tv-vote-box{display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+.tv-vote-box .tv-vote{margin:0;}
+.tv-votes small{font-size:inherit;color:var(--ink-faint);}
+.tv-vote[aria-pressed="true"]{border-color:var(--accent-solid);}
 /* Tarea bloqueada por otra: etiqueta en la tarjeta y en la fila de la lista. */
 .blocked-badge{display:inline-flex;align-items:center;gap:5px;flex:none;height:22px;padding:0 8px;font-size:12px;border-radius:var(--r-sm);background:var(--late-bg);color:var(--late);white-space:nowrap;}
 .blocked-badge .icon{display:inline-flex;color:inherit !important;margin:0;}

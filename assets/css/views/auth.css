@@ -143,7 +143,9 @@ html.auth-gate .app{display:none !important;}
 .auth-label-row a:hover,.auth-switch a:hover{text-decoration-color:currentColor;}
 /* Contraseña con el botón de ver/ocultar dentro del campo. */
 .auth-pass{position:relative;}
-.auth-form .auth-pass input{padding-right:44px;}
+/* El hueco del ojo. Lleva los mismos :not() que la regla general de los campos: sin ellos
+   pesaba menos que ella, el hueco no se aplicaba y una contraseña larga pasaba por debajo del ojo. */
+.auth-form .auth-pass input:not([type="checkbox"]):not([type="radio"]):not([type="file"]){padding-right:44px;}
 .auth-pass-toggle{
   position:absolute;
   top:50%;

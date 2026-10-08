@@ -78,14 +78,24 @@
       if(south) season = (season + 2) % 4;
     }
     root.setAttribute('data-season', SEASONS[season]);
+    /* El paisaje del acceso se puede quitar (el botón de la pantalla de acceso, ver
+       WORKHUB_AUTH.setScene en auth-early.js): queda apuntado aquí y, desde el primer
+       fotograma, html.scene-off deja el fondo liso y a Sumi en el panel (auth.css). */
+    var sceneOff = false;
+    try{ sceneOff = localStorage.getItem('workhub_scene') === 'off'; }catch(e){}
+    if(sceneOff) root.classList.add('scene-off');
     /* Las fotos de espera del paisaje de esa estación (assets/css/seasons/, las genera
        scripts/make-auth-posters.js). Solo donde puede salir el acceso con paisaje: no en modo
-       local ni en móviles y tabletas (la misma condición que auth.css y auth-early.js). */
-    if(root.classList.contains('auth-gate') && !window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches){
-      var photos = document.createElement('link');
+       local, ni en móviles y tabletas (la misma condición que auth.css y auth-early.js), ni con
+       el paisaje quitado (si se vuelve a poner, las pide auth-early.js con esta función). */
+    var photos = null;
+    window.__scenePhotos = function(){
+      if(photos || !root.classList.contains('auth-gate') || window.matchMedia('(max-width: 860px), (hover: none) and (pointer: coarse)').matches) return;
+      photos = document.createElement('link');
       photos.rel = 'stylesheet'; photos.href = '../assets/css/seasons/' + SEASONS[season] + '.css';
       document.head.appendChild(photos);
-    }
+    };
+    if(!sceneOff) window.__scenePhotos();
   }catch(e){}
   try{
     var theme = localStorage.getItem('workhub_theme');

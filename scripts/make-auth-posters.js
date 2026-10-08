@@ -93,6 +93,8 @@ async function shot(browser, theme, up, tree, season){
      copos parados en la foto se notan cuando llegan los de verdad. */
   const data = await page.evaluate((only) => {
     const scene = Workhub.views.authScene;
+    /* La escena arranca en el escalón más ligero y va subiendo: para la foto, el mejor. */
+    scene.quality(0);
     /* bench() pinta y espera a la tarjeta: en este mismo turno el lienzo aún tiene la imagen. */
     for(let i = 0; i < 40; i++) scene.bench(1, only);
     return document.getElementById('authCanvas').toDataURL('image/png');

@@ -134,7 +134,34 @@
     });
     return sceneLoad;
   };
-  function wantScene(){ if(!screen.hidden && !api.plain.matches) api.loadScene(); }
+  /* El paisaje se puede quitar del todo con el botón de la pantalla de acceso (lo pidió el
+     dueño, para los equipos a los que les pesa): se apunta en este navegador y boot.js pone
+     html.scene-off antes de pintar. Sin paisaje no se descarga la escena ni sus fotos; queda
+     el fondo liso y, en el panel de la derecha, Sumi con su tablero (auth.css). */
+  var root = document.documentElement;
+  api.sceneOff = function(){ return root.classList.contains('scene-off'); };
+  /* El botón, ya con su texto si el paisaje estaba quitado (AuthView lo mantiene después). */
+  var sceneBtn = $('authSceneToggle');
+  if(sceneBtn && api.sceneOff()){
+    sceneBtn.setAttribute('aria-pressed', 'false');
+    sceneBtn.setAttribute('aria-label', 'Mostrar el paisaje animado');
+    sceneBtn.title = 'Mostrar el paisaje animado';
+  }
+  api.setScene = function(on){
+    root.classList.toggle('scene-off', !on);
+    try{
+      if(on) localStorage.removeItem('workhub_scene');
+      else localStorage.setItem('workhub_scene', 'off');
+    }catch(e){}
+    if(on){
+      /* Las fotos de espera (boot.js no las pidió) y la escena, si aún no se había bajado. */
+      if(window.__scenePhotos) window.__scenePhotos();
+      place();
+      wantScene();
+    }
+    if(api.scene) api.scene.enable(on);
+  };
+  function wantScene(){ if(!screen.hidden && !api.plain.matches && !api.sceneOff()) api.loadScene(); }
   if(api.plain.addEventListener) api.plain.addEventListener('change', wantScene);
   /* La pantalla de acceso aparece con el atributo hidden (aquí o desde AuthView). */
   new MutationObserver(function(){ place(); wantScene(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});

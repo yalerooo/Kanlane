@@ -9,7 +9,7 @@ const root = path.join(__dirname, '../..');
 const boot = fs.readFileSync(path.join(root, 'src/boot.js'), 'utf8');
 
 /* Ejecuta boot.js con un navegador de mentira y devuelve lo que deja en <html> y en <head>. */
-function run({month, zone, search = '', firebase = false, narrow = false}){
+function run({month, zone, search = '', firebase = false, narrow = false, store = {}}){
   const attrs = {}, classes = new Set(), links = [];
   const html = {
     classList: {add: (...c) => c.forEach((x) => classes.add(x)), remove: (...c) => c.forEach((x) => classes.delete(x)), contains: (c) => classes.has(c)},
@@ -20,13 +20,13 @@ function run({month, zone, search = '', firebase = false, narrow = false}){
     window: {WORKHUB_FIREBASE: firebase ? {apiKey: 'k', projectId: 'p'} : {}, matchMedia: () => ({matches: narrow})},
     document: {documentElement: html, createElement: () => ({}), head: {appendChild: (el) => links.push(el)}},
     location: {protocol: 'https:', search},
-    localStorage: {getItem: () => null},
+    localStorage: {getItem: (k) => (k in store ? store[k] : null)},
     navigator: {language: 'es-ES', languages: ['es-ES']},
     Intl: {DateTimeFormat: () => ({resolvedOptions: () => ({timeZone: zone})})},
     Date: FakeDate,
     setTimeout: () => {}
   });
-  return {season: attrs['data-season'], sheets: links.filter((l) => l.rel === 'stylesheet').map((l) => l.href)};
+  return {season: attrs['data-season'], classes, sheets: links.filter((l) => l.rel === 'stylesheet').map((l) => l.href)};
 }
 
 let passed = 0;
@@ -68,6 +68,15 @@ test('las fotos de espera de la estación solo se enlazan con acceso y fuera de 
   assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true}).sheets, ['../assets/css/seasons/autumn.css']);
   assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, narrow: true}).sheets, []);
   assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: false}).sheets, []);
+});
+
+test('con el paisaje quitado se marca html.scene-off y no se enlazan las fotos de espera', () => {
+  const off = run({month: 9, zone: 'Europe/Madrid', firebase: true, store: {workhub_scene: 'off'}});
+  assert.ok(off.classes.has('scene-off'));
+  assert.deepEqual(off.sheets, []);
+  const on = run({month: 9, zone: 'Europe/Madrid', firebase: true});
+  assert.ok(!on.classes.has('scene-off'));
+  assert.equal(on.sheets.length, 1);
 });
 
 test('cada estación tiene su árbol y sus fotos de espera', () => {

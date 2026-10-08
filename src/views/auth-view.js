@@ -96,6 +96,23 @@
       });
 
       this.buildScene();
+      this.buildDesk();
+      /* El botón del paisaje: lo quita del todo (fondo liso y Sumi en el panel) o lo devuelve. */
+      const sceneBtn = $('authSceneToggle');
+      const paintSceneBtn = () => {
+        const on = !EARLY.sceneOff();
+        const label = Workhub.t(on ? 'Quitar el paisaje animado' : 'Mostrar el paisaje animado');
+        sceneBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        sceneBtn.setAttribute('aria-label', label);
+        sceneBtn.title = label;
+      };
+      this.paintSceneBtn = paintSceneBtn;
+      paintSceneBtn();
+      sceneBtn.addEventListener('click', () => {
+        EARLY.setScene(EARLY.sceneOff());
+        paintSceneBtn();
+        this.playDesk();
+      });
       /* La pantalla del ordenador de la escena acompaña al formulario: mientras se escribe
          enseña un cuadro de acceso con el correo (o el nombre) letra a letra. De la contraseña
          solo se le pasa cuántos caracteres hay, y salen como puntos. */
@@ -144,6 +161,72 @@
     scene(o){
       const s = Workhub.views.authScene;
       if(s) s.signal(o);
+    }
+
+    /* ---------- Sin paisaje: Sumi y su tablero ----------
+       Con el paisaje quitado (html.scene-off), en el panel de la derecha va Sumi sobre un
+       tablero pequeño. Sigue el cursor con los ojos y los cierra mientras se escribe la
+       contraseña, como el de la esquina del formulario, al que sustituye. */
+    buildDesk(){
+      const sumi = Workhub.views.sumi;
+      this.desk = $('authDesk');
+      $('authDeskSumi').innerHTML = sumi.svg({size:112, cls:'is-alive'});
+      this.deskSumi = $('authDeskSumi').firstChild;
+      this.deskMood = 'normal';
+      this.deskTimers = [];
+      sumi.follow(this.deskSumi);
+      this.pass.addEventListener('focus', () => sumi.setMood(this.deskSumi, 'cerrado'));
+      this.pass.addEventListener('blur', () => sumi.setMood(this.deskSumi, this.deskMood));
+    }
+
+    stopDesk(){
+      this.deskTimers.splice(0).forEach(clearTimeout);
+      this.desk.querySelectorAll('.auth-desk-card').forEach((c) => c.getAnimations().forEach((a) => a.cancel()));
+    }
+
+    /* Sumi va avanzando las tareas, una a una, y al llevar la última a «Hecho» lo celebra.
+       Como manda su cuaderno (docs/marca/cuaderno-sumi.html): el brazo central baja una vez por
+       tarjeta, todo ocurre una vez y termina, y con «reducir movimiento» se ve ya el final.
+       Se repite cada vez que el panel vuelve a enseñarse. */
+    playDesk(){
+      this.stopDesk();
+      const sumi = Workhub.views.sumi, el = this.deskSumi;
+      const cols = Array.from(this.desk.querySelectorAll('.auth-desk-col'));
+      const cards = Array.from(this.desk.querySelectorAll('.auth-desk-card'));
+      const mood = (m) => { this.deskMood = m; if(document.activeElement !== this.pass) sumi.setMood(el, m); };
+      /* Como al principio: dos por hacer y una en curso. */
+      cards.forEach((c, i) => cols[i < 2 ? 0 : 1].appendChild(c));
+      mood('normal');
+      if(this.screen.hidden || !EARLY.sceneOff() || EARLY.plain.matches) return;
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced'){
+        cards.forEach((c) => cols[2].appendChild(c));
+        mood('contento');
+        return;
+      }
+      /* La tarjeta cambia de columna y va de un sitio a otro con un salto corto; las que deja
+         atrás suben a ocupar su hueco. */
+      const move = (card, col) => {
+        const before = cards.map((c) => c.getBoundingClientRect());
+        col.appendChild(card);
+        cards.forEach((c, i) => {
+          const now = c.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
+          if(!dx && !dy) return;
+          const lift = c === card ? -14 : 0;
+          c.animate([
+            {transform:'translate(' + dx + 'px,' + dy + 'px)'},
+            {transform:'translate(' + dx / 2 + 'px,' + (dy / 2 + lift) + 'px)'},
+            {transform:'none'}
+          ], {duration:600, easing:'cubic-bezier(.3,.6,.3,1)'});
+        });
+        sumi.play(el, 'dip');
+      };
+      /* Qué tarea pasa a qué columna, por orden. */
+      const steps = [[2, 2], [0, 1], [0, 2], [1, 1], [1, 2]];
+      const later = (fn, ms) => this.deskTimers.push(setTimeout(fn, ms));
+      steps.forEach((s, i) => later(() => move(cards[s[0]], cols[s[1]]), 1100 + i * 1500));
+      const end = 1100 + (steps.length - 1) * 1500 + 750;
+      later(() => { mood('fiesta'); sumi.play(el, 'nod'); }, end);
+      later(() => mood('contento'), end + 2600);
     }
 
     /* Acceso correcto: la pantalla del ordenador lo celebra un instante antes de pasar a la app.
@@ -309,6 +392,7 @@
       this.setMode(mode, !early || !this.panel.contains(document.activeElement));
       /* Lo que se pulsó mientras cargaba la app se atiende ahora. */
       EARLY.take(true);
+      this.playDesk();
     }
 
     paintProviders(){
@@ -324,6 +408,7 @@
       const guest = this.panel.classList.contains('is-guest');
       const shown = this.pass.type === 'text';
       this.paintProviders();
+      this.paintSceneBtn();
       this.showGuests(this.guests);
       if(guest) this.setGuestStep(true); else this.setMode(this.mode);
       this.setPassVisible(shown);
@@ -447,6 +532,7 @@
       this.screen.hidden = true;
       this.verifyRun = null;
       this.stopTimers();
+      this.stopDesk();
       this.scene({reset:true});
     }
 

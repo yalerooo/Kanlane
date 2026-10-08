@@ -255,6 +255,8 @@
         <div class="filter-panel" id="taskFilterPanel" hidden>
           <label class="filter-field needs-clients"><span>Cliente</span><select id="filterCliente" class="needs-clients" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option></select></label>
           <label class="filter-field team-only team-off"><span>Miembro</span><select id="filterAssignee" class="team-only team-off" aria-label="Filtrar por miembro"><option value="">Todos los miembros</option></select></label>
+          <label class="filter-field" id="filterLabelField" hidden><span>Etiqueta</span><select id="filterLabel" aria-label="Filtrar por etiqueta"><option value="">Todas las etiquetas</option></select></label>
+          <label class="filter-field"><span>Fecha límite</span><select id="filterDue" aria-label="Filtrar por fecha límite"><option value="">Cualquier fecha</option><option value="overdue">Vencidas</option><option value="none">Sin fecha</option></select></label>
           <button type="button" class="btn btn-ghost btn-sm" id="btnTaskFilterClear">Quitar filtros</button>
         </div>
       </div>

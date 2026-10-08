@@ -243,12 +243,19 @@
       return this.items.filter((t) => TaskModel.stageKey(t) === status).sort(TaskModel.byOrder);
     }
 
-    /* assignee (solo en equipos): '' todas, 'me' las mías, 'none' sin asignar o el uid de un miembro. */
-    filter(query, cliente, assignee){
+    /* assignee (solo en equipos): '' todas, 'me' las mías, 'none' sin asignar o el uid de un miembro.
+       more (opcional): {label, due}. label: el nombre de una etiqueta (sin distinguir mayúsculas);
+       due: 'overdue' las vencidas sin terminar, 'none' las que no tienen fecha límite. */
+    filter(query, cliente, assignee, more){
       const q = (query || '').trim().toLowerCase();
       const T = Workhub.views.team;
+      const label = String((more && more.label) || '').toLowerCase();
+      const due = (more && more.due) || '';
       return this.items.filter((t) => {
         if(cliente && (t.cliente || 'Sin cliente') !== cliente) return false;
+        if(label && !(Array.isArray(t.labels) && t.labels.some((n) => String(n).toLowerCase() === label))) return false;
+        if(due === 'overdue' && TaskModel.dueState(t) !== 'overdue') return false;
+        if(due === 'none' && t.dueDate) return false;
         if(assignee && T.enabled()){
           const who = T.assigned(t);
           if(assignee === 'none'){ if(who.length) return false; }

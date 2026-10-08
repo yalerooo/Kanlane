@@ -108,7 +108,7 @@
 
   function render(){
     const f = board.filters();
-    let list = tasks.filter(f.query, f.cliente, f.assignee);
+    let list = tasks.filter(f.query, f.cliente, f.assignee, f);
     if(f.week) list = board.dueThisWeek(list);
     board.render(list, tasks.items);
   }

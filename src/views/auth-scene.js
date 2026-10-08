@@ -38,8 +38,9 @@
    descansa un rato y vuelve a probar. La calidad en la que se asienta se guarda en el
    navegador (MEMO_KEY) y la visita siguiente arranca ya en ella y se enseña enseguida. Con la
    escena a la vista no cambia de calidad delante de nadie: si hay que bajar, se retira un
-   instante tras la foto desenfocada y vuelve ya cambiada (retreat); si se podría subir, se
-   apunta para la próxima visita. Se pinta solo mientras la pantalla de
+   instante tras la foto desenfocada y vuelve ya cambiada (retreat), y a la vista no sube. La
+   primera vez la calidad se elige de una carrera de fotogramas, sin subir escalón a escalón
+   (sprint). Se pinta solo mientras la pantalla de
    acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
    sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
    parado varios segundos). Hasta que acaban se enseña una imagen de la escena hecha de antemano
@@ -3750,19 +3751,16 @@
         if(guess(i) <= 0.8 * room(i) && (m.l >= level - 2 || guess(i) <= 0.5 * room(i))) to = i;
         else if(m.l === level - 1 && m.n === step && ms <= 0.72 * room(i)) to = i;
       }
-      if(to < 0){ steady = true; ups = 0; if(!later) remember(mode); return; }
-      /* Con la escena ya a la vista, subir se notaría (cambia la resolución) y no hace falta
-         para que vaya fluida: si lleva un rato pidiéndolo, se apunta para la próxima visita,
-         que arrancará en ese modo, y aquí se queda como está. */
-      if(shown){
-        if(++ups >= 3 && !later){ later = true; remember(to); }
-        return;
-      }
+      if(to < 0){ steady = true; ups = 0; remember(mode); return; }
+      /* Con la escena ya a la vista no se sube: se notaría (cambia la resolución) y no hace
+         falta para que vaya fluida. Tampoco se apunta para la próxima visita: lo que tardaría
+         el modo de arriba es una estimación, y cuando fallaba la visita siguiente arrancaba
+         demasiado alto y tenía que retirarse para bajar (medido). La calidad guardada caduca
+         (MEMO_DAYS) y entonces se elige de nuevo. */
+      if(shown) return;
       note(ms);
       setMode(to);
     }
-    /* later: ya hay apuntado un modo mejor para la próxima visita; no se pisa con el de ahora. */
-    let later = false;
     /* Con la escena ya a la vista, si hay que bajar de calidad (otra ventana, el equipo más
        cargado que cuando se asentó) no se cambia delante de nadie: la escena se retira un
        instante tras la foto desenfocada, cambia, vuelve a asentarse sin verse y se enseña otra
@@ -3770,7 +3768,6 @@
     function retreat(to){
       swapping = true;
       shown = false;
-      later = false;
       canvas.classList.add('is-swap');
       canvas.classList.remove('is-on');
       setTimeout(() => {
@@ -3795,6 +3792,68 @@
         wake();
       }, restWait);
       restWait = Math.min(restWait * 2, 240000);
+    }
+    /* La primera visita (sin calidad guardada), con reloj. Subir desde lo más ligero midiendo
+       fotogramas al ritmo de la pantalla llevaba uno o dos segundos con la escena ya lista y
+       sin enseñar, y era casi todo lo que tardaba en salir en un equipo modesto. Aquí se
+       mide de una carrera: unos fotogramas seguidos en lo más ligero, que no ahoga a nadie, y
+       con lo que tardan y lo que pesa cada modo (weight) se salta al mejor que quepa; allí se
+       comprueba con otra carrera y, si no cabe, se baja al que diga esa medida, que ya es de
+       cerca. Tres o cuatro tandas, unas décimas. Después sigue el reloj de siempre (decide). */
+    function burst(n){
+      return new Promise((resolve) => {
+        /* Los fotogramas van con la hora que les tocaría en pantalla, para que hagan lo que
+           harían de verdad (los turnos del cielo, el suelo y la luz de la hierba van por
+           tiempo). El primero rehace lo que no cambia y no cuenta. */
+        const gap = frameMs * step, from = performance.now();
+        draw(from);
+        const q = gl.createQuery();
+        gl.beginQuery(clock.TIME_ELAPSED_EXT, q);
+        for(let i = 1; i <= n; i++) draw(from + i * gap);
+        gl.endQuery(clock.TIME_ELAPSED_EXT);
+        gl.flush();
+        const poll = () => {
+          if(dead || gl.isContextLost()){ resolve(0); return; }
+          if(!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)){
+            if(performance.now() - from > 3000){ gl.deleteQuery(q); resolve(0); return; }
+            setTimeout(poll, 4);
+            return;
+          }
+          const ms = gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6 / n, clean = !gl.getParameter(clock.GPU_DISJOINT_EXT);
+          gl.deleteQuery(q);
+          resolve(clean ? ms : 0);
+        };
+        setTimeout(poll, 4);
+      });
+    }
+    async function sprint(){
+      measuring = true;
+      /* El mejor modo en el que cabría, por lo que tarda este y lo que pesa cada uno. */
+      const fit = (ms) => {
+        for(let i = 0; i < MODES.length; i++) if(ms * weight(MODES[i].l) / weight(level) <= 0.75 * room(i)) return i;
+        return MODES.length - 1;
+      };
+      /* floor: de ahí para arriba ya se ha visto que no cabe. */
+      let floor = 0, ok = false;
+      for(let round = 0; round < 4; round++){
+        const ms = await burst(4);
+        if(!(ms > 0) || dead || pinned) break;
+        took = ms;
+        seen[level] = {ms, at:performance.now()};
+        note(ms);
+        const fits = ms <= 0.82 * room(mode);
+        if(!fits) floor = mode + 1;
+        const to = Math.min(MODES.length - 1, Math.max(fit(ms), floor));
+        if(to === mode || (fits && to > mode)){ ok = fits; break; }
+        setMode(to);
+      }
+      measuring = false;
+      if(dead) return;
+      /* Lo que la carrera ha adelantado en el reloj de la escena se olvida. */
+      prev = 0; lightAt = 0; turnAt = 0;
+      if(ok && !pinned){ steady = true; remember(mode); }
+      settle = performance.now() + 120;
+      wake();
     }
     /* Sin reloj: una tanda de fotogramas de prueba (pace) y a decidir con eso. Se repite poco
        después si ha cambiado algo (hay que medir el modo nuevo) y, si se bajó, cuando toque
@@ -3832,6 +3891,17 @@
     function loop(now){
       raf = 0;
       if(dead || away(screen) || document.hidden || measuring) return;
+      /* Lo que dura un fotograma de esta pantalla: lo habitual entre dos llamadas seguidas. Se
+         mide ya mientras se compila, para saberlo cuando haya que elegir la calidad (sprint). */
+      if(beatAt && now - beatAt > 3 && now - beatAt < 60){
+        beats.push(now - beatAt);
+        if(beats.length >= 30){
+          beats.sort((a, b) => a - b);
+          frameMs = Math.min(Math.max(beats[9], 4), 34);
+          beats.length = 0;
+        }
+      }
+      beatAt = now;
       /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
       if(!live){
         loadPoster();
@@ -3845,17 +3915,11 @@
         if(!isStill()) raf = requestAnimationFrame(loop);
         return;
       }
-      if(!liveAt){ liveAt = now; probeAt = now + 100; }
-      /* Lo que dura un fotograma de esta pantalla: lo habitual entre dos llamadas seguidas. */
-      if(beatAt && now - beatAt > 3 && now - beatAt < 60){
-        beats.push(now - beatAt);
-        if(beats.length >= 30){
-          beats.sort((a, b) => a - b);
-          frameMs = Math.min(Math.max(beats[9], 4), 34);
-          beats.length = 0;
-        }
+      if(!liveAt){
+        liveAt = now; probeAt = now + 100;
+        /* La primera vez en este equipo: la calidad se elige de una carrera, no subiendo. */
+        if(clockOn && !memo && !pinned && !isStill()){ sprint(); return; }
       }
-      beatAt = now;
       if(clockOn) readClock();
       /* Con movimiento reducido (o ahorro de datos) es una sola imagen: en el mejor escalón, que
          no hay que moverla. */

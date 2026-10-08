@@ -1674,6 +1674,18 @@
     'No se han permitido las notificaciones en este navegador.':'Notifications were not allowed in this browser.',
     'Demasiados intentos. Espera un momento.':'Too many attempts. Wait a moment.',
     'No se pudieron activar los avisos. Inténtalo de nuevo.':'Couldn\'t turn on notifications. Try again.',
+    /* Duplicar tareas y columnas */
+    'Duplicar tarea':'Duplicate task',
+    'Duplicar columna':'Duplicate column',
+    '{name} (copia)':'{name} (copy)',
+    'Tarea duplicada':'Task duplicated',
+    'Columna duplicada':'Column duplicated',
+    'Copia eliminada':'Copy deleted',
+    'No se pudo duplicar la tarea':'Couldn\'t duplicate the task',
+    'No se pudo duplicar la columna':'Couldn\'t duplicate the column',
+    'No se pudieron duplicar todas las tarjetas de la columna':'Not all cards in the column could be duplicated',
+    'El proyecto ya tiene el máximo de columnas.':'The project already has the maximum number of columns.',
+    'creó la tarea como copia de otra':'created the task as a copy of another',
     /* Archivar tareas y columnas */
     'Archivar':'Archive',
     'Archivados':'Archived',

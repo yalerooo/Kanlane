@@ -17,6 +17,9 @@
   };
 
   const ORDER_STEP = 1024;
+  /* Campos de una tarea que no pasan a su copia (ver copyOf). */
+  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned',
+    'ghItemId', 'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels', 'ghPrs', 'ghSyncedAt', 'ghRemoteAt'];
   /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
   const DUE_SPAN = {day:1, week:7, month:30};
 
@@ -351,6 +354,51 @@
         if(ref && ref.id) this.emit('auto', {type:'created', id:ref.id, to:TaskModel.stageKey(body)});
         return ref;
       });
+    }
+
+    /* Lo que lleva la copia de una tarea: todo su contenido (título, descripción, subtareas con su
+       estado, etiquetas, personas asignadas, fechas, repetición, vínculos y campos personalizados),
+       sin compartir nada con la original. No se copia lo que la identifica en otro sitio (GitHub),
+       su historia (creación, archivo, repetición ya creada) ni quién la sigue. Las notas viven en
+       una subcolección y tampoco se copian. over: campos que cambian en la copia. */
+    static copyOf(t, over){
+      const body = {};
+      Object.keys(t || {}).forEach((k) => {
+        if(k.charAt(0) === '_' || NOT_COPIED.indexOf(k) !== -1 || t[k] === undefined) return;
+        body[k] = JSON.parse(JSON.stringify(t[k]));
+      });
+      Object.assign(body, over);
+      body.createdAt = body.updatedAt = Date.now();
+      return body;
+    }
+
+    /* Duplica una tarea: la copia queda justo debajo de la original, en su misma columna.
+       Cuenta como una tarea creada por una persona (puede disparar una automatización). */
+    duplicate(id, over){
+      const t = this.find(id);
+      if(!t || t._undecryptable || !this.isReady()) return Promise.reject(new Error('not-found'));
+      const status = TaskModel.stageKey(t);
+      const column = this.inStatus(status);
+      const next = column[column.indexOf(t) + 1];
+      const order = next ? (TaskModel.orderOf(t) + TaskModel.orderOf(next)) / 2 : TaskModel.orderOf(t) + ORDER_STEP;
+      return this.add(TaskModel.copyOf(t, Object.assign({}, over, {status:status, order:order}))).then((ref) => {
+        if(ref && ref.id) this.emit('auto', {type:'created', id:ref.id, to:status});
+        return ref;
+      });
+    }
+
+    /* Copia varias tareas a la columna `status` (al duplicar una columna), en el orden en que
+       vienen en la lista: el orden se numera de nuevo, así dos tareas que empataban quedan igual
+       que se veían. De una en una y con concurrencia limitada, nunca en lote (límite de las reglas
+       en equipos). Es una copia en bloque, como una importación: no dispara automatizaciones.
+       → promesa con {ids: las creadas, failed: cuántas no se pudieron crear}. */
+    duplicateInto(list, status){
+      const ids = [];
+      let failed = 0;
+      const todo = (list || []).filter((t) => t && !t._undecryptable);
+      if(!this.isReady()) return Promise.resolve({ids:ids, failed:todo.length});
+      return Workhub.utils.pool.run(todo, 8, (t) => this.add(TaskModel.copyOf(t, {status:status, order:(todo.indexOf(t) + 1) * ORDER_STEP}))
+        .then((ref) => { if(ref && ref.id) ids.push(ref.id); }, () => { failed++; })).then(() => ({ids:ids, failed:failed}));
     }
 
     /* Escritura que viene de la sincronización con GitHub: la tarea queda

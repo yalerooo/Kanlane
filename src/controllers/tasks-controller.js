@@ -5,6 +5,12 @@
   const platform = Workhub.services.platform;
   const toast = Workhub.views.toast;
 
+  /* Nombre de una copia, «Nombre (copia)», sin pasar de max caracteres (se recorta el nombre). */
+  function copyName(name, max){
+    const room = max - Workhub.t('{name} (copia)', {name:''}).length;
+    return Workhub.t('{name} (copia)', {name:String(name || '').slice(0, Math.max(0, room)).trim()}).trim();
+  }
+
   class TasksController {
     constructor(app, board, dialog, detail){
       this.app = app;
@@ -122,6 +128,7 @@
         this.openEdit(id, true);
       });
       this.detail.bindArchive((id) => this.archiveTasks([id]));
+      this.detail.bindDuplicate((id) => this.duplicateTask(id));
       this.detail.bindFollow((id) => this.toggleFollow(id));
       this.bindTaskLinks();
       this.detail.bindStatus((id, status) => {
@@ -432,6 +439,7 @@
           visible: stages.length - this.hiddenColumns().length,
           tasks: this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).length,
           canRemove: stages.length > PT.MIN_STAGES,
+          canDuplicate: stages.length + TaskModel.ARCHIVED.length < PT.MAX_STAGES,
           canArchive: !this.archiveBlock(status),
           archiveWhy: this.archiveBlock(status)
         });
@@ -443,6 +451,7 @@
         },
         hide: (status) => this.setHiddenColumns(this.hiddenColumns().concat(status)),
         move: (status, dir) => this.moveColumn(status, dir),
+        duplicate: (status) => this.duplicateColumn(status),
         archive: (status) => this.archiveColumn(status),
         archiveAll: (status) => this.archiveTasks(this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).map((t) => t.id)),
         remove: (status) => this.removeColumn(status),
@@ -529,6 +538,67 @@
           () => toast.undoable(list.length === 1 ? 'Tarjeta eliminada' : list.length + ' tarjetas eliminadas', () => this.tasks.restore(snap), list.length === 1 ? 'Tarjeta restaurada' : 'Tarjetas restauradas'),
           () => toast.error('No se pudieron eliminar todas las tarjetas'));
       });
+    }
+
+    /* ---------- Duplicar ---------- */
+
+    /* Duplica una tarea: la copia queda debajo de la original, con su contenido, subtareas,
+       etiquetas y personas asignadas (TaskModel.copyOf dice qué se lleva), y se abre su ficha. */
+    duplicateTask(id){
+      const T = Workhub.views.team;
+      const t = this.tasks.find(id);
+      if(!t || !this.tasks.isReady() || !T.canEdit()) return;
+      if(t._undecryptable){ toast.error('Esta tarea no se puede descifrar con la clave de este proyecto.'); return; }
+      this.tasks.duplicate(id, {title:copyName(t.title, 500)}).then((ref) => {
+        const copy = ref.id;
+        this.logActivity(copy, 'creó la tarea como copia de otra');
+        /* A quien tenga asignada la copia se le avisa, como al crear una tarea asignada. */
+        this.notifyAssigned(copy, [], T.assigned(t));
+        toast.undoable('Tarea duplicada', () => this.tasks.remove(copy), 'Copia eliminada');
+        /* Se abre en cuanto esté entre las tareas cargadas (lo normal es que ya lo esté). */
+        this.taskLink = {project:this.app.projectId, task:copy, until:Date.now() + 5000};
+        this.tryTaskLink();
+      }, () => toast.error('No se pudo duplicar la tarea'));
+    }
+
+    /* Duplica una columna con sus tarjetas: la copia va justo detrás, con el mismo color, límite
+       y «cuenta como terminada». Las tarjetas son copias independientes, con sus mismos títulos
+       y en el mismo orden. Se puede deshacer desde el aviso. */
+    duplicateColumn(status){
+      const TaskModel = Workhub.models.TaskModel;
+      const PT = Workhub.models.ProjectTemplates;
+      const s = TaskModel.STATUS.find((x) => x.key === status);
+      if(!s || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      if(TaskModel.STATUS.length + TaskModel.ARCHIVED.length >= PT.MAX_STAGES){ toast.error('El proyecto ya tiene el máximo de columnas.'); return; }
+      const key = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      /* Las tarjetas de ahora, antes de que exista la columna nueva. */
+      const cards = this.tasks.inStatus(status);
+      const saved = this.stagesApi().updateStages((stages) => {
+        const i = stages.findIndex((x) => x.key === status);
+        if(i < 0) return false;
+        const copy = {key:key, label:copyName(s.label, 40), color:s.color, done:!!s.done};
+        if(s.limit) copy.limit = s.limit;
+        stages.splice(i + 1, 0, copy);
+      });
+      /* updateStages enseña la columna al momento y guarda después: si no está, no se llegó a crear. */
+      if(!TaskModel.STATUS.some((x) => x.key === key)){ toast.error('No se pudo duplicar la columna'); return; }
+      Promise.all([saved, this.tasks.duplicateInto(cards, key)]).then(([ok, out]) => {
+        /* La columna no se pudo guardar (updateStages ya lo ha dicho): sus tarjetas sobran. */
+        if(!ok){ out.ids.forEach((id) => this.tasks.remove(id).catch(() => {})); return; }
+        if(out.failed) toast.error('No se pudieron duplicar todas las tarjetas de la columna');
+        toast.undoable('Columna duplicada', () => this.undoColumnCopy(key, out.ids), 'Copia eliminada');
+      });
+    }
+
+    /* Deshacer «Duplicar columna»: borra las copias que sigan en esa columna y la quita. Lo que
+       alguien haya movido ya a otra columna se queda donde está. */
+    undoColumnCopy(key, ids){
+      const here = ids.filter((id) => { const t = this.tasks.findAny(id); return t && t.status === key; });
+      return Promise.all(here.map((id) => this.tasks.remove(id))).then(() => this.stagesApi().updateStages((stages) => {
+        const i = stages.findIndex((x) => x.key === key);
+        if(i < 0) return false;
+        stages.splice(i, 1);
+      }));
     }
 
     /* ---------- Archivo ---------- */

@@ -42,6 +42,7 @@ jobs:
           node tests/fields/custom-fields.test.js
           node tests/tasks/repeat.test.js
           node tests/tasks/archive.test.js
+          node tests/tasks/duplicate.test.js
           node tests/tasks/filter.test.js
           node tests/local/local-store.test.js
           node tests/trello/trello-import.test.js

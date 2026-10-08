@@ -130,7 +130,11 @@
     let inner;
     if(cut){
       const id = 'sumi-m' + (++serial);
-      inner = '<mask id="' + id + '" maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80"><rect x="-8" y="-8" width="80" height="80" fill="#fff"/><g class="sumi-face">' + parts.face + '</g></mask>' +
+      /* La máscara que recorta los ojos tiene un tamaño, y lo que se sale de ella no se pinta.
+         Con los brazos sueltos (flow) el del medio, al estirarse, llegaba más abajo de su borde y
+         se veía cortado en recto: ahí la máscara es bastante más grande. */
+      const box = o.flow ? 'x="-48" y="-40" width="160" height="190"' : 'x="-8" y="-8" width="80" height="80"';
+      inner = '<mask id="' + id + '" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#fff"/><g class="sumi-face">' + parts.face + '</g></mask>' +
         '<g mask="url(#' + id + ')" fill="' + body + '">' + shape + '</g>' + extra + deco;
     } else {
       inner = '<g fill="' + body + '">' + shape + '</g><g class="sumi-face">' + parts.face + '</g>' + extra;

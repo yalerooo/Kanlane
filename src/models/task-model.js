@@ -17,6 +17,8 @@
   };
 
   const ORDER_STEP = 1024;
+  /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
+  const DUE_SPAN = {day:1, week:7, month:30};
 
   /* Cada cuánto se repite una tarea. */
   const REPEATS = [
@@ -244,14 +246,23 @@
     }
 
     /* assignee (solo en equipos): '' todas, 'me' las mías, 'none' sin asignar o el uid de un miembro.
-       more (opcional): {label, due}. label: el nombre de una etiqueta (sin distinguir mayúsculas);
-       due: 'overdue' las vencidas sin terminar, 'none' las que no tienen fecha límite. */
+       more (opcional): {label, noLabel, due, done}. label: el nombre de una etiqueta (sin distinguir
+       mayúsculas); noLabel: las que no llevan ninguna. due: 'overdue' las vencidas sin terminar,
+       'none' las que no tienen fecha límite, y 'day' | 'week' | 'month' las que están sin terminar
+       y vencen de hoy a mañana, a 7 días o a 30 días. done: 'done' las completadas, 'open' el resto. */
     filter(query, cliente, assignee, more){
       const q = (query || '').trim().toLowerCase();
       const T = Workhub.views.team;
       const label = String((more && more.label) || '').toLowerCase();
       const due = (more && more.due) || '';
+      const done = (more && more.done) || '';
+      const noLabel = !!(more && more.noLabel);
+      const today = todayYmd();
+      const until = DUE_SPAN[due] ? shiftYmd(today, DUE_SPAN[due]) : '';
       return this.items.filter((t) => {
+        if(noLabel && Array.isArray(t.labels) && t.labels.length) return false;
+        if(done && TaskModel.isDone(t) !== (done === 'done')) return false;
+        if(until && !(t.dueDate && !TaskModel.isDone(t) && t.dueDate >= today && t.dueDate <= until)) return false;
         if(cliente && (t.cliente || 'Sin cliente') !== cliente) return false;
         if(label && !(Array.isArray(t.labels) && t.labels.some((n) => String(n).toLowerCase() === label))) return false;
         if(due === 'overdue' && TaskModel.dueState(t) !== 'overdue') return false;

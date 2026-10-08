@@ -154,7 +154,7 @@
     render(){
       const f = this.board.filters();
       this.board.setHidden(this.hiddenColumns());
-      let list = this.tasks.filter(f.query, f.cliente, f.assignee);
+      let list = this.tasks.filter(f.query, f.cliente, f.assignee, f);
       if(f.week) list = this.board.dueThisWeek(list);
       this.board.render(list, this.tasks.items);
       if(this.board.mode === 'table') this.table.render(list, this.tasks.items);

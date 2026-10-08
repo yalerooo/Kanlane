@@ -36,6 +36,9 @@
       this.search = document.getElementById('search');
       this.filterCliente = document.getElementById('filterCliente');
       this.filterAssignee = document.getElementById('filterAssignee');
+      this.filterLabel = document.getElementById('filterLabel');
+      this.filterLabelField = document.getElementById('filterLabelField');
+      this.filterDue = document.getElementById('filterDue');
       this.btnNew = document.getElementById('btnNew');
       this.tabs = document.getElementById('boardTabs');
       this.keyboardStatus = document.getElementById('boardKeyboardStatus');
@@ -139,6 +142,8 @@
       this.search.addEventListener('input', handler);
       this.filterCliente.addEventListener('change', handler);
       this.filterAssignee.addEventListener('change', handler);
+      this.filterLabel.addEventListener('change', handler);
+      this.filterDue.addEventListener('change', handler);
       const pick = (el, value) => {
         el.value = el.value === value ? '' : value;
         el.dispatchEvent(new Event('change', {bubbles:true}));
@@ -151,6 +156,7 @@
         if(kind === 'all') this.clearFilters();
         else if(kind === 'week'){ this.week = !this.week; handler(); }
         else if(kind === 'mine') pick(this.filterAssignee, 'me');
+        else if(kind === 'unassigned') pick(this.filterAssignee, 'none');
         else if(kind === 'client') pick(this.filterCliente, b.getAttribute('data-client'));
       });
       if(this.filterClear) this.filterClear.addEventListener('click', () => { this.clearFilters(); this._toggleFilterPanel(false); });
@@ -168,11 +174,11 @@
       this._refilter = handler;
     }
 
-    /* Quita cliente, miembro y «esta semana» (la búsqueda escrita se deja). */
+    /* Quita cliente, miembro, etiqueta, fecha y «esta semana» (la búsqueda escrita se deja). */
     clearFilters(){
       this.week = false;
       let fired = false;
-      [this.filterCliente, this.filterAssignee].forEach((el) => {
+      [this.filterCliente, this.filterAssignee, this.filterLabel, this.filterDue].forEach((el) => {
         if(!el.value) return;
         el.value = '';
         el.dispatchEvent(new Event('change', {bubbles:true}));
@@ -184,6 +190,9 @@
     /* Al cambiar de proyecto. */
     resetQuick(){
       this.week = false;
+      /* Las etiquetas son de cada proyecto; la fecha se quita con ellas para empezar sin filtros. */
+      this.filterLabel.value = '';
+      this.filterDue.value = '';
       this.setSelecting(false);
     }
 
@@ -328,9 +337,11 @@
       if(!this.quick) return;
       const T = Workhub.views.team;
       const cliente = this.filterCliente.value, assignee = this.filterAssignee.value;
+      this._syncLabelOptions(all);
+      const more = this.filterLabel.value || this.filterDue.value;
       const chip = (kind, label, on, extra) => '<button type="button" class="chip" data-quick="' + kind + '"' + (extra || '') + ' aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>';
-      let html = chip('all', esc(Workhub.t('Todas')), !cliente && !assignee && !this.week);
-      if(T.enabled()) html += chip('mine', esc(Workhub.t('Asignadas a mí')), assignee === 'me');
+      let html = chip('all', esc(Workhub.t('Todas')), !cliente && !assignee && !more && !this.week);
+      if(T.enabled()) html += chip('mine', esc(Workhub.t('Asignadas a mí')), assignee === 'me') + chip('unassigned', esc(Workhub.t('Sin asignar')), assignee === 'none');
       html += chip('week', esc(Workhub.t('Vencen esta semana')), this.week);
       if(Workhub.clientsEnabled !== false){
         const open = {};
@@ -340,7 +351,35 @@
         html += names.map((n) => chip('client', '<i class="client-dot" style="--h:' + clientColors.hueOf(n) + '"></i><span translate="no">' + esc(n) + '</span>', cliente === n, ' data-client="' + esc(n) + '"')).join('');
       }
       this.quick.innerHTML = html;
-      if(this.filterDot) this.filterDot.hidden = !cliente && !assignee;
+      if(this.filterDot) this.filterDot.hidden = !cliente && !assignee && !more;
+    }
+
+    /* Opciones del filtro por etiqueta: las del catálogo del proyecto y las que lleve alguna tarea
+       (una copia importada puede traer etiquetas que no están en el catálogo). Solo se repinta si
+       cambian; sin etiquetas, el campo no se enseña. */
+    _syncLabelOptions(all){
+      const seen = {};
+      const names = [];
+      const add = (name) => {
+        const key = String(name || '').toLowerCase();
+        if(!key || seen[key]) return;
+        seen[key] = true;
+        names.push(String(name));
+      };
+      Workhub.views.labels.catalog().forEach((l) => add(l.name));
+      all.forEach((t) => { if(Array.isArray(t.labels)) t.labels.forEach(add); });
+      const sig = names.join('\n');
+      if(sig !== this._labelSig){
+        this._labelSig = sig;
+        const current = this.filterLabel.value.toLowerCase();
+        this.filterLabel.innerHTML = '<option value="">' + esc(Workhub.t('Todas las etiquetas')) + '</option>' +
+          names.map((n) => '<option value="' + esc(n) + '" translate="no">' + esc(n) + '</option>').join('');
+        /* Si la etiqueta elegida ya no existe, el filtro se quita (se ve en el tablero al momento). */
+        const keep = names.find((n) => n.toLowerCase() === current);
+        this.filterLabel.value = keep || '';
+        if(current && !keep && this._refilter) setTimeout(() => this._refilter(), 0);
+      }
+      if(this.filterLabelField) this.filterLabelField.hidden = !names.length;
     }
 
     bindOpen(handler){
@@ -523,7 +562,8 @@
     }
 
     filters(){
-      return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value, week:this.week};
+      return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value, week:this.week,
+        label:this.filterLabel.value, due:this.filterDue.value};
     }
 
     /* Filtro por miembro (solo en equipos). Sin miembros se vacía y se olvida la elección. */

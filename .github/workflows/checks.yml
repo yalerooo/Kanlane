@@ -44,6 +44,7 @@ jobs:
           node tests/tasks/archive.test.js
           node tests/tasks/duplicate.test.js
           node tests/tasks/filter.test.js
+          node tests/tasks/sort.test.js
           node tests/local/local-store.test.js
           node tests/trello/trello-import.test.js
           node tests/assets/limits.test.js

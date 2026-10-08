@@ -194,6 +194,20 @@ async function newProject(page, name){
     assert.deepEqual(await page.locator('.card h3').allTextContents(), ['Vence hoy'], '«Vencen esta semana» deja solo lo que vence entre el lunes y el domingo');
     await page.locator('#quickFilters [data-quick="all"]').click();
     assert.equal(await page.locator('.card').count(), 2, '«Todas» quita el filtro');
+    /* Ordenar la columna desde su menú: por título, deshacer y por fecha límite (ya lo estaba). */
+    const sortBy = async (by) => {
+      await page.locator('.col[data-status="todo"] [data-col-menu]').click();
+      await page.locator('.col-menu [data-act="sort"][data-by="' + by + '"]').click();
+    };
+    await sortBy('title');
+    await page.waitForFunction(() => document.querySelector('.col[data-status="todo"] .card h3').textContent === 'Vence dentro de un mes');
+    assert.deepEqual(await page.locator('.card h3').allTextContents(), ['Vence dentro de un mes', 'Vence hoy']);
+    await page.locator('.toast').filter({hasText:'Columna ordenada'}).locator('.toast-action').click();
+    await page.waitForFunction(() => document.querySelector('.col[data-status="todo"] .card h3').textContent === 'Vence hoy');
+    await sortBy('due');
+    await page.locator('.toast').filter({hasText:'ya estaba en ese orden'}).waitFor();
+    assert.deepEqual(await page.locator('.card h3').allTextContents(), ['Vence hoy', 'Vence dentro de un mes']);
+    assert.equal(await page.evaluate(() => Workhub.app.models.tasks.items.length), 2, 'ordenar no pierde ni duplica tareas');
     /* Tablero ↔ lista: las mismas tareas, y la lista abre la ficha. */
     await page.locator('#taskMode [data-task-mode="list"]').click();
     assert.equal(await page.locator('#board').isVisible(), false);

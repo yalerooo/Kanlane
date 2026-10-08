@@ -196,16 +196,23 @@
       this.deskPointer = null;
       sumi.follow(this.deskSumi);
       /* El formulario manda. Con la contraseña deja lo que esté haciendo, se va al cristal y se
-         da la vuelta para no mirar; con el correo (o el nombre) se va también al cristal y
-         acompaña lo que se escribe. Al salir del campo vuelve a lo suyo. */
+         da la vuelta para no mirar; al escribir el correo (o el nombre) se va también al
+         cristal y acompaña lo que se escribe. Al salir del campo vuelve a lo suyo. */
       const attend = (what, field) => { this.deskFocus = what; this.deskField = field || null; if(this.deskOn) this.playDesk(true); };
       this.pass.addEventListener('focus', () => attend('pass'));
       this.pass.addEventListener('blur', () => attend(null));
       [this.email, this.name].forEach((field) => {
         if(!field) return;
-        field.addEventListener('focus', () => attend('mail', field));
-        field.addEventListener('blur', () => attend(null));
-        field.addEventListener('input', () => { if(this.deskTap) this.deskTap(field); });
+        /* Con solo tener el cursor dentro no acude: al entrar el correo ya lo tiene, y así no
+           se le veía nunca rescatar tareas (lo vio el dueño). Va cuando se empieza a escribir;
+           si se deja de escribir un rato, o se sale del campo, vuelve a lo suyo. */
+        field.addEventListener('input', () => {
+          if(this.deskFocus !== 'mail') attend('mail', field);
+          if(this.deskTap) this.deskTap(field);
+          clearTimeout(this.deskIdle);
+          this.deskIdle = setTimeout(() => { if(this.deskFocus === 'mail') attend(null); }, 4500);
+        });
+        field.addEventListener('blur', () => { clearTimeout(this.deskIdle); if(this.deskFocus === 'mail') attend(null); });
       });
       /* Por dónde anda el cursor, por si le da por acercarse a curiosear. */
       document.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') this.deskPointer = [ev.clientX, ev.clientY, performance.now()]; }, {passive:true});
@@ -390,7 +397,8 @@
         }
         body.x += body.vx * dt; body.y += body.vy * dt;
         /* Se ladea un poco hacia donde va; no se tumba. */
-        const lean = clamp(body.vx * 0.045, -13, 13) + Math.sin(body.t * 13) * 8 * party * party;
+        const lean = clamp(body.vx * 0.045, -13, 13);
+        const sway = party > 0 ? Math.sin((1 - party) * 9.4) * 10 * party : 0;
         body.rot += (lean - body.rot) * Math.min(1, dt * 4);
         if(body.pose){
           if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
@@ -398,7 +406,7 @@
         }
         body.sx += (tsx - body.sx) * Math.min(1, dt * 16);
         body.sy += (tsy - body.sy) * Math.min(1, dt * 16);
-        me.style.transform = move(body.x - size / 2, body.y - size / 2) + ' rotate(' + body.rot.toFixed(2) + 'deg)';
+        me.style.transform = move(body.x - size / 2, body.y - size / 2) + ' rotate(' + (body.rot + sway).toFixed(2) + 'deg)';
         el.style.scale = body.sx.toFixed(3) + ' ' + body.sy.toFixed(3);
 
         /* Los brazos. La velocidad, vista desde el propio Sumi (que va ladeado): las puntas se
@@ -410,7 +418,7 @@
         hand[0] += (handTo[0] - hand[0]) * Math.min(1, dt * 9);
         hand[1] += (handTo[1] - hand[1]) * Math.min(1, dt * 9);
         high += (highTo - high) * Math.min(1, dt * 10);
-        party = Math.max(0, party - dt * 1.15);
+        party = Math.max(0, party - dt * 0.95);
         arms.forEach((a, i) => {
           const tx = clamp(-lx * 0.05, -5, 5) + Math.sin(body.t * a.w + a.ph) * 1.8 + (i - 1) * spread;
           const ty = clamp(-ly * 0.04, -3, 6) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.8 + curl;
@@ -549,6 +557,7 @@
         await wait(170);
         reachTo = 0;
         const all = Array.from(this.desk.querySelectorAll('.auth-desk-card')), before = all.map((n) => n.getBoundingClientRect());
+        let landed = null;
         cols[to].appendChild(c);
         all.forEach((n, i) => {
           const now = n.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
@@ -559,17 +568,21 @@
             return;
           }
           n.classList.add('is-fly');
-          n.animate([
+          const fly = n.animate([
             {transform:from + ' rotate(0deg) scale(1)'},
             {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 30) + 'px) rotate(' + (dx < 0 ? 9 : -9) + 'deg) scale(1.1)', offset:0.5},
             {transform:'translate(0px,3px) rotate(0deg) scale(1.06, .92)', offset:0.82},
             {transform:'translate(0px,-2px) scale(.98, 1.03)', offset:0.92},
             {transform:'none'}
-          ], {duration:760, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => n.classList.remove('is-fly');
+          ], {duration:760, easing:'cubic-bezier(.3,.7,.3,1)'});
+          fly.onfinish = () => n.classList.remove('is-fly');
+          landed = fly.finished.catch(() => {});
         });
         again(cols[to], 'is-hit');
+        /* La acompaña y espera a que se pose: antes celebraba (y la tarjeta soltaba su anillo)
+           con ella todavía en el aire. */
         const next = over(c);
-        await swim(next[0], next[1]);
+        await Promise.all([swim(next[0], next[1]), landed]);
         if(!alive() || to !== 2) return;
         /* A «Hecho»: anillo verde y burbujas en la tarjeta, y Sumi lo celebra como lo haría un
            dibujo animado: se agacha para coger impulso (anticipación), salta estirado con los

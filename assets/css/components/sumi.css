@@ -5,6 +5,7 @@
 .sumi{display:block;flex:none;overflow:visible;}
 .sumi-face{transform-box:fill-box;transform-origin:center;}
 .sumi-arm{transform-box:fill-box;transform-origin:top center;}
+.sumi-extra{transform-box:fill-box;transform-origin:center;}
 
 @media (prefers-reduced-motion: no-preference){
   /* Los ojos siguen al cursor con `translate`, que se suma a las animaciones de `transform`. */

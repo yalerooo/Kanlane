@@ -8,6 +8,7 @@
 .cal-legend i{display:inline-block;flex:none;}
 .cal-legend .lg-meet{width:14px;height:8px;border-radius:3px;background:var(--surface-3);}
 .cal-legend .lg-task{width:6px;height:6px;border-radius:2px;background:var(--ink-faint);}
+.cal-legend .lg-span{width:6px;height:6px;border-radius:2px;box-shadow:inset 0 0 0 1.5px var(--ink-faint);}
 .cal-legend .lg-late{width:6px;height:6px;border-radius:2px;background:var(--late);}
 .cal-legend span:last-child{margin-left:auto;}
 .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start;}
@@ -82,6 +83,9 @@
 .cal-chip.is-meeting{background:var(--surface-2);color:var(--ink);}
 .cal-chip.is-meeting > span{-webkit-line-clamp:3;}
 .cal-chip.is-meeting b{display:block;font-weight:400;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+/* Día intermedio de una tarea con fecha de inicio: el mismo punto, hueco. */
+.cal-chip.is-span{color:var(--ink-faint);}
+.cal-chip.is-span::before{background:none;box-shadow:inset 0 0 0 1.5px var(--c, var(--ink-faint));}
 .cal-chip.is-overdue{color:var(--late);}
 .cal-chip.is-done{text-decoration:line-through;text-decoration-color:var(--line-strong);color:var(--ink-faint);}
 .cal-chip.dragging{opacity:0.4;}
@@ -90,6 +94,7 @@
 .cal-dot{width:5px;height:5px;border-radius:2px;display:block;background:var(--ink-faint);}
 .cal-dot.is-meeting{background:var(--ink);}
 .cal-dot.is-overdue{background:var(--late);}
+.cal-dot.is-span{background:none;box-shadow:inset 0 0 0 1px var(--ink-faint);}
 @media (max-width:640px){
   .cal-cell{min-height:52px;padding:4px;align-items:center;}
   .cal-items{display:none;}

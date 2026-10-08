@@ -20,6 +20,11 @@
     return d.toLocaleDateString(Workhub.i18n.locale, {day:'2-digit', month:'short'});
   }
 
+  /* Intervalo entre dos fechas AAAA-MM-DD («05 oct – 12 oct»); un solo día si coinciden. */
+  function fmtRange(start, end){
+    return start === end ? fmtDate(start) : fmtDate(start) + ' – ' + fmtDate(end);
+  }
+
   function fmtDateTime(ts){
     if(!ts) return '';
     const d = new Date(ts);
@@ -40,5 +45,5 @@
     return Math.round((parseYmd(s) - today) / 86400000);
   }
 
-  Workhub.utils.dates = {pad2, ymd, todayYmd, parseYmd, capitalize, fmtDate, fmtDateTime, longDay, daysFromToday};
+  Workhub.utils.dates = {pad2, ymd, todayYmd, parseYmd, capitalize, fmtDate, fmtRange, fmtDateTime, longDay, daysFromToday};
 })();

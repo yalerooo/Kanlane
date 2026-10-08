@@ -85,6 +85,12 @@
 
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-scene" aria-hidden="true"><canvas id="authCanvas"></canvas></div>
+  <!-- Sin paisaje y en móviles: tinta, burbujas y un Sumi grande y tenue al fondo (auth.css, .auth-ink). -->
+  <div class="auth-ink" aria-hidden="true">
+    <i class="auth-ink-blob"></i><i class="auth-ink-blob"></i><i class="auth-ink-blob"></i>
+    <span class="auth-ink-sumi" data-sumi="normal" data-sumi-size="560" data-sumi-class="is-drift" data-sumi-eye="var(--bg)"></span>
+    <span class="auth-ink-bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  </div>
   <header class="auth-top">
     <div class="auth-tools">
       <div class="segmented auth-lang" id="authLang" role="radiogroup" aria-label="Idioma" translate="no"><button type="button" role="radio" data-lang-choice="es" aria-label="Español">ES</button><button type="button" role="radio" data-lang-choice="en" aria-label="English">EN</button></div>

@@ -181,21 +181,34 @@
 
     stopDesk(){
       this.deskTimers.splice(0).forEach(clearTimeout);
-      this.desk.querySelectorAll('.auth-desk-card').forEach((c) => c.getAnimations().forEach((a) => a.cancel()));
+      const host = this.deskSumi.parentNode, face = this.deskSumi.querySelector('.sumi-face');
+      host.getAnimations().forEach((a) => a.cancel());
+      if(face) face.style.translate = '';
+      this.desk.querySelectorAll('.auth-desk-card').forEach((c) => {
+        c.getAnimations().forEach((a) => a.cancel());
+        c.classList.remove('is-fly', 'is-landed');
+      });
+      this.desk.querySelectorAll('.auth-desk-col').forEach((c) => c.classList.remove('is-hit'));
     }
 
-    /* Sumi va avanzando las tareas, una a una, y al llevar la última a «Hecho» lo celebra.
-       Como manda su cuaderno (docs/marca/cuaderno-sumi.html): el brazo central baja una vez por
-       tarjeta, todo ocurre una vez y termina, y con «reducir movimiento» se ve ya el final.
-       Se repite cada vez que el panel vuelve a enseñarse. */
+    /* Sumi va avanzando las tareas, una a una, y al llevar la última a «Hecho» lo celebra; el
+       tablero se vacía y vuelve a empezar, en bucle mientras el panel esté a la vista. Su
+       cuaderno (docs/marca/cuaderno-sumi.html) dice que todo ocurre una vez y termina: esto es
+       la excepción, junto con el Sumi del fondo (auth.css, .auth-ink), que pidió el dueño para
+       que el acceso sin paisaje no quedara soso. Con «reducir movimiento» se ve ya el final.
+       Cada tarea: Sumi mira a la columna de destino, se inclina hacia ella y estira el brazo
+       central; la tarjeta se levanta, cruza en arco y se posa, y las que deja atrás suben a
+       ocupar su hueco. */
     playDesk(){
       this.stopDesk();
-      const sumi = Workhub.views.sumi, el = this.deskSumi;
+      const sumi = Workhub.views.sumi, el = this.deskSumi, host = el.parentNode;
+      const face = el.querySelector('.sumi-face');
       const cols = Array.from(this.desk.querySelectorAll('.auth-desk-col'));
       const cards = Array.from(this.desk.querySelectorAll('.auth-desk-card'));
       const mood = (m) => { this.deskMood = m; if(document.activeElement !== this.pass) sumi.setMood(el, m); };
       /* Como al principio: dos por hacer y una en curso. */
-      cards.forEach((c, i) => cols[i < 2 ? 0 : 1].appendChild(c));
+      const reset = () => cards.forEach((c, i) => cols[i < 2 ? 0 : 1].appendChild(c));
+      reset();
       mood('normal');
       if(this.screen.hidden || !EARLY.sceneOff() || EARLY.plain.matches) return;
       if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced'){
@@ -203,30 +216,68 @@
         mood('contento');
         return;
       }
-      /* La tarjeta cambia de columna y va de un sitio a otro con un salto corto; las que deja
-         atrás suben a ocupar su hueco. */
-      const move = (card, col) => {
-        const before = cards.map((c) => c.getBoundingClientRect());
-        col.appendChild(card);
-        cards.forEach((c, i) => {
-          const now = c.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
-          if(!dx && !dy) return;
-          const lift = c === card ? -14 : 0;
-          c.animate([
-            {transform:'translate(' + dx + 'px,' + dy + 'px)'},
-            {transform:'translate(' + dx / 2 + 'px,' + (dy / 2 + lift) + 'px)'},
-            {transform:'none'}
-          ], {duration:600, easing:'cubic-bezier(.3,.6,.3,1)'});
-        });
+      const later = (fn, ms) => this.deskTimers.push(setTimeout(fn, ms));
+      const again = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+      /* Los ojos, hacia esa columna (0, 1 o 2; sin ella, al frente). Si el cursor se mueve, lo
+         siguen a él (sumi.follow). */
+      const look = (to) => { if(face) face.style.translate = to == null ? '' : ((to - 1) * 1.7) + 'px 1.2px'; };
+      const move = (card, to) => {
+        look(to);
+        host.animate([
+          {transform:'none'},
+          {transform:'translateY(5px) rotate(' + (to - 1) * 5 + 'deg)', offset:0.42},
+          {transform:'none'}
+        ], {duration:760, easing:'cubic-bezier(.3,.6,.3,1)'});
         sumi.play(el, 'dip');
+        /* La tarjeta sale cuando el brazo llega abajo. */
+        later(() => {
+          const before = cards.map((c) => c.getBoundingClientRect());
+          cols[to].appendChild(card);
+          cards.forEach((c, i) => {
+            const now = c.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
+            if(!dx && !dy) return;
+            const from = 'translate(' + dx + 'px,' + dy + 'px)';
+            if(c !== card){
+              c.animate([{transform:from}, {transform:'none'}], {duration:420, delay:140, fill:'backwards', easing:'cubic-bezier(.2,.8,.2,1)'});
+              return;
+            }
+            c.classList.add('is-fly');
+            c.animate([
+              {transform:from + ' rotate(0deg) scale(1)'},
+              {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 26) + 'px) rotate(' + (dx < 0 ? 7 : -7) + 'deg) scale(1.09)', offset:0.5},
+              {transform:'translate(0px,-3px) rotate(0deg) scale(1.03)', offset:0.86},
+              {transform:'none'}
+            ], {duration:700, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => c.classList.remove('is-fly');
+          });
+          again(cols[to], 'is-hit');
+          if(to === 2) later(() => again(card, 'is-landed'), 600);
+        }, 250);
       };
       /* Qué tarea pasa a qué columna, por orden. */
       const steps = [[2, 2], [0, 1], [0, 2], [1, 1], [1, 2]];
-      const later = (fn, ms) => this.deskTimers.push(setTimeout(fn, ms));
-      steps.forEach((s, i) => later(() => move(cards[s[0]], cols[s[1]]), 1100 + i * 1500));
-      const end = 1100 + (steps.length - 1) * 1500 + 750;
-      later(() => { mood('fiesta'); sumi.play(el, 'nod'); }, end);
-      later(() => mood('contento'), end + 2600);
+      const STEP = 1500, FIRST = 900;
+      const round = () => {
+        this.deskTimers.length = 0;
+        steps.forEach((s, i) => later(() => move(cards[s[0]], s[1]), FIRST + i * STEP));
+        const end = FIRST + (steps.length - 1) * STEP + 1050;
+        later(() => {
+          look(null);
+          mood('fiesta');
+          sumi.play(el, 'nod');
+          host.animate([{transform:'none'}, {transform:'translateY(-11px)', offset:0.35}, {transform:'none'}, {transform:'translateY(-5px)', offset:0.8}, {transform:'none'}], {duration:900, easing:'ease-out'});
+        }, end);
+        later(() => mood('contento'), end + 2200);
+        /* Y vuelta a empezar: las tarjetas se van, vuelven a su sitio y el tablero arranca otra vez. */
+        later(() => cards.forEach((c, i) => c.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(7px) scale(.94)'}], {duration:260, delay:i * 70, fill:'forwards', easing:'ease-in'})), end + 3700);
+        later(() => {
+          cards.forEach((c) => { c.getAnimations().forEach((a) => a.cancel()); c.classList.remove('is-landed'); });
+          reset();
+          mood('normal');
+          cards.forEach((c, i) => c.animate([{opacity:0, transform:'translateY(-8px) scale(.94)'}, {opacity:1, transform:'none'}], {duration:380, delay:i * 90, fill:'backwards', easing:'cubic-bezier(.2,1.3,.4,1)'}));
+          round();
+        }, end + 3700 + 520);
+      };
+      round();
     }
 
     /* Acceso correcto: la pantalla del ordenador lo celebra un instante antes de pasar a la app.

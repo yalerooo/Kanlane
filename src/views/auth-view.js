@@ -408,8 +408,8 @@
          retraso: el gesto baja por el brazo como por un látigo, y la punta llega la última y
          se pasa un poco. El agua, además, los arrastra: se quedan atrás de por donde va. El brazo mide siempre lo mismo salvo lo que
          se le pida (ext): antes, al levantarlo, se estiraba como una goma hasta el doble.
-         lift: cuánto lo tiene levantado (0, colgando; 1, abierto hacia fuera y arriba; algo menos
-         de 0, recogido). hook: cuánto de más se le enrosca la punta hacia arriba. */
+         lift: cuánto lo tiene levantado (0, colgando; 1, abierto hacia fuera con la punta arriba;
+         algo menos de 0, recogido). hook: cuánto de más se le enrosca la punta hacia arriba. */
       const geo = sumi.geometry(false), SEG = 6;
       const arms = geo.arms.map((a, i) => {
         const top = geo.root - a[1] / 2;
@@ -418,9 +418,9 @@
       });
       /* reach: lo que se alarga de más el del medio para coger o empujar. */
       let reachTo = 0;
-      /* El saludo: levanta el brazo derecho y lo agita desde el hombro. */
+      /* El saludo: abre el brazo derecho y lo mece. */
       const wave = (ms) => { arms[2].liftTo = 1; this.deskTimers.push(setTimeout(() => { arms[2].liftTo = 0; }, ms)); };
-      /* Para celebrar: los dos brazos de fuera arriba, en uve, y un meneo del cuerpo que
+      /* Para celebrar: los dos brazos de fuera abiertos, con la punta arriba, y un meneo del cuerpo que
          empieza y se apaga solo; el del medio lo encoge, como quien salta con las piernas
          recogidas. high: cuánto de «arriba del todo»; party: lo que le queda
          de meneo. */
@@ -428,7 +428,7 @@
       /* shake: cuánto niega con la cabeza (se apaga solo). asleep: dormido del todo; el bucle
          de cada fotograma se para. */
       let shake = 0, asleep = false;
-      const cheer = (on) => { arms[0].liftTo = arms[2].liftTo = on ? 1 : 0; highTo = on ? 1 : 0; reachTo = on ? -12 : 0; if(on) party = 1; };
+      const cheer = (on) => { arms[0].liftTo = arms[2].liftTo = on ? 1 : 0; highTo = on ? 1 : 0; reachTo = on ? -7 : 0; if(on) party = 1; };
       /* Lo que lleva colgado y cuánto se balancea. */
       let held = null, swing = 0, swingV = 0;
       /* Burbujas sueltas en ese punto, que suben y se deshacen. */
@@ -536,25 +536,32 @@
         party = Math.max(0, party - dt * 0.7);
         shake = Math.max(0, shake - dt * 1.05);
         arms.forEach((a, i) => {
-          /* Sube deprisa (lo lanza) y baja despacio (lo deja caer). */
-          a.lift += (a.liftTo - a.lift) * Math.min(1, dt * (a.liftTo > a.lift ? 15 : 5.5));
-          const up = a.lift, wag = Math.sin(body.t * (9.5 + 2.5 * high) + i * 0.45);
+          /* Lo sube con calma y lo baja más despacio todavía (lo deja caer). */
+          a.lift += (a.liftTo - a.lift) * Math.min(1, dt * (a.liftTo > a.lift ? 7 : 4.5));
+          const up = a.lift, wag = Math.sin(body.t * (6 + high) + i * 0.45);
           /* La postura: adónde apunta el hombro y cuánto se dobla cada tramo respecto al
-             anterior. Levantado, sale hacia fuera y la punta se le curva hacia arriba, y lo agita desde el
-             hombro; al nadar, los de fuera se abren y se cierran con la brazada. */
-          const base = a.side * (up * (1.6 + 0.1 * high + 0.26 * wag) + spread);
-          const bend = a.side * (up * 0.08 + a.hook);
+             anterior. El hombro se abre poco: el brazo sale siempre por abajo, por donde está
+             unido al cuerpo, y es la curva la que lo lleva hacia fuera y le sube la punta. Si
+             girara entero desde el hombro asomaría por el costado de la cabeza, como una pieza
+             pegada encima (lo vio el dueño). Levantado, lo mece despacio; al nadar, los de fuera
+             se abren y se cierran con la brazada. */
+          const base = a.side * (up * (0.5 + 0.06 * high + 0.07 * wag) + spread);
+          const bend = a.side * (up * (0.2 + 0.03 * high + 0.035 * wag) + a.hook);
           for(let k = 0; k < SEG; k++){
             const und = Math.sin(body.t * a.sp - k * 0.85 + a.ph) * (0.05 + k * 0.012) * (1 - 0.6 * Math.max(0, up));
             const want = (k ? (a.a[k - 1] + bend) * 0.55 + (base + k * bend) * 0.45 : base) + und;
-            const stiff = k ? 170 - k * 14 : 170 + 90 * Math.max(0, up), damp = k ? 14 - k * 0.9 : 16;
+            const stiff = k ? 150 - k * 12 : 170, damp = k ? 16 - k : 21;
             /* El agua empuja cada tramo de lado (más cuanto más cerca de la punta) y, al caer,
                le abre los brazos de fuera. A un brazo levantado lo mueve menos: lo sujeta él. */
             const drag = ((fx * Math.cos(a.a[k]) - fy * Math.sin(a.a[k])) * 0.1 * (0.35 + k * 0.3) + a.side * Math.max(0, -fy) * 0.05) * (1 - 0.75 * Math.max(0, up));
             a.w[k] += ((want - a.a[k]) * stiff - a.w[k] * damp + drag) * dt;
             a.a[k] += a.w[k] * dt;
+            /* Topes: ni el hombro se abre más de la cuenta ni un tramo se quiebra sobre el
+               anterior, pase lo que pase con los muelles. */
+            const from = k ? a.a[k - 1] : 0, most = k ? 0.42 : 0.72;
+            if(Math.abs(a.a[k] - from) > most){ a.a[k] = from + Math.sign(a.a[k] - from) * most; a.w[k] *= 0.5; }
           }
-          const extTo = (i === 1 ? reachTo : 0) + curl + (up > 0 ? up * (i ? 3 : 6) : up * 3);
+          const extTo = (i === 1 ? reachTo : 0) + curl + (up > 0 ? up * (i ? 2 : 4) : up * 3);
           a.extV += ((extTo - a.ext) * 300 - a.extV * 24) * dt; a.ext += a.extV * dt;
           /* El trazo: de la mitad de un tramo a la mitad del siguiente con una curva que tiene
              la articulación por punto de control, así que no se le ve ningún codo. */
@@ -728,7 +735,7 @@
         if(!alive() || to !== 2) return;
         /* A «Hecho»: anillo verde y burbujas en la tarjeta, y Sumi lo celebra como lo haría un
            dibujo animado: se agacha y recoge los brazos para coger impulso (anticipación),
-           salta estirado con los brazos arrastrando detrás, al llegar arriba los lanza en uve y
+           salta estirado con los brazos arrastrando detrás, al llegar arriba los abre hacia los lados y
            se menea con cara de fiesta, cae, se aplasta al posarse, da un botecito más pequeño
            y se recompone mientras los brazos bajan solos. Antes el salto era un empujón que se
            frenaba en el agua y luego volvía nadando, y los brazos se estiraban al doble

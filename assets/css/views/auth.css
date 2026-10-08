@@ -431,6 +431,45 @@ html.scene-lite body.is-authing .consent-card{-webkit-backdrop-filter:none;backd
 
 /* Cambio de tema en la pantalla de acceso: la tarjeta pasa de un color a otro con suavidad
    mientras el cielo de la escena hace lo mismo (auth-view.js pone la clase un instante). */
+/* ---------- Sin paisaje (html.scene-off) ----------
+   El botón del paisaje de la pastilla de arriba lo quita del todo (WORKHUB_AUTH.setScene, en
+   auth-early.js; boot.js pone la clase antes de pintar): ni lienzo ni fotos, el fondo liso de
+   la app como en el móvil, y en el panel de la derecha, donde se veía el ordenador, Sumi con
+   un tablero pequeño en el que va avanzando las tareas (AuthView.playDesk). */
+.auth-scene-toggle .ic-slash{display:none;}
+html.scene-off .auth-scene-toggle .ic-slash{display:block;}
+.auth-desk{display:none;}
+html.scene-off .auth-scene{display:none;}
+html.scene-off .auth-shell{box-shadow:0 0 0 1px var(--line), var(--shadow-pop, 0 12px 32px rgba(0, 0, 0, .12));}
+html.scene-off .auth-tools{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface-solid);border-color:var(--line);}
+html.scene-off .auth-foot{color:var(--ink-soft);text-shadow:none;}
+html.scene-off .auth-foot a{color:var(--ink);text-decoration-color:var(--line-strong);}
+html.scene-off .auth-foot a:hover{text-decoration-color:var(--ink);}
+html.scene-off .auth-aside{background:var(--surface-2);border-left:1px solid var(--line);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;}
+html.scene-off .auth-desk{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:28px 20px;color:var(--ink);}
+/* Un Sumi por pantalla: con el del panel a la vista, el de la esquina del formulario sobra. */
+html.scene-off .auth-sumi{display:none;}
+.auth-desk-sumi{display:block;width:112px;height:112px;}
+.auth-desk-board{display:grid;grid-template-columns:repeat(3, 98px);gap:10px;align-items:stretch;}
+.auth-desk-col{display:flex;flex-direction:column;gap:7px;min-height:168px;padding:9px 8px;background:var(--surface-2);border-radius:var(--r-lg);}
+.auth-desk-col > b{display:flex;align-items:center;gap:6px;margin:0 1px 2px;font-size:10.5px;font-weight:600;line-height:1.3;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.auth-desk-col > b::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--st-pend);}
+.auth-desk-col:nth-child(2) > b::before{background:var(--st-proc);}
+.auth-desk-col:nth-child(3) > b::before{background:var(--st-done);}
+/* Una tarea: dos renglones; el segundo se pone del color de su columna. */
+.auth-desk-card{display:block;padding:9px 9px 10px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--line), var(--shadow-sm);}
+.auth-desk-card::before,.auth-desk-card::after{content:"";display:block;height:5px;border-radius:3px;}
+.auth-desk-card::before{width:72%;background:var(--ink);opacity:.5;}
+.auth-desk-card::after{width:34%;margin-top:7px;background:var(--st-pend);opacity:.55;transition:background-color .3s ease, opacity .3s ease;}
+.auth-desk-col:nth-child(2) .auth-desk-card::after{background:var(--st-proc);opacity:1;}
+.auth-desk-col:nth-child(3) .auth-desk-card::after{background:var(--st-done);opacity:1;}
+.auth-desk-col:nth-child(3) .auth-desk-card::before{opacity:.3;}
+@media (max-width: 860px), (hover: none) and (pointer: coarse){
+  /* Sin panel no hay paisaje que quitar, y Sumi sigue en su esquina. */
+  .auth-scene-toggle{display:none;}
+  html.scene-off .auth-sumi{display:block;}
+}
+
 .auth-screen.is-theming .auth-shell,
 .auth-screen.is-theming .auth-shell *,
 .auth-screen.is-theming .auth-tools,

@@ -28,9 +28,11 @@
    imagen intermedia y en cada fotograma solo se rehace lo que se mueve (FRAG, COMP); de cada
    brizna se guarda lo que no depende del viento (GRASS_BASE). Lo que no cambia de un fotograma a otro (dónde toca cada rayo el suelo y el
    ordenador, y sus sombras) se calcula una vez por tamaño de ventana y se guarda en una imagen
-   (GEO, BAKE). La calidad se adapta al equipo: antes de enseñar la escena se mide lo que tarda
-   la tarjeta gráfica y se elige un escalón (LEVELS: resolución, cantidad de hierba, fotogramas
-   por segundo); si después va justa, se baja otro. Se pinta solo mientras la pantalla de
+   (GEO, BAKE). La calidad se adapta al equipo: la escena se enseña en el escalón más ligero
+   (LEVELS: resolución y cantidad de hierba) y, midiendo lo que tarda de verdad la tarjeta
+   gráfica en cada fotograma, sube mientras le sobre tiempo y baja si va justa (MODES y
+   «Calidad», en setup()). Nunca se queda parada para siempre: si ni en lo más ligero llega,
+   descansa un rato y vuelve a probar. Se pinta solo mientras la pantalla de
    acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
    sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
    parado varios segundos). Hasta que acaban se enseña una imagen de la escena hecha de antemano
@@ -1879,22 +1881,28 @@
     '}'
   ].join('\n');
 
-  /* Escalones de calidad, del mejor al más ligero. Cada equipo empieza en el mejor que aguanta
-     (se mide, ver measure()) y baja si aun así va justo.
+  /* Escalones de calidad, del mejor al más ligero. Todos los equipos empiezan en el más ligero
+     y van subiendo mientras les sobre tiempo (ver «Calidad», en setup()).
      - side: lado mayor del lienzo, en píxeles; por encima de esto se estira.
      - part: qué parte de las briznas se pinta (las que quedan, más anchas).
      - tall: briznas de cuatro tramos (true) o de dos.
-     - fps: fotogramas por segundo.
      - lit: cuántas luciérnagas alumbran la hierba (se ven todas siempre).
      - sharp: enfoque del cerezo. */
   const LEVELS = [
-    {side:1920, part:1, tall:true, fps:30, lit:40, sharp:1},
-    {side:1600, part:0.72, tall:true, fps:30, lit:40, sharp:1},
-    {side:1366, part:0.5, tall:true, fps:30, lit:24, sharp:1},
-    {side:1152, part:0.34, tall:false, fps:30, lit:16, sharp:0},
-    {side:960, part:0.22, tall:false, fps:30, lit:8, sharp:0},
-    {side:800, part:0.14, tall:false, fps:20, lit:0, sharp:0}
+    {side:1920, part:1, tall:true, lit:40, sharp:1},
+    {side:1600, part:0.72, tall:true, lit:40, sharp:1},
+    {side:1366, part:0.5, tall:true, lit:24, sharp:1},
+    {side:1152, part:0.34, tall:false, lit:16, sharp:0},
+    {side:960, part:0.22, tall:false, lit:8, sharp:0},
+    {side:800, part:0.14, tall:false, lit:0, sharp:0}
   ];
+  /* Los modos en que se puede pintar, del preferido al último: un escalón (l) y unos fotogramas
+     por segundo (hz). Primero a 60 sin bajar del cuarto escalón (se nota más la fluidez que el
+     detalle); si no da, a 30 en el mejor escalón que quepa, y lo último, el más ligero a 20. */
+  const MODES = [0, 1, 2, 3].map((l) => ({l, hz:60}))
+    .concat(LEVELS.map((q, l) => ({l, hz:30})), [{l:LEVELS.length - 1, hz:20}]);
+  /* Por dónde se empieza: el escalón más ligero, a 30. Y el de una imagen quieta: el mejor. */
+  const MODE_START = MODES.length - 2, MODE_STILL = MODES.findIndex((m) => m.hz === 30);
   /* Las imágenes de espera (ver WAIT): una de noche y otra de atardecer. Sus medidas y dónde
      cae en ellas el ordenador están en src/boot.js (window.__authPoster), que es quien las
      pone de fondo desde el primer fotograma. Abarcan más ancho que cualquier ventana; lo poco
@@ -1905,7 +1913,7 @@
   /* En móviles y tabletas no hay escena (WORKHUB_AUTH.plain, en auth-early.js): si una ventana
      de escritorio se estrecha hasta ahí, se para; al ensancharla, sigue. */
   const PLAIN = (window.WORKHUB_AUTH && window.WORKHUB_AUTH.plain) || {matches:false};
-  const onPlain = (fn) => { if(PLAIN.addEventListener) PLAIN.addEventListener('change', fn); };
+  const onPlain = (fn, opts) => { if(PLAIN.addEventListener) PLAIN.addEventListener('change', fn, opts); };
   const away = (screen) => PLAIN.matches || (screen.hidden && !document.documentElement.classList.contains('auth-early'));
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
@@ -2317,31 +2325,73 @@
     if(darkQuery.addEventListener) darkQuery.addEventListener('change', paint);
   }
 
-  /* La escena no se prepara hasta que la pantalla de acceso se ve por primera vez: quien entra
-     con la sesión ya iniciada no paga la compilación de los sombreadores. */
+  /* ---------- Arrancar, parar y volver a arrancar ----------
+     La escena no se prepara hasta que la pantalla de acceso se ve por primera vez: quien entra
+     con la sesión ya iniciada no paga la compilación de los sombreadores. Y se puede quitar
+     del todo (enable(false), el botón del acceso: ver WORKHUB_AUTH.setScene en auth-early.js):
+     se para, suelta la tarjeta gráfica y no queda nada escuchando. Si se vuelve a pedir, o si
+     el navegador pierde el contexto (lost), es una escena nueva en un lienzo nuevo.
+     host: la pantalla de acceso, el panel y el lienzo de ahora. engine: la escena en marcha.
+     broken: no hay WebGL 2, o el contexto se ha perdido ya demasiadas veces. */
+  let host = null, engine = null, wanted = false, pending = false, broken = false, losses = 0;
+  /* Tras perder el contexto, el escalón del que ya no se pasa: lo más probable es que la tarjeta
+     no pudiera con el de antes. */
+  let cap = 0;
+  function go(){
+    /* Hasta que la tarjeta se ve de verdad, no: con la pantalla enseñada a medias (auth-early)
+       basta la imagen de fondo, y arrancar antes retrasaba medio segundo el formulario. */
+    if(!wanted || engine || pending || broken || !host || host.screen.hidden || document.hidden || PLAIN.matches) return;
+    pending = true;
+    /* Y no antes de que la foto de espera esté pintada (WORKHUB_AUTH.painted, en
+       auth-early.js): compilar ocupa a la tarjeta, y en un equipo modesto la foto no salía. */
+    const EARLY = window.WORKHUB_AUTH;
+    const painted = EARLY && EARLY.painted ? EARLY.painted() : Promise.resolve();
+    painted.then(() => requestAnimationFrame(() => setTimeout(() => {
+      pending = false;
+      if(!wanted || engine) return;
+      engine = boot(host.canvas, host.screen, host.focusEl);
+      if(!engine) broken = true;
+    }, 0)));
+  }
+  /* Un lienzo que ha tenido contexto no sirve para otro: se cambia por uno nuevo. */
+  function renew(){
+    const fresh = document.createElement('canvas');
+    fresh.id = host.canvas.id;
+    host.canvas.replaceWith(fresh);
+    host.canvas = fresh;
+  }
+  function stop(){
+    if(!engine) return;
+    engine.destroy(true);
+    engine = null;
+    renew();
+  }
+  /* El navegador ha tirado el contexto (la tarjeta se reinició, o iba ahogada). at: el escalón
+     en el que pasó. Se vuelve a empezar, un par de veces como mucho, sin pasar del siguiente. */
+  function lost(at){
+    if(!engine) return;
+    engine.destroy(false);
+    engine = null;
+    renew();
+    cap = Math.min(LEVELS.length - 1, Math.max(cap, at + 1));
+    if(++losses > 2){ broken = true; return; }
+    setTimeout(go, 1500);
+  }
   function start(canvas, screen, focusEl){
-    let done = false;
-    const go = () => {
-      /* Hasta que la tarjeta se ve de verdad, no: con la pantalla enseñada a medias (auth-early)
-         basta la imagen de fondo, y arrancar antes retrasaba medio segundo el formulario. */
-      if(done || screen.hidden || document.hidden || PLAIN.matches) return;
-      done = true;
-      watch.disconnect();
-      document.removeEventListener('visibilitychange', go);
-      /* Y no antes de que la foto de espera esté pintada (WORKHUB_AUTH.painted, en
-         auth-early.js): compilar ocupa a la tarjeta, y en un equipo modesto la foto no salía. */
-      const EARLY = window.WORKHUB_AUTH;
-      const painted = EARLY && EARLY.painted ? EARLY.painted() : Promise.resolve();
-      painted.then(() => requestAnimationFrame(() => setTimeout(() => boot(canvas, screen, focusEl), 0)));
-    };
+    host = {canvas, screen, focusEl};
     /* La imagen de fondo sí, desde ya: no cuesta nada. */
     backdrop(screen);
-    const watch = new MutationObserver(go);
-    watch.observe(screen, {attributes:true, attributeFilter:['hidden']});
+    new MutationObserver(go).observe(screen, {attributes:true, attributeFilter:['hidden']});
     document.addEventListener('visibilitychange', go);
     onPlain(go);
-    requestAnimationFrame(go);
+    enable(!document.documentElement.classList.contains('scene-off'));
     return true;
+  }
+  function enable(on){
+    wanted = !!on;
+    if(!host) return;
+    if(wanted) requestAnimationFrame(go);
+    else stop();
   }
 
   function boot(canvas, screen, focusEl){
@@ -2419,7 +2469,7 @@
     /* Y en primavera, las flores (ver FLOWERS_VERT). */
     if(SEASON === 0) queue.push(prepare(HEAD + COMMON + '\n' + FLOWERS_VERT, HEAD + COMMON + '\n' + FLOWERS_FRAG));
     const compiled = () => !parallel || gl.isContextLost() || queue.every((p) => !p || gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
-    setup(gl, canvas, screen, focusEl, cache, {
+    return setup(gl, canvas, screen, focusEl, cache, {
       /* Hay espera que cubrir: se compila en segundo plano. */
       waits: false,
       /* El programa de la imagen de espera: con la pantalla en vivo en cuanto está; antes, el
@@ -2430,6 +2480,7 @@
         });
         return held[0] || held[1];
       },
+      lost,
       /* Avisa cuando todos los programas están compilados (con la lista, por orden). */
       linked(done){
         const wait = () => {
@@ -2440,13 +2491,22 @@
         setTimeout(wait, 0);
       }
     });
-    return true;
   }
 
   function setup(gl, canvas, screen, focusEl, cache, kit){
     /* Los programas llegan cuando acaban de compilarse (live); hasta entonces, la imagen de espera. */
     let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], fall = null, bloom = null, live = false;
+    /* dead: esta escena se ha parado para siempre (se quitó el paisaje o se perdió el contexto;
+       ver destroy). heard y watch: con qué se apunta todo lo que escucha, para soltarlo de golpe. */
+    let dead = false;
+    const life = new AbortController(), heard = {signal:life.signal}, watching = [];
+    const watch = (fn, node, names) => {
+      const o = new MutationObserver(fn);
+      o.observe(node, {attributes:true, attributeFilter:names});
+      watching.push(o);
+    };
     kit.linked((list) => {
+      if(dead) return;
       sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; grassBase = list[5]; scenes = list.slice(6);
       if(SEASON === 3) fall = scenes.pop();
       if(SEASON === 0) bloom = scenes.pop();
@@ -2470,7 +2530,7 @@
        cuántas briznas y con qué luz está calculado. field: todas las briznas, en su orden al
        azar; sown: cuántas hay subidas a instBuf, ordenadas de cerca a lejos. */
     const instBuf = gl.createBuffer(), simBuf = gl.createBuffer(), baseBuf = gl.createBuffer();
-    let grown = 0, grownNight = -1, grownDay = -1, grownWait = 0;
+    let grown = 0, grownNight = -1, grownDay = -1, grownAt = 0;
     /* Sembrar las briznas lleva unas décimas: se hace aparte, mientras se compila (plant). */
     let planted = false, field = null, sown = 0;
     /* El abanico de briznas cubre una pantalla normal de sobra, pero en una ultrapanorámica la
@@ -2489,7 +2549,7 @@
       sown = 0;
     }
     function plant(){
-      if(planted) return;
+      if(planted || dead) return;
       planted = true;
       gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
       field = blades(fan[0], fan[1]);
@@ -2595,7 +2655,7 @@
        turn: a cuál de las dos lentas, cielo o suelo, le toca en este fotograma. */
     const sceneTex = gl.createTexture(), sceneFbo = gl.createFramebuffer();
     let turn = 0;
-    let stale = true, litNight = -1, litDay = -1, litWait = 0;
+    let stale = true, litNight = -1, litDay = -1, litAt = 0;
     function target(unit, tex, fbo, format, kind, type){
       gl.activeTexture(unit);
       gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -2629,6 +2689,7 @@
     const treeTex = gl.createTexture();
     const treeImg = new Image();
     treeImg.onload = () => {
+      if(dead) return;
       gl.bindTexture(gl.TEXTURE_2D, treeTex);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -2650,6 +2711,7 @@
     if(SEASON === 0){
       const img = new Image();
       img.onload = () => {
+        if(dead) return;
         bloomCells = Math.max(1, Math.round(img.width / img.height));
         gl.activeTexture(gl.TEXTURE7);
         gl.bindTexture(gl.TEXTURE_2D, bloomTex);
@@ -2735,7 +2797,8 @@
       }catch(e){ return false; }
     })();
     const saver = !!(navigator.connection && navigator.connection.saveData);
-    /* frozen: el equipo no puede con la animación ni en la calidad más baja; se queda la imagen. */
+    /* frozen: la escena se queda en una imagen. Para siempre sin tarjeta gráfica o con ahorro de
+       datos; un rato (rest) si el equipo no puede con la animación ni en lo más ligero. */
     let frozen = software || saver;
     const isStill = () => frozen || stillQuery.matches || root.getAttribute('data-motion') === 'reduced';
 
@@ -2753,16 +2816,23 @@
 
     let scale = 1, night = isDark() ? 1 : 0, day = dayAt(hour()), dawn = dawnAt(hour());
     let raf = 0, last = 0, prev = 0, t0 = performance.now();
-    /* Calidad (ver LEVELS). Se empieza por la que el equipo aguanta, que se mide antes de enseñar
-       el primer fotograma animado (measure); si después la tarjeta va justa, se baja un escalón,
-       y si ni en el más ligero llega, la escena se queda quieta. Sin tarjeta gráfica no se mide:
-       la imagen fija se pinta en el escalón más ligero y pequeña. cost: lo que midió measure(),
-       ronda a ronda (escalón y milisegundos por fotograma). */
-    let level = software ? LEVELS.length - 1 : 0, measured = software, measuring = false, cost = null;
-    let slow = 0, counted = 0, settle = 0, shown = false;
-    /* A cuántos fotogramas por segundo se pinta: los del escalón o, si el equipo va sobrado
-       (fluid, lo decide measure), 60. */
-    let rate = LEVELS[level].fps, fluid = false;
+    /* ---------- Calidad (ver LEVELS y MODES) ----------
+       Se empieza por lo más ligero, que cualquier equipo mueve y se enseña enseguida, y se sube
+       mientras sobre tiempo. Lo que se mira es lo que tarda de verdad la tarjeta gráfica en
+       pintar un fotograma (clock, más abajo), no cuándo avisa de que ha acabado: ese aviso
+       llega con el fotograma siguiente por poco trabajo que haya (medido: más de 20 ms por un
+       lienzo vacío), y fiarse de él bajaba la calidad sin motivo, escalón a escalón, hasta dejar
+       la escena parada (lo vio el dueño: «a veces se queda completamente parada»).
+       mode: en cuál de MODES se pinta. pinned: fijado a mano (quality), no se toca. cost: por
+       dónde ha ido pasando (escalón, fotogramas por segundo y milisegundos medidos). barred:
+       hasta cuándo no se vuelve a cada modo, porque al probarlo no dio. */
+    /* Con pantalla táctil, nunca por encima del tercer escalón: se calientan enseguida. */
+    if(window.matchMedia('(pointer: coarse)').matches) cap = Math.max(cap, 2);
+    let mode = MODE_START, level = Math.max(MODES[mode].l, cap), rate = MODES[mode].hz;
+    let pinned = software, measuring = false, settle = 0, shown = false;
+    const cost = [], barred = MODES.map(() => 0);
+    let strikes = 0, barWait = 20000, restWait = 30000, restTimer = 0;
+    root.classList.toggle('scene-lite', level >= LITE_FROM);
     /* Para medir: qué pasadas se pintan (1 escena, 2 arbolado, 4 hierba, 8 lo de delante) y con
        qué brizna (null: la del escalón). */
     let passes = 15, tallForced = null;
@@ -2958,21 +3028,30 @@
       if(!place || relayout || place.w !== w || place.h !== h){
         const at = layout(w, h);
         /* Solo se rehace lo que no cambia si de verdad se ha movido algo. */
-        if(!place || at.w !== place.w || at.h !== place.h || at.fx !== place.fx || at.fy !== place.fy || at.tx !== place.tx){ place = at; stale = true; }
+        if(!place || at.w !== place.w || at.h !== place.h || at.fx !== place.fx || at.fy !== place.fy || at.tx !== place.tx){
+          /* Con otro tamaño de ventana, lo que tardaba cada escalón ya no vale. */
+          if(place && (at.w !== place.w || at.h !== place.h)) seen.fill(null);
+          place = at; stale = true;
+        }
         relayout = false;
       }
     }
-    function setLevel(l){
-      level = Math.max(0, Math.min(LEVELS.length - 1, l | 0));
-      rate = fluid ? 60 : LEVELS[level].fps;
-      counted = 0; slow = 0;
+    /* Pasa a pintar en ese modo. */
+    function setMode(i){
+      mode = Math.max(0, Math.min(MODES.length - 1, i | 0));
+      const to = Math.max(MODES[mode].l, cap);
+      rate = MODES[mode].hz;
+      strikes = 0;
+      ticks.length = 0;
+      if(to === level) return;
+      level = to;
       /* En los escalones de un equipo modesto, los cristales de la pantalla de acceso dejan de
          desenfocar lo que tienen detrás (auth.css, html.scene-lite): con la escena moviéndose
          debajo, el navegador rehace ese desenfoque en cada fotograma, y a una gráfica integrada
          le cuesta casi tanto como la propia escena. */
       root.classList.toggle('scene-lite', level >= LITE_FROM);
-      /* El primer fotograma tras el cambio vuelve a calcular lo que no cambia: no cuenta. */
-      settle = performance.now() + 800;
+      /* Los primeros fotogramas tras el cambio vuelven a calcular lo que no cambia: no cuentan. */
+      settle = performance.now() + 300;
       resize();
     }
 
@@ -3004,6 +3083,10 @@
     /* Lo que avanza con el tiempo, lo use la escena o la imagen de espera. posing: se está
        generando una imagen de espera (poster): todo quieto, sin cerezo ni luciérnagas. */
     let still = false, time = 0, toNight = 0, toDay = 0, ease = null;
+    /* Cada cuánto se rehacen las sombras mientras se mueve el sol (ms). redone: este fotograma
+       ha rehecho algo de lo que no cambia, así que pesa más de la cuenta y no sirve de medida. */
+    const RELIGHT = 140;
+    let redone = false;
     let posing = false, raw = 0, nightFixed = null;
     function advance(now){
       still = isStill() || posing;
@@ -3041,21 +3124,21 @@
       }
 
       /* Lo que no cambia: entero al cambiar el tamaño, y solo las sombras cuando se mueve el sol
-         (al cambiar de tema; mientras dura, una vez de cada cuatro fotogramas, que el sol va
-         despacio). */
+         (al cambiar de tema; mientras dura, unas siete veces por segundo, vaya la escena a 30
+         fotogramas o a 60: el sol va despacio y rehacerlas es de lo más caro que hay). */
       const fresh = stale;
+      const moving = night !== toNight || day !== toDay;
       if(cache){
-        const moving = night !== toNight || day !== toDay;
         if(stale){
           target(gl.TEXTURE2, geoTex, geoFbo, gl.RGBA32F, gl.RGBA, gl.FLOAT);
           target(gl.TEXTURE3, shadeTex, shadeFbo, gl.RG16F, gl.RG, gl.HALF_FLOAT);
           target(gl.TEXTURE5, sceneTex, sceneFbo, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT);
           bakePass(0, time);
           bakePass(1, time);
-          litNight = night; litDay = day; litWait = 0;
-        }else if((night !== litNight || day !== litDay) && (!moving || ++litWait >= 4)){
+          litNight = night; litDay = day; litAt = now; redone = true;
+        }else if((night !== litNight || day !== litDay) && (!moving || now - litAt >= RELIGHT)){
           bakePass(1, time);
-          litNight = night; litDay = day; litWait = 0;
+          litNight = night; litDay = day; litAt = now; redone = true;
         }
       }
       stale = false;
@@ -3086,10 +3169,10 @@
           sown = count; grown = 0;
         }
         const relit = night !== grownNight || day !== grownDay;
-        if(fresh || count !== grown || (relit && (!(night !== toNight || day !== toDay) || ++grownWait >= 4))){
+        if(fresh || count !== grown || (relit && (!moving || now - grownAt >= RELIGHT))){
           uniforms(grassBase, time);
           store(grassBase, baseVao, baseBuf);
-          grown = count; grownNight = night; grownDay = day; grownWait = 0;
+          grown = count; grownNight = night; grownDay = day; grownAt = now; redone = true;
         }
         uniforms(sim, time);
         gl.uniform1f(sim.U.uWide, 1 / Math.sqrt(q.part));
@@ -3226,8 +3309,8 @@
     /* El relevo. La imagen y la escena no pueden ser iguales brizna a brizna (otra calidad, otro
        instante del viento): fundir una sobre otra enseñaba dos hierbas distintas a la vez. Así
        que la imagen se desvanece por debajo (cover: cuánto tapa aún) y la hierba de verdad
-       crece encima (grow, ver uGrow en GRASS_SIM). Mientras se mide el equipo la hierba va
-       entera: si no, la medida saldría más ligera de lo que es. */
+       crece encima (grow, ver uGrow en GRASS_SIM). Mientras crece, esos fotogramas no
+       cuentan para la calidad (queryOk): saldrían más ligeros de lo que son. */
     let cover = 0, grow = 1;
     function loadPoster(){
       const dark = isDark();
@@ -3362,77 +3445,131 @@
     /* Lo que cuesta un escalón a este tamaño de ventana, en unidades que solo sirven para
        comparar unos con otros: lo que pesan sus píxeles más lo que pesan sus briznas. Ajustado
        con medidas en una gráfica integrada (Iris Xe) a 1280x720 y a 1920x1080: el coste crece
-       algo más deprisa que el número de píxeles. */
+       algo más deprisa que el número de píxeles. En invierno no hay briznas. */
     function weight(i){
-      const q = LEVELS[i], s = Math.min(1, q.side / Math.max(place.w, place.h));
-      return Math.pow(place.w * place.h * s * s, 1.15) / 35 + BLADES * q.part * (q.tall ? 1 : 0.6);
+      const q = LEVELS[Math.max(i, cap)], s = Math.min(1, q.side / Math.max(place.w, place.h));
+      return Math.pow(place.w * place.h * s * s, 1.15) / 35 + (SEASON === 3 ? 0 : BLADES * q.part * (q.tall ? 1 : 0.6));
     }
-    /* Qué calidad aguanta este equipo. No se deduce del nombre de la tarjeta ni del número de
-       núcleos (un portátil con gráfica integrada tiene ocho y dieciséis gigas): se mide, con la
-       escena todavía sin enseñar. Se empieza por un escalón intermedio, que no ahoga a una
-       tarjeta floja (mientras la tarjeta está saturada, el navegador entero va a tirones), y
-       con lo que tarda se calcula, por lo que pesa cada escalón, a dónde ir; después se
-       comprueba. Tres rondas como mucho, unas décimas de segundo. Primero se busca ir a 60
-       fotogramas por segundo sin bajar del cuarto escalón: se nota más la fluidez que el
-       detalle. Si no da, a 30 (o a 20 en el último) en el mejor escalón que quepa. El primer
-       fotograma de cada ronda no cuenta: calcula lo que no cambia. */
-    async function measure(){
-      measuring = true;
-      const lowest = LEVELS.length - 1;
-      const log = [];
-      let l = 2, first = true;
-      fluid = true;
-      for(let round = 0; round < 3; round++){
-        setLevel(l);
-        await gauge(1);
-        let ms = await pace();
-        const room = (i) => BUDGET * 1000 / (fluid ? 60 : LEVELS[i].fps);
-        /* Si no cabe, se repite y vale la mejor: la primera medida suele salir inflada (la
-           tarjeta aún está arrancando y la página, cargando). */
-        if(ms > room(l)) ms = Math.min(ms, await pace());
-        /* Se fijó la calidad a mano mientras tanto (quality): manda eso. */
-        if(measured) return;
-        log.push([l, fluid ? 60 : LEVELS[l].fps, Math.round(ms * 10) / 10]);
-        /* Lo que tardaría el escalón j, por lo que pesa: ¿cabe? */
-        const fits = (j) => ms * weight(j) / weight(l) <= 0.9 * room(j);
-        let next = l;
-        if(fluid && ms > room(l)){
-          /* A 60 no llega aquí: ¿en uno más ligero, sin pasar del cuarto? Si no, a 30. */
-          next = -1;
-          /* Aquí sin margen: la primera medida sale inflada y la ronda siguiente lo comprueba. */
-          for(let j = 3; j > l; j--) if(ms * weight(j) / weight(l) <= room(j)) next = j;
-          if(next < 0){ fluid = false; next = l; }
-        }
-        if(!fluid && next === l && ms > room(l) && l < lowest){
-          next = lowest;
-          for(let j = lowest; j > l; j--) if(fits(j)) next = j;
-        }
-        if(next === l && ms <= room(l) && first) for(let j = l - 1; j >= 0; j--) if(fits(j)) next = j;
-        first = false;
-        if(next === l) break;
-        l = next;
+    /* El reloj de la tarjeta gráfica (EXT_disjoint_timer_query_webgl2): lo que tarda en pintar
+       un fotograma, sin parar la página. Una consulta cada vez: se abre al pintar (loop) y el
+       resultado se recoge fotogramas después. Donde no lo hay (Firefox, Safari), o si no da
+       números, se mide a tandas (probe). queryOk: ese fotograma vale como medida. */
+    const clock = software ? null : gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    let clockOn = !!clock, query = null, queryOk = false, blanks = 0, took = 0;
+    const ticks = [];
+    function readClock(){
+      if(!query || !gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) return;
+      const ms = gl.getQueryParameter(query, gl.QUERY_RESULT) / 1e6;
+      const clean = !gl.getParameter(clock.GPU_DISJOINT_EXT);
+      gl.deleteQuery(query);
+      query = null;
+      if(!clean || !queryOk) return;
+      if(ms > 0){ blanks = 0; tick(ms); }
+      else if(++blanks > 20){ clockOn = false; probeAt = performance.now(); }
+    }
+    function tick(ms){
+      if(pinned || frozen || performance.now() < settle) return;
+      ticks.push(ms);
+      /* La primera vez se decide pronto; después, con más calma. */
+      if(ticks.length < (cost.length ? 14 : 8)) return;
+      /* No la media: lo que tardan los fotogramas más bien lentos. */
+      ticks.sort((a, b) => a - b);
+      took = ticks[Math.floor(ticks.length * 0.7)];
+      ticks.length = 0;
+      decide(took);
+    }
+    /* Qué parte del fotograma puede llevarse la escena en cada modo, en milisegundos. */
+    const room = (i) => BUDGET * 1000 / MODES[i].hz;
+    const note = (ms) => { cost.push([level, rate, Math.round(ms * 10) / 10]); if(cost.length > 40) cost.shift(); };
+    /* Con lo que tarda un fotograma en el modo de ahora, a cuál ir. Lo que tardaría otro
+       escalón es lo que tardó la última vez que se pintó en él (seen), si es reciente; si no,
+       se estima por lo que pesa (weight), y al llegar se vuelve a medir.
+       - Si no cabe (dos veces seguidas, o de largo), se baja al primero en el que quepa y a ese
+         modo no se vuelve en un rato, cada vez más largo: así no va y viene.
+       - Si cabe en uno mejor con margen, se sube: dos escalones como mucho de una vez, salvo que
+         sobre muchísimo (la cuenta es una estimación, y pasarse ahoga a una tarjeta floja).
+       - La estimación peca de prudente: si aquí sobra más de un cuarto del tiempo, se prueba
+         el escalón siguiente aunque la cuenta diga que no.
+       - Si no cabe ni en el último, la escena descansa (rest). */
+    const seen = LEVELS.map(() => null);
+    function decide(ms){
+      const now = performance.now();
+      seen[level] = {ms, at:now};
+      const known = (i) => { const k = seen[Math.max(MODES[i].l, cap)]; return k && now - k.at < 180000 ? k.ms : 0; };
+      const guess = (i) => ms * weight(MODES[i].l) / weight(level);
+      if(ms > room(mode)){
+        if(++strikes < 2 && ms < room(mode) * 1.5) return;
+        barred[mode] = now + barWait;
+        barWait = Math.min(barWait * 2, 300000);
+        note(ms);
+        let to = -1;
+        for(let i = mode + 1; i < MODES.length && to < 0; i++) if((known(i) || guess(i)) <= 0.9 * room(i)) to = i;
+        if(to < 0 && mode === MODES.length - 1){ rest(); return; }
+        setMode(to < 0 ? MODES.length - 1 : to);
+        return;
       }
-      /* En móviles y tabletas, nunca por encima del tercer escalón: se calientan enseguida. */
-      if(window.matchMedia('(pointer: coarse)').matches) l = Math.max(l, 2);
-      cost = log;
-      measured = true;
+      strikes = 0;
+      let to = -1;
+      for(let i = 0; i < mode && to < 0; i++){
+        if(barred[i] > now) continue;
+        const m = MODES[i], was = known(i);
+        if(was){ if(was <= 0.85 * room(i)) to = i; continue; }
+        if(guess(i) <= 0.8 * room(i) && (m.l >= level - 2 || guess(i) <= 0.5 * room(i))) to = i;
+        else if(m.l === level - 1 && m.hz === rate && ms <= 0.72 * room(i)) to = i;
+      }
+      if(to < 0) return;
+      note(ms);
+      setMode(to);
+    }
+    /* Ni en lo más ligero: la escena se queda en una imagen un rato y vuelve a probar (antes se
+       quedaba parada para siempre). Cada vez espera más. */
+    function rest(){
+      frozen = true;
+      restTimer = setTimeout(() => {
+        restTimer = 0;
+        if(dead) return;
+        frozen = false;
+        setMode(MODE_START);
+        wake();
+      }, restWait);
+      restWait = Math.min(restWait * 2, 240000);
+    }
+    /* Sin reloj: una tanda de fotogramas de prueba (pace) y a decidir con eso. Se repite poco
+       después si ha cambiado algo (hay que medir el modo nuevo) y, si se bajó, cuando toque
+       volver a intentar subir. probeAt: cuándo toca la siguiente. */
+    let probeAt = Infinity;
+    async function probe(){
+      if(measuring || pinned || dead) return;
+      measuring = true;
+      /* El primer fotograma no cuenta: calcula lo que no cambia. */
+      await gauge(1);
+      const ms = took = Math.min(await pace(), await pace());
       measuring = false;
-      setLevel(l);
+      if(dead) return;
+      if(!pinned){
+        const before = mode, now = performance.now();
+        decide(ms);
+        const retry = barred.reduce((t, until, i) => (i < mode && until > now ? Math.min(t, until) : t), Infinity);
+        probeAt = mode !== before || strikes ? now + 700 : retry;
+      }
       wake();
     }
 
-    /* La marca del último fotograma mandado a la tarjeta. heavy: no lo había terminado cuando
-       tocaba (ver loop). */
-    let mark = null, heavy = false;
+    /* La marca del último fotograma mandado a la tarjeta: mientras no lo haya terminado no se le
+       manda otro (se amontonarían y el formulario iría a tirones). skipped: cuántas veces ha
+       tocado pintar y seguía con él. La marca avisa tarde aunque el trabajo sea poco, así que
+       de ella no se deduce la calidad, salvo donde no hay reloj y solo si se pasa de largo. */
+    let mark = null, skipped = 0, counted = 0, slow = 0;
     function judge(){
       if(!mark) return;
-      if(gl.clientWaitSync(mark, 0, 0) === gl.TIMEOUT_EXPIRED){ heavy = true; return; }
+      /* Medio segundo sin avisar: se da por terminado (hay controladores que no avisan). */
+      if(gl.clientWaitSync(mark, 0, 0) === gl.TIMEOUT_EXPIRED && skipped < 30) return;
       gl.deleteSync(mark);
       mark = null;
     }
     function loop(now){
       raf = 0;
-      if(away(screen) || document.hidden || measuring) return;
+      if(dead || away(screen) || document.hidden || measuring) return;
       /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
       if(!live){
         loadPoster();
@@ -3446,30 +3583,30 @@
         if(!isStill()) raf = requestAnimationFrame(loop);
         return;
       }
-      if(!measured && !isStill()){ measure(); return; }
+      if(clockOn) readClock();
+      /* Con movimiento reducido (o ahorro de datos) es una sola imagen: en el mejor escalón, que
+         no hay que moverla. */
+      if(!pinned && !restTimer && mode !== MODE_STILL && isStill()) setMode(MODE_STILL);
       const every = 1000 / rate;
       if(now - last >= every - 2){
-        /* Si la tarjeta aún no ha terminado el fotograma anterior, no se le manda otro: se
-           amontonarían y el formulario iría a tirones. */
         judge();
-        if(mark){ raf = requestAnimationFrame(loop); return; }
-        /* Fotogramas pesados: más de un tercio de una tanda, un escalón menos. En el más ligero,
-           si lo son casi todos, la escena se queda quieta. Mientras cambia el tema no se
-           cuentan: esos segundos se rehacen las sombras y pesan más de la cuenta. */
-        if(last && now > settle && night === toNight && day === toDay){
-          counted++;
-          if(heavy) slow++;
-          if(counted >= 24){
-            /* Antes de bajar de escalón, se baja de 60 a 30. */
-            if(slow > 8 && fluid){ fluid = false; setLevel(level); }
-            else if(slow > 8 && level < LEVELS.length - 1) setLevel(level + 1);
-            else if(slow > 16) frozen = true;
-            counted = 0; slow = 0;
+        if(mark){ skipped++; raf = requestAnimationFrame(loop); return; }
+        if(!clockOn && !pinned && !isStill()){
+          if(now >= probeAt){ probeAt = Infinity; skipped = 0; probe(); return; }
+          /* Fotogramas que la tarjeta no había acabado dos turnos después: si son más de un
+             tercio de una tanda, se vuelve a medir. Mientras cambia el tema no se cuentan. */
+          if(last && now > settle && night === toNight && day === toDay){
+            counted++;
+            if(skipped >= 2) slow++;
+            if(counted >= 24){
+              if(slow > 8) probeAt = now;
+              counted = 0; slow = 0;
+            }
           }
         }
-        heavy = false;
+        skipped = 0;
         last = now;
-        if(!shown){ shown = true; canvas.classList.add('is-on'); }
+        if(!shown){ shown = true; canvas.classList.add('is-on'); probeAt = now + 1300; }
         /* La escena ya está: la imagen de espera se va por debajo de la hierba, que crece, y
            se suelta. */
         if(veil > 0){
@@ -3478,24 +3615,44 @@
         }
         cover = veil * veil * (3 - 2 * veil);
         grow = veilFrom && !isStill() ? Math.min(1, (now - veilFrom) / 1100) : 1;
+        const timing = clockOn && !query && !pinned && !isStill();
+        if(timing){ query = gl.createQuery(); gl.beginQuery(clock.TIME_ELAPSED_EXT, query); }
+        redone = false;
         draw(now);
+        /* Vale de medida si no ha rehecho nada, la hierba ya está entera y el sol no se mueve. */
+        if(timing){ gl.endQuery(clock.TIME_ELAPSED_EXT); queryOk = !redone && grow >= 1 && night === toNight && day === toDay; }
         cover = 0;
         if(veil <= 0 && veilFrom >= 0){ gl.deleteTexture(posterTex); veilFrom = -1; }
         if(!isStill()){
-          /* Pesado: la tarjeta sigue con él pasada la mayor parte del tiempo del fotograma. */
-          const flag = mark = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+          mark = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
           gl.flush();
-          setTimeout(() => { if(mark === flag) judge(); }, every * 0.85);
         }
       }
       if(!isStill()) raf = requestAnimationFrame(loop);
     }
     function wake(){
-      if(raf || measuring || away(screen) || document.hidden) return;
+      if(dead || raf || measuring || away(screen) || document.hidden) return;
       resize();
       /* Tras una pausa (pestaña oculta, escena quieta) el primer fotograma no cuenta como pesado. */
       last = 0;
       raf = requestAnimationFrame(loop);
+    }
+    /* Para del todo y suelta lo que escuchaba (ver stop() y lost(), arriba). lose: además
+       devuelve la memoria de la tarjeta gráfica. */
+    function destroy(lose){
+      dead = true;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      clearTimeout(restTimer);
+      life.abort();
+      watching.forEach((o) => o.disconnect());
+      canvas.classList.remove('is-on');
+      root.classList.remove('scene-lite');
+      Object.assign(api, IDLE);
+      if(lose){
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if(ext) ext.loseContext();
+      }
     }
 
     /* Lo que pasa en el formulario, para la pantalla del ordenador. {text}: lo escrito en el
@@ -3516,11 +3673,11 @@
       last = 0;
       wake();
     }
-    /* Para las pruebas y para medir: el estado de la calidad (cost: lo que midió measure()),
+    /* Para las pruebas y para medir: el estado de la calidad (cost: los cambios de modo; ms: lo último medido),
        fijar la hora, fijar el escalón y cuánto tarda de verdad un fotograma (only: solo esas
        pasadas, ver passes). */
     function state(){
-      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:rate, frozen, software, cache, live, cost, night, day, dawn, canvas:[canvas.width, canvas.height]};
+      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:rate, frozen, software, cache, live, clock:clockOn, ms:took, cost, night, day, dawn, canvas:[canvas.width, canvas.height]};
     }
     function bench(frames, only){
       if(!live) return 0;
@@ -3536,7 +3693,17 @@
     api.bench = bench;
     api.poster = poster;
     api.hour = (h) => { hourFixed = h == null ? null : +h; last = 0; wake(); };
-    api.quality = (l, hz) => { measured = true; measuring = false; frozen = false; fluid = hz === 60; setLevel(l); last = 0; wake(); };
+    /* Fija el escalón y los fotogramas por segundo (30 si no se dicen); sin escalón, lo suelta. */
+    api.quality = (l, hz) => {
+      pinned = l != null;
+      if(!pinned) return;
+      clearTimeout(restTimer);
+      frozen = false;
+      const i = MODES.findIndex((m) => m.l === (l | 0) && m.hz === (hz || 30));
+      setMode(i < 0 ? MODES.length - 1 : i);
+      last = 0;
+      wake();
+    };
 
     /* El cursor: solo con ratón (en pantallas táctiles no hay cursor que seguir). */
     if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
@@ -3544,20 +3711,20 @@
         if(ev.pointerType && ev.pointerType !== 'mouse') return;
         mouse.tx = ev.clientX; mouse.ty = ev.clientY; mouse.moved = performance.now();
         if(!mouse.inside){ mouse.inside = true; mouse.x = mouse.tx; mouse.y = mouse.ty; }
-      }, {passive:true});
-      screen.addEventListener('pointerleave', () => { mouse.inside = false; });
+      }, {passive:true, signal:life.signal});
+      screen.addEventListener('pointerleave', () => { mouse.inside = false; }, heard);
     }
 
-    window.addEventListener('resize', () => { resize(); wake(); });
-    document.addEventListener('visibilitychange', wake);
-    onPlain(wake);
+    window.addEventListener('resize', () => { resize(); wake(); }, heard);
+    document.addEventListener('visibilitychange', wake, heard);
+    onPlain(wake, heard);
     /* La pantalla de acceso aparece y desaparece con el atributo hidden; el tema, con data-theme. */
-    new MutationObserver(() => { relayout = true; resize(); wake(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
-    new MutationObserver(wake).observe(root, {attributes:true, attributeFilter:['data-theme', 'data-motion']});
-    if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake);
-    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); cancelAnimationFrame(raf); raf = 0; mark = null; canvas.classList.remove('is-on'); });
+    watch(() => { relayout = true; resize(); wake(); }, screen, ['hidden']);
+    watch(wake, root, ['data-theme', 'data-motion']);
+    if(darkQuery.addEventListener) darkQuery.addEventListener('change', wake, heard);
+    canvas.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); kit.lost(level); }, heard);
     wake();
-    return true;
+    return {destroy};
   }
 
   /* signal() no hace nada hasta que la escena arranca (o si no hay WebGL). */
@@ -3565,16 +3732,16 @@
      modesto compilar lleva segundos, y si no, lo escrito o un acceso en curso no llegaban a la
      pantalla del ordenador); setup() lo repasa. */
   const early = [];
-  let started = false;
-  const api = {
-    start(canvas, screen, focusEl){
-      if(started) return true;
-      started = true;
-      return start(canvas, screen, focusEl);
-    },
-    signal(o){ if(early.length < 60) early.push(o); },
+  /* Sin escena en marcha (aún no ha arrancado, se ha quitado o no hay WebGL). */
+  const IDLE = {
+    signal(o){ early.push(o); if(early.length > 60) early.shift(); },
     state(){ return null; }, bench(){ return 0; }, poster(){ return null; }, hour(){}, quality(){}
   };
+  const api = Object.assign({
+    start(canvas, screen, focusEl){ return host ? true : start(canvas, screen, focusEl); },
+    /* Quitar el paisaje del todo, o volver a ponerlo. */
+    enable
+  }, IDLE);
   /* Este script lo pide auth-early.js (loadScene) cuando la pantalla de acceso se va a ver con
      paisaje, así que puede llegar antes o después de que exista Workhub: se publica en los dos
      sitios (AuthView lo recoge de WORKHUB_AUTH.scene si llegó antes). La escena se empieza a

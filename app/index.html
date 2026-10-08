@@ -88,6 +88,7 @@
   <header class="auth-top">
     <div class="auth-tools">
       <div class="segmented auth-lang" id="authLang" role="radiogroup" aria-label="Idioma" translate="no"><button type="button" role="radio" data-lang-choice="es" aria-label="Español">ES</button><button type="button" role="radio" data-lang-choice="en" aria-label="English">EN</button></div>
+      <button type="button" class="icon-only auth-theme auth-scene-toggle" id="authSceneToggle" aria-pressed="true" aria-label="Quitar el paisaje animado" title="Quitar el paisaje animado"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18.5l5.6-8.2 3.9 5.4 2.6-3.6 4.9 6.4z"/><circle cx="16.6" cy="6.8" r="1.8"/><path class="ic-slash" d="M4 3.5l16 17"/></svg></button>
       <button type="button" class="icon-only auth-theme" id="authTheme" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar entre tema claro y oscuro"><svg class="ic-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg><svg class="ic-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     </div>
   </header>
@@ -167,7 +168,17 @@
         </div>
       </section>
 
-      <div class="auth-aside" id="authWindow" aria-hidden="true"></div>
+      <div class="auth-aside" id="authWindow" aria-hidden="true">
+        <!-- Sin paisaje (html.scene-off): Sumi y un tablero pequeño; lo mueve AuthView.playDesk. -->
+        <div class="auth-desk" id="authDesk">
+          <span class="auth-desk-sumi" id="authDeskSumi"></span>
+          <div class="auth-desk-board">
+            <div class="auth-desk-col"><b>Por hacer</b><i class="auth-desk-card"></i><i class="auth-desk-card"></i></div>
+            <div class="auth-desk-col"><b>En curso</b><i class="auth-desk-card"></i></div>
+            <div class="auth-desk-col"><b>Hecho</b></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -82,6 +82,8 @@
     'Tareas abiertas':'Open tasks',
     /* Rediseño «cristal limpio» */
     'Cambiar entre tema claro y oscuro':'Switch between light and dark theme',
+    'Quitar el paisaje animado':'Remove the animated landscape',
+    'Mostrar el paisaje animado':'Show the animated landscape',
     'Vista de las tareas':'Task view',
     'Tablero':'Board',
     'Lista':'List',

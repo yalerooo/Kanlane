@@ -43,11 +43,13 @@ function board(){
     ],
     members:[{id:id(20), fullName:'Ana Pérez', username:'ana'}],
     cards:[
-      {id:CARD2, name:'Segunda', pos:20, idList:id(1), closed:false, desc:'', idLabels:[], due:null},
+      {id:CARD2, name:'Segunda', pos:20, idList:id(1), closed:false, desc:'', idLabels:[], due:null,
+        cover:{idAttachment:id(70), color:null, size:'normal', brightness:'dark', scaled:[{url:'https://example.com/a.jpg'}]}},
       {id:CARD1, name:'Primera', pos:10, idList:id(1), closed:false, desc:'**Hola**', idLabels:[id(10), id(11), id(12)],
         due:'2024-04-15T17:27:00.000Z', start:'2024-04-01T06:00:00.000Z', dueReminder:1440, idMembers:[id(20)], dateLastActivity:'2024-03-05T12:00:00.000Z',
-        attachments:[{name:'doc', url:'https://example.com/doc'}], coordinates:{latitude:40.4, longitude:-3.7}},
-      {id:id(32), name:'', pos:10, idList:id(2), closed:false, desc:'', idLabels:[]},
+        attachments:[{name:'doc', url:'https://example.com/doc'}], coordinates:{latitude:40.4, longitude:-3.7},
+        cover:{idAttachment:null, color:'sky', size:'full', brightness:'light'}},
+      {id:id(32), name:'', pos:10, idList:id(2), closed:false, desc:'', idLabels:[], cover:{idAttachment:null, color:null, size:'normal'}},
       {id:id(33), name:'Archivada', pos:30, idList:id(1), closed:true, desc:'', idLabels:[]},
       {id:id(34), name:'En lista archivada', pos:10, idList:id(4), closed:false, desc:'', idLabels:[]}
     ],
@@ -110,13 +112,20 @@ function board(){
   assert.deepEqual(plain(second.checklist.map((c) => [c.text, c.done])), [['Solo', true]]);
   assert.deepEqual(plain(first.notes.map((n) => n.text)), ['Ana Pérez: Primer comentario 🙂', 'Ana Pérez: Segundo comentario']);
   assert.deepEqual(plain(seed.counts), {lists:3, cards:3, labels:4, checkItems:4, comments:2});
-  assert.deepEqual(plain(seed.skipped), {archivedCards:2, archivedLists:1, mergedLists:0, labels:0});
+  assert.deepEqual(plain(seed.skipped), {archivedCards:2, archivedLists:1, mergedLists:0, labels:0, imageCovers:1});
   assert.match(TrelloImport.summary(seed), /listas: 3 · tarjetas: 3 · etiquetas: 4 · subtareas: 4 · comentarios: 2/);
   assert.match(TrelloImport.summary(TrelloImport.parse(JSON.stringify(board()))), /archivadas que no se importan: 2/);
   console.log('OK   trello: checklists → subtareas y comentarios → notas');
 
   /* Lo que Kanlane aún no tiene no se cuela en la tarea (está leído, pero comentado). */
-  ['startDate', 'dueReminder', 'members', 'attachments', 'location', 'votes', 'cover'].forEach((k) => assert.ok(!(k in first), k));
+  ['startDate', 'dueReminder', 'members', 'attachments', 'location', 'votes'].forEach((k) => assert.ok(!(k in first), k));
+
+  /* Portadas: la de color pasa al color de Kanlane más parecido; la de imagen no viene en el archivo y se avisa. */
+  assert.deepEqual(plain(first.cover), {color:'blue'}, 'celeste → azul');
+  assert.ok(!('cover' in second), 'la portada de imagen no se importa');
+  assert.ok(!('cover' in seed.tasks.find((t) => t.title === '(sin título)')), 'sin portada');
+  assert.match(TrelloImport.summary(seed), /Portadas de imagen que no se importan[^:]*: 1\./);
+  console.log('OK   trello: las portadas de color se conservan y las de imagen se avisan');
 
   /* Más listas de las que admite Kanlane (500, como Trello): las que sobran se juntan en la última etapa. */
   const big = board();
@@ -147,7 +156,7 @@ function board(){
   assert.equal(plain(ProjectTemplates.resolve(config)).stages[1].limit, 3);
   assert.equal(config.labels.length, 4);
   const ALLOWED = ['title', 'desc', 'cliente', 'status', 'contacto', 'dueDate', 'dueTime', 'repeat', 'checklist', 'labels', 'assignees',
-    'linkedContacts', 'linkedVault', 'order', 'createdAt', 'updatedAt', 'repeatSpawned'];
+    'linkedContacts', 'linkedVault', 'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'cover'];
   const written = [];
   const notes = [];
   const model = {
@@ -161,6 +170,7 @@ function board(){
   const res = await ProjectSeed.write(model, long);
   assert.deepEqual(plain(res), {tasks:4, notes:3, failed:1}, 'un fallo no detiene el resto');
   written.forEach((b) => Object.keys(b).forEach((k) => assert.ok(ALLOWED.includes(k), 'campo no admitido por las reglas: ' + k)));
+  assert.deepEqual(plain(written.map((b) => b.cover || null)).filter(Boolean), [{color:'blue'}], 'la portada de color se escribe en la tarea');
   const capped = written.find((b) => b.title[0] === 'x');
   assert.equal(capped.title.length, 500);
   assert.equal(capped.desc.length, 20000);

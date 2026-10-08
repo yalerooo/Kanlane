@@ -314,6 +314,15 @@
       this.btnDone.title = Workhub.t(isDone ? 'Completada' : 'Marcar como completada');
       this.dlg.classList.toggle('is-done', isDone);
       this.title.textContent = t.title || 'Sin título';
+      /* Portada: franja de color o la imagen, encima del título. */
+      const cover = t._undecryptable ? null : TaskModel.coverOf(t);
+      const coverEl = $('tvCover');
+      coverEl.hidden = !cover;
+      coverEl.className = 'tv-cover' + (cover && cover.asset ? ' is-image' : '');
+      coverEl.style.setProperty('--cv', cover && cover.color ? Workhub.models.ProjectTemplates.colorOf(cover.color).dot : '');
+      const coverSrc = cover && cover.asset ? platform.assetUrlNow(cover.asset) : '';
+      coverEl.innerHTML = cover && cover.asset ? '<img' + (coverSrc ? ' src="' + esc(coverSrc) + '"' : '') + ' data-asset-id="' + esc(cover.asset) + '" alt="">' : '';
+      platform.hydrateAssetImages(coverEl);
       /* La fecha límite siempre; el resto solo si tiene valor (las tareas
          importadas de copias antiguas no traen fechas reales de creación). */
       const known = (ts) => ts > 100000;

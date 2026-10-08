@@ -968,6 +968,11 @@
         <button type="button" class="btn btn-ghost btn-sm" id="fLabelAdd">Crear</button>
       </div>
     </div>
+    <div class="field" id="fCoverField">
+      <span class="field-label" id="fCoverLabel">Portada</span>
+      <div class="cover-picker" id="fCover" role="radiogroup" aria-labelledby="fCoverLabel"></div>
+      <p class="field-help" id="fCoverHelp">Un color o una de las imágenes adjuntas en las notas de la tarea. Se ve en lo alto de la tarjeta.</p>
+    </div>
     <div class="row2">
       <div class="field needs-clients">
         <label for="fCliente">Cliente / proyecto</label>
@@ -1118,6 +1123,7 @@
   </div>
   <div class="tv-scroll">
   <div class="tv-body">
+    <div class="tv-cover" id="tvCover" hidden></div>
     <div class="tv-title-row">
       <button type="button" class="tv-done" id="btnTvDone" title="Marcar como completada"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="sr-only" id="btnTvDoneText">Marcar como completada</span></button>
       <h2 id="tvTitle" translate="no"></h2>

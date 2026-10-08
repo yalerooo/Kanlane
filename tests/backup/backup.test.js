@@ -90,4 +90,22 @@ const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meet
   const bare = await plain.import({tasks:[{title:'T', notes:[{text:'Con archivo', attachments:[{name:'a.txt', parts:['p1']}]}]}]});
   assert.deepEqual([made.notes[0].attachments, bare.counts.files, bare.counts.filesSkipped], [undefined, 0, 1]);
   console.log('OK   copia: importar conserva las subtareas y copia los adjuntos de las notas');
+
+  /* Portadas: el color va con la tarea; la imagen sigue a la copia de su nota (id nuevo), o al
+     mismo id si era una imagen suelta de las de antes; si su nota no viene, la tarea llega sin portada. */
+  made.tasks.length = made.notes.length = uploads.length = 0;
+  const covers = {};
+  store.update = async (id, patch) => { covers[id] = patch.cover; };
+  plain.files = {read:async (att) => ({from:att.parts.join('+')}), image:async (blob) => 'nueva-' + blob.from, file:async () => []};
+  await plain.import({tasks:[
+    {title:'Color', cover:{color:'blue'}},
+    {title:'Imagen copiada', cover:{asset:'i1'}, notes:[{text:'n', attachments:[{image:true, parts:['i0']}, {image:true, parts:['i1']}], assetIds:['i0', 'i1']}]},
+    {title:'Imagen de antes', cover:{asset:'vieja'}, notes:[{text:'n', imageAssetId:'vieja'}]},
+    {title:'Imagen que no viene', cover:{asset:'perdida'}, notes:[{text:'n'}]},
+    {title:'Portada rara', cover:'azul'},
+    {title:'Sin portada'}
+  ]});
+  assert.deepEqual(JSON.parse(JSON.stringify(made.tasks.map((t) => t.cover || null))), [{color:'blue'}, null, null, null, null, null]);
+  assert.deepEqual(JSON.parse(JSON.stringify(covers)), {t2:{asset:'nueva-i1'}, t3:{asset:'vieja'}});
+  console.log('OK   copia: las portadas de color y de imagen se conservan al importar');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

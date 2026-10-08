@@ -313,6 +313,12 @@ async function t(name, fn){
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea admite fecha de inicio y campos personalizados', () => assertSucceeds(own.collection('tasks').doc('ranged').set({title:'a', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:10, f2:'texto', f3:true}})));
   await t('una fecha de inicio que no es AAAA-MM-DD se rechaza', () => assertFails(own.collection('tasks').doc('ranged2').set({title:'a', startDate:'2026-10-06T00:00:00Z'})));
+  await t('una tarea admite portada de color', () => assertSucceeds(own.collection('tasks').doc('cover1').set({title:'a', cover:{color:'blue'}})));
+  await t('una tarea admite portada de imagen', () => assertSucceeds(own.collection('tasks').doc('cover2').set({title:'a', cover:{asset:'abc123'}})));
+  await t('quitar la portada deja el mapa vacío', () => assertSucceeds(own.collection('tasks').doc('cover1').update({cover:{}})));
+  await t('una portada que no es un mapa se rechaza', () => assertFails(own.collection('tasks').doc('cover3').set({title:'a', cover:'blue'})));
+  await t('una portada con una imagen incrustada se rechaza', () => assertFails(own.collection('tasks').doc('cover4').set({title:'a', cover:{asset:'data:image/png;base64,' + 'A'.repeat(300)}})));
+  await t('una portada con campos de más se rechaza', () => assertFails(own.collection('tasks').doc('cover5').set({title:'a', cover:{color:'blue', asset:'x', size:'full'}})));
   await t('una tarea admite la marca de archivada', () => assertSucceeds(own.collection('tasks').doc('archived').set({title:'a', status:'todo', archivedAt:1759900000000})));
   await t('restaurar una tarea archivada deja la marca a cero', () => assertSucceeds(own.collection('tasks').doc('archived').update({archivedAt:0})));
   await t('una marca de archivada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('archived2').set({title:'a', archivedAt:'ayer'})));

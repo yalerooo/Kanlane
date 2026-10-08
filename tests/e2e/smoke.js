@@ -210,6 +210,33 @@ async function newProject(page, name){
     await page.locator('#dlgTaskView').waitFor({state:'hidden'});
     await page.locator('#taskMode [data-task-mode="board"]').click();
     assert.equal(await page.locator('#board').isVisible(), true);
+    /* Portada de color desde el formulario: se ve en la tarjeta y en la ficha, sigue tras recargar y se quita. */
+    const coverOf = (title) => page.evaluate((x) => Workhub.models.TaskModel.coverOf(Workhub.app.models.tasks.items.find((t) => t.title === x)), title);
+    const editTask = async (title) => {
+      await page.evaluate((x) => Workhub.app.controllers.tasks.openEdit(Workhub.app.models.tasks.items.find((t) => t.title === x).id), title);
+      await page.locator('#dlg').waitFor({state:'visible'});
+    };
+    await editTask('Vence hoy');
+    assert.equal(await page.locator('#fCover [data-cover="none"]').getAttribute('aria-checked'), 'true');
+    await page.locator('#fCover [data-cover="color"][data-value="blue"]').click();
+    await page.locator('#btnSave').click();
+    await page.locator('#dlg').waitFor({state:'hidden'});
+    await page.locator('.card').filter({hasText:'Vence hoy'}).locator('.card-cover').waitFor();
+    assert.equal(await page.locator('.card-cover').count(), 1, 'la tarea sin portada sigue sin ella');
+    await page.reload();
+    await page.locator('.card').filter({hasText:'Vence hoy'}).locator('.card-cover').waitFor();
+    assert.deepEqual(await coverOf('Vence hoy'), {color:'blue'});
+    await page.locator('.card').filter({hasText:'Vence hoy'}).click();
+    await page.locator('#tvCover').waitFor({state:'visible'});
+    await page.keyboard.press('Escape');
+    await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+    await editTask('Vence hoy');
+    assert.equal(await page.locator('#fCover [data-value="blue"]').getAttribute('aria-checked'), 'true');
+    await page.locator('#fCover [data-cover="none"]').click();
+    await page.locator('#btnSave').click();
+    await page.locator('#dlg').waitFor({state:'hidden'});
+    assert.equal(await coverOf('Vence hoy'), null);
+    assert.equal(await page.locator('.card-cover').count(), 0);
 
     /* ---- Tabla, cronograma y campos personalizados: otras vistas de las mismas tareas ---- */
     const taskBy = (title) => page.evaluate((x) => { const t = Workhub.app.models.tasks.items.find((i) => i.title === x); return t ? JSON.parse(JSON.stringify(t)) : null; }, title);

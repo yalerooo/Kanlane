@@ -85,11 +85,14 @@
 
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-scene" aria-hidden="true"><canvas id="authCanvas"></canvas></div>
-  <!-- Sin paisaje y en móviles: tinta, burbujas y un Sumi grande y tenue al fondo (auth.css, .auth-ink). -->
+  <!-- Sin paisaje y en móviles: agua de fondo (auth.css, .auth-ink). Por orden: la superficie (dos
+       filas de reflejos), cuatro rayos de luz, dos manchas de color, Sumi y las burbujas. -->
   <div class="auth-ink" aria-hidden="true">
-    <i class="auth-ink-blob"></i><i class="auth-ink-blob"></i><i class="auth-ink-blob"></i>
-    <span class="auth-ink-sumi" data-sumi="normal" data-sumi-size="560" data-sumi-class="is-drift" data-sumi-eye="var(--bg)"></span>
-    <span class="auth-ink-bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <i class="auth-ink-surface"></i><i class="auth-ink-surface"></i>
+    <i class="auth-ink-ray"></i><i class="auth-ink-ray"></i><i class="auth-ink-ray"></i><i class="auth-ink-ray"></i>
+    <i class="auth-ink-blob"></i><i class="auth-ink-blob"></i>
+    <span class="auth-ink-sumi" data-sumi="normal" data-sumi-size="430" data-sumi-class="is-drift" data-sumi-eye="var(--bg)" data-sumi-flow></span>
+    <span class="auth-ink-bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
   </div>
   <header class="auth-top">
     <div class="auth-tools">

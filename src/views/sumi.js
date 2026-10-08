@@ -54,11 +54,27 @@
     return d + 'H' + g.x0 + 'Z';
   }
 
-  function armsMarkup(g){
+  /* flow: los brazos sueltos, para un Sumi que flota (el del fondo del acceso). Cada brazo deja
+     de ser una cápsula rígida y pasa a ser un trazo curvo, vez y media más largo, que ondula
+     sin parar entre dos formas, cada uno a su ritmo. Sale recto del cuerpo (su raíz no se
+     mueve ni se ve la unión) y lo que se mece es la punta. La curva se anima dentro del propio
+     SVG (animate), que es lo que funciona igual en todos los navegadores; con calm, quieta. */
+  const FLOW = [[5.4, -2.6, 4.2], [6.8, 3.2, -4.6], [4.6, -3.4, 3.8]];   /* segundos, y cuánto se va la punta a cada lado */
+  function armsMarkup(g, body, flow, calm){
     return g.arms.map((a, i) => {
-      const rect = '<rect class="sumi-arm sumi-arm-' + i + '" x="' + a[0] + '" y="' + g.top + '" width="' + a[1] + '" height="' + (a[2] - g.top) + '" rx="' + a[1] / 2 + '"/>';
+      const x = a[0] + a[1] / 2, len = (a[2] - g.top) * 1.55;
+      let arm;
+      if(flow){
+        const f = FLOW[i];
+        const curve = (k) => 'M' + x + ' ' + g.top + 'C' + x + ' ' + (g.top + len * 0.42).toFixed(2) + ' ' + (x + f[1] * k * 0.55).toFixed(2) + ' ' + (g.top + len * 0.72).toFixed(2) + ' ' + (x + f[1 + (k < 0 ? 1 : 0)] * Math.abs(k)).toFixed(2) + ' ' + (g.top + len).toFixed(2);
+        const there = curve(1), back = curve(-1);
+        const sway = calm ? '' : '<animate attributeName="d" dur="' + f[0] + 's" begin="-' + (i * 1.7) + 's" repeatCount="indefinite" values="' + there + ';' + back + ';' + there + '" keyTimes="0;0.5;1" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>';
+        arm = '<path class="sumi-arm sumi-arm-' + i + '" d="' + there + '" fill="none" stroke="' + body + '" stroke-width="' + a[1] + '" stroke-linecap="round">' + sway + '</path>';
+      } else {
+        arm = '<rect class="sumi-arm sumi-arm-' + i + '" x="' + a[0] + '" y="' + g.top + '" width="' + a[1] + '" height="' + (a[2] - g.top) + '" rx="' + a[1] / 2 + '"/>';
+      }
       const turn = (1 - i) * g.splay;
-      return turn ? '<g transform="rotate(' + turn + ' ' + (a[0] + a[1] / 2) + ' ' + g.root + ')">' + rect + '</g>' : rect;
+      return turn ? '<g transform="rotate(' + turn + ' ' + x + ' ' + g.root + ')">' + arm + '</g>' : arm;
     }).join('');
   }
 
@@ -96,6 +112,7 @@
      - season: 'spring' | 'summer' | 'autumn' | 'winter' añade el detalle de esa estación; false lo
        quita. Si falta, se usa la estación de la aplicación (<html data-season>). Nunca lo llevan
        el logotipo, los iconos ni la versión reducida, ni los gestos que ya ocupan esa esquina.
+     - flow: los brazos sueltos, que ondulan sin parar (ver armsMarkup); calm los deja quietos.
      - bg: color de un cuadrado de fondo con las esquinas a 14; Sumi ocupa entonces el 62 % del
        ancho. Con bg hay que dar también eye (normalmente el mismo color). */
   function svg(o){
@@ -104,7 +121,7 @@
     const body = o.body || 'currentColor';
     const cut = !o.eye;
     const parts = face(o.mood, g, cut ? '#000' : o.eye);
-    const shape = '<path d="' + bodyPath(g) + '"/>' + armsMarkup(g);
+    const shape = '<path d="' + bodyPath(g) + '"/>' + armsMarkup(g, body, !!o.flow, !!o.calm);
     const extra = '<path class="sumi-extra" d="' + parts.extra + '" fill="none" stroke="' + body + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
     /* Solo el Sumi suelto y completo: ni el logotipo (lleva eye) ni los iconos (bg) ni el reducido. */
     const auto = cut && !o.bg && !o.mini && !parts.extra;
@@ -205,7 +222,8 @@
     const d = host.dataset, mood = d.sumi || 'normal';
     /* data-sumi-eye: color de los ojos, pintados en vez de recortados (ver svg): para un Sumi
        grande que se mueve todo el rato, recortarlos obliga a rehacer la máscara en cada fotograma. */
-    host.innerHTML = svg({mood: mood, size: +d.sumiSize || 64, mini: d.sumiMini === '1', cls: d.sumiClass || '', eye: d.sumiEye || undefined});
+    host.innerHTML = svg({mood: mood, size: +d.sumiSize || 64, mini: d.sumiMini === '1', cls: d.sumiClass || '', eye: d.sumiEye || undefined,
+      flow: d.sumiFlow !== undefined, calm: still() || doc.documentElement.getAttribute('data-motion') === 'reduced'});
     const el = host._sumi = host.firstChild;
     if(d.sumiFollow !== undefined) follow(el);
     if(d.sumiPlay) whenSeen(host, () => play(el, d.sumiPlay));

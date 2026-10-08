@@ -65,29 +65,35 @@ test('?estacion= fuerza una, para probarlas', () => {
   assert.equal(run({month: 0, zone: 'Europe/Madrid', search: '?estacion=monzon'}).season, 'winter');
 });
 
-test('las fotos de espera de la estación solo se enlazan con acceso y fuera de móviles', () => {
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true}).sheets, ['../assets/css/seasons/autumn.css']);
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, narrow: true}).sheets, []);
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: false}).sheets, []);
+/* El paisaje, pedido con el botón del acceso. */
+const SCENE = {workhub_scene: 'on'};
+
+test('las fotos de espera de la estación solo se enlazan con el paisaje pedido, con acceso y fuera de móviles', () => {
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, store: SCENE}).sheets, ['../assets/css/seasons/autumn.css']);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, narrow: true, store: SCENE}).sheets, []);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: false, store: SCENE}).sheets, []);
 });
 
-test('con el paisaje quitado se marca html.scene-off y no se enlazan las fotos de espera', () => {
-  const off = run({month: 9, zone: 'Europe/Madrid', firebase: true, store: {workhub_scene: 'off'}});
-  assert.ok(off.classes.has('scene-off'));
-  assert.deepEqual(off.sheets, []);
-  const on = run({month: 9, zone: 'Europe/Madrid', firebase: true});
+test('el acceso sale sin paisaje (html.scene-off) salvo que se haya pedido', () => {
+  /* Por defecto, y también para quien lo quitó cuando el paisaje salía siempre ('off'). */
+  [{}, {workhub_scene: 'off'}].forEach((store) => {
+    const off = run({month: 9, zone: 'Europe/Madrid', firebase: true, store});
+    assert.ok(off.classes.has('scene-off'));
+    assert.deepEqual(off.sheets, []);
+  });
+  const on = run({month: 9, zone: 'Europe/Madrid', firebase: true, store: SCENE});
   assert.ok(!on.classes.has('scene-off'));
   assert.equal(on.sheets.length, 1);
 });
 
 test('la escena se empieza a bajar ya solo si se va a ver el acceso con paisaje', () => {
   const scene = ['script ../src/views/auth-scene.js'];
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true}).preloads, scene);
-  /* Con la sesión iniciada no se ve el acceso; ni en móviles, ni sin paisaje, ni en modo local. */
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, store: {workhub_session: '1'}}).preloads, []);
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, narrow: true}).preloads, []);
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, store: {workhub_scene: 'off'}}).preloads, []);
-  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: false}).preloads, []);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, store: SCENE}).preloads, scene);
+  /* Con la sesión iniciada no se ve el acceso; ni en móviles, ni sin paisaje (lo habitual), ni en modo local. */
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, store: {workhub_scene: 'on', workhub_session: '1'}}).preloads, []);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true, narrow: true, store: SCENE}).preloads, []);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: true}).preloads, []);
+  assert.deepEqual(run({month: 9, zone: 'Europe/Madrid', firebase: false, store: SCENE}).preloads, []);
 });
 
 test('cada estación tiene su árbol y sus fotos de espera', () => {

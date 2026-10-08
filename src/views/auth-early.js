@@ -134,24 +134,24 @@
     });
     return sceneLoad;
   };
-  /* El paisaje se puede quitar del todo con el botón de la pantalla de acceso (lo pidió el
-     dueño, para los equipos a los que les pesa): se apunta en este navegador y boot.js pone
-     html.scene-off antes de pintar. Sin paisaje no se descarga la escena ni sus fotos; queda
-     el fondo liso y, en el panel de la derecha, Sumi con su tablero (auth.css). */
+  /* El acceso sale sin paisaje: el agua con Sumi (auth.css, html.scene-off, que boot.js pone
+     antes de pintar). El paisaje en 3D se pide con el botón de la pantalla de acceso y queda
+     apuntado en este navegador; mientras no se pida, no se descargan ni la escena ni sus fotos. */
   var root = document.documentElement;
   api.sceneOff = function(){ return root.classList.contains('scene-off'); };
-  /* El botón, ya con su texto si el paisaje estaba quitado (AuthView lo mantiene después). */
+  /* El botón viene en la página como «sin paisaje», que es lo habitual: si el paisaje está
+     puesto, se le cambia ya el texto (AuthView lo mantiene después). */
   var sceneBtn = $('authSceneToggle');
-  if(sceneBtn && api.sceneOff()){
-    sceneBtn.setAttribute('aria-pressed', 'false');
-    sceneBtn.setAttribute('aria-label', 'Mostrar el paisaje animado');
-    sceneBtn.title = 'Mostrar el paisaje animado';
+  if(sceneBtn && !api.sceneOff()){
+    sceneBtn.setAttribute('aria-pressed', 'true');
+    sceneBtn.setAttribute('aria-label', 'Quitar el paisaje animado');
+    sceneBtn.title = 'Quitar el paisaje animado';
   }
   api.setScene = function(on){
     root.classList.toggle('scene-off', !on);
     try{
-      if(on) localStorage.removeItem('workhub_scene');
-      else localStorage.setItem('workhub_scene', 'off');
+      if(on) localStorage.setItem('workhub_scene', 'on');
+      else localStorage.removeItem('workhub_scene');
     }catch(e){}
     if(on){
       /* Las fotos de espera (boot.js no las pidió) y la escena, si aún no se había bajado. */

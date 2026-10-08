@@ -228,7 +228,9 @@ export function rootOf(id, job) {
 
 const list = (v) => (Array.isArray(v) ? v : []);
 const cleanCtx = (c) => ({
-  stages: list(c && c.stages).filter((s) => s && typeof s.key === 'string').map((s) => ({key: s.key, label: String(s.label || s.key), done: !!s.done})),
+  stages: list(c && c.stages).filter((s) => s && typeof s.key === 'string' && !s.archived).map((s) => ({key: s.key, label: String(s.label || s.key), done: !!s.done})),
+  /* Claves de las columnas archivadas: sus tareas no están en el tablero y las reglas no las tocan. */
+  archived: list(c && c.stages).filter((s) => s && typeof s.key === 'string' && s.archived).map((s) => s.key),
   labels: list(c && c.labels).filter((l) => typeof l === 'string'),
   members: list(c && c.members).filter((m) => m && typeof m.uid === 'string').map((m) => ({uid: m.uid, name: String(m.name || '')})),
   team: !!(c && c.team)
@@ -274,7 +276,9 @@ export async function runJob(id, job, store, nowMs) {
   if (found.some((t) => t.data.ev) || (state && state.ev)) return drop('encrypted');
   const read = {};
   found.forEach((t) => { read[t.id] = t.updateTime || ''; });
-  const tasks = found.filter((t) => DAY.test(String(t.data.dueDate || ''))).map((t) => Object.assign({}, t.data, {id: t.id}));
+  /* Las archivadas (ellas o su columna) se dejan como están. */
+  const tasks = found.filter((t) => DAY.test(String(t.data.dueDate || '')) && !(+t.data.archivedAt > 0) && ctx.archived.indexOf(t.data.status) === -1)
+    .map((t) => Object.assign({}, t.data, {id: t.id}));
   let fired = {};
   try { fired = JSON.parse((state && state.values && state.values.fired) || '{}') || {}; } catch (e) { fired = {}; }
   if (typeof fired !== 'object' || Array.isArray(fired)) fired = {};

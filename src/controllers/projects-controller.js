@@ -272,17 +272,18 @@
     }
 
     /* Cambia las etapas del proyecto abierto desde el tablero (renombrar, color,
-       límite, orden…). fn recibe una copia editable y puede devolver false para
-       cancelar. Un proyecto de un tipo predefinido pasa a ser personalizado. */
+       límite, orden, archivar…). fn recibe una copia editable de todas, también
+       las archivadas (archived: true), y puede devolver false para cancelar. Un
+       proyecto de un tipo predefinido pasa a ser personalizado. */
     updateStages(fn){
       const PT = Workhub.models.ProjectTemplates;
       const p = this.current();
       if(!p || !this.projects.isReady()) return Promise.resolve(false);
       const cfg = this.projects.configOf(p);
-      const stages = cfg.stages.map((s) => Object.assign({}, s));
+      const stages = PT.allStages(p);
       if(fn(stages) === false) return Promise.resolve(false);
       const clean = PT.normalizeStages(stages);
-      if(clean.length < PT.MIN_STAGES) return Promise.resolve(false);
+      if(clean.filter((s) => !s.archived).length < PT.MIN_STAGES) return Promise.resolve(false);
       const fields = PT.fieldsFor(PT.CUSTOM_TYPE, clean, cfg.clients);
       const next = Object.assign({}, p, fields);
       /* Se ve al instante; la base de datos confirma después. */
@@ -417,6 +418,7 @@
         });
         return;
       }
+      config = this.keepArchived(id, config);
       this.confirmStages(id, config).then((ok) => {
         if(!ok){ this.view.setBusy(false); return null; }
         return this.projects.save(id, nombre, color, config).then(() => {
@@ -428,6 +430,17 @@
         this.view.setBusy(false);
         this.view.showError('No se pudo guardar el proyecto. Inténtalo de nuevo.');
       });
+    }
+
+    /* El diálogo de proyecto solo enseña las columnas del tablero: al guardar, las archivadas
+       siguen en el proyecto (salvo que una del tablero use ya su clave). */
+    keepArchived(id, config){
+      const PT = Workhub.models.ProjectTemplates;
+      const p = this.projects.get(id);
+      if(!p || !config || config.tipo !== PT.CUSTOM_TYPE || !Array.isArray(config.stages)) return config;
+      const keys = config.stages.map((s) => s.key);
+      const kept = this.projects.configOf(p).archived.filter((s) => keys.indexOf(s.key) === -1);
+      return kept.length ? Object.assign({}, config, {stages:config.stages.concat(kept)}) : config;
     }
 
     /* Al guardar el proyecto abierto sin alguna de sus columnas: si una automatización la usaba, se

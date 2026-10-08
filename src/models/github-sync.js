@@ -314,7 +314,8 @@
     _pull(items, cfg, result, alive){
       const ignored = cfg.ignored || [];
       const byItem = {};
-      this.tasks.items.forEach((t) => { if(t.ghItemId) byItem[t.ghItemId] = t; });
+      /* También las archivadas: siguen enlazadas y no hay que importarlas otra vez. */
+      this.tasks.everything().forEach((t) => { if(t.ghItemId) byItem[t.ghItemId] = t; });
       let chain = Promise.resolve();
       items.forEach((item) => {
         if(ignored.indexOf(item.id) !== -1) return;
@@ -330,6 +331,8 @@
               ghRemoteAt: r.remoteAt
             }, this._extraFields(r), this._linkFields(item)));
           }
+          /* Archivada: se queda como está hasta que se restaure. */
+          if(TaskModel.isArchived(t)) return null;
           /* Tareas enlazadas antes de existir las etiquetas: se rellenan sin contar como cambio. */
           if(r.labels && !t.ghLabels && !this._dirty(t)) this.tasks.update(t.id, this._extraFields(r));
           if(r.remoteAt <= (t.ghRemoteAt || 0)) return null;

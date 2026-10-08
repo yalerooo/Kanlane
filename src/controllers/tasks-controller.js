@@ -49,11 +49,20 @@
       this.board.bindNew(() => this.openNew());
       this.board.bindFilters(() => this.render());
       this.board.bindOpen((id) => this.openDetail(id));
-      this.board.bindSelect({remove: (ids) => this.removeMany(ids)});
+      this.board.bindSelect({remove: (ids) => this.removeMany(ids), archive: (ids) => this.archiveTasks(ids)});
       this.board.bindQuickAdd((status) => this.openNew(status));
       this.board.bindMove((id, status, beforeId) => this.moveWithActivity(id, status, beforeId));
       this.columns = new Workhub.views.ColumnView();
       this.bindColumns();
+      /* Archivados: lo que se archivó en este proyecto, para restaurarlo o eliminarlo. */
+      this.archive = new Workhub.views.ArchiveView();
+      this.archive.bind({
+        open: () => { this.renderArchive(); this.archive.open(); },
+        restoreTask: (id) => this.restoreTask(id),
+        removeTask: (id) => this.removeArchivedTask(id),
+        restoreColumn: (key) => this.restoreColumn(key),
+        removeColumn: (key) => this.removeArchivedColumn(key)
+      });
 
       /* Tabla y cronograma: otras dos vistas de las mismas tareas. */
       this.table = new Workhub.views.TaskTableView();
@@ -87,6 +96,7 @@
       /* Si el formulario se cierra por otra vía (cambio de proyecto), la pregunta pendiente se retira. */
       this.dialog.dlg.addEventListener('close', () => { if(this.discarding && this.columns.confirmDlg.open) this.columns.confirmDlg.close(); });
       this.dialog.bindDelete((id) => this.remove(id));
+      this.dialog.bindArchive((id) => this.archiveTasks([id]));
       this.dialog.bindAddNote((text, files) => this.addNote(text, files));
       this.dialog.bindDeleteNote((noteId) => {
         /* Con la nota se van sus archivos adjuntos. */
@@ -110,6 +120,7 @@
         this.closeDetail();
         this.openEdit(id, true);
       });
+      this.detail.bindArchive((id) => this.archiveTasks([id]));
       this.detail.bindStatus((id, status) => {
         this.moveWithActivity(id, status);
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
@@ -151,6 +162,7 @@
         this.timeline.setHidden(this.hiddenColumns());
         this.timeline.render(list, this.tasks.items);
       }
+      if(this.archive.isOpen()) this.renderArchive();
     }
 
     /* ---------- Tabla y cronograma ---------- */
@@ -327,7 +339,9 @@
           count: stages.length,
           visible: stages.length - this.hiddenColumns().length,
           tasks: this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).length,
-          canRemove: stages.length > PT.MIN_STAGES
+          canRemove: stages.length > PT.MIN_STAGES,
+          canArchive: !this.archiveBlock(status),
+          archiveWhy: this.archiveBlock(status)
         });
       });
       col.bindMenu({
@@ -337,6 +351,8 @@
         },
         hide: (status) => this.setHiddenColumns(this.hiddenColumns().concat(status)),
         move: (status, dir) => this.moveColumn(status, dir),
+        archive: (status) => this.archiveColumn(status),
+        archiveAll: (status) => this.archiveTasks(this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).map((t) => t.id)),
         remove: (status) => this.removeColumn(status),
         removeAll: (status) => this.removeAllTasks(status)
       });
@@ -348,7 +364,7 @@
           s.color = v.color;
           s.limit = v.limit;
           s.done = v.done;
-          if(!stages.some((x) => x.done)){
+          if(!stages.some((x) => x.done && !x.archived)){
             col.showError('Tiene que haber al menos una columna cuyas tarjetas cuenten como terminadas.');
             return false;
           }
@@ -361,7 +377,9 @@
     moveColumn(status, dir){
       this.stagesApi().updateStages((stages) => {
         const i = stages.findIndex((s) => s.key === status);
-        const j = i + dir;
+        /* La vecina que se ve: las columnas archivadas guardan su sitio, pero no cuentan. */
+        let j = i + dir;
+        while(stages[j] && stages[j].archived) j += dir;
         if(i < 0 || j < 0 || j >= stages.length) return false;
         stages.splice(j, 0, stages.splice(i, 1)[0]);
       });
@@ -399,7 +417,8 @@
           const i = stages.findIndex((x) => x.key === status);
           if(i < 0) return false;
           const removed = stages.splice(i, 1)[0];
-          if(removed.done && !stages.some((x) => x.done)) stages[stages.length - 1].done = true;
+          const left = stages.filter((x) => !x.archived);
+          if(removed.done && !left.some((x) => x.done)) left[left.length - 1].done = true;
         });
       });
     }
@@ -417,6 +436,125 @@
         Promise.all(list.map((t) => this.tasks.remove(t.id))).then(
           () => toast.undoable(list.length === 1 ? 'Tarjeta eliminada' : list.length + ' tarjetas eliminadas', () => this.tasks.restore(snap), list.length === 1 ? 'Tarjeta restaurada' : 'Tarjetas restauradas'),
           () => toast.error('No se pudieron eliminar todas las tarjetas'));
+      });
+    }
+
+    /* ---------- Archivo ---------- */
+
+    /* Archiva tareas: salen del tablero (y del calendario, los avisos…) sin perder nada, y se
+       restauran desde «Archivados» o con «Deshacer» en el aviso. No es eliminar. */
+    archiveTasks(ids){
+      if(!this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      const list = (Array.isArray(ids) ? ids : []).filter((id) => { const t = this.tasks.find(id); return t && !t._undecryptable; });
+      if(!list.length) return;
+      if(list.indexOf(this.detailId) !== -1) this.closeDetail();
+      if(list.indexOf(this.currentId) !== -1) this.closeDialog();
+      this.tasks.archive(list).then((done) => {
+        this.board.setSelecting(false);
+        if(done.length < list.length) toast.error(list.length === 1 ? 'No se pudo archivar la tarea' : 'No se pudieron archivar todas las tareas');
+        if(!done.length) return;
+        done.forEach((id) => this.logActivity(id, 'archivó la tarea'));
+        toast.undoable(done.length === 1 ? 'Tarea archivada' : done.length + ' tareas archivadas',
+          () => Promise.all(done.map((id) => this.tasks.unarchive(id))).then(() => done.forEach((id) => this.logActivity(id, 'restauró la tarea'))),
+          done.length === 1 ? 'Tarea restaurada' : 'Tareas restauradas');
+      });
+    }
+
+    restoreTask(id){
+      if(!this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      this.tasks.unarchive(id).then((patch) => {
+        this.logActivity(id, 'restauró la tarea');
+        /* Su columna está archivada o ya no existe: se dice dónde ha ido a parar. */
+        const msg = patch.status ? Workhub.t('Tarea restaurada en «{col}»', {col:Workhub.models.TaskModel.statusOf(patch.status).label}) : Workhub.t('Tarea restaurada');
+        toast.success(msg, {important:true});
+      }, () => toast.error('No se pudo restaurar la tarea'));
+    }
+
+    /* Eliminar de verdad una tarea archivada (se puede deshacer desde el aviso: vuelve al archivo). */
+    removeArchivedTask(id){
+      const t = this.tasks.findAny(id);
+      if(!t || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      const name = t._undecryptable ? Workhub.t('No se puede descifrar') : (t.title || Workhub.t('Sin título'));
+      this.columns.confirm('Eliminar tarea', Workhub.t('Se eliminará «{name}» con sus notas. Podrás deshacerlo desde el aviso que sale después.', {name:name}), 'Eliminar').then((ok) => {
+        if(!ok || !this.tasks.findAny(id)) return;
+        const snap = this.tasks.snapshot(id);
+        this.tasks.remove(id).then(
+          () => toast.undoable('Tarea eliminada', () => this.tasks.restore(snap), 'Tarea restaurada'),
+          () => toast.error('No se pudo eliminar la tarea'));
+      });
+    }
+
+    /* Por qué no se puede archivar una columna (vacío si se puede): el tablero necesita un mínimo
+       de columnas y al menos una en la que las tarjetas cuenten como terminadas. */
+    archiveBlock(status){
+      const TaskModel = Workhub.models.TaskModel;
+      const MIN = Workhub.models.ProjectTemplates.MIN_STAGES;
+      const stages = TaskModel.STATUS;
+      const s = stages.find((x) => x.key === status);
+      if(!s) return Workhub.t('Esta columna ya no existe.');
+      if(stages.length <= MIN) return Workhub.t('El tablero necesita al menos {n} columnas.', {n:MIN});
+      if(s.done && !stages.some((x) => x.done && x !== s)) return Workhub.t('Es la única columna cuyas tarjetas cuentan como terminadas.');
+      return '';
+    }
+
+    setColumnArchived(key, archived){
+      return this.stagesApi().updateStages((stages) => {
+        const s = stages.find((x) => x.key === key);
+        if(!s || !!s.archived === archived) return false;
+        if(archived) s.archived = true;
+        else delete s.archived;
+      });
+    }
+
+    /* Archiva una columna con sus tarjetas: desaparecen del tablero y vuelven tal cual al restaurarla. */
+    archiveColumn(status){
+      if(!Workhub.views.team.canEdit() || this.archiveBlock(status)) return;
+      const s = Workhub.models.TaskModel.STATUS.find((x) => x.key === status);
+      const autos = this.app.controllers && this.app.controllers.automations;
+      /* Solo se pregunta si una automatización usa la columna (quedará en pausa). */
+      (autos ? autos.warningFor({stage:status}) : Promise.resolve('')).then((warn) => (warn
+        ? this.columns.confirm('Archivar columna', Workhub.t('Se archivará la columna «{name}» con sus tarjetas. Podrás restaurarla desde Archivados.', {name:s.label}), 'Archivar columna', warn)
+        : true)).then((ok) => {
+        if(!ok) return;
+        this.setColumnArchived(status, true).then((saved) => {
+          if(saved) toast.undoable('Columna archivada', () => this.setColumnArchived(status, false).then((back) => { if(!back) throw new Error('not-restored'); }), 'Columna restaurada');
+        });
+      });
+    }
+
+    restoreColumn(key){
+      if(!Workhub.views.team.canEdit()) return;
+      this.setColumnArchived(key, false).then((ok) => { if(ok) toast.success(Workhub.t('Columna restaurada'), {important:true}); });
+    }
+
+    /* Eliminar de verdad una columna archivada: como al eliminar una del tablero, sus tarjetas no
+       se borran; pasan a la primera columna (una tarea cuyo estado ya no existe cae ahí). */
+    removeArchivedColumn(key){
+      const TaskModel = Workhub.models.TaskModel;
+      const s = TaskModel.ARCHIVED.find((x) => x.key === key);
+      if(!s || !Workhub.views.team.canEdit()) return;
+      const n = this.tasks.inArchivedStage(key).length;
+      const text = n
+        ? 'Se eliminará la columna «' + s.label + '». Sus ' + n + (n === 1 ? ' tarjeta pasará' : ' tarjetas pasarán') + ' a la primera columna; no se borra ninguna.'
+        : 'Se eliminará la columna «' + s.label + '».';
+      this.columns.confirm('Eliminar columna', text, 'Eliminar columna').then((ok) => {
+        if(!ok) return;
+        this.stagesApi().updateStages((stages) => {
+          const i = stages.findIndex((x) => x.key === key && x.archived);
+          if(i < 0) return false;
+          stages.splice(i, 1);
+        });
+      });
+    }
+
+    renderArchive(){
+      const TaskModel = Workhub.models.TaskModel;
+      const name = (key) => { const s = TaskModel.STATUS.concat(TaskModel.ARCHIVED).find((x) => x.key === key); return s ? s.label : ''; };
+      this.archive.render({
+        canEdit: Workhub.views.team.canEdit(),
+        columns: TaskModel.ARCHIVED.map((s) => ({key:s.key, label:s.label, dot:s.dot, count:this.tasks.inArchivedStage(s.key).length})),
+        tasks: this.tasks.archivedItems().map((t) => ({id:t.id, title:t.title || '', locked:!!t._undecryptable, at:+t.archivedAt,
+          cliente:this.app.clientsEnabled() ? (t.cliente || '') : '', column:name(t.status)}))
       });
     }
 
@@ -457,6 +595,7 @@
 
     refreshDetail(){
       if(!this.detailId || !this.detail.isOpen()) return;
+      /* Eliminada o archivada (también desde otro dispositivo): la ficha se cierra. */
       const t = this.tasks.find(this.detailId);
       if(!t){ this.closeDetail(); return; }
       this.detail.render(t, this.detailContext());

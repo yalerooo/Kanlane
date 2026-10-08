@@ -140,6 +140,7 @@
 
   detail.bindClose(() => $('dlgTaskView').close());
   detail.bindEdit(() => lock('edit'));
+  detail.bindArchive(() => lock('edit'));
   detail.bindStatus((id, status) => { tasks.move(id, status); });
   detail.bindDone((id, status) => { tasks.move(id, status); });
   detail.bindChecklist((id, itemId, done) => tasks.toggleCheck(id, itemId, done));
@@ -156,6 +157,7 @@
   $('btnProject').addEventListener('click', () => lock('project'));
   $('btnCommand').addEventListener('click', () => lock('search'));
   $('btnAutomations').addEventListener('click', () => lock('section'));
+  $('btnArchive').addEventListener('click', () => lock('section'));
   document.addEventListener('keydown', (ev) => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((ev.target && ev.target.tagName) || '');
     if((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')){ ev.preventDefault(); lock('search'); }

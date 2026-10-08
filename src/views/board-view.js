@@ -65,6 +65,7 @@
       this.selectBar = document.getElementById('taskSelectBar');
       this.selectCount = document.getElementById('taskSelectCount');
       this.selectDelete = document.getElementById('btnSelectDelete');
+      this.selectArchive = document.getElementById('btnSelectArchive');
 
       /* Línea que marca dónde caerá la tarea al soltarla. */
       this.indicator = document.createElement('div');
@@ -188,7 +189,7 @@
 
     /* ---------- Selección de varias tareas ---------- */
 
-    /* handlers: {remove(ids)}. Se entra en el modo con el botón de la barra o con Ctrl/Cmd + clic
+    /* handlers: {remove(ids), archive(ids)}. Se entra en el modo con el botón de la barra o con Ctrl/Cmd + clic
        en una tarea; Mayús + clic marca todas las que hay entre la anterior y esa. */
     bindSelect(handlers){
       if(!this.selectBtn || !this.selectBar) return;
@@ -201,6 +202,7 @@
         this._paintSelection();
       });
       this.selectDelete.addEventListener('click', () => { if(this.selected.size) handlers.remove(Array.from(this.selected)); });
+      if(this.selectArchive) this.selectArchive.addEventListener('click', () => { if(this.selected.size && handlers.archive) handlers.archive(Array.from(this.selected)); });
       document.addEventListener('keydown', (ev) => {
         if(ev.key !== 'Escape' || !this.selecting || document.querySelector('dialog[open], .dd.is-open')) return;
         this.setSelecting(false);
@@ -272,6 +274,10 @@
       this.selectCount.textContent = n === 0 ? 'Ninguna tarea seleccionada' : n === 1 ? '1 tarea seleccionada' : n + ' tareas seleccionadas';
       this.selectDelete.disabled = !n;
       this.selectDelete.textContent = n > 1 ? 'Eliminar ' + n : 'Eliminar';
+      if(this.selectArchive){
+        this.selectArchive.disabled = !n;
+        this.selectArchive.textContent = n > 1 ? 'Archivar ' + n : 'Archivar';
+      }
       const all = this.visibleIds.length > 0 && this.visibleIds.every((id) => this.selected.has(id));
       const allBtn = document.getElementById('btnSelectAll');
       allBtn.textContent = all ? 'Quitar la selección' : 'Seleccionar todas';

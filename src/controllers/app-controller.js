@@ -109,7 +109,7 @@
       const clientsChanged = !this.config || this.config.clients !== cfg.clients;
       this.config = cfg;
       this.configSig = sig;
-      M.TaskModel.setStages(cfg.stages);
+      M.TaskModel.setStages(cfg.stages, cfg.archived);
       this.fillStatusSelects();
       Workhub.clientsEnabled = cfg.clients;
       this.shell.setClientsEnabled(cfg.clients);

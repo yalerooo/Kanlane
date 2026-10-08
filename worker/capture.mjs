@@ -142,8 +142,11 @@ export async function loadProject(ref, store) {
     root = ref.pid === 'main' ? 'users/' + ref.uid : 'users/' + ref.uid + '/projects/' + ref.pid;
     assets = 'users/' + ref.uid + '/assets';
   }
+  /* stages: las columnas del tablero. archived: las claves de las archivadas (sus tareas no se ven). */
+  const cfg = PT.resolve(doc || {});
   return {root: root, assets: assets, doc: doc || {}, enc: !!(doc && doc.enc), team: team,
-    stages: PT.resolve(doc || {}).stages.map((s) => ({key: s.key, label: String(s.label || s.key), done: !!s.done}))};
+    stages: cfg.stages.map((s) => ({key: s.key, label: String(s.label || s.key), done: !!s.done})),
+    archived: cfg.archived.map((s) => s.key)};
 }
 
 /* El papel de una cuenta en un equipo: 'owner' | 'editor' | 'viewer' | ''. */

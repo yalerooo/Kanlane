@@ -313,6 +313,9 @@ async function t(name, fn){
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea admite fecha de inicio y campos personalizados', () => assertSucceeds(own.collection('tasks').doc('ranged').set({title:'a', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:10, f2:'texto', f3:true}})));
   await t('una fecha de inicio que no es AAAA-MM-DD se rechaza', () => assertFails(own.collection('tasks').doc('ranged2').set({title:'a', startDate:'2026-10-06T00:00:00Z'})));
+  await t('una tarea admite la marca de archivada', () => assertSucceeds(own.collection('tasks').doc('archived').set({title:'a', status:'todo', archivedAt:1759900000000})));
+  await t('restaurar una tarea archivada deja la marca a cero', () => assertSucceeds(own.collection('tasks').doc('archived').update({archivedAt:0})));
+  await t('una marca de archivada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('archived2').set({title:'a', archivedAt:'ayer'})));
   await t('una tarea que se repite admite el día original de la repetición', () => assertSucceeds(own.collection('tasks').doc('anchored').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30'})));
   await t('un día original de la repetición demasiado largo se rechaza', () => assertFails(own.collection('tasks').doc('anchored2').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30T00:00'})));
   await t('unos campos personalizados que no son un mapa se rechazan', () => assertFails(own.collection('tasks').doc('ranged3').set({title:'a', custom:['x']})));

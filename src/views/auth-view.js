@@ -316,8 +316,15 @@
          el gesto de siempre (sumi.css, .is-wave), que gira el brazo entero sobre su raíz: con
          los brazos sueltos, al girar se le abría una muesca en la unión con el cuerpo (lo vio el
          dueño). Aquí el brazo sigue saliendo recto del cuerpo y lo que sube es su curva. */
-      let hand = 0, handTo = 0;
-      const wave = (ms) => { handTo = 1; this.deskTimers.push(setTimeout(() => { handTo = 0; }, ms)); };
+      const hand = [0, 0], handTo = [0, 0];
+      const wave = (ms) => { handTo[1] = 1; this.deskTimers.push(setTimeout(() => { handTo[1] = 0; }, ms)); };
+      /* Los dos brazos arriba, en uve y más altos que al saludar, y un meneo del cuerpo que se
+         va apagando: para celebrar. high: cuánto de «arriba del todo»; party: cuánto se menea. */
+      let high = 0, highTo = 0, party = 0;
+      const cheer = (ms) => {
+        handTo[0] = handTo[1] = 1; highTo = 1; party = 1;
+        this.deskTimers.push(setTimeout(() => { handTo[0] = handTo[1] = 0; highTo = 0; }, ms));
+      };
       /* Lo que lleva colgado y cuánto se balancea. */
       let held = null, swing = 0, swingV = 0;
       /* Burbujas sueltas en ese punto, que suben y se deshacen. */
@@ -383,7 +390,7 @@
         }
         body.x += body.vx * dt; body.y += body.vy * dt;
         /* Se ladea un poco hacia donde va; no se tumba. */
-        const lean = clamp(body.vx * 0.045, -13, 13);
+        const lean = clamp(body.vx * 0.045, -13, 13) + Math.sin(body.t * 13) * 8 * party * party;
         body.rot += (lean - body.rot) * Math.min(1, dt * 4);
         if(body.pose){
           if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
@@ -400,7 +407,10 @@
         const c = Math.cos(-body.rot / 57.3), s = Math.sin(-body.rot / 57.3);
         const lx = (body.vx * c - body.vy * s) * unit, ly = (body.vx * s + body.vy * c) * unit;
         reach += (reachTo - reach) * Math.min(1, dt * 18);
-        hand += (handTo - hand) * Math.min(1, dt * 9);
+        hand[0] += (handTo[0] - hand[0]) * Math.min(1, dt * 9);
+        hand[1] += (handTo[1] - hand[1]) * Math.min(1, dt * 9);
+        high += (highTo - high) * Math.min(1, dt * 10);
+        party = Math.max(0, party - dt * 1.15);
         arms.forEach((a, i) => {
           const tx = clamp(-lx * 0.05, -5, 5) + Math.sin(body.t * a.w + a.ph) * 1.8 + (i - 1) * spread;
           const ty = clamp(-ly * 0.04, -3, 6) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.8 + curl;
@@ -412,10 +422,13 @@
           /* Los tres puntos de la curva: colgando y, el derecho al saludar, hacia fuera y arriba,
              agitando la punta. Se pasa de una forma a otra poco a poco (hand). */
           let p = [a.x, y + len * 0.42, a.x + a.ox * 0.5, y + len * 0.74, a.x + a.ox, y + len];
-          if(i === 2 && hand > 0.01){
-            const wag = Math.sin(body.t * 10) * 3.2;
-            const up = [a.x + 2, y + 11, a.x + 15 + wag * 0.4, y + 15, a.x + 20 + wag, y + 2 + Math.abs(wag) * 0.4];
-            p = p.map((v, n) => v + (up[n] - v) * hand);
+          const lift = i === 1 ? 0 : hand[i >> 1];
+          if(lift > 0.01){
+            /* side: hacia qué lado se abre (el izquierdo, a la izquierda). Los dos brazos agitan
+               la punta a contratiempo. Al celebrar (high) suben más y se abren en uve. */
+            const side = i - 1, wag = Math.sin(body.t * (10 + 4 * high) + i * 1.6) * 3.2;
+            const up = [a.x + 2 * side, y + 11 - 2 * high, a.x + side * (15 + wag * 0.4), y + 15 - 6 * high, a.x + side * (20 + wag), y + 2 + Math.abs(wag) * 0.4 - 11 * high];
+            p = p.map((v, n) => v + (up[n] - v) * lift);
           }
           a.node.setAttribute('d', 'M' + a.x + ' ' + geo.top + 'V' + y + 'C' + p.map((v) => v.toFixed(2)).join(' '));
         });
@@ -558,17 +571,40 @@
         const next = over(c);
         await swim(next[0], next[1]);
         if(!alive() || to !== 2) return;
-        /* A «Hecho»: anillo verde, burbujas, cara de fiesta y una voltereta. */
+        /* A «Hecho»: anillo verde y burbujas en la tarjeta, y Sumi lo celebra como lo haría un
+           dibujo animado: se agacha para coger impulso (anticipación), salta estirado con los
+           brazos colgando detrás, arriba los lanza en uve y se menea con cara de fiesta, cae y,
+           al posarse, se aplasta un poco y se recompone. Antes daba una voltereta de 360º
+           girando en bloque sobre su centro, que no se parecía a nada. */
         again(c, 'is-landed');
         puff(mid(c)[0], mid(c)[1], 7);
-        mood('fiesta');
         look(null);
-        pose(1.14, 0.86, 140);
-        await wait(140);
-        body.vy -= 190;
-        pose(0.9, 1.12, 240);
-        el.animate([{rotate:'0deg'}, {rotate:'360deg'}], {duration:820, easing:'cubic-bezier(.35,0,.25,1)'});
-        await wait(1150);
+        mood('contento');
+        pose(1.17, 0.83, 190);
+        reachTo = -6;
+        await wait(190);
+        if(!alive()) return;
+        mood('fiesta');
+        body.vy -= 250;
+        pose(0.86, 1.17, 230);
+        reachTo = 5;
+        puff(body.x, body.y + size * 0.42, 5);
+        await wait(210);
+        if(!alive()) return;
+        reachTo = 0;
+        cheer(880);
+        puff(body.x - size * 0.5, body.y - size * 0.2, 2);
+        puff(body.x + size * 0.5, body.y - size * 0.2, 2);
+        await wait(640);
+        if(!alive()) return;
+        /* Baja a su sitio y se posa. */
+        await swim(next[0], next[1]);
+        if(!alive()) return;
+        look(null);
+        pose(1.11, 0.91, 150);
+        await wait(170);
+        pose(0.97, 1.04, 140);
+        await wait(520);
         mood('normal');
       };
       const release = (c) => {

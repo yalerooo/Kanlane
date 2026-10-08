@@ -62,6 +62,7 @@
       this.controllers.command = new C.CommandController(this, new V.CommandPaletteView());
       this.controllers.github = new C.GithubController(this, new V.GithubView());
       this.controllers.mcp = new C.McpController(this, new V.McpView());
+      this.controllers.push = new C.PushController(this);
       this.controllers.reminders = new C.RemindersController(this, new V.RemindersView());
       this.controllers.automations = new C.AutomationsController(this, new V.AutomationsView());
       this.controllers.account = new C.AccountController(this, new V.AccountView());
@@ -389,6 +390,7 @@
         this.connectProject();
         this.controllers.backup.scheduleAuto();
         this.controllers.account.start();
+        this.controllers.push.start();
 
         /* El invitado aterriza siempre en Tareas: la última vista recordada es de este navegador, no
            suya (podía ser la de otra persona, o «Copia de seguridad» de la sesión anterior). */

@@ -96,3 +96,36 @@ self.addEventListener('fetch', (event) => {
   const isSdk = url.hostname === 'www.gstatic.com' && url.pathname.indexOf('/firebasejs/') === 0;
   if(isSdk) event.respondWith(staleWhileRevalidate(request));
 });
+
+/* Avisos con Kanlane cerrado (worker/notify.mjs): el servidor manda {title, body, tag, project,
+   task} y aquí solo se enseña. Al pulsar la notificación se abre esa tarea: en la pestaña de
+   Kanlane que ya haya, o en una nueva. */
+const LINK_PROJECT = /^t:[A-Za-z0-9_-]{1,128}$/;
+const LINK_TASK = /^[A-Za-z0-9_-]{1,128}$/;
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try{ data = (event.data && event.data.json()) || {}; }catch(e){ data = {}; }
+  const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const link = LINK_PROJECT.test(data.project) && LINK_TASK.test(data.task) ? {project: data.project, task: data.task} : null;
+  event.waitUntil(self.registration.showNotification(str(data.title, 120) || 'Kanlane', {
+    body: str(data.body, 300),
+    tag: str(data.tag, 140) || undefined,
+    icon: '/assets/img/icon-192.png',
+    badge: '/assets/img/favicon-32.png',
+    data: link
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const link = event.notification.data;
+  event.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then((list) => {
+    const open = list.find((c) => new URL(c.url).pathname.indexOf('/app/') === 0);
+    if(open){
+      if(link) open.postMessage({type: 'kanlane-open-task', project: link.project, task: link.task});
+      return open.focus();
+    }
+    return self.clients.openWindow('/app/' + (link ? '#tarea=' + encodeURIComponent(link.project + '/' + link.task) : ''));
+  }));
+});

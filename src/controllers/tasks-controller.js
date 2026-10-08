@@ -31,6 +31,7 @@
         this.board.showLoaded();
         this.render();
         this.refreshDetail();
+        this.tryTaskLink();
       });
       this.tasks.on('recurred', (r) => toast.success(Workhub.t('Próxima repetición creada para el {fecha}', {fecha:Workhub.utils.dates.fmtDate(r.date)}), {important:true}));
       this.contacts.on('change', () => this.refreshDetail());
@@ -121,6 +122,8 @@
         this.openEdit(id, true);
       });
       this.detail.bindArchive((id) => this.archiveTasks([id]));
+      this.detail.bindFollow((id) => this.toggleFollow(id));
+      this.bindTaskLinks();
       this.detail.bindStatus((id, status) => {
         this.moveWithActivity(id, status);
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
@@ -171,8 +174,12 @@
     patchTask(id, patch){
       const t = this.tasks.find(id);
       if(!t || t._undecryptable || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return false;
+      const had = Workhub.views.team.assigned(t);
       this.tasks.patchLocal(id, patch);
-      this.tasks.save(id, Object.assign({}, patch)).then(() => this.logActivity(id, 'editó la tarea'), () => toast.error('No se pudo guardar la tarea'));
+      this.tasks.save(id, Object.assign({}, patch)).then(() => {
+        this.logActivity(id, 'editó la tarea');
+        if(patch.assignees) this.notifyAssigned(id, had, patch.assignees);
+      }, () => toast.error('No se pudo guardar la tarea'));
       return true;
     }
 
@@ -245,6 +252,7 @@
       const before = this.tasks.find(id);
       const oldStatus = before && before.status;
       this.tasks.move(id, status, beforeId);
+      if(before && oldStatus !== status) this.pushEvent(id, 'moved', [], {column:status});
       if(before && oldStatus !== status && Workhub.models.TaskModel.statusOf(status).done){
         document.dispatchEvent(new CustomEvent('sumi:done'));
         /* Era la última que quedaba: Sumi lo celebra una vez. */
@@ -270,8 +278,92 @@
     postComment(id, text, files){
       if(!Workhub.views.team.canEdit()) return;
       this.detail.setCommentBusy(true);
-      this.saveNote(id, text, files).then(() => this.detail.commentSaved(), (msg) => this.detail.commentFailed(msg))
+      const T = Workhub.views.team;
+      const mentioned = T.enabled() ? Workhub.views.mentions.find(text, T.members()) : [];
+      this.saveNote(id, text, files).then(() => {
+        this.detail.commentSaved();
+        this.pushEvent(id, 'comment', mentioned);
+      }, (msg) => this.detail.commentFailed(msg))
         .then(() => this.detail.setCommentBusy(false));
+    }
+
+    /* ---------- Seguir, menciones y avisos (equipos) ---------- */
+
+    /* Sigo o dejo de seguir una tarea: quien la sigue recibe un aviso cuando alguien comenta o la
+       mueve. No toca updatedAt: no es un cambio de contenido. */
+    toggleFollow(id){
+      const T = Workhub.views.team;
+      const t = this.tasks.find(id);
+      if(!t || t._undecryptable || !T.enabled() || !T.canEdit() || !this.tasks.isReady()) return;
+      const me = T.meUid();
+      const now = Array.isArray(t.followers) ? t.followers : [];
+      const on = now.indexOf(me) === -1;
+      const next = on ? now.concat(me).slice(-50) : now.filter((u) => u !== me);
+      this.tasks.patchLocal(id, {followers:next});
+      this.tasks.update(id, {followers:next}).then(
+        () => toast.success(on ? 'Sigues esta tarea' : 'Ya no sigues esta tarea'),
+        () => { this.tasks.patchLocal(id, {followers:now}); toast.error('No se pudo cambiar el seguimiento'); });
+    }
+
+    /* Avisa al servidor de lo que acaba de pasar en una tarea, para que mande los avisos push
+       (src/services/push.js). kind: 'comment' (to: mencionados), 'assigned' (to: asignados nuevos)
+       o 'moved'. Solo se llama si hay a quién avisar además de mí. */
+    pushEvent(id, kind, to, more){
+      const T = Workhub.views.team;
+      const push = Workhub.services.push;
+      const t = this.tasks.findAny(id);
+      if(!push || !T.enabled() || !t) return;
+      const me = T.meUid();
+      const direct = (to || []).filter((u) => u !== me);
+      const followers = kind === 'assigned' ? [] : (Array.isArray(t.followers) ? t.followers : []).filter((u) => u !== me);
+      if(!direct.length && !followers.length) return;
+      push.event(this.app.rootDb, this.app.projectId, Object.assign({taskId:id, kind:kind, to:direct}, more));
+    }
+
+    /* A quién se acaba de asignar la tarea (los que no estaban antes). */
+    notifyAssigned(id, before, after){
+      const had = before || [];
+      const added = (Array.isArray(after) ? after : []).filter((u) => had.indexOf(u) === -1);
+      if(added.length) this.pushEvent(id, 'assigned', added);
+    }
+
+    /* Abrir una tarea desde una notificación: llega como mensaje del service worker (Kanlane ya
+       estaba abierto) o en la dirección (#tarea=proyecto/tarea, al abrirse por la notificación).
+       Si es de otro proyecto, se cambia a él y se espera a que carguen sus tareas. */
+    bindTaskLinks(){
+      const take = (project, task) => {
+        if(typeof project !== 'string' || typeof task !== 'string' || !project || !task) return;
+        this.taskLink = {project:project, task:task, until:Date.now() + 20000};
+        this.tryTaskLink();
+      };
+      let hash = '';
+      try{ hash = decodeURIComponent(location.hash || ''); }catch(e){ hash = ''; }
+      const m = /^#tarea=([^/]+)\/(.+)$/.exec(hash);
+      if(m){
+        take(m[1], m[2]);
+        try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+      }
+      if(typeof navigator !== 'undefined' && navigator.serviceWorker){
+        navigator.serviceWorker.addEventListener('message', (ev) => {
+          const d = ev.data || {};
+          if(d.type === 'kanlane-open-task') take(d.project, d.task);
+        });
+      }
+      this.app.models.projects.on('change', () => this.tryTaskLink());
+    }
+
+    tryTaskLink(){
+      const link = this.taskLink;
+      if(!link) return;
+      if(Date.now() > link.until){ this.taskLink = null; return; }
+      if(this.app.projectId !== link.project){
+        if(this.app.rootDb && this.app.models.projects.exists(link.project)) this.app.switchProject(link.project);
+        return;
+      }
+      if(!this.tasks.find(link.task)) return;
+      this.taskLink = null;
+      this.app.navigate('tasks');
+      this.openDetail(link.task);
     }
 
     /* Cambió el equipo del proyecto abierto (miembros, mi rol): filtro, tarjetas y ficha. */
@@ -714,8 +806,11 @@
         values.cliente = prev ? (prev.cliente || '') : '';
       }
       if(values.assignees === undefined) delete values.assignees;
+      const prevTask = id ? this.tasks.find(id) : null;
+      const had = prevTask ? Workhub.views.team.assigned(prevTask) : [];
       this.tasks.save(id, values).then((ref) => {
         this.logActivity(id || ref.id, id ? 'editó la tarea' : 'creó la tarea');
+        if(values.assignees) this.notifyAssigned(id || ref.id, had, values.assignees);
         toast.success(id ? 'Cambios guardados' : 'Tarea creada');
         this.closeDialog(true);
       }, () => {

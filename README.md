@@ -32,6 +32,7 @@
 ### Organizar el trabajo
 - **Tableros kanban por proyecto.** Arrastra las tareas entre etapas, o míralas en lista, con filtros rápidos por cliente, por lo que vence esta semana y por lo que tienes asignado. Elige un tipo de proyecto (soporte, desarrollo, kanban con revisión) o define tus propias etapas, con color, orden y límite de tarjetas por columna.
 - **Archivo.** Archiva tareas o columnas enteras en vez de borrarlas: salen del tablero, se conservan con todo lo que tenían y se restauran desde «Archivados». Eliminar sigue siendo una acción aparte.
+- **Menciones, seguir y avisos.** En los equipos, `@Nombre` en un comentario avisa a esa persona, «Seguir» una tarea te avisa de sus comentarios y movimientos, y las asignaciones también avisan: como notificaciones del sistema aunque Kanlane esté cerrado, si las activas en Ajustes.
 - **Subtareas y tareas que se repiten.** Divide una tarea en pasos con su progreso, y haz que se repita cada día, semana, mes o año: al terminarla se crea la siguiente.
 - **Calendario** de fechas límite y reuniones en vista de mes, semana y día. Arrastra una tarea o una reunión a otro día para moverla.
 - **Clientes y contactos** en una sola sección: cada cliente con sus personas, tareas y reuniones. Colores propios por cliente.
@@ -186,6 +187,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 ### Organize your work
 - **Kanban boards per project.** Drag tasks between stages, or view them as a list, with quick filters by client, by what is due this week and by what is assigned to you. Pick a project type (support, development, kanban with review) or define your own stages, with colors, order and per-column card limits.
 - **Archive.** Archive tasks or whole columns instead of deleting them: they leave the board, keep everything they had and can be restored from "Archived". Deleting is still a separate action.
+- **Mentions, following and notifications.** In teams, `@Name` in a comment notifies that person, following a task notifies you of its comments and moves, and assignments notify too: as system notifications even when Kanlane is closed, if you turn them on in Settings.
 - **Subtasks and recurring tasks.** Split a task into steps with progress, and make it repeat daily, weekly, monthly or yearly: finishing it creates the next one.
 - **Calendar** of due dates and meetings in month, week and day views. Drag a task or a meeting to another day to move it.
 - **Clients and contacts** in a single section: each client with its people, tasks and meetings. Per-client colors.

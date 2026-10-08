@@ -104,6 +104,11 @@ function memoryStore() {
     return Array.from(s.docs.entries()).filter(([p, d]) => p.indexOf(collection + '/') === 0 && p.split('/').length === 2 && d.data[field] === value)
       .slice(0, n).map(([p, d]) => ({id: p.split('/')[1], data: JSON.parse(JSON.stringify(d.data))}));
   };
+  s.whereIn = async (collection, field, values, n) => {
+    s.reads++;
+    return Array.from(s.docs.entries()).filter(([p, d]) => p.indexOf(collection + '/') === 0 && p.split('/').length === 2 && values.indexOf(d.data[field]) !== -1)
+      .slice(0, n).map(([p, d]) => ({id: p.split('/')[1], data: JSON.parse(JSON.stringify(d.data))}));
+  };
   s.olderThan = async (collection, field, value, n) => {
     s.reads++;
     return Array.from(s.docs.entries()).filter(([p, d]) => p.indexOf(collection + '/') === 0 && p.split('/').length === 2 && d.data[field] !== undefined && d.data[field] < value)

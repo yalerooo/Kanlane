@@ -16,11 +16,17 @@
    mcp: ofrecer en Ajustes → Integraciones los tokens del servidor MCP (docs/MCP.md). Necesita los
    secretos MCP_SECRET y FIREBASE_SERVICE_ACCOUNT en el Worker. Mientras el servidor no los tenga,
    el apartado no se enseña aunque esto esté en true. En false no se enseña ni se consulta; los
-   tokens que ya existan siguen funcionando hasta que se revoquen. */
+   tokens que ya existan siguen funcionando hasta que se revoquen.
+   push: ofrecer en Ajustes los avisos con Kanlane cerrado y avisar al servidor de menciones,
+   asignaciones y cambios en tareas seguidas (docs/NOTIFICACIONES.md). Necesita los secretos
+   VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT y FIREBASE_SERVICE_ACCOUNT en el Worker. Mientras el
+   servidor no los tenga, activar los avisos dice que aún no están disponibles. En false no se
+   enseña ni se avisa; las menciones y «Seguir» siguen funcionando dentro de la app. */
 Workhub.features = {
   encryptedProjects: true,
   managedEncryption: true,
   vaultTotp: true,
   mailCapture: true,
-  mcp: true
+  mcp: true,
+  push: true
 };

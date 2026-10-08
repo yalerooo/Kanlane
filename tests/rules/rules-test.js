@@ -316,6 +316,8 @@ async function t(name, fn){
   await t('una tarea admite la marca de archivada', () => assertSucceeds(own.collection('tasks').doc('archived').set({title:'a', status:'todo', archivedAt:1759900000000})));
   await t('restaurar una tarea archivada deja la marca a cero', () => assertSucceeds(own.collection('tasks').doc('archived').update({archivedAt:0})));
   await t('una marca de archivada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('archived2').set({title:'a', archivedAt:'ayer'})));
+  await t('una tarea admite la lista de quien la sigue', () => assertSucceeds(own.collection('tasks').doc('followed').set({title:'a', status:'todo', followers:['u1', 'u2']})));
+  await t('una lista de seguidores que no es una lista se rechaza', () => assertFails(own.collection('tasks').doc('followed2').set({title:'a', followers:'u1'})));
   await t('una tarea que se repite admite el día original de la repetición', () => assertSucceeds(own.collection('tasks').doc('anchored').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30'})));
   await t('un día original de la repetición demasiado largo se rechaza', () => assertFails(own.collection('tasks').doc('anchored2').set({title:'a', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30T00:00'})));
   await t('unos campos personalizados que no son un mapa se rechazan', () => assertFails(own.collection('tasks').doc('ranged3').set({title:'a', custom:['x']})));
@@ -385,6 +387,7 @@ async function t(name, fn){
   const pb = zu.collection('projects').doc('pb');
   const pa = zu.collection('projects').doc('pa');
   await t('tarea sellada en un proyecto cifrado', () => assertSucceeds(pb.collection('tasks').doc('s1').set(sealed({status: 'todo', order: 1, assignees: []}))));
+  await t('tarea sellada con seguidores en claro', () => assertSucceeds(pb.collection('tasks').doc('s1f').set(sealed({status: 'todo', order: 1, followers: ['u1']}))));
   await t('tarea sellada con title se rechaza', () => assertFails(pb.collection('tasks').doc('s2').set(sealed({title: 'visible'}))));
   await t('tarea sellada con campos de github se rechaza', () => assertFails(pb.collection('tasks').doc('s3').set(sealed({ghItemId: 'x'}))));
   await t('bloque cifrado de más de 200 000 caracteres se rechaza', () => assertFails(pb.collection('tasks').doc('s4').set(sealed({e: 'A'.repeat(200001)}))));

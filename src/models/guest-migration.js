@@ -187,7 +187,13 @@
               if(note.imageAssetId) note.imageAssetId = assetId;
               return attachments(note);
             }).then(() => put(target.collection('notes').doc(n.id), note));
-          }));
+          })).then(() => {
+            /* Portada de imagen: es de una de esas notas, así que sigue al id que tenga en la cuenta. */
+            const data = d.data() || {};
+            if(!data.cover || !data.cover.asset) return null;
+            const asset = state.assets[data.cover.asset];
+            return put(target, Object.assign({}, data, {cover:asset ? {asset:String(asset).split(',')[0]} : {}}));
+          });
       });
     };
 

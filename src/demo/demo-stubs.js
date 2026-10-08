@@ -5,6 +5,7 @@
   Workhub.services.platform = {
     hydrateAssetImages: function(){},
     assetSrc: function(){ return ''; },
+    assetUrlNow: function(){ return ''; },
     mode: function(){ return 'local'; }
   };
   /* Preferencias (tablero o lista): solo en memoria, la demo no guarda nada. */

@@ -204,6 +204,17 @@
       return {start:start && start <= end ? start : end, end:end};
     }
 
+    /* Portada de la tarea: {color} (una clave de ProjectTemplates.COLORS) o {asset} (el id de una
+       imagen adjunta en una de sus notas, que es quien la guarda y la borra). null si no tiene
+       o no vale; quitarla es guardar `cover: {}`. */
+    static coverOf(t){
+      const c = t && t.cover;
+      if(!c || typeof c !== 'object') return null;
+      if(typeof c.asset === 'string' && c.asset && c.asset.length <= 200) return {asset:c.asset};
+      if(typeof c.color === 'string' && Workhub.models.ProjectTemplates.COLORS.some((x) => x.key === c.color)) return {color:c.color};
+      return null;
+    }
+
     /* Día del mes del que parte la repetición mensual o anual de una tarea. Una tarea del día 31
        cae el 30 en noviembre: la siguiente guarda en repeatAnchor («31@2026-11-30») el día original
        y la fecha para la que se calculó, y así diciembre vuelve al 31. Si alguien cambia la fecha
@@ -323,6 +334,9 @@
       if(t.startDate && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, daysBetween(t.dueDate, next));
       if(t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
       if(Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
+      /* La portada de color se conserva; la de imagen no, porque la imagen es de una nota de la original. */
+      const cover = TaskModel.coverOf(t);
+      if(cover && cover.color) copy.cover = cover;
       /* El mes no tiene ese día: la siguiente recuerda cuál era (ver repeatDay). */
       if((t.repeat === 'monthly' || t.repeat === 'yearly') && day !== +next.slice(8)) copy.repeatAnchor = day + '@' + next;
       /* Si las reglas publicadas aún no admiten repeatAnchor, la tarea se crea sin él, como antes. */
@@ -360,13 +374,15 @@
        estado, etiquetas, personas asignadas, fechas, repetición, vínculos y campos personalizados),
        sin compartir nada con la original. No se copia lo que la identifica en otro sitio (GitHub),
        su historia (creación, archivo, repetición ya creada) ni quién la sigue. Las notas viven en
-       una subcolección y tampoco se copian. over: campos que cambian en la copia. */
+       una subcolección y tampoco se copian; por eso una portada de imagen (que es de una nota)
+       se queda en la original, y una de color sí pasa. over: campos que cambian en la copia. */
     static copyOf(t, over){
       const body = {};
       Object.keys(t || {}).forEach((k) => {
         if(k.charAt(0) === '_' || NOT_COPIED.indexOf(k) !== -1 || t[k] === undefined) return;
         body[k] = JSON.parse(JSON.stringify(t[k]));
       });
+      if(body.cover && !(TaskModel.coverOf(body) || {}).color) delete body.cover;
       Object.assign(body, over);
       body.createdAt = body.updatedAt = Date.now();
       return body;
@@ -651,13 +667,24 @@
 
     /* Elimina la nota y devuelve los documentos de `assets` que enlazaba con `assetIds`, para
        que se borren también. La imagen de una nota antigua (imageAssetId) se deja: una copia
-       importada puede enlazar la misma. */
+       importada puede enlazar la misma. Si la portada de la tarea era una imagen de esta nota,
+       la tarea se queda sin portada. */
     removeNote(taskId, noteId){
       const ref = this.notes(taskId).doc(noteId);
+      let wasCover = false;
       return ref.get().then((snap) => {
         const data = (snap && snap.exists !== false && snap.data && snap.data()) || {};
-        return Array.isArray(data.assetIds) ? data.assetIds.filter((id) => typeof id === 'string' && id) : [];
-      }, () => []).then((ids) => ref.delete().then(() => ids));
+        const ids = Array.isArray(data.assetIds) ? data.assetIds.filter((id) => typeof id === 'string' && id) : [];
+        const cover = TaskModel.coverOf(this.find(taskId));
+        wasCover = !!(cover && cover.asset && (cover.asset === data.imageAssetId || ids.indexOf(cover.asset) !== -1));
+        return ids;
+      }, () => []).then((ids) => ref.delete().then(() => {
+        if(wasCover){
+          this.patchLocal(taskId, {cover:{}});
+          this.update(taskId, {cover:{}}).catch(() => {});
+        }
+        return ids;
+      }));
     }
 
     /* Copia de todas las tareas con sus notas incrustadas (para exportar). */

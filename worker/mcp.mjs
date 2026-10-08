@@ -413,6 +413,7 @@ async function moveTask(who, args, store, now) {
     if (validDate(t.startDate) && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, Math.round((parseYmd(next) - parseYmd(t.dueDate)) / DAY_MS));
     if (t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
     if (Array.isArray(t.assignees)) copy.assignees = t.assignees.slice();
+    if (t.cover && typeof t.cover.color === 'string' && t.cover.color && !t.cover.asset) copy.cover = {color: t.cover.color};
     if ((t.repeat === 'monthly' || t.repeat === 'yearly') && day !== +next.slice(8)) copy.repeatAnchor = day + '@' + next;
     patch.repeatSpawned = true;
     writes.push({path: who.project.root + '/tasks/' + newId(), create: copy});

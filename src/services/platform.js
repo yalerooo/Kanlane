@@ -99,6 +99,14 @@
     return mode() === 'claude' ? ('/_blob/' + assetId) : '';
   }
 
+  /* URLs ya resueltas en esta sesión, para lo que se repinta a menudo (las portadas del tablero). */
+  const assetUrls = {};
+
+  /* La URL de una imagen si ya se resolvió antes ('' si todavía no). */
+  function assetUrlNow(assetId){
+    return assetSrc(assetId) || assetUrls[assetId] || '';
+  }
+
   /* En modo local y en la nube las imágenes se resuelven a URLs al pintarlas. */
   function hydrateAssetImages(container){
     if(mode() === 'claude') return;
@@ -107,7 +115,7 @@
     container.querySelectorAll('img[data-asset-id]').forEach((img) => {
       const id = img.getAttribute('data-asset-id');
       if(!id) return;
-      resolve(id).then((url) => { if(url) img.src = url; }).catch(() => {});
+      resolve(id).then((url) => { if(url){ assetUrls[id] = url; if(img.getAttribute('src') !== url) img.src = url; } }).catch(() => {});
     });
   }
 
@@ -120,6 +128,6 @@
     }
   }
 
-  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, connectAssets, uploadAsset, uploadFile, fileBlob, deleteAssets, download, assetSrc, hydrateAssetImages, whenReady,
+  Workhub.services.platform = {mode, isAvailable, isLocal, connectDb, connectAssets, uploadAsset, uploadFile, fileBlob, deleteAssets, download, assetSrc, assetUrlNow, hydrateAssetImages, whenReady,
     fileLimits: {maxBytes: FILE_MAX_BYTES, maxPerNote: NOTE_MAX_FILES}};
 })();

@@ -1,7 +1,7 @@
 /* Semilla de un proyecto nuevo: lo que trae, además de las etapas, un tablero importado
    (trello-import.js) o una plantilla (project-gallery.js):
    {source, nombre, clients, stages, labels:[{name, color}],
-    tasks:[{title, desc, status, dueDate, dueTime, labels, checklist:[{id, text, done}], notes:[{text, createdAt}], order, createdAt, updatedAt}]}
+    tasks:[{title, desc, status, dueDate, dueTime, labels, checklist:[{id, text, done}], notes:[{text, createdAt}], cover:{color}, order, createdAt, updatedAt}]}
    Aquí se recorta a los límites de las reglas y se escribe en el proyecto recién creado, con el
    modelo de tareas ya conectado (así un proyecto con cifrado total lo guarda cifrado). */
 (function(){
@@ -42,12 +42,14 @@
       };
       if(dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '')) body.dueTime = t.dueTime;
       if(/^\d{4}-\d{2}-\d{2}$/.test(t.startDate || '') && (!dueDate || t.startDate <= dueDate)) body.startDate = t.startDate;
+      /* Portada: solo de color (una semilla no trae imágenes adjuntas). */
+      const color = t.cover && typeof t.cover.color === 'string' ? t.cover.color : '';
+      if(color && Workhub.models.ProjectTemplates.COLORS.some((c) => c.key === color)) body.cover = {color:color};
       /* PENDIENTE: campos que el importador de Trello ya lee y Kanlane aún no guarda. Al crear cada
          uno (aquí, en validData('tasks') de firestore.rules y en EncSchema), descomentar su línea.
       if(t.dueComplete) body.dueComplete = true;
       if(t.dueReminder != null) body.dueReminder = t.dueReminder;
       if(list(t.attachments).length) body.attachments = t.attachments.slice(0, 50);
-      if(t.cover) body.cover = t.cover;
       if(t.location) body.location = t.location;
       if(t.votes) body.votes = t.votes;
       if(list(t.customFields).length) body.customFields = t.customFields;

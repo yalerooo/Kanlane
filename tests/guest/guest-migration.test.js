@@ -46,13 +46,13 @@ function guest(){
   const db = fakeDb();
   db.put('projects', 'main', {nombre:'Mi trabajo', tipo:'desarrollo', createdAt:0, labels:[{name:'urgente', color:2}]});
   db.put('projects', 'p2', {nombre:'Segundo', createdAt:50});
-  db.put('tasks', 't1', {title:'Con nota', status:'todo', linkedContacts:['c1'], linkedVault:['v1'], createdAt:1});
+  db.put('tasks', 't1', {title:'Con nota', status:'todo', linkedContacts:['c1'], linkedVault:['v1'], createdAt:1, cover:{asset:'img-local'}});
   db.put('tasks/t1/notes', 'n1', {text:'con foto', imageAssetId:'img-local', createdAt:2, kind:'note'});
   db.put('tasks/t1/notes', 'n2', {text:'sin foto', imageAssetId:'', createdAt:3, kind:'note'});
   db.put('tasks/t1/notes', 'n3', {text:'con archivo', imageAssetId:'', createdAt:4, kind:'note',
     attachments:[{name:'informe.pdf', type:'application/pdf', size:9, image:false, parts:['file-local']}, {name:'perdido.zip', type:'application/zip', size:5, image:false, parts:['ya-no-existe']}],
     assetIds:['file-local', 'ya-no-existe']});
-  db.put('tasks', 't2', {title:'Otra', status:'doing', createdAt:4});
+  db.put('tasks', 't2', {title:'Otra', status:'doing', createdAt:4, cover:{color:'blue'}});
   db.put('clients', 'cl1', {nombre:'Acme', createdAt:1});
   db.put('contacts', 'c1', {cliente:'Acme', nombre:'Ana', createdAt:1});
   db.put('meetings', 'm1', {title:'Kickoff', date:'2026-10-07', createdAt:1});
@@ -116,6 +116,8 @@ function assets(){
     assert.deepEqual(to.raw(base + 'vault_meta', 'check'), {saltPassword:'salt'}, 'el cofre llega con su contraseña maestra');
     assert.equal(to.raw(base + 'tasks/t1/notes', 'n1').imageAssetId, 'img-cuenta-1', 'la imagen de la nota se sube a la cuenta');
     assert.equal(to.raw(base + 'tasks/t1/notes', 'n2').imageAssetId, '');
+    assert.deepEqual(to.raw(base + 'tasks', 't1').cover, {asset:'img-cuenta-1'}, 'la portada de imagen sigue a la imagen de su nota');
+    assert.deepEqual(to.raw(base + 'tasks', 't2').cover, {color:'blue'}, 'la portada de color llega tal cual');
     assert.equal(imgs.uploads.length, 1);
     const n3 = to.raw(base + 'tasks/t1/notes', 'n3');
     assert.deepEqual(n3.attachments, [{name:'informe.pdf', type:'application/pdf', size:9, image:false, parts:['file-local-a', 'file-local-b']}], 'el archivo adjunto se sube a la cuenta; el que ya no existe se quita');

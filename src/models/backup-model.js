@@ -46,6 +46,15 @@
     return out;
   }
 
+  /* Portada de una tarea del archivo, con la forma que admiten las reglas: {color}, {asset} o null. */
+  function coverOf(t){
+    const c = t && t.cover;
+    if(!c || typeof c !== 'object') return null;
+    if(typeof c.asset === 'string' && c.asset && c.asset.length <= 200) return {asset:c.asset};
+    if(typeof c.color === 'string' && c.color && c.color.length <= 20) return {color:c.color};
+    return null;
+  }
+
   /* Campos personalizados del proyecto abierto. */
   function projectFields(){
     return Workhub.views && Workhub.views.fields ? Workhub.views.fields.list() : [];
@@ -62,8 +71,9 @@
     /* Los adjuntos de una nota del archivo (`attachments`), copiados a archivos nuevos: la copia no
        comparte nada con la nota original, así que borrar una no deja a la otra sin sus archivos.
        Los que ya no están (se borraron, o el archivo viene de otra cuenta) o no se pueden subir
-       se quedan fuera y se cuentan en counts.filesSkipped. → [{name, type, size, image, parts}] */
-    copyAttachments(note, counts){
+       se quedan fuera y se cuentan en counts.filesSkipped. → [{name, type, size, image, parts}]
+       moved (opcional): ahí se apunta el id nuevo de cada imagen copiada, por su id del archivo. */
+    copyAttachments(note, counts, moved){
       const list = (Array.isArray(note && note.attachments) ? note.attachments : [])
         .filter((a) => a && Array.isArray(a.parts) && a.parts.length && a.parts.every((id) => typeof id === 'string' && id)).slice(0, NOTE_FILES_MAX);
       const copied = [];
@@ -75,6 +85,7 @@
           .then((parts) => {
             if(!Array.isArray(parts) || !parts.length){ counts.filesSkipped++; return; }
             counts.files++;
+            if(moved && att.image) moved[a.parts[0]] = parts[0];
             copied.push(Object.assign(att, {parts:parts}));
           }, () => { counts.filesSkipped++; });
       }), Promise.resolve()).then(() => copied);
@@ -161,6 +172,11 @@
         if(Object.keys(custom).length) extra.custom = custom;
         /* Una tarea archivada sigue archivada al importarla. */
         if(+t.archivedAt > 0) extra.archivedAt = +t.archivedAt;
+        /* Portada: el color va con la tarea; la imagen es de una nota y se enlaza cuando esa nota
+           ya está copiada (más abajo), con el id que tenga aquí. */
+        const cover = coverOf(t);
+        if(cover && cover.color) extra.cover = cover;
+        const moved = {};
         /* linkedContacts/linkedVault no se importan: guardan ids de documentos
            que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
         counts.tasks++;
@@ -180,7 +196,8 @@
           return Promise.all(list(t.notes).map((n) => {
             if(!n) return Promise.resolve();
             counts.notes++;
-            return this.copyAttachments(n, counts).then((files) => {
+            if(n.imageAssetId) moved[n.imageAssetId] = n.imageAssetId;
+            return this.copyAttachments(n, counts, moved).then((files) => {
               const note = {
                 text: n.text || '',
                 imageAssetId: n.imageAssetId || '',
@@ -195,7 +212,10 @@
               }
               return m.tasks.addNoteRaw(ref.id, note);
             });
-          }));
+          })).then(() => {
+            const asset = cover && cover.asset ? moved[cover.asset] : '';
+            return asset ? m.tasks.update(ref.id, {cover:{asset:asset}}).catch(() => null) : null;
+          });
         });
       });
 

@@ -32,6 +32,10 @@
   class BoardView {
     constructor(){
       this.board = document.getElementById('board');
+      /* Una portada cuya imagen no carga no deja un hueco roto en la tarjeta. */
+      this.board.addEventListener('error', (ev) => {
+        if(ev.target.classList && ev.target.classList.contains('card-cover')) ev.target.removeAttribute('src');
+      }, true);
       this.stateMsg = document.getElementById('stateMsg');
       this.skeleton = document.getElementById('boardSkeleton');
       this.summary = document.getElementById('summary');
@@ -739,6 +743,8 @@
           '</section>';
       }).join('');
 
+      /* Portadas de imagen: las que aún no tienen su URL la reciben ahora. */
+      Workhub.services.platform.hydrateAssetImages(this.board);
       this.board.querySelectorAll('.col').forEach((c) => {
         c.querySelector('.cards').scrollTop = scrolls[c.getAttribute('data-status')] || 0;
       });
@@ -797,6 +803,16 @@
     return '<span class="card-tag" translate="no" title="' + esc(list.join(', ')) + '">' + esc(list.slice(0, 2).join(' · ')) + (list.length > 2 ? ' +' + (list.length - 2) : '') + '</span>';
   }
 
+  /* Portada de la tarjeta: una franja de color o una imagen, arriba y de lado a lado. La imagen
+     no ocupa sitio hasta que tiene su URL (y si ya no existe, no se ve nada). */
+  function coverHtml(t){
+    const c = TaskModel.coverOf(t);
+    if(!c) return '';
+    if(c.color) return '<div class="card-cover" style="--cv:' + Workhub.models.ProjectTemplates.colorOf(c.color).dot + '"></div>';
+    const src = Workhub.services.platform.assetUrlNow(c.asset);
+    return '<img class="card-cover is-image"' + (src ? ' src="' + esc(src) + '"' : '') + ' data-asset-id="' + esc(c.asset) + '" alt="" draggable="false">';
+  }
+
   function cardHtml(t){
     const T = Workhub.views.team;
     const links = (Array.isArray(t.linkedContacts) ? t.linkedContacts.length : 0) + (Array.isArray(t.linkedVault) ? t.linkedVault.length : 0);
@@ -814,6 +830,7 @@
     const custom = Workhub.views.fields ? Workhub.views.fields.cardHtml(t) : '';
     const contact = t.contacto ? '<div class="card-contact">' + iconSpan('user') + '<span translate="no">' + esc(t.contacto) + '</span></div>' : '';
     return '<article class="card' + (t._undecryptable ? ' is-undecryptable' : '') + (TaskModel.isDone(t) ? ' is-done' : '') + '" draggable="' + (T.canEdit() ? 'true' : 'false') + '" tabindex="0" role="button" aria-describedby="boardKeyboardHelp" data-id="' + esc(t.id) + '">' +
+      (t._undecryptable ? '' : coverHtml(t)) +
       (top ? '<div class="card-top">' + top + '</div>' : '') +
       '<h3 translate="no">' + esc(t._undecryptable ? Workhub.t('No se puede descifrar') : t.title) + '</h3>' +
       (t.desc ? '<p translate="no">' + esc(Workhub.utils.markdown.plain(t.desc)) + '</p>' : '') +

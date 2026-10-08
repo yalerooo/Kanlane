@@ -89,8 +89,41 @@
       this.newColor = Workhub.views.labels.PALETTE[0];
       this.onCreateLabel = null;
 
+      /* Portada: null, {color} o {asset}. Las imágenes que se ofrecen son las de las notas de la tarea. */
+      this.coverEl = $('fCover');
+      this.cover = null;
+      this.hadCover = false;
+      this.coverImages = [];
+      this.coverEl.addEventListener('click', (ev) => {
+        const b = closest(ev.target, 'button[data-cover]');
+        if(!b) return;
+        const kind = b.getAttribute('data-cover');
+        const value = b.getAttribute('data-value');
+        this.cover = kind === 'color' ? {color:value} : kind === 'asset' ? {asset:value} : null;
+        this._renderCover();
+      });
+
       this._bindLocalUi();
       this._bindLabels();
+    }
+
+    /* ---------- Portada ---------- */
+
+    _renderCover(){
+      const cur = this.cover || {};
+      const images = this.coverImages.slice();
+      if(cur.asset && images.indexOf(cur.asset) === -1) images.unshift(cur.asset);
+      const option = (kind, value, on, cls, label, inner, style) =>
+        '<button type="button" class="' + cls + (on ? ' is-selected' : '') + '" role="radio" aria-checked="' + on + '" data-cover="' + kind + '" data-value="' + esc(value) + '" title="' + esc(label) + '" aria-label="' + esc(label) + '"' + (style || '') + '>' + (inner || '') + '</button>';
+      this.coverEl.innerHTML =
+        option('none', '', !this.cover, 'cover-none', Workhub.t('Sin portada'), '<span>' + esc(Workhub.t('Sin portada')) + '</span>') +
+        Workhub.models.ProjectTemplates.COLORS.map((c) => option('color', c.key, cur.color === c.key, 'stage-color is-lg', Workhub.t(c.name), '', ' style="--c:' + c.dot + '"')).join('') +
+        images.map((id, i) => {
+          const src = platform.assetUrlNow(id);
+          return option('asset', id, cur.asset === id, 'cover-thumb', Workhub.t('Imagen {n}', {n:i + 1}),
+            '<img' + (src ? ' src="' + esc(src) + '"' : '') + ' data-asset-id="' + esc(id) + '" alt="">');
+        }).join('');
+      platform.hydrateAssetImages(this.coverEl);
     }
 
     /* ---------- Asignaciones ---------- */
@@ -250,7 +283,7 @@
     _snapshot(){
       const controls = Array.prototype.filter.call(this.form.elements, (el) => el.tagName !== 'BUTTON' && el.tagName !== 'FIELDSET')
         .map((el, i) => [el.id || el.name || i, el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value]);
-      return JSON.stringify([controls, this.checklist, this.selected, this.assigned]);
+      return JSON.stringify([controls, this.checklist, this.selected, this.assigned, this.cover]);
     }
 
     /* Da por guardado lo que hay ahora: a partir de aquí, cualquier cambio cuenta. */
@@ -457,6 +490,8 @@
       /* Lo mismo con el inicio y los campos personalizados: una tarea que no los usa no los lleva. */
       if(extra.startDate || this.hadStart) values.startDate = extra.startDate || '';
       if(extra.custom && (Object.keys(extra.custom).length || this.hadCustom)) values.custom = extra.custom;
+      /* Y con la portada: {} quita la que tenía. */
+      if(this.cover || this.hadCover) values.cover = this.cover || {};
       return values;
     }
 
@@ -469,6 +504,10 @@
       this.fields.id.value = '';
       this.hadTime = false;
       this.hadStart = this.hadCustom = false;
+      this.cover = null;
+      this.hadCover = false;
+      this.coverImages = [];
+      this._renderCover();
       this._clearErrors();
       this._renderCustom({});
       this.checklist = [];
@@ -503,6 +542,10 @@
       this.fields.inicio.value = t.startDate || '';
       this.hadStart = !!t.startDate;
       this.hadCustom = !!(t.custom && Object.keys(t.custom).length);
+      this.cover = Workhub.models.TaskModel.coverOf(t);
+      this.hadCover = !!this.cover;
+      this.coverImages = [];
+      this._renderCover();
       this._clearErrors();
       this._renderCustom(t.custom || {});
       this.fields.repeat.value = t.repeat || '';
@@ -551,6 +594,20 @@
         ? docs.map(noteHtml).join('')
         : '<p class="line" style="opacity:.65">Sin notas todavía.</p>';
       platform.hydrateAssetImages(this.notesList);
+      /* Las imágenes de las notas son las que se pueden poner de portada. Si se elimina la nota
+         que tenía la elegida, el formulario se queda sin portada (TaskModel.removeNote hace lo mismo). */
+      const before = this.coverImages;
+      this.coverImages = docs.reduce((ids, d) => ids.concat(Workhub.models.TaskModel.attachmentsOf(d.data() || {})
+        .filter((a) => a.image).map((a) => a.parts[0])), []).filter((id, i, all) => all.indexOf(id) === i);
+      const gone = this.cover && this.cover.asset && before.indexOf(this.cover.asset) !== -1 && this.coverImages.indexOf(this.cover.asset) === -1;
+      if(gone){
+        /* No cuenta como un cambio sin guardar: la tarea ya está así. */
+        const wasClean = !this.isDirty();
+        this.cover = null;
+        this.hadCover = false;
+        if(wasClean) this.markClean();
+      }
+      this._renderCover();
     }
 
     showNotesError(){

@@ -87,6 +87,10 @@
     return base;
   }
 
+  /* Color de una portada de Trello → el color de Kanlane que más se le parece. */
+  const COVER_COLOR = {green:'green', lime:'green', yellow:'orange', orange:'orange', red:'red', pink:'red',
+    purple:'violet', blue:'blue', sky:'blue', black:'gray'};
+
   /* Catálogo de etiquetas: [{name, color}] y, por id de Trello, el nombre con el que queda. */
   function readLabels(board, used){
     const catalog = [];
@@ -214,6 +218,9 @@
 
     const counts = {lists:lists.stages.length, cards:0, labels:labels.catalog.length, checkItems:0, comments:0};
     const position = {};
+    /* Portadas de imagen (un adjunto, una foto subida o de Unsplash): el archivo de Trello no trae
+       las imágenes, así que esas tarjetas llegan sin portada y se avisa de cuántas son. */
+    let imageCovers = 0;
     const tasks = open.slice().sort(byPos).map((c) => {
       const due = localParts(c.due);
       const names = [];
@@ -227,7 +234,10 @@
       counts.checkItems += checklist.length;
       counts.comments += notes.length;
       const created = idTime(c.id) || time(c.dateLastActivity) || Date.now();
-      return {
+      const tc = c.cover && typeof c.cover === 'object' ? c.cover : {};
+      const coverColor = COVER_COLOR[text(tc.color)];
+      if(!coverColor && (tc.idAttachment || tc.idUploadedBackground || (Array.isArray(tc.scaled) && tc.scaled.length))) imageCovers++;
+      return Object.assign(coverColor ? {cover:{color:coverColor}} : {}, {
         title:text(c.name).trim() || Workhub.t('(sin título)'),
         desc:text(c.desc),
         status:status,
@@ -252,8 +262,6 @@
         /* Adjuntos (CSV «Attachment Count» y «Attachment Links»). Los archivos subidos a Trello piden
            iniciar sesión para bajarlos; los que son enlaces se pueden guardar tal cual.
         , attachments:list(c.attachments).map((a) => ({name:a.name, url:a.url, mimeType:a.mimeType, bytes:a.bytes, isUpload:!!a.isUpload, createdAt:time(a.date)})) */
-        /* Portada de la tarjeta (color o adjunto):
-        , cover:c.cover && (c.cover.color || c.cover.idAttachment) ? {color:c.cover.color, attachmentId:c.cover.idAttachment, size:c.cover.size} : null */
         /* Ubicación:
         , location:c.coordinates ? {name:c.locationName, address:c.address, lat:c.coordinates.latitude, lng:c.coordinates.longitude} : null */
         /* Votos (CSV «Vote Count»):
@@ -264,7 +272,7 @@
         , trelloUrl:c.shortUrl, trelloNumber:c.idShort */
         /* Tarjeta plantilla, separador o tarjeta espejo:
         , isTemplate:!!c.isTemplate, cardRole:c.cardRole, mirrorOf:c.mirrorSourceId */
-      };
+      });
     });
 
     const archivedCards = cards.length - open.length;
@@ -279,7 +287,7 @@
       labels:labels.catalog,
       tasks:tasks,
       counts:counts,
-      skipped:{archivedCards:archivedCards, archivedLists:lists.archived, mergedLists:lists.merged, labels:labels.dropped},
+      skipped:{archivedCards:archivedCards, archivedLists:lists.archived, mergedLists:lists.merged, labels:labels.dropped, imageCovers:imageCovers},
       /* Nombre de la etapa que recibe las listas que no caben. */
       mergedInto:lists.merged ? lists.stages[lists.stages.length - 1].label : ''
 
@@ -299,6 +307,7 @@
     if(s.mergedLists) parts.push(Workhub.t('Kanlane admite {max} etapas: las listas que sobran ({n}) se juntan en «{stage}» y sus tarjetas llevan el nombre de su lista como etiqueta.', {max:MAX_STAGES, n:s.mergedLists, stage:seed.mergedInto}));
     if(s.archivedCards) parts.push(Workhub.t('Tarjetas archivadas que no se importan: {n}.', {n:s.archivedCards}));
     if(s.labels) parts.push(Workhub.t('Etiquetas sin usar que no caben (el máximo es {max}): {n}.', {max:MAX_CATALOG, n:s.labels}));
+    if(s.imageCovers) parts.push(Workhub.t('Portadas de imagen que no se importan (el archivo de Trello no trae las imágenes): {n}. Las de color sí.', {n:s.imageCovers}));
     return parts.join(' ');
   }
 

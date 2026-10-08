@@ -88,8 +88,11 @@ service cloud.firestore {
             'order', 'createdAt', 'updatedAt', 'repeatSpawned', 'ghItemId',
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
             'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom', 'repeatAnchor',
-            'archivedAt', 'followers'
+            'archivedAt', 'followers', 'cover'
           ]) && textWithin(data, 'title', 500)
+          && data.get('cover', {}) is map && data.get('cover', {}).size() <= 2
+          && textWithin(data.get('cover', {}), 'color', 20)
+          && textWithin(data.get('cover', {}), 'asset', 200)
           && listWithin(data, 'followers', 50)
           && data.get('archivedAt', 0) is number
           && textWithin(data, 'startDate', 10)

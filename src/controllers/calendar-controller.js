@@ -74,11 +74,27 @@
       return map;
     }
 
+    /* Tareas con intervalo (fecha de inicio anterior a la fecha límite, o solo inicio), según
+       el filtro: [{task, start, end}]. El calendario las pinta también en los días anteriores
+       a la fecha límite. */
+    spans(){
+      const TaskModel = Workhub.models.TaskModel;
+      const filter = this.view.clientFilter();
+      const out = [];
+      this.tasks.items.forEach((t) => {
+        if(filter && t.cliente !== filter) return;
+        const r = TaskModel.rangeOf(t);
+        if(r && (!t.dueDate || (r.end === t.dueDate && r.start < r.end))) out.push({task:t, start:r.start, end:r.end});
+      });
+      return out.sort((a, b) => a.start.localeCompare(b.start) || (a.task.createdAt || 0) - (b.task.createdAt || 0));
+    }
+
     render(){
       if(!this.view.isVisible()) return;
       const map = this.buckets();
-      this.view.render(this.year, this.month, this.selected, map, this.mode);
-      this.view.renderDay(this.selected, map[this.selected], this.upcoming(map, this.selected));
+      const spans = this.spans();
+      this.view.render(this.year, this.month, this.selected, map, this.mode, spans);
+      this.view.renderDay(this.selected, map[this.selected], this.upcoming(map, this.selected), spans);
       this.fillExtensions();
     }
 
@@ -139,7 +155,7 @@
       } else {
         this.view.markSelected(date);
         const map = this.buckets();
-        this.view.renderDay(date, map[date], this.upcoming(map, date));
+        this.view.renderDay(date, map[date], this.upcoming(map, date), this.spans());
         this.fillExtensions();
       }
       if(scroll) this.view.scrollToDay();

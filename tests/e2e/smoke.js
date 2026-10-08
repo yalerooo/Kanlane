@@ -293,6 +293,14 @@ async function newProject(page, name){
     await page.reload();
     await page.locator('.card').filter({hasText:'Sin fechas'}).locator('.cf-badge').waitFor();
     assert.equal((await taskBy('Vence hoy')).startDate, todayKey);
+    /* El intervalo se ve en la tarjeta y, en el calendario, también el día de inicio; con solo fecha límite, nada cambia. */
+    assert.match(await page.locator('.card').filter({hasText:'Vence hoy'}).locator('.due-badge').textContent(), / – /);
+    assert.doesNotMatch(await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.due-badge').textContent(), /–/);
+    await page.locator('#tabCalendar').click();
+    await page.locator('.cal-cell[data-date="' + todayKey + '"] .cal-chip.is-span').filter({hasText:'Vence hoy'}).waitFor({state:'attached'});
+    await page.locator('#calDay .agenda-item').filter({hasText:'Vence hoy'}).waitFor();
+    assert.equal(await page.locator('.cal-chip.is-span').filter({hasText:'Vence dentro de un mes'}).count(), 0);
+    await page.locator('#tabTasks').click();
     await page.locator('#btnFields').click();
     await page.locator('#cfList [data-act="del"]').click();
     assert.match(await page.locator('#confirmText').textContent(), /«Horas».*1 tarea/);

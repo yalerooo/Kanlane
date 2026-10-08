@@ -761,11 +761,17 @@
 
   /* ---- Piezas comunes de la tarjeta y de la fila de la lista ---- */
 
+  /* Fecha límite; con fecha de inicio, el intervalo («05 oct – 12 oct»). Solo inicio: «Desde 05 oct». */
   function dueHtml(t){
-    if(!t.dueDate) return '';
+    const r = TaskModel.rangeOf(t);
+    if(!t.dueDate){
+      return r ? '<span class="due-badge" title="' + esc(Workhub.t('Fecha de inicio')) + '">' + iconSpan('calendar') + esc(Workhub.t('Desde {fecha}', {fecha:fmtDate(r.start)})) + '</span>' : '';
+    }
     const ds = TaskModel.dueState(t);
     const cls = 'due-badge' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : ds === 'done' ? ' is-done' : '');
-    const txt = ds === 'today' ? 'Hoy' : fmtDate(t.dueDate);
+    const ranged = r && r.end === t.dueDate && r.start < r.end;
+    const end = ds === 'today' ? Workhub.t('Hoy') : fmtDate(t.dueDate);
+    const txt = ranged ? fmtDate(r.start) + ' – ' + end : end;
     const title = ds === 'overdue' ? ' title="' + esc(Workhub.t('Vencida')) + '"' : '';
     return '<span class="' + cls + '"' + title + '>' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(txt) + (t.dueTime ? '<span class="due-time" translate="no">' + esc(t.dueTime) + '</span>' : '') + '</span>';
   }

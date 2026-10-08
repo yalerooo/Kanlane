@@ -1,7 +1,7 @@
 /* Calendario mensual, agenda del día y diálogos de reunión. */
 (function(){
   const {esc, closest, PLUS_ICON} = Workhub.utils.html;
-  const {ymd, todayYmd, parseYmd, capitalize, longDay} = Workhub.utils.dates;
+  const {ymd, todayYmd, parseYmd, capitalize, longDay, fmtDate, fmtRange} = Workhub.utils.dates;
   const {safeUrl, platformOf} = Workhub.utils.urls;
   const {copyWithFeedback, showMessage, bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const TaskModel = Workhub.models.TaskModel;
@@ -185,8 +185,8 @@
       Workhub.views.ClientSelect.populateFilter(this.filterCliente, names);
     }
 
-    /* buckets: {'AAAA-MM-DD': {tasks, meetings}} */
-    render(year, month, selected, buckets, mode){
+    /* buckets: {'AAAA-MM-DD': {tasks, meetings}}; spans: [{task, start, end}] (CalendarController.spans). */
+    render(year, month, selected, buckets, mode, spans){
       mode = mode || 'month';
       const loc = Workhub.i18n.locale;
       const first = new Date(year, month, 1);
@@ -218,18 +218,19 @@
         const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
         const key = ymd(d);
         const b = buckets[key] || EMPTY_BUCKET;
-        const chips = b.meetings.map(meetingChipHtml).concat(b.tasks.map(taskChipHtml));
+        const running = spansOn(spans, key);
+        const chips = b.meetings.map(meetingChipHtml).concat(b.tasks.map((t) => taskChipHtml(t)), running.map((t) => taskChipHtml(t, true)));
         const extra = chips.length > maxChips ? '<span class="cal-more">+' + (chips.length - maxChips) + ' más</span>' : '';
         const dots = b.meetings.slice(0, MAX_CHIPS).map(() => '<i class="cal-dot is-meeting"></i>')
           .concat(b.tasks.slice(0, MAX_CHIPS).map((t) => {
             return '<i class="cal-dot' + (TaskModel.dueState(t) === 'overdue' ? ' is-overdue' : '') + '"></i>';
-          })).join('');
+          }), running.slice(0, MAX_CHIPS).map(() => '<i class="cal-dot is-span"></i>')).join('');
         const cls = 'cal-cell' +
           (mode === 'month' && d.getMonth() !== month ? ' is-other' : '') +
           (d.getDay() === 0 || d.getDay() === 6 ? ' is-weekend' : '') +
           (key === today ? ' is-today' : '') +
           (key === selected ? ' is-selected' : '');
-        const count = b.meetings.length + b.tasks.length;
+        const count = b.meetings.length + b.tasks.length + running.length;
         const aria = longDay(d) + (count ? ', ' + count + (count === 1 ? ' elemento' : ' elementos') : '');
         html += '<div class="' + cls + '" data-date="' + key + '" role="button" tabindex="0" aria-label="' + esc(aria) + '">' +
           '<span class="cal-num">' + d.getDate() + '</span>' +
@@ -248,8 +249,9 @@
     }
 
     /* upcoming: [{kind, date, item}] de los días siguientes (CalendarController.upcoming). */
-    renderDay(date, bucket, upcoming){
+    renderDay(date, bucket, upcoming, spans){
       const b = bucket || EMPTY_BUCKET;
+      const running = spansOn(spans, date);
       const isToday = date === todayYmd();
       const parts = [];
       if(b.meetings.length) parts.push(b.meetings.length + (b.meetings.length === 1 ? ' reunión' : ' reuniones'));
@@ -260,7 +262,7 @@
           '<button type="button" class="btn btn-ghost btn-sm" data-action="new-meeting">' + PLUS_ICON + 'Reunión</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" data-action="new-task">' + PLUS_ICON + 'Tarea con esta fecha</button>' +
         '</div>';
-      if(!b.meetings.length && !b.tasks.length){
+      if(!b.meetings.length && !b.tasks.length && !running.length){
         html += '<div class="cal-empty-box">' + Workhub.views.sumi.svg({mood:'dormido', size:56, cls:'is-sleep'}) + '<p class="cal-empty">Nada programado este día.</p></div>';
       }
       if(b.meetings.length){
@@ -268,6 +270,9 @@
       }
       if(b.tasks.length){
         html += '<p class="cal-day-label">Tareas que vencen</p>' + b.tasks.map((t) => agendaTaskHtml(t)).join('');
+      }
+      if(running.length){
+        html += '<p class="cal-day-label">' + esc(Workhub.t('Tareas en curso')) + '</p>' + running.map((t) => agendaTaskHtml(t)).join('');
       }
       if(upcoming && upcoming.length){
         html += '<p class="cal-day-label">Próximamente</p>' + upcoming.map((u) => {
@@ -371,12 +376,28 @@
       : '--c:' + fallback;
   }
 
-  /* Tarea en el mes: una línea con el punto del cliente (dos líneas como mucho). */
-  function taskChipHtml(t){
+  /* Tareas en curso un día: las que tienen intervalo y ese día cae antes de su fecha límite
+     (el último día ya sale como tarea que vence). Solo con inicio: ese día. */
+  function spansOn(spans, key){
+    return (spans || []).filter((s) => s.start <= key && (s.task.dueDate ? key < s.end : key === s.end)).map((s) => s.task);
+  }
+
+  /* «05 oct – 12 oct» si la tarea tiene fecha de inicio; «Desde 05 oct» si solo tiene inicio. */
+  function rangeText(t){
+    const r = TaskModel.rangeOf(t);
+    if(!r) return '';
+    if(!t.dueDate) return Workhub.t('Desde {fecha}', {fecha:fmtDate(r.start)});
+    return r.end === t.dueDate && r.start < r.end ? fmtRange(r.start, r.end) : '';
+  }
+
+  /* Tarea en el mes: una línea con el punto del cliente (dos líneas como mucho). span: día
+     intermedio de su intervalo (punto hueco; solo se arrastra desde su fecha límite). */
+  function taskChipHtml(t, span){
     const s = TaskModel.statusOf(t.status);
     const ds = TaskModel.dueState(t);
-    const cls = 'cal-chip is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '');
-    return '<span class="' + cls + '" draggable="true" data-kind="task" data-id="' + esc(t.id) + '" style="' + dotStyle(t.cliente, s.dot) + '" title="' + esc(t.title) + '"><span translate="no">' + esc(t.title) + '</span></span>';
+    const range = rangeText(t);
+    const cls = 'cal-chip is-task' + (span ? ' is-span' : '') + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '');
+    return '<span class="' + cls + '" draggable="' + (span ? 'false' : 'true') + '" data-kind="task" data-id="' + esc(t.id) + '" style="' + dotStyle(t.cliente, s.dot) + '" title="' + esc(t.title + (range ? ' · ' + range : '')) + '"><span translate="no">' + esc(t.title) + '</span></span>';
   }
 
   /* Reunión en el mes: etiqueta con la hora en su propia línea, para que el nombre no se corte tanto. */
@@ -419,7 +440,8 @@
     const s = TaskModel.statusOf(t.status);
     const ds = TaskModel.dueState(t);
     const prog = TaskModel.checklistProgress(t);
-    const meta = [!when && t.dueTime ? '<b translate="no">' + esc(t.dueTime) + '</b>' : '', clientMeta(t.cliente), '<span translate="no">' + esc(s.label) + '</span>',
+    const range = rangeText(t);
+    const meta = [!when && t.dueTime ? '<b translate="no">' + esc(t.dueTime) + '</b>' : '', range ? '<span>' + esc(range) + '</span>' : '', clientMeta(t.cliente), '<span translate="no">' + esc(s.label) + '</span>',
       prog.total ? '<span>' + esc(Workhub.t('{n} de {total}', {n:prog.done, total:prog.total})) + '</span>' : ''].filter(Boolean).join('<span aria-hidden="true">·</span>');
     const ring = '<span class="agenda-ring' + (s.done ? ' is-final' : '') + '" style="--st:' + s.dot + '" title="' + esc(ds === 'overdue' ? 'Vencida' : s.label) + '"></span>';
     return '<div class="agenda-item is-task' + (ds === 'overdue' ? ' is-overdue' : '') + (ds === 'done' ? ' is-done' : '') + '" data-kind="task" data-id="' + esc(t.id) + '">' +

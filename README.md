@@ -35,7 +35,7 @@
 - **Duplicar.** Duplica una tarea o una columna entera con sus tarjetas. Las copias conservan subtareas, etiquetas y personas asignadas, y son independientes de la original.
 - **Menciones, seguir y avisos.** En los equipos, `@Nombre` en un comentario avisa a esa persona, «Seguir» una tarea te avisa de sus comentarios y movimientos, y las asignaciones también avisan: como notificaciones del sistema aunque Kanlane esté cerrado, si las activas en Ajustes.
 - **Subtareas y tareas que se repiten.** Divide una tarea en pasos con su progreso, y haz que se repita cada día, semana, mes o año: al terminarla se crea la siguiente.
-- **Calendario** de fechas límite y reuniones en vista de mes, semana y día. Arrastra una tarea o una reunión a otro día para moverla.
+- **Calendario** de fechas límite y reuniones en vista de mes, semana y día. Arrastra una tarea o una reunión a otro día para moverla. Las tareas con fecha de inicio muestran su intervalo en la tarjeta y en todos los días que ocupan.
 - **Clientes y contactos** en una sola sección: cada cliente con sus personas, tareas y reuniones. Colores propios por cliente.
 - **Búsqueda global (`Ctrl K`)** entre tareas, notas, clientes, contactos y reuniones, con acciones rápidas.
 - **Automatizaciones** por proyecto: reglas «cuando pasa algo en una tarea, haz esto» (al crearla, al moverla a una columna, al completarla o al acercarse su fecha, también con Kanlane cerrado), botones en la tarea que ejecutan varias acciones con un clic y ejemplos listos para usar.
@@ -191,7 +191,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 - **Duplicate.** Duplicate a task or a whole column with its cards. Copies keep subtasks, labels and assigned people, and are independent of the original.
 - **Mentions, following and notifications.** In teams, `@Name` in a comment notifies that person, following a task notifies you of its comments and moves, and assignments notify too: as system notifications even when Kanlane is closed, if you turn them on in Settings.
 - **Subtasks and recurring tasks.** Split a task into steps with progress, and make it repeat daily, weekly, monthly or yearly: finishing it creates the next one.
-- **Calendar** of due dates and meetings in month, week and day views. Drag a task or a meeting to another day to move it.
+- **Calendar** of due dates and meetings in month, week and day views. Drag a task or a meeting to another day to move it. Tasks with a start date show their range on the card and on every day they span.
 - **Clients and contacts** in a single section: each client with its people, tasks and meetings. Per-client colors.
 - **Global search (`Ctrl K`)** across tasks, notes, clients, contacts and meetings, with quick actions.
 - **Automations** per project: rules like “when something happens to a task, do this” (when it is created, moved to a column, completed or close to its due date, even with Kanlane closed), buttons on the task that run several actions in one click, and ready-made examples.

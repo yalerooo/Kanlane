@@ -94,6 +94,15 @@
       photos = document.createElement('link');
       photos.rel = 'stylesheet'; photos.href = '../assets/css/seasons/' + SEASONS[season] + '.css';
       document.head.appendChild(photos);
+      /* Y, si lo que se va a ver es el acceso (sin sesión ni invitado), la escena se empieza a
+         bajar ya: quien la pide es auth-early.js (loadScene) al enseñar el formulario, bastante
+         más tarde, y en la primera visita esa espera se sumaba a la de compilarla. Misma
+         dirección que allí, para que sea la misma descarga. */
+      if(window.__authFirst){
+        var scene = document.createElement('link');
+        scene.rel = 'preload'; scene.as = 'script'; scene.href = '../src/views/auth-scene.js';
+        document.head.appendChild(scene);
+      }
     };
     if(!sceneOff) window.__scenePhotos();
   }catch(e){}

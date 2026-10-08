@@ -645,8 +645,11 @@
     '}',
     'vec2 groundGrad(vec2 p){',
     '  float e = .06;',
-    '  float g0 = terrain(p);',
-    '  return vec2(terrain(p + vec2(e, 0.)) - g0, terrain(p + vec2(0., e)) - g0) / e;',
+    /* Las tres alturas, en un bucle que el compilador no puede desenrollar (uZero): escritas */
+    /* una a una, terrain() se copiaba entera tres veces y compilar tardaba más. */
+    '  vec3 g = vec3(0.);',
+    '  for(int i = uZero; i < 3; i++) g[i] = terrain(p + (i == 1 ? vec2(e, 0.) : (i == 2 ? vec2(0., e) : vec2(0.))));',
+    '  return vec2(g.y - g.x, g.z - g.x) / e;',
     '}',
     /* Las sombras que no se mueven: la del ordenador y la del propio terreno. */
     'float groundShadow(vec3 p, float base, vec3 L){',

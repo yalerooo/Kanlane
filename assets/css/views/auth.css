@@ -409,6 +409,12 @@ html.auth-gate body:not(.is-authing) .consent{display:none;}
 }
 .auth-scene canvas{position:relative;z-index:1;display:block;width:100%;height:100%;opacity:0;transition:opacity .7s ease;}
 .auth-scene canvas.is-on{opacity:1;}
+/* Sin enseñar todavía (auth-scene.js, loop): el lienzo ya se compone con la página, para que
+   lo que se mide sea lo que costará a la vista, pero no llega a verse. Con opacidad 0 el
+   navegador ni lo pintaría. */
+.auth-scene canvas.is-trial{opacity:.004;transition:none;}
+/* La escena se retira para cambiar de calidad (retreat): un fundido corto hacia la foto. */
+.auth-scene canvas.is-swap{transition-duration:.3s;}
 /* Con la escena ya encima, la foto deja de pintarse. */
 .auth-scene:has(canvas.is-on)::before,.auth-scene:has(canvas.is-on)::after{visibility:hidden;transition:visibility 0s .8s;}
 /* Equipo modesto (html.scene-lite, lo marca la escena al elegir un escalón bajo): los cristales

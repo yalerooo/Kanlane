@@ -15,9 +15,12 @@
    3. La hierba (GRASS_SIM / GRASS_VERT / GRASS_FRAG): geometría de verdad, una cinta por brizna,
       cientos de miles, dibujadas de una vez (instancias). La profundidad de la pasada 1 decide
       qué briznas quedan delante o detrás del ordenador y del tronco. Lo que es igual para toda
-      la brizna se calcula antes, una vez por brizna (GRASS_SIM, transform feedback).
+      la brizna se calcula antes, una vez por brizna (transform feedback): el viento, en cada
+      fotograma (GRASS_SIM); la luz, que cambia despacio, por turnos (GRASS_LIGHT). De lejos
+      las briznas llevan menos tramos (lods).
    En primavera, entre el arbolado y la hierba, las flores (FLOWERS_VERT / FLOWERS_FRAG).
-   4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas. En invierno, además, la
+   4. Lo que va por delante (OVER): pétalos, pájaros y luciérnagas, cada uno en su recuadro
+      (sprites) y no a pantalla completa. En invierno, además, la
       nevada: miles de puntos (FLAKES_VERT / FLAKES_FRAG).
    COMMON son las funciones que comparten (ruido, terreno, ordenador, cielo...).
 
@@ -32,7 +35,11 @@
    (LEVELS: resolución y cantidad de hierba) y, midiendo lo que tarda de verdad la tarjeta
    gráfica en cada fotograma, sube mientras le sobre tiempo y baja si va justa (MODES y
    «Calidad», en setup()). Nunca se queda parada para siempre: si ni en lo más ligero llega,
-   descansa un rato y vuelve a probar. Se pinta solo mientras la pantalla de
+   descansa un rato y vuelve a probar. La calidad en la que se asienta se guarda en el
+   navegador (MEMO_KEY) y la visita siguiente arranca ya en ella y se enseña enseguida. Con la
+   escena a la vista no cambia de calidad delante de nadie: si hay que bajar, se retira un
+   instante tras la foto desenfocada y vuelve ya cambiada (retreat); si se podría subir, se
+   apunta para la próxima visita. Se pinta solo mientras la pantalla de
    acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
    sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
    parado varios segundos). Hasta que acaban se enseña una imagen de la escena hecha de antemano
@@ -486,6 +493,10 @@
     '  float s = max(dot(rd, normalize(vec3(L.x, .02, L.z))), 0.);',
     /* Estrellas: muchas pequeñas, unas pocas grandes, y la vía láctea cruzando. */
     '  float starry = smoothstep(.45, 1., uNight) * smoothstep(.02, .25, rd.y);',
+    /* Solo donde se van a ver: de día y al atardecer no hay, y eran un tercio de lo que cuesta */
+    /* el cielo. */
+    '  vec3 stars = vec3(0.);',
+    '  if(starry > 0.){',
     '  vec2 sp = rd.xy / (1. + abs(rd.z)) * 420.;',
     '  vec2 si = floor(sp);',
     '  float st = step(.986, hash(si)) * smoothstep(.42, .05, length(fract(sp) - .5));',
@@ -496,7 +507,7 @@
     '  big *= .58 + .42 * sin(uTime * (.9 + 1.5 * hash(si2 + 5.)) + hash(si2 + 3.) * 30.) * sin(uTime * .37 + hash(si2) * 9.);',
     '  float band = exp(-pow(dot(rd, normalize(vec3(.62, .42, -.66))) * 3.2, 2.));',
     '  float dust = fbm(rd.xy * 5. + 11.);',
-    '  vec3 stars = vec3(.9, .92, 1.) * st + mix(vec3(1., .88, .74), vec3(.78, .86, 1.), hash(si2)) * big * 1.4;',
+    '  stars = vec3(.9, .92, 1.) * st + mix(vec3(1., .88, .74), vec3(.78, .86, 1.), hash(si2)) * big * 1.4;',
     '  stars += vec3(.30, .30, .50) * band * (.25 + .75 * dust) * .50;',
     '  stars += vec3(.9, .92, 1.) * step(.955, hash(si + 91.)) * smoothstep(.40, .05, length(fract(sp) - .5)) * band * dust * 1.2;',
     /* De vez en cuando, una estrella fugaz. */
@@ -511,6 +522,7 @@
     '  float perp = length(rel + sdir * along);',
     '  float streak = exp(-perp * perp * 120000.) * smoothstep(.10, 0., along) * step(0., along);',
     '  stars += vec3(.92, .96, 1.) * streak * smoothstep(0., .03, sf) * (1. - smoothstep(.10, .20, sf)) * step(.45, hash(vec2(sid, 1.3))) * 1.6;',
+    '  }',
     /* Cuánta nube: desde qué densidad empiezan a verse los jirones altos y los bancos bajos
        (cuanto más alto el número, menos nube). Verano, casi despejado; primavera, bancos
        sueltos; otoño, cargado; invierno, el más cubierto. STARS: lo que lucen las estrellas
@@ -875,7 +887,9 @@
     '  vec3 col = sky(rd, L);',
     /* Sierras lejanas: tres cordilleras, una tras otra. Cuanto más lejos, más pálidas; al pie */
     /* de cada una se posa la bruma y el filo que mira al sol se enciende. */
-    '  if(tHit < 0.){',
+    /* Solo cerca del horizonte: la más alta no pasa de ,1425 y por encima es todo cielo (más */
+    /* de la mitad de sus píxeles), que se ahorra los veintisiete ruidos de las tres. */
+    '  if(tHit < 0. && rd.y < .1426){',
     '    float az = atan(rd.x, rd.z);',
     '    vec3 hz = skyBase(normalize(vec3(rd.x, .02, rd.z)), L);',
     '    float toSun = pow(max(dot(normalize(vec3(rd.x, 0., rd.z)), normalize(vec3(L.x, 0., L.z))), 0.), 6.);',
@@ -1080,7 +1094,8 @@
     '      for(int i = 0; i < FF_N; i++){',
     '        if(i >= uFFLit) break;',
     '        vec3 d = uFF[i].xyz - p;',
-    '        fl += ffCol * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
+    '        float q = dot(d, d);',
+    '        if(q < 2.4) fl += ffCol * max(uFF[i].w - .15, 0.) * exp(-q * 3.2);',
     '      }',
     '      gcol += alb * fl * 1.5 * (.35 + .65 * kk) * uNight;',
     '    }',
@@ -1470,6 +1485,13 @@
     '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.) * uFade;',
     '}'
   ]).join('\n');
+  /* La cámara de la hierba: no depende de nada (ni de la altura del suelo, que se va en la
+     resta), así que va como constante y no se rehace en cada vértice. */
+  const GRASS_CAM = [
+    'const vec3 G_FW = normalize(vec3(-2.2, .40, 11.5));',
+    'const vec3 G_RT = normalize(cross(vec3(0., 1., 0.), G_FW));',
+    'const vec3 G_UP = cross(G_FW, G_RT);'
+  ].join('\n');
   const GRASS_BASE = [
     /* ---------- La hierba, paso previo: lo que no cambia de cada brizna ---------- */
     /* Dónde está su raíz, cuánto mide, la sombra fija que le cae (la del terreno y la del */
@@ -1477,12 +1499,16 @@
     /* más caro de la hierba y no depende del viento, así que se calcula una sola vez por tamaño */
     /* de ventana, y otra cuando cambia la luz (el tema), y se guarda (transform feedback). */
     'layout(location = 1) in vec4 aInst;',
+    'uniform float uWide;',
     /* Altura de la raíz, alto de la brizna, sombra fija y contacto. */
     'out vec4 oB0;',
-    /* Mata, dos ruidos fijos (el desfase de la onda del viento y las manchas de la copa) y la */
-    /* distancia a la cámara. */
+    /* Mata, dos ruidos fijos (el desfase de la onda del viento y las manchas de la copa) y el */
+    /* ancho de la brizna. */
     'out vec4 oB1;',
     'out vec4 oB2;',
+    /* Cuánta luz de la pantalla del ordenador le llega, las manchas de tierra seca y hacia dónde */
+    /* mira la brizna (coseno y seno). */
+    'out vec4 oB3;',
 
     'void main(){',
     '  setupTree();',
@@ -1519,7 +1545,9 @@
     '  float contact = smoothstep(.25, 1.9, foot) * .72 + .28;',
     '  contact *= .45 + .55 * smoothstep(.55, 1.5, length(ql.xz - vec2(0., -.12)));',
     '  oB0 = vec4(root.y, h, sh, contact);',
-    '  oB1 = vec4(clump, noise(r0 * .35), noise(r0 * 6.1), dist);',
+    /* De lejos las briznas se ensanchan para seguir cubriendo con menos. */
+    '  float w = (.0046 + .0032 * fract(rB * 3.7)) * (1. + dist * .13) * uWide;',
+    '  oB1 = vec4(clump, noise(r0 * .35), noise(r0 * 6.1), w);',
 
     /* Bruma: la misma que el suelo. */
     '  vec3 rd = normalize(root - ro);',
@@ -1531,52 +1559,47 @@
     /* Dos mezclas seguidas (bruma y bruma baja) resumidas en un color y una cantidad. */
     '  float fa = 1. - (1. - fog) * (1. - mist * .42);',
     '  oB2 = vec4((fc * fog * (1. - mist * .42) + mistCol * mist * .42) / max(fa, 1e-4), fa);',
+
+    /* La pantalla del ordenador alumbra la hierba que tiene delante: cuánto, que el color lo */
+    /* pone GRASS_LIGHT. Y las manchas rojizas de tierra seca, que antes se calculaban en cada */
+    /* píxel de cada brizna. */
+    '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
+    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
+    '  vec3 tl = sc - root;',
+    '  float dl = length(tl);',
+    '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
+    '  float ang = rB * 19.;',
+    '  oB3 = vec4(spill, smoothstep(.66, .9, fbm3(r0 * .23 + 8.)), cos(ang), sin(ang));',
     '  gl_Position = vec4(0., 0., 0., 1.);',
     '}'
   ].join('\n');
   const GRASS_SIM = [
-    /* ---------- La hierba, primer paso: lo que es igual para toda la brizna ---------- */
+    /* ---------- La hierba, primer paso: el viento ---------- */
     /* Cada brizna sale de su raíz en el suelo, se curva hacia un lado y el viento la tumba a */
-    /* rachas que recorren la colina. Hacia dónde cae y qué sombra y qué luz le llegan vale lo */
-    /* mismo para sus nueve vértices: se calcula aquí una vez por brizna en cada fotograma y se */
-    /* guarda (transform feedback); GRASS_VERT solo le da forma. Calcularlo en cada vértice */
-    /* costaba nueve veces más. Lo que además no cambia con el tiempo viene ya de GRASS_BASE. */
+    /* rachas que recorren la colina. Hacia dónde cae vale lo mismo para sus nueve vértices: se */
+    /* calcula aquí una vez por brizna en cada fotograma y se guarda (transform feedback); */
+    /* GRASS_VERT solo le da forma. Calcularlo en cada vértice costaba nueve veces más. Aquí va */
+    /* solo lo que tiene que ir a cada fotograma, que es lo que se mueve; la luz, que cambia */
+    /* despacio, va aparte y por turnos (GRASS_LIGHT), y lo que no cambia viene de GRASS_BASE. */
     'layout(location = 1) in vec4 aInst;',
     'layout(location = 2) in vec4 aB0;',
     'layout(location = 3) in vec4 aB1;',
-    'layout(location = 4) in vec4 aB2;',
-    'uniform float uWide;',
+    'layout(location = 4) in vec4 aB3;',
     /* Cuánto ha crecido la hierba (0..1): al relevar a la imagen de espera sale del suelo en */
     /* vez de aparecer de golpe encima de la hierba de la imagen. */
     'uniform float uGrow;',
-    /* Raíz (altura), alto de la brizna y hacia dónde cae. */
+    /* Alto de la brizna, hacia dónde cae y la racha. */
     'out vec4 oA;',
-    /* Sombra, contacto, racha y mata. */
-    'out vec4 oLight;',
-    'out vec4 oFog;',
-    /* Luces de cerca y ancho de la brizna. */
-    'out vec4 oExtra;',
 
     'void main(){',
-    '  setupTree();',
-    '  float treeSc = TREE_SC * uTreeS;',
-    '  float base = uBase;',
-    '  vec3 ta = vec3(0., base + 1.02, 0.);',
-    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
-    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
-    '  vec3 L = sunDir();',
-
     /* aInst: raíz (x, z) y dos números al azar. */
     '  vec2 r0 = aInst.xy;',
     '  float rA = aInst.z, rB = aInst.w;',
-    '  vec3 root = vec3(r0.x, aB0.x, r0.y);',
-    '  float h = aB0.y, clump = aB1.x, dist = aB1.w;',
+    '  float h = aB0.y;',
     /* Sale por zonas, del ordenador hacia fuera, y no toda a la vez: unas briznas sueltas o a */
     /* medio crecer enseñan el pie, que es oscuro, y el relevo se veía como un césped ralo y */
     /* apagado tapando el de la imagen. Detrás del frente la hierba ya está entera. */
     '  h *= smoothstep(0., .2, uGrow * 1.3 - min(length(r0) / 30., 1.) - .1 * fract(rB * 5.3));',
-    /* De lejos las briznas se ensanchan para seguir cubriendo con menos. */
-    '  float w = (.0046 + .0032 * fract(rB * 3.7)) * (1. + dist * .13) * uWide;',
 
     /* Viento: rachas anchas que cruzan la colina, una onda que las acompaña y un temblor fino */
     /* en cada brizna. */
@@ -1586,26 +1609,44 @@
     '  float wave = sin(dot(r0, wdir) * 1.1 - uTime * 1.7 + aB1.y * 5.) * .5 + .5;',
     '  float blow = .03 + .50 * gust + .16 * wave * gust;',
     '  float flutter = sin(uTime * (3.2 + 2.6 * rA) + rB * 43.) * (.035 + .07 * gust);',
-    '  float ang = rB * 19.;',
-    '  vec2 own = vec2(cos(ang), sin(ang));',
-    '  vec2 lean = own * (.14 + .36 * rA) + wdir * blow + vec2(-wdir.y, wdir.x) * flutter;',
+    '  vec2 lean = aB3.zw * (.14 + .36 * rA) + wdir * blow + vec2(-wdir.y, wdir.x) * flutter;',
     /* El cursor: las briznas de su alrededor se tumban hacia fuera, como si pasara una mano. */
     /* Se mide en pantalla (dónde cae la raíz respecto al cursor), llevado a medidas de la */
     /* escena a esa distancia; en vertical cuenta más, porque el suelo se ve muy de canto. */
     '  if(uMouse.z > .002){',
-    '    vec3 v0 = root - ro;',
-    '    float z0 = max(dot(v0, fw), .3);',
-    '    vec2 f0 = uFocus + uRes.y * 1.5 * vec2(dot(v0, rt), dot(v0, up)) / z0;',
+    '    vec3 v0 = vec3(r0.x, aB0.x, r0.y) - vec3(2.2, uBase + .62, -11.5);',
+    '    float z0 = max(dot(v0, G_FW), .3);',
+    '    vec2 f0 = uFocus + uRes.y * 1.5 * vec2(dot(v0, G_RT), dot(v0, G_UP)) / z0;',
     '    vec2 md = (f0 - uMouse.xy) / uRes.y * z0 / 1.5;',
     '    md.y *= 2.4;',
     '    float push = exp(-dot(md, md) / .62) * uMouse.z;',
-    '    lean += normalize(rt.xz * md.x + normalize(fw.xz) * md.y + 1e-4) * push * 1.35;',
+    '    lean += normalize(G_RT.xz * md.x + normalize(G_FW.xz) * md.y + 1e-4) * push * 1.35;',
     '    h *= 1. - .22 * push;',
     '  }',
-    '  oA = vec4(root.y, h, lean);',
+    '  oA = vec4(h, lean, gust);',
+    '  gl_Position = vec4(0., 0., 0., 1.);',
+    '}'
+  ].join('\n');
+  const GRASS_LIGHT = [
+    /* ---------- La hierba: la luz que le llega a cada brizna ---------- */
+    /* Las sombras que se mueven (las nubes, la copa del cerezo) y las luces de cerca (la */
+    /* pantalla del ordenador, las luciérnagas). Cambian despacio, así que no se rehacen para */
+    /* todas las briznas en cada fotograma, sino para una parte cada vez (ver draw): era la */
+    /* mitad de lo que costaba mover la hierba. */
+    'layout(location = 1) in vec4 aInst;',
+    'layout(location = 2) in vec4 aB0;',
+    'layout(location = 3) in vec4 aB1;',
+    'layout(location = 4) in vec4 aB3;',
+    /* Sombra y contacto. */
+    'out vec4 oLight;',
+    /* Luces de cerca. */
+    'out vec4 oExtra;',
 
-    /* Sombras: a las fijas (terreno y ordenador) se suman las que se mueven: las nubes y la */
-    /* copa del cerezo, a manchas. */
+    'void main(){',
+    '  setupTree();',
+    '  float treeSc = TREE_SC * uTreeS;',
+    '  vec3 L = sunDir();',
+    '  vec2 r0 = aInst.xy;',
     '  float sh = aB0.z;',
     '  float cloudSh = smoothstep(.34, .66, fbm3(r0 * .075 + vec2(uTime * .035, uTime * .014)));',
     '  sh *= mix(.40, 1., cloudSh);',
@@ -1615,67 +1656,68 @@
     '  float contact = aB0.w;',
     '  sh *= contact;',
     '  sh = mix(sh, 1., uNight * .5);',
-    '  oLight = vec4(sh, .45 + .55 * contact, gust, clump);',
-    '  oFog = aB2;',
+    '  oLight = vec4(sh, .45 + .55 * contact, 0., 0.);',
 
-    /* Luces de cerca: la pantalla del ordenador y, de noche, las luciérnagas. */
-    '  vec3 sn = vec3(0., 0., -1.); sn.xz = rot(-YAW) * sn.xz;',
-    '  vec3 sc = vec3(0., 1.16, -.66) * CS; sc.xz = rot(-YAW) * sc.xz; sc.y += base;',
-    '  vec3 tl = sc - root;',
-    '  float dl = length(tl);',
-    '  float spill = max(dot(normalize(tl), vec3(0., 1., 0.)) * .6 + .4, 0.) * max(dot(-normalize(tl), sn), 0.) / (1. + dl * dl * .5);',
-    '  vec3 extra = screenLight() * spill * mix(mix(1.6, .9, uDay), 7.0, uNight);',
+    /* Luces de cerca: la pantalla del ordenador y, de noche, las luciérnagas (solo las que */
+    /* alumbran y de cerca: a metro y medio ya no llega nada). */
+    '  vec3 extra = screenLight() * aB3.x * mix(mix(1.6, .9, uDay), 7.0, uNight);',
     '  if(uNight > .01){',
+    '    vec3 root = vec3(r0.x, aB0.x, r0.y);',
     '    vec3 fl = vec3(0.);',
     '    for(int i = 0; i < FF_N; i++){',
     '      if(i >= uFFLit) break;',
     '      vec3 d = uFF[i].xyz - root;',
-    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
+    '      float q = dot(d, d);',
+    '      if(q < 2.4) fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-q * 3.2);',
     '    }',
     '    extra += fl * 1.5 * uNight;',
     '  }',
-    '  oExtra = vec4(extra, w);',
+    '  oExtra = vec4(extra, 0.);',
     '  gl_Position = vec4(0., 0., 0., 1.);',
     '}'
   ].join('\n');
   const GRASS_VERT = [
     /* ---------- La hierba, segundo paso: una cinta por brizna ---------- */
-    /* Cada brizna es una cinta de cuatro tramos (dos en los equipos justos) que acaba en punta. */
-    /* Aquí solo se le da forma: lo demás viene ya calculado de GRASS_SIM. */
+    /* Cada brizna es una cinta de cuatro tramos (dos de lejos y en los equipos justos) que */
+    /* acaba en punta. Aquí solo se le da forma: lo demás viene ya calculado de GRASS_BASE, */
+    /* GRASS_SIM y GRASS_LIGHT. OJO: lo que es igual para toda la brizna no se marca «flat»: en */
+    /* Windows el navegador lo resuelve con un sombreador de geometría y la hierba tarda cinco */
+    /* veces más (medido). */
     'layout(location = 0) in vec2 aBlade;',
+    /* Las potencias de la altura que piden la curva y el ancho, ya hechas para cada vértice. */
+    'layout(location = 9) in vec3 aShape;',
     'layout(location = 1) in vec4 aInst;',
     'layout(location = 2) in vec4 aA;',
     'layout(location = 3) in vec4 aLight;',
-    'layout(location = 4) in vec4 aFog;',
-    'layout(location = 5) in vec4 aExtra;',
+    'layout(location = 4) in vec4 aExtra;',
+    'layout(location = 5) in vec4 aB0;',
+    'layout(location = 6) in vec4 aB1;',
+    'layout(location = 7) in vec4 aFog;',
+    'layout(location = 8) in vec4 aB3;',
     'out vec3 vN;',
     'out vec3 vPos;',
+    'out float vT;',
+    /* Los dos números al azar, la mata y la tierra seca; sombra, contacto y racha. */
     'out vec4 vBlade;',
-    'out vec4 vLight;',
+    'out vec3 vLight;',
     'out vec4 vFog;',
     'out vec3 vExtra;',
 
     'void main(){',
-    '  float base = uBase;',
-    '  vec3 ta = vec3(0., base + 1.02, 0.);',
-    '  vec3 ro = vec3(2.2, base + .62, -11.5);',
-    '  vec3 fw = normalize(ta - ro), rt = normalize(cross(vec3(0., 1., 0.), fw)), up = cross(fw, rt);',
+    '  vec3 ro = vec3(2.2, uBase + .62, -11.5);',
 
     /* aBlade: lado (-1..1) y altura dentro de la brizna (0 raíz, 1 punta). */
-    '  float rA = aInst.z, rB = aInst.w;',
     '  float t = aBlade.y;',
-    '  vec3 root = vec3(aInst.x, aA.x, aInst.y);',
-    '  float h = aA.y, w = aExtra.w;',
-    '  vec2 lean = aA.zw;',
-    '  float ang = rB * 19.;',
-    '  vec2 own = vec2(cos(ang), sin(ang));',
+    '  vec3 root = vec3(aInst.x, aB0.x, aInst.y);',
+    '  float h = aA.x, w = aB1.w;',
+    '  vec2 lean = aA.yz;',
+    '  vec2 own = aB3.zw;',
     '  float lm2 = min(dot(lean, lean), 1.);',
 
-    /* La curva de la brizna y su tangente. */
-    '  float tc = pow(t, 1.7);',
-    '  vec3 p = root + vec3(lean.x, 0., lean.y) * h * tc;',
+    /* La curva de la brizna y su tangente. aShape: t^1,7; 1,7·max(t, ,02)^,7; 1 - t^1,5. */
+    '  vec3 p = root + vec3(lean.x, 0., lean.y) * h * aShape.x;',
     '  p.y += h * t * (1. - .30 * lm2 * t);',
-    '  vec3 tang = normalize(vec3(lean.x * 1.7 * pow(max(t, .02), .7), 1. - .60 * lm2 * t, lean.y * 1.7 * pow(max(t, .02), .7)));',
+    '  vec3 tang = normalize(vec3(lean.x * aShape.y, 1. - .60 * lm2 * t, lean.y * aShape.y));',
 
     /* El ancho mira a medias a la cámara: así ninguna brizna queda de canto y desaparece. */
     '  vec3 toCam = normalize(ro - p);',
@@ -1683,23 +1725,23 @@
     '  vec3 ownSide = vec3(-own.y, 0., own.x);',
     '  ownSide *= sign(dot(ownSide, camSide) + 1e-4);',
     '  vec3 side = normalize(mix(ownSide, camSide, .60));',
-    '  float taper = 1. - pow(t, 1.5);',
-    '  p += side * aBlade.x * w * taper;',
+    '  p += side * aBlade.x * w * aShape.z;',
 
     '  vec3 n = normalize(cross(side, tang));',
     '  n *= sign(dot(n, toCam) + 1e-4);',
     /* Algo de curva a lo ancho, como una hoja doblada por su nervio. */
     '  vN = normalize(n + side * aBlade.x * .55);',
     '  vPos = p;',
-    '  vBlade = vec4(t, rA, rB, aLight.w);',
-    '  vLight = aLight;',
+    '  vT = t;',
+    '  vBlade = vec4(aInst.z, aInst.w, aB1.x, aB3.y);',
+    '  vLight = vec3(aLight.xy, aA.w);',
     '  vFog = aFog;',
     '  vExtra = aExtra.xyz;',
 
     /* Proyección: la misma cámara que la escena (el punto de fuga está en uFocus, no en el centro). */
     '  vec3 v = p - ro;',
-    '  float zv = dot(v, fw);',
-    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, rt), dot(v, up)) / zv;',
+    '  float zv = dot(v, G_FW);',
+    '  vec2 frag = uFocus + uRes.y * 1.5 * vec2(dot(v, G_RT), dot(v, G_UP)) / zv;',
     '  vec2 ndc = frag / uRes * 2. - 1.;',
     '  float zn = (Z_FAR * (zv - Z_NEAR) / ((Z_FAR - Z_NEAR) * zv)) * 2. - 1.;',
     '  gl_Position = vec4(ndc * zv, zn * zv, zv);',
@@ -1709,14 +1751,15 @@
     /* ---------- La hierba: el color de cada brizna ---------- */
     'in vec3 vN;',
     'in vec3 vPos;',
+    'in float vT;',
     'in vec4 vBlade;',
-    'in vec4 vLight;',
+    'in vec3 vLight;',
     'in vec4 vFog;',
     'in vec3 vExtra;',
     'out vec4 fragColor;',
 
     'void main(){',
-    '  float t = vBlade.x, rA = vBlade.y, rB = vBlade.z, clump = vBlade.w;',
+    '  float t = vT, rA = vBlade.x, rB = vBlade.y, clump = vBlade.z;',
     '  float sh = vLight.x, contact = vLight.y, gust = vLight.z;',
     '  vec3 L = sunDir();',
     '  vec3 sunCol = sunColor();',
@@ -1737,8 +1780,8 @@
     '  alb = mix(alb, alb * vec3(.78, 1.02, 1.12), smoothstep(.6, 1., fract(rB * 23.3)) * .45);',
     '  float dry = smoothstep(.80, .97, fract(rA * 5.3 + rB * 1.7));',
     '  alb = mix(alb, vec3(.50, .43, .17) * (.35 + .65 * t), dry * .75);',
-    /* Manchas rojizas de tierra seca, de día. */
-    '  alb = mix(alb, vec3(.26, .15, .10), smoothstep(.66, .9, fbm3(vPos.xz * .23 + 8.)) * .20 * (1. - uNight));',
+    /* Manchas rojizas de tierra seca, de día (vienen de GRASS_BASE). */
+    '  alb = mix(alb, vec3(.26, .15, .10), vBlade.w * .20 * (1. - uNight));',
     '  alb = seasonGrass(alb);',
     /* De noche, apagada y fría, igual que el suelo. */
     '  alb = mix(alb, vec3(dot(alb, vec3(.30, .59, .11))) * vec3(.70, .90, 1.02), uNight * .50);',
@@ -1766,71 +1809,76 @@
     '  fragColor = vec4(post(col, gl_FragCoord.xy), 1.);',
     '}'
   ].join('\n');
+  /* ---------- Lo que va por delante de la hierba: pétalos, pájaros y luciérnagas ---------- */
+  /* Cada cosa es un recuadro pequeño (una instancia) que pinta solo lo suyo: antes era una
+     pasada a pantalla completa que en cada píxel repasaba los veintidós pétalos y las cuarenta
+     luciérnagas, y casi siempre para no pintar nada; en una gráfica integrada se llevaba un
+     tercio del fotograma. Los recuadros los prepara el JS (sprites): aBox, el centro y el medio
+     lado en alturas de pantalla; aP y aQ, lo de cada cosa; aQ.x dice qué es (0 pétalo, 1 pájaro,
+     2 luciérnaga). Van en ese orden y se mezclan como antes: pétalos y pájaros tapan, la luz
+     de las luciérnagas se suma. */
+  const OVER_VERT = [
+    'layout(location = 0) in vec2 aQuad;',
+    'layout(location = 1) in vec4 aBox;',
+    'layout(location = 2) in vec4 aP;',
+    'layout(location = 3) in vec4 aQ;',
+    'out vec4 vBox;',
+    'out vec4 vP;',
+    'out vec4 vQ;',
+    'void main(){',
+    '  vBox = aBox; vP = aP; vQ = aQ;',
+    '  gl_Position = vec4((aBox.xy + aQuad * aBox.zw) * uRes.y / uRes * 2. - 1., 0., 1.);',
+    '}'
+  ].join('\n');
   const OVER = [
-    /* ---------- Lo que va por delante de la hierba: pétalos y luciérnagas ---------- */
-    /* Las luciérnagas, ya llevadas a la pantalla (flies2d): dónde cae cada una, su escala y a */
-    /* qué distancia está; y hacia dónde queda su estela, cuánto se desenfoca y cuánto brilla. */
-    'uniform vec4 uFly[40];',
-    'uniform vec4 uFlyB[40];',
-    /* Los pétalos: dónde está cada uno y cómo está girado (coseno y seno), y cuánto se ve. Los */
-    /* mueve el JS (petals): calcularlo aquí era repetir las mismas cuentas en cada píxel. */
-    'uniform vec4 uPetal[22];',
-    'uniform float uPetalA[22];',
     '#ifdef CACHE',
     'uniform sampler2D uGeo;',
     '#endif',
+    'in vec4 vBox;',
+    'in vec4 vP;',
+    'in vec4 vQ;',
     'out vec4 fragColor;',
 
     'void main(){',
-    '  setupTree();',
-    '  vec3 col = vec3(0.);',
-    '  float alpha = 0.;',
-    /* Pétalos del cerezo: caen despacio y el viento los lleva hacia la derecha. */
-    '  vec2 pa = gl_FragCoord.xy / uRes.y;',
-    '  float asp = uRes.x / uRes.y;',
-    '  for(int i = 0; i < 22; i++){',
-    '    vec2 v = pa - uPetal[i].xy;',
-    /* Lejos del pétalo no hay nada que pintar. */
-    '    if(dot(v, v) > .00004) continue;',
-    '    vec2 dp = vec2(uPetal[i].z * v.x + uPetal[i].w * v.y, uPetal[i].z * v.y - uPetal[i].w * v.x);',
+    '  vec2 v = gl_FragCoord.xy / uRes.y - vBox.xy;',
+    '  if(vQ.x < .5){',
+    /* Pétalos del cerezo: caen despacio y el viento los lleva hacia la derecha. vP: cómo está */
+    /* girado (coseno y seno), cuánto se ve y cuál es. Los mueve el JS (petals). */
+    '    if(dot(v, v) > .00004) discard;',
+    '    vec2 dp = vec2(vP.x * v.x + vP.y * v.y, vP.x * v.y - vP.y * v.x);',
     /* Según la estación: pétalos rosas u hojas secas (más grandes, cada una de su color). En */
     /* verano no cae nada y en invierno nieva aparte (FLAKES): lo apaga el JS (petals). */
     '#if SEASON == 2',
     '    float petal = 1. - smoothstep(.0028, .0056, length(dp * vec2(1., 1.6)));',
-    '    vec3 pc = mix(vec3(1., .52, .14), vec3(.66, .20, .08), fract(float(i) * .37));',
+    '    vec3 pc = mix(vec3(1., .52, .14), vec3(.66, .20, .08), fract(floor(vP.w + .5) * .37));',
     '    pc = mix(pc, pc * vec3(.50, .52, .95), uNight * .6);',
     '#else',
     '    float petal = 1. - smoothstep(.0020, .0042, length(dp * vec2(1., 1.9)));',
     '    vec3 pc = mix(vec3(1., .78, .86), vec3(.62, .56, .86), uNight * .6);',
     '#endif',
-    '    float a = petal * uPetalA[i] * .9;',
-    '    col = col * (1. - a) + pc * a;',
-    '    alpha = alpha * (1. - a) + a;',
-    '  }',
-    /* Una bandada cruza el cielo al atardecer, lejos. */
-    '  if(uNight < .99 && abs(pa.y - .80) < .10){',
-    '    float bt = uTime * .011;',
-    '    for(int i = 0; i < 6; i++){',
-    '      float fi = float(i);',
-    '      vec2 bp = vec2(fract(bt + .37) * (asp + .5) - .25, .80 + .035 * sin(bt * 9.));',
-    '      bp += vec2(-.022 * fi - .010 * mod(fi, 2.), (mod(fi, 2.) * 2. - 1.) * .011 * ceil(fi * .5));',
-    '      vec2 q = (pa - bp) / .0062;',
-    '      float flap = .25 + .65 * sin(uTime * 5.5 + fi * 1.9);',
-    '      float wing = abs(q.y - abs(q.x) * flap + .18 * q.x * q.x);',
-    '      float bird = (1. - smoothstep(.10, .26, wing)) * (1. - smoothstep(.85, 1., abs(q.x)));',
-    '      float a = bird * .62 * (1. - uNight);',
-    '      col *= 1. - a;',
-    '      col += vec3(.10, .05, .08) * a;',
-    '      alpha = alpha * (1. - a) + a;',
-    '    }',
-    '  }',
-    /* Luciérnagas, de noche. Las tapa el ordenador. */
-    '  if(uNight > .01 && SEASON != 3){',
-    '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
+    '    float a = petal * vP.z * .9;',
+    '    if(a <= 0.) discard;',
+    '    fragColor = vec4(pc * a, a);',
+    '  }else if(vQ.x < 1.5){',
+    /* Una bandada cruza el cielo al atardecer, lejos. vP.x: el aleteo de este pájaro. */
+    '    vec2 q = v / .0062;',
+    '    float wing = abs(q.y - abs(q.x) * vP.x + .18 * q.x * q.x);',
+    '    float bird = (1. - smoothstep(.10, .26, wing)) * (1. - smoothstep(.85, 1., abs(q.x)));',
+    '    float a = bird * .62 * (1. - uNight);',
+    '    if(a <= 0.) discard;',
+    '    fragColor = vec4(vec3(.10, .05, .08) * a, a);',
+    '  }else{',
+    /* Luciérnagas, de noche. Las tapa el ordenador. vP: su escala, a qué distancia está, cuánto */
+    /* se desenfoca y cuánto brilla; vQ: cuál es y hacia dónde queda su estela (flies2d). */
+    '    float k = vP.x;',
+    '    float d2 = dot(v, v) * k * k;',
+    /* A esta distancia ya no llega ni el resplandor amplio ni la estela. */
+    '    if(d2 > .25) discard;',
     '#ifdef CACHE',
     '    float tObj = texelFetch(uGeo, ivec2(gl_FragCoord.xy), 0).y;',
     '    if(tObj < 0.) tObj = 1e4;',
     '#else',
+    '    vec2 uv = (gl_FragCoord.xy - uFocus) / uRes.y;',
     '    float base = uBase;',
     '    vec3 ta = vec3(0., base + 1.02, 0.);',
     '    vec3 ro = vec3(2.2, base + .62, -11.5);',
@@ -1848,36 +1896,24 @@
     '      }',
     '    }',
     '#endif',
-    /* Cada una: un punto vivo, un halo, un resplandor amplio y la estela de por dónde acaba */
-    /* de pasar. Las que vuelan pegadas a la cámara salen desenfocadas, como discos de luz. */
-    '    vec3 glow = vec3(0.);',
-    '    for(int i = 0; i < FF_N; i++){',
-    '      vec2 d = uv - uFly[i].xy;',
-    '      float k = uFly[i].z;',
-    '      float d2 = dot(d, d) * k * k;',
-    /* A esta distancia ya no llega ni el resplandor amplio ni la estela; o la tapa el ordenador */
-    /* (las que quedan detrás de la cámara traen una distancia enorme). */
-    '      if(d2 > .25 || uFly[i].w >= tObj) continue;',
-    '      vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(float(i), 2.9)));',
-    '      float g = 1.5 * exp(-d2 / .00042) + .30 * exp(-d2 / .0055) + .040 * exp(-d2 / .070);',
+    '    if(vP.y >= tObj) discard;',
+    /* Un punto vivo, un halo, un resplandor amplio y la estela de por dónde acaba de pasar. */
+    /* Las que vuelan pegadas a la cámara salen desenfocadas, como discos de luz. */
+    '    vec3 tint = mix(vec3(.72, 1., .30), vec3(1., .86, .34), hash(vec2(floor(vQ.y + .5), 2.9)));',
+    '    float g = 1.5 * exp(-d2 / .00042) + .30 * exp(-d2 / .0055) + .040 * exp(-d2 / .070);',
     /* Estela. */
-    '      vec2 ab = uFlyB[i].xy;',
-    '      float h = clamp(dot(d, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
-    '      vec2 dt = d - ab * h;',
-    '      g += .34 * exp(-dot(dt, dt) * k * k / .00050) * (1. - h) * (1. - h);',
+    '    vec2 ab = vQ.zw;',
+    '    float h = clamp(dot(v, ab) / max(dot(ab, ab), 1e-7), 0., 1.);',
+    '    vec2 dt = v - ab * h;',
+    '    g += .34 * exp(-dot(dt, dt) * k * k / .00050) * (1. - h) * (1. - h);',
     /* Desenfoque de las cercanas: un disco suave con el borde algo más marcado. */
-    '      float blur = uFlyB[i].z;',
-    '      if(blur > 0.){',
-    '        float rr = length(d) / blur;',
-    '        g = g * .35 + (1. - smoothstep(.55, 1., rr)) * (.13 + .07 * smoothstep(.55, .95, rr));',
-    '      }',
-    '      glow += tint * g * uFlyB[i].w;',
+    '    float blur = vP.z;',
+    '    if(blur > 0.){',
+    '      float rr = length(v) / blur;',
+    '      g = g * .35 + (1. - smoothstep(.55, 1., rr)) * (.13 + .07 * smoothstep(.55, .95, rr));',
     '    }',
-    '    col += min(glow, vec3(1.)) * smoothstep(.35, 1., uNight);',
+    '    fragColor = vec4(min(tint * g * vP.w, vec3(1.)) * smoothstep(.35, 1., uNight), 0.);',
     '  }',
-    /* Donde no hay nada (casi toda la pantalla), ni se escribe. */
-    '  if(alpha <= 0. && col == vec3(0.)) discard;',
-    '  fragColor = vec4(col, alpha);',
     '}'
   ].join('\n');
 
@@ -1921,6 +1957,12 @@
   /* Qué parte del tiempo de cada fotograma puede llevarse la escena, como mucho: el resto es
      para el navegador, que el formulario tiene que seguir yendo fino. */
   const BUDGET = 0.62;
+  /* La calidad en la que se asentó este equipo se guarda en el navegador (MEMO_KEY) y la visita
+     siguiente arranca ya en ella, sin volver a subir desde lo más ligero: la escena sale de
+     primeras como va a quedar. Vale MEMO_DAYS días, para la misma tarjeta gráfica, la misma
+     estación (en invierno no hay hierba y cuesta otra cosa) y una ventana parecida; si no, se
+     empieza como la primera vez. */
+  const MEMO_KEY = 'workhub_scene_q', MEMO_DAYS = 14;
   /* Desde /app/. La imagen (2048x1024) trae dos capas del mismo encuadre, una al lado de la
      otra: a la izquierda la madera y a la derecha las flores. */
   /* Hasta dónde se corre la imagen de espera: la misma que en el sombreador (WARP_X1 en WAIT). */
@@ -1993,7 +2035,8 @@
     '    for(int i = 0; i < FF_N; i++){',
     '      if(i >= uFFLit) break;',
     '      vec3 d = uFF[i].xyz - head;',
-    '      fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-dot(d, d) * 3.2);',
+    '      float q = dot(d, d);',
+    '      if(q < 2.4) fl += vec3(.80, 1., .34) * max(uFF[i].w - .15, 0.) * exp(-q * 3.2);',
     '    }',
     '    extra += fl * 1.5 * uNight;',
     '  }',
@@ -2455,17 +2498,18 @@
     const holds = [];
     const held = [null, null];
     /* Por orden: hierba (dos pasos), arbolado, lo de delante, lo que no cambia, lo fijo de la
-       hierba y, al final, la
+       hierba, su luz y, al final, la
        escena: cielo, suelo, carcasa, pantalla y lo que se pone en cada fotograma (ver FRAG) o,
        sin CACHE, un solo programa con todo. */
     const part = (n) => prepare(VERT, HEAD + DEF + '#define PART ' + n + '\n' + COMMON + '\n' + GEO + '\n' + TREE_FN + '\n' + FRAG);
     const queue = [
-      prepare(HEAD + COMMON + '\n' + GRASS_SIM, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oA', 'oLight', 'oFog', 'oExtra']),
-      prepare(HEAD + COMMON + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG),
+      prepare(HEAD + COMMON + '\n' + GRASS_CAM + '\n' + GRASS_SIM, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oA']),
+      prepare(HEAD + COMMON + '\n' + GRASS_CAM + '\n' + GRASS_VERT, HEAD + COMMON + '\n' + GRASS_FRAG),
       prepare(HEAD + COMMON + '\n' + TREES_VERT, HEAD + COMMON + '\n' + TREES_FRAG),
-      prepare(VERT, HEAD + DEF + COMMON + '\n' + OVER),
+      prepare(HEAD + COMMON + '\n' + OVER_VERT, HEAD + DEF + COMMON + '\n' + OVER),
       cache ? prepare(VERT, HEAD + COMMON + '\n' + GEO + '\n' + BAKE) : null,
-      prepare(HEAD + COMMON + '\n' + GRASS_BASE, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oB0', 'oB1', 'oB2'])
+      prepare(HEAD + COMMON + '\n' + GRASS_BASE, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oB0', 'oB1', 'oB2', 'oB3']),
+      prepare(HEAD + COMMON + '\n' + GRASS_LIGHT, HEAD + 'out vec4 c;void main(){c=vec4(0.);}', ['oLight', 'oExtra'])
     ].concat(cache ? [part(1), part(2), part(3), prepare(VERT, HEAD + COMMON + '\n' + SCREEN + '\n' + GLASS), prepare(VERT, HEAD + COMMON + '\n' + TREE_FN + '\n' + COMP)] : [part(0)]);
     /* En invierno, al final de la lista, la nevada (ver FLAKES_VERT). */
     if(SEASON === 3) queue.push(prepare(HEAD + FLAKES_VERT, HEAD + FLAKES_FRAG));
@@ -2498,7 +2542,7 @@
 
   function setup(gl, canvas, screen, focusEl, cache, kit){
     /* Los programas llegan cuando acaban de compilarse (live); hasta entonces, la imagen de espera. */
-    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, scenes = [], fall = null, bloom = null, live = false;
+    let sim = null, grass = null, wood = null, over = null, bake = null, grassBase = null, shine = null, scenes = [], fall = null, bloom = null, live = false;
     /* dead: esta escena se ha parado para siempre (se quitó el paisaje o se perdió el contexto;
        ver destroy). heard y watch: con qué se apunta todo lo que escucha, para soltarlo de golpe. */
     let dead = false;
@@ -2510,7 +2554,7 @@
     };
     kit.linked((list) => {
       if(dead) return;
-      sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; grassBase = list[5]; scenes = list.slice(6);
+      sim = list[0]; grass = list[1]; wood = list[2]; over = list[3]; bake = list[4]; grassBase = list[5]; shine = list[6]; scenes = list.slice(7);
       if(SEASON === 3) fall = scenes.pop();
       if(SEASON === 0) bloom = scenes.pop();
       plant();
@@ -2528,12 +2572,29 @@
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
     /* La hierba. instBuf: la raíz y el azar de cada brizna. simBuf: lo que GRASS_SIM calcula
-       para cada una en cada fotograma (cuatro vec4). */
-    /* baseBuf: lo que GRASS_BASE calcula para cada una y no cambia (tres vec4). grown: para
+       para cada una en cada fotograma (un vec4). lightBuf: su luz, que GRASS_LIGHT rehace por
+       turnos (dos vec4; lit: para cuántas briznas está calculada; lightFrom: por cuál va el
+       turno; lightAt: cuándo fue el último). */
+    /* baseBuf: lo que GRASS_BASE calcula para cada una y no cambia (cuatro vec4). grown: para
        cuántas briznas y con qué luz está calculado. field: todas las briznas, en su orden al
        azar; sown: cuántas hay subidas a instBuf, ordenadas de cerca a lejos. */
-    const instBuf = gl.createBuffer(), simBuf = gl.createBuffer(), baseBuf = gl.createBuffer();
-    let grown = 0, grownNight = -1, grownDay = -1, grownAt = 0;
+    const instBuf = gl.createBuffer(), simBuf = gl.createBuffer(), baseBuf = gl.createBuffer(), lightBuf = gl.createBuffer();
+    let grown = 0, grownNight = -1, grownDay = -1, grownAt = 0, lit = 0, lightFrom = 0, lightAt = 0;
+    /* De lejos una brizna mide pocos píxeles y su curva no se distingue: se pinta con menos
+       tramos. Como van ordenadas de cerca a lejos, son tres tandas seguidas: hasta lodA, de
+       cuatro tramos; hasta lodB, de dos; el resto, un triángulo. lodFor: para qué briznas y
+       qué alto de lienzo está hecha la cuenta. */
+    let lodA = 0, lodB = 0, lodFor = '';
+    function lods(count){
+      const key = count + ':' + canvas.height + ':' + sown;
+      if(key === lodFor) return;
+      lodFor = key;
+      /* A esta distancia una brizna mide unos 18 píxeles de alto (con dos tramos su curva se
+         aparta de la de cuatro menos de un píxel), y a esta otra, unos 8. */
+      const a = canvas.height / 60, b = canvas.height / 27;
+      lodA = 0; lodB = 0;
+      for(let i = 0; i < count; i++){ if(field.far[i] <= a) lodA++; if(field.far[i] <= b) lodB++; }
+    }
     /* Sembrar las briznas lleva unas décimas: se hace aparte, mientras se compila (plant). */
     let planted = false, field = null, sown = 0;
     /* El abanico de briznas cubre una pantalla normal de sobra, pero en una ultrapanorámica la
@@ -2558,9 +2619,11 @@
       field = blades(fan[0], fan[1]);
       gl.bufferData(gl.ARRAY_BUFFER, BLADES * 16, gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, simBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 64, gl.DYNAMIC_COPY);
+      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 16, gl.DYNAMIC_COPY);
       gl.bindBuffer(gl.ARRAY_BUFFER, baseBuf);
-      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 48, gl.DYNAMIC_COPY);
+      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 64, gl.DYNAMIC_COPY);
+      gl.bindBuffer(gl.ARRAY_BUFFER, lightBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, BLADES * 32, gl.DYNAMIC_COPY);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     setTimeout(plant, 400);
@@ -2574,35 +2637,72 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+    /* De lo fijo, lo que piden el viento y la luz: oB0, oB1 y oB3. */
     gl.bindBuffer(gl.ARRAY_BUFFER, baseBuf);
-    for(let i = 0; i < 3; i++){
+    [0, 16, 48].forEach((at, i) => {
       gl.enableVertexAttribArray(2 + i);
-      gl.vertexAttribPointer(2 + i, 4, gl.FLOAT, false, 48, i * 16);
-    }
+      gl.vertexAttribPointer(2 + i, 4, gl.FLOAT, false, 64, at);
+    });
     const feedback = gl.createTransformFeedback();
     /* La brizna: una cinta que acaba en punta (lado, altura). */
     function bladeVao(shape){
       const vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
-      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape), gl.STATIC_DRAW);
-      gl.enableVertexAttribArray(0);
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-      gl.bindBuffer(gl.ARRAY_BUFFER, instBuf);
-      gl.enableVertexAttribArray(1);
-      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
-      gl.vertexAttribDivisor(1, 1);
-      gl.bindBuffer(gl.ARRAY_BUFFER, simBuf);
-      for(let i = 0; i < 4; i++){
-        gl.enableVertexAttribArray(2 + i);
-        gl.vertexAttribPointer(2 + i, 4, gl.FLOAT, false, 64, i * 16);
-        gl.vertexAttribDivisor(2 + i, 1);
+      /* Cada vértice: lado, altura y las potencias de la altura que usa GRASS_VERT (aShape),
+         que son siempre las mismas y allí se calculaban en cada vértice de cada brizna. */
+      const data = [];
+      for(let i = 0; i < shape.length; i += 2){
+        const t = shape[i + 1];
+        data.push(shape[i], t, Math.pow(t, 1.7), 1.7 * Math.pow(Math.max(t, 0.02), 0.7), 1 - Math.pow(t, 1.5));
       }
-      return {vao, count:shape.length / 2};
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
+      gl.enableVertexAttribArray(9);
+      gl.vertexAttribPointer(9, 3, gl.FLOAT, false, 20, 8);
+      for(let i = 1; i <= 8; i++){
+        gl.enableVertexAttribArray(i);
+        gl.vertexAttribDivisor(i, 1);
+      }
+      const blade = {vao, count:shape.length / 2, first:-1};
+      aim(blade, 0);
+      return blade;
     }
-    /* De cuatro tramos y, para los equipos justos, de dos. */
+    /* Desde qué brizna pinta esa forma (ver lods): lo de cada brizna se lee a partir de ahí.
+       Por orden: raíz y azar, viento, luz (dos) y lo fijo (cuatro). */
+    function aim(blade, first){
+      gl.bindVertexArray(blade.vao);
+      if(blade.first === first) return;
+      blade.first = first;
+      const at = (loc, buf, stride, off) => { gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, stride, first * stride + off); };
+      at(1, instBuf, 16, 0); at(2, simBuf, 16, 0); at(3, lightBuf, 32, 0); at(4, lightBuf, 32, 16);
+      at(5, baseBuf, 64, 0); at(6, baseBuf, 64, 16); at(7, baseBuf, 64, 32); at(8, baseBuf, 64, 48);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+    /* De cuatro tramos; de dos, para las de lejos y para los equipos justos; y un triángulo,
+       para las que ya casi no se ven. */
     const bladeTall = bladeVao([-1, 0, 1, 0, -1, 0.3, 1, 0.3, -1, 0.55, 1, 0.55, -1, 0.78, 1, 0.78, 0, 1]);
     const bladeShort = bladeVao([-1, 0, 1, 0, -1, 0.5, 1, 0.5, 0, 1]);
+    const bladeTip = bladeVao([-1, 0, 1, 0, 0, 1]);
+
+    /* Lo que va por delante (ver OVER): un recuadro por pétalo, pájaro y luciérnaga. spr: lo de
+       cada uno (doce números); sprN: cuántos hay en este fotograma. */
+    const SPRITES = PETALS + 6 + FIREFLIES;
+    const spr = new Float32Array(SPRITES * 12), sprBuf = gl.createBuffer(), sprVao = gl.createVertexArray();
+    let sprN = 0;
+    gl.bindVertexArray(sprVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, sprBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, spr.byteLength, gl.DYNAMIC_DRAW);
+    for(let i = 0; i < 3; i++){
+      gl.enableVertexAttribArray(1 + i);
+      gl.vertexAttribPointer(1 + i, 4, gl.FLOAT, false, 48, i * 16);
+      gl.vertexAttribDivisor(1 + i, 1);
+    }
 
     /* El árbol lejano: un rectángulo (x de -1 a 1, y de 0 a 1). */
     const woodVao = gl.createVertexArray();
@@ -2619,6 +2719,11 @@
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     const ffNow = new Float32Array(FIREFLIES * 4), ffBefore = new Float32Array(FIREFLIES * 4);
+    /* Las que alumbran la hierba y el suelo en este fotograma (uFF): de las que le tocan al
+       escalón, solo las que están encendidas (por debajo de ,15 de brillo no dan luz). Casi
+       siempre son menos de la mitad, y es una cuenta por brizna y por píxel de suelo. */
+    const ffLit = new Float32Array(FIREFLIES * 4);
+    let ffCount = 0;
     const petalNow = new Float32Array(PETALS * 4), petalAlpha = new Float32Array(PETALS);
     /* Las luciérnagas llevadas a la pantalla, para pintarlas (ver OVER): con la misma cámara que
        los sombreadores, dónde cae cada una (en alturas de pantalla desde el ordenador), su
@@ -2657,7 +2762,7 @@
     /* La imagen intermedia donde pintan las partes de la escena (ver FRAG), en la unidad 5.
        turn: a cuál de las dos lentas, cielo o suelo, le toca en este fotograma. */
     const sceneTex = gl.createTexture(), sceneFbo = gl.createFramebuffer();
-    let turn = 0;
+    let turn = 0, turnAt = 0;
     let stale = true, litNight = -1, litDay = -1, litAt = 0;
     function target(unit, tex, fbo, format, kind, type){
       gl.activeTexture(unit);
@@ -2793,13 +2898,32 @@
     const isDark = () => { const a = root.getAttribute('data-theme'); return a ? a === 'dark' : darkQuery.matches; };
     /* Sin tarjeta gráfica (el navegador pinta WebGL con el procesador) cada fotograma tarda
        muchísimo y bloquearía el formulario: se pinta una sola imagen, pequeña, y se deja quieta. */
-    const software = (function(){
+    const gpu = (function(){
       try{
         const ext = gl.getExtension('WEBGL_debug_renderer_info');
-        const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
-        return /swiftshader|llvmpipe|software|basic render/i.test(name);
-      }catch(e){ return false; }
+        return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+      }catch(e){ return ''; }
     })();
+    const software = /swiftshader|llvmpipe|software|basic render/i.test(gpu);
+    /* La calidad guardada de una visita anterior (ver MEMO_KEY). De la tarjeta no se guarda el
+       nombre, solo un número sacado de él, que basta para saber si es la misma. */
+    const gpuKey = (function(){ let h = 0; for(let i = 0; i < gpu.length; i++) h = (h * 31 + gpu.charCodeAt(i)) | 0; return h; })();
+    const area = () => (canvas.clientWidth || window.innerWidth) * (canvas.clientHeight || window.innerHeight);
+    const memo = (function(){
+      if(software) return null;
+      try{
+        const m = JSON.parse(localStorage.getItem(MEMO_KEY));
+        const a = area();
+        if(m && m.g === gpuKey && m.s === SEASON && MODES[m.m] && Date.now() - m.t < MEMO_DAYS * 864e5 && a <= m.a * 1.3 && a >= m.a * 0.6) return m;
+      }catch(e){}
+      return null;
+    })();
+    /* Apunta ese modo para la próxima visita. Con la calidad fijada a mano o la escena quieta
+       no: no dicen nada de lo que aguanta el equipo. */
+    function remember(m){
+      if(pinned || software || stillQuery.matches || root.getAttribute('data-motion') === 'reduced') return;
+      try{ localStorage.setItem(MEMO_KEY, JSON.stringify({g:gpuKey, s:SEASON, a:area(), m, t:Date.now()})); }catch(e){}
+    }
     const saver = !!(navigator.connection && navigator.connection.saveData);
     /* frozen: la escena se queda en una imagen. Para siempre sin tarjeta gráfica o con ahorro de
        datos; un rato (rest) si el equipo no puede con la animación ni en lo más ligero. */
@@ -2832,12 +2956,15 @@
        hasta cuándo no se vuelve a cada modo, porque al probarlo no dio. */
     /* Con pantalla táctil, nunca por encima del tercer escalón: se calientan enseguida. */
     if(window.matchMedia('(pointer: coarse)').matches) cap = Math.max(cap, 2);
-    let mode = MODE_START, level = Math.max(MODES[mode].l, cap), step = MODES[mode].n;
+    /* Con la calidad de la visita anterior guardada (memo) se arranca en ella, ya asentada. */
+    let mode = memo ? memo.m : MODE_START, level = Math.max(MODES[mode].l, cap), step = MODES[mode].n;
     let pinned = software, measuring = false, settle = 0, shown = false;
+    /* swapping: la escena se está retirando para cambiar de calidad sin que se vea (retreat). */
+    let swapping = false;
     /* Lo que dura un fotograma de la pantalla, en milisegundos: se mide (beat), porque no todas
        van a 60. steady: la calidad ya ha dejado de moverse; hasta entonces la escena no se
        enseña (ver ready), para que nadie la vea cambiar de resolución al arrancar. */
-    let frameMs = 1000 / 60, beatAt = 0, steady = false, liveAt = 0, ups = 0;
+    let frameMs = 1000 / 60, beatAt = 0, steady = !!memo, liveAt = 0, ups = 0;
     const beats = [];
     const cost = [], barred = MODES.map(() => 0);
     let strikes = 0, barWait = 20000, restWait = 30000, restTimer = 0;
@@ -3084,10 +3211,9 @@
       gl.uniform1f(p.U.uTreeX, place.tx * scale);
       gl.uniform1f(p.U.uTreeS, place.ts);
       gl.uniform1f(p.U.uBase, place.base);
-      gl.uniform1i(p.U.uFFLit, posing || SEASON === 3 ? 0 : LEVELS[level].lit);
+      gl.uniform1i(p.U.uFFLit, ffCount);
       gl.uniform1f(p.U.uRaw, raw);
-      if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffNow);
-      if(p.U.uFFp) gl.uniform4fv(p.U.uFFp, ffBefore);
+      if(p.U.uFF) gl.uniform4fv(p.U.uFF, ffLit);
     }
 
     /* Lo que avanza con el tiempo, lo use la escena o la imagen de espera. posing: se está
@@ -3124,6 +3250,52 @@
       time = still ? 12 : (now - t0) / 1000;
     }
 
+    /* Los recuadros de lo que va por delante en este fotograma (ver OVER), en el orden en que
+       se pintan: pétalos, pájaros y luciérnagas. Lo que no se ve no entra. Todo en alturas de
+       pantalla desde la esquina de abajo a la izquierda. */
+    function sprites(){
+      const asp = canvas.width / canvas.height;
+      let n = 0;
+      const put = (x, y, hw, hh, p0, p1, p2, p3, q0, q1, q2, q3) => {
+        spr.set([x, y, hw, hh, p0, p1, p2, p3, q0, q1, q2, q3], n++ * 12);
+      };
+      petals(time, asp, petalNow, petalAlpha);
+      for(let i = 0; i < PETALS; i++){
+        if(petalAlpha[i] > 0) put(petalNow[i * 4], petalNow[i * 4 + 1], 0.0064, 0.0064, petalNow[i * 4 + 2], petalNow[i * 4 + 3], petalAlpha[i], i, 0, 0, 0, 0);
+      }
+      /* Una bandada cruza el cielo al atardecer, lejos. */
+      if(night < 0.99){
+        const bt = time * 0.011, fr = bt + 0.37;
+        for(let i = 0; i < 6; i++){
+          const odd = i % 2;
+          const x = (fr - Math.floor(fr)) * (asp + 0.5) - 0.25 - 0.022 * i - 0.010 * odd;
+          const y = 0.80 + 0.035 * Math.sin(bt * 9) + (odd * 2 - 1) * 0.011 * Math.ceil(i * 0.5);
+          put(x, y, 0.0064, 0.0085, 0.25 + 0.65 * Math.sin(time * 5.5 + i * 1.9), 0, 0, 0, 1, 0, 0, 0);
+        }
+      }
+      /* Luciérnagas, de noche. El recuadro llega hasta donde su luz deja de verse: el
+         resplandor amplio de una que está casi apagada no alcanza ni la mitad que el de una
+         encendida, y son las más. */
+      const dusk = Math.min(Math.max((night - 0.35) / 0.65, 0), 1), nightK = dusk * dusk * (3 - 2 * dusk);
+      if(nightK > 0 && SEASON !== 3){
+        flies2d();
+        const ox = place.fx * scale / canvas.height, oy = (place.h - place.fy) * scale / canvas.height;
+        for(let i = 0; i < FIREFLIES; i++){
+          const o = i * 4, k = flyA[o + 2], b = flyB[o + 3] * nightK;
+          if(flyA[o + 3] > 1e8 || !(k > 0) || b <= 0) continue;
+          /* Hasta dónde llega cada cosa por encima de media milésima (un octavo de tono): el
+             resplandor amplio, el halo y la estela (que sale del centro hacia atrás). */
+          const wide = Math.sqrt(0.070 * Math.max(Math.log(80 * b), 0));
+          const halo = Math.sqrt(0.0055 * Math.max(Math.log(600 * b), 0)) + Math.sqrt(0.00042 * Math.max(Math.log(3000 * b), 0));
+          const tail = Math.hypot(flyB[o], flyB[o + 1]) * k + Math.sqrt(0.0005 * Math.max(Math.log(680 * b), 0));
+          const r = Math.max(Math.min(Math.max(wide, halo, tail), 0.5) / k, flyB[o + 2]);
+          if(!(r > 0)) continue;
+          put(ox + flyA[o], oy + flyA[o + 1], r, r, k, flyA[o + 3], flyB[o + 2], flyB[o + 3], 2, i, flyB[o], flyB[o + 1]);
+        }
+      }
+      sprN = n;
+    }
+
     function draw(now){
       advance(now);
       const q = LEVELS[level];
@@ -3131,6 +3303,10 @@
       for(let i = 0; i < FIREFLIES; i++){
         fly(i, time, place.tree, ffNow, i * 4);
         fly(i, time - 0.22, place.tree, ffBefore, i * 4);
+      }
+      ffCount = 0;
+      for(let i = 0, n = posing || SEASON === 3 ? 0 : q.lit; i < n; i++){
+        if(ffNow[i * 4 + 3] > 0.15) ffLit.set(ffNow.subarray(i * 4, i * 4 + 4), ffCount++ * 4);
       }
 
       /* Lo que no cambia: entero al cambiar el tamaño, y solo las sombras cuando se mueve el sol
@@ -3157,13 +3333,14 @@
          cambia (baseBuf) solo se rehace al cambiar el tamaño, al entrar briznas nuevas (otro
          escalón) o al moverse el sol; lo demás (simBuf), en cada fotograma. */
       const count = Math.round(BLADES * q.part);
-      const store = (p, vao, buf) => {
+      /* Guarda en buf (stride bytes por brizna) lo de n briznas a partir de first. */
+      const store = (vao, buf, stride, first, n) => {
         gl.bindVertexArray(vao);
         gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, feedback);
-        gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buf);
+        gl.bindBufferRange(gl.TRANSFORM_FEEDBACK_BUFFER, 0, buf, first * stride, n * stride);
         gl.enable(gl.RASTERIZER_DISCARD);
         gl.beginTransformFeedback(gl.POINTS);
-        gl.drawArrays(gl.POINTS, 0, count);
+        gl.drawArrays(gl.POINTS, first, n);
         gl.endTransformFeedback();
         gl.disable(gl.RASTERIZER_DISCARD);
         gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
@@ -3181,13 +3358,32 @@
         const relit = night !== grownNight || day !== grownDay;
         if(fresh || count !== grown || (relit && (!moving || now - grownAt >= RELIGHT))){
           uniforms(grassBase, time);
-          store(grassBase, baseVao, baseBuf);
+          gl.uniform1f(grassBase.U.uWide, 1 / Math.sqrt(q.part));
+          store(baseVao, baseBuf, 64, 0, count);
           grown = count; grownNight = night; grownDay = day; grownAt = now; redone = true;
+          lit = 0;
         }
         uniforms(sim, time);
-        gl.uniform1f(sim.U.uWide, 1 / Math.sqrt(q.part));
         gl.uniform1f(sim.U.uGrow, grow);
-        store(sim, simVao, simBuf);
+        store(simVao, simBuf, 16, 0, count);
+        /* La luz, por turnos: en cada fotograma solo una parte de las briznas, la que toca
+           para que cada una se ponga al día unas quince veces por segundo, se pinte a 30, a 60
+           o a 144; de sobra para unas sombras de nube y unas luciérnagas. Toda de una vez si no
+           hay nada hecho, si la escena está quieta (un solo fotograma) o mientras cambia el
+           tema. */
+        uniforms(shine, time);
+        const share = lit !== count || still || moving ? 1 : Math.min((now - lightAt) * 0.015, 1);
+        const some = Math.max(1, Math.min(count, Math.ceil(count * share)));
+        if(some >= count){ store(simVao, lightBuf, 32, 0, count); lightFrom = 0; }
+        else{
+          if(lightFrom >= count) lightFrom = 0;
+          const first = Math.min(some, count - lightFrom);
+          store(simVao, lightBuf, 32, lightFrom, first);
+          if(some > first) store(simVao, lightBuf, 32, 0, some - first);
+          lightFrom = (lightFrom + some) % count;
+        }
+        lit = count; lightAt = now;
+        lods(count);
       }
 
       /* 2. La escena, que escribe también la profundidad. */
@@ -3224,10 +3420,14 @@
         gl.disable(gl.DEPTH_TEST);
         paint(scenes[3]);
         if(fresh || still){ paint(scenes[0]); paint(scenes[1]); paint(scenes[2]); }
-        else{
+        else if(now - turnAt >= 31){
+          /* Uno de los dos cada treintavo de segundo como mucho (quince veces por segundo cada
+             uno): cambian muy despacio, y pintando en cada fotograma de una pantalla de 60 o de
+             144 Hz se rehacían dos o cinco veces más a menudo sin que se notara. */
           paint(scenes[turn]);
           if(turn === 0) paint(scenes[2]);
           turn = 1 - turn;
+          turnAt = now;
         }
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       }
@@ -3277,10 +3477,15 @@
       /* 4. La hierba, segundo paso: las cintas, delante o detrás de lo ya pintado según su
          profundidad. */
       if((passes & 4) && SEASON !== 3){
-        const blade = (tallForced === null ? q.tall : tallForced) ? bladeTall : bladeShort;
         uniforms(grass, time);
-        gl.bindVertexArray(blade.vao);
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, blade.count, count);
+        /* Tres tandas, de cerca a lejos (ver lods); en los equipos justos no hay de cuatro tramos. */
+        const tall = tallForced === null ? q.tall : tallForced;
+        const a = tall ? Math.min(lodA, count) : 0, b = Math.max(a, Math.min(lodB, count));
+        [[bladeTall, 0, a], [bladeShort, a, b], [bladeTip, b, count]].forEach((run) => {
+          if(run[2] <= run[1]) return;
+          aim(run[0], run[1]);
+          gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, run[0].count, run[2] - run[1]);
+        });
       }
 
       /* 5. Pétalos, pájaros y luciérnagas, por delante de todo. */
@@ -3290,14 +3495,16 @@
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       uniforms(over, time);
       if(cache) gl.uniform1i(over.U.uGeo, 2);
-      petals(time, canvas.width / canvas.height, petalNow, petalAlpha);
-      flies2d();
-      gl.uniform4fv(over.U.uFly, flyA);
-      gl.uniform4fv(over.U.uFlyB, flyB);
-      gl.uniform4fv(over.U.uPetal, petalNow);
-      gl.uniform1fv(over.U.uPetalA, petalAlpha);
-      gl.bindVertexArray(fullVao);
-      if(passes & 8) gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if(passes & 8){
+        sprites();
+        if(sprN){
+          gl.bindVertexArray(sprVao);
+          gl.bindBuffer(gl.ARRAY_BUFFER, sprBuf);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, spr, 0, sprN * 12);
+          gl.bindBuffer(gl.ARRAY_BUFFER, null);
+          gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, sprN);
+        }
+      }
       /* La nevada, encima: los puntos se suman a lo pintado. */
       if((passes & 8) && fall){
         const asp = canvas.width / canvas.height;
@@ -3455,12 +3662,16 @@
       return Math.max((three - Math.min(a, b)) / 2, three / 6);
     }
     /* Lo que cuesta un escalón a este tamaño de ventana, en unidades que solo sirven para
-       comparar unos con otros: lo que pesan sus píxeles más lo que pesan sus briznas. Ajustado
-       con medidas en una gráfica integrada (Iris Xe) a 1280x720 y a 1920x1080: el coste crece
-       algo más deprisa que el número de píxeles. En invierno no hay briznas. */
+       comparar unos con otros (vienen a ser milisegundos en una gráfica integrada). mp:
+       millones de píxeles del lienzo; n: cuánta hierba (1, toda y de cuatro tramos; en
+       invierno no hay). La escena pesa según los píxeles; la hierba, sobre todo según lo que
+       ocupa en pantalla (briznas por píxeles), porque lo que cuesta es colorearla, no moverla.
+       Ajustado con medidas en una Radeon integrada a 1366x768 y a 1920x1080, los seis
+       escalones. */
     function weight(i){
       const q = LEVELS[Math.max(i, cap)], s = Math.min(1, q.side / Math.max(place.w, place.h));
-      return Math.pow(place.w * place.h * s * s, 1.15) / 35 + (SEASON === 3 ? 0 : BLADES * q.part * (q.tall ? 1 : 0.6));
+      const mp = place.w * place.h * s * s / 1e6, n = SEASON === 3 ? 0 : q.part * (q.tall ? 1 : 0.6);
+      return 0.6 + 8.6 * mp + (1.5 + 7.7 * mp) * n;
     }
     /* El reloj de la tarjeta gráfica (EXT_disjoint_timer_query_webgl2): lo que tarda en pintar
        un fotograma, sin parar la página. Una consulta cada vez: se abre al pintar (loop) y el
@@ -3480,7 +3691,7 @@
       else if(++blanks > 20){ clockOn = false; probeAt = performance.now(); }
     }
     function tick(ms){
-      if(pinned || frozen || performance.now() < settle) return;
+      if(pinned || frozen || swapping || performance.now() < settle) return;
       ticks.push(ms);
       /* La primera vez se decide pronto; después, con más calma. */
       if(ticks.length < (shown ? 14 : 6)) return;
@@ -3523,8 +3734,11 @@
         note(ms);
         let to = -1;
         for(let i = mode + 1; i < MODES.length && to < 0; i++) if((known(i) || guess(i)) <= 0.9 * room(i)) to = i;
-        if(to < 0 && mode === MODES.length - 1){ steady = true; rest(); return; }
-        setMode(to < 0 ? MODES.length - 1 : to);
+        if(to < 0 && mode === MODES.length - 1){ steady = true; remember(mode); rest(); return; }
+        to = to < 0 ? MODES.length - 1 : to;
+        remember(to);
+        if(shown && !isStill()) retreat(to);
+        else setMode(to);
         return;
       }
       strikes = 0;
@@ -3536,12 +3750,38 @@
         if(guess(i) <= 0.8 * room(i) && (m.l >= level - 2 || guess(i) <= 0.5 * room(i))) to = i;
         else if(m.l === level - 1 && m.n === step && ms <= 0.72 * room(i)) to = i;
       }
-      if(to < 0){ steady = true; ups = 0; return; }
-      /* Con la escena ya a la vista, subir se nota (cambia la resolución): solo si lleva un
-         rato pidiéndolo. */
-      if(shown && ++ups < 3) return;
+      if(to < 0){ steady = true; ups = 0; if(!later) remember(mode); return; }
+      /* Con la escena ya a la vista, subir se notaría (cambia la resolución) y no hace falta
+         para que vaya fluida: si lleva un rato pidiéndolo, se apunta para la próxima visita,
+         que arrancará en ese modo, y aquí se queda como está. */
+      if(shown){
+        if(++ups >= 3 && !later){ later = true; remember(to); }
+        return;
+      }
       note(ms);
       setMode(to);
+    }
+    /* later: ya hay apuntado un modo mejor para la próxima visita; no se pisa con el de ahora. */
+    let later = false;
+    /* Con la escena ya a la vista, si hay que bajar de calidad (otra ventana, el equipo más
+       cargado que cuando se asentó) no se cambia delante de nadie: la escena se retira un
+       instante tras la foto desenfocada, cambia, vuelve a asentarse sin verse y se enseña otra
+       vez (ready). */
+    function retreat(to){
+      swapping = true;
+      shown = false;
+      later = false;
+      canvas.classList.add('is-swap');
+      canvas.classList.remove('is-on');
+      setTimeout(() => {
+        swapping = false;
+        canvas.classList.remove('is-swap');
+        if(dead) return;
+        steady = false;
+        liveAt = performance.now();
+        setMode(to);
+        wake();
+      }, 320);
     }
     /* Ni en lo más ligero: la escena se queda en una imagen un rato y vuelve a probar (antes se
        quedaba parada para siempre). Cada vez espera más. */
@@ -3643,7 +3883,12 @@
         }
         skipped = 0;
         last = now;
-        if(!shown && ready(now)){ shown = true; canvas.classList.add('is-on'); }
+        /* Sin enseñar todavía, el lienzo ya se compone con la página (auth.css, canvas.is-trial):
+           lo que se mide es lo que costará a la vista, con la tarjeta de acceso encima. */
+        if(!shown && !swapping){
+          if(ready(now)){ shown = true; canvas.classList.remove('is-trial'); canvas.classList.add('is-on'); }
+          else canvas.classList.add('is-trial');
+        }
         /* La escena ya está: la imagen de espera se va por debajo de la hierba, que crece, y
            se suelta. */
         if(veil > 0){
@@ -3685,7 +3930,7 @@
       clearTimeout(restTimer);
       life.abort();
       watching.forEach((o) => o.disconnect());
-      canvas.classList.remove('is-on');
+      canvas.classList.remove('is-on', 'is-trial', 'is-swap');
       root.classList.remove('scene-lite');
       Object.assign(api, IDLE);
       if(lose){
@@ -3716,7 +3961,7 @@
        fijar la hora, fijar el escalón y cuánto tarda de verdad un fotograma (only: solo esas
        pasadas, ver passes). */
     function state(){
-      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:fps(), hz:Math.round(1000 / frameMs), shown, frozen, software, cache, live, clock:clockOn, ms:took, cost, night, day, dawn, canvas:[canvas.width, canvas.height]};
+      return {level, side:LEVELS[level].side, blades:Math.round(BLADES * LEVELS[level].part), fps:fps(), hz:Math.round(1000 / frameMs), shown, frozen, software, cache, live, clock:clockOn, ms:took, cost, memo:!!memo, night, day, dawn, canvas:[canvas.width, canvas.height]};
     }
     function bench(frames, only){
       if(!live) return 0;

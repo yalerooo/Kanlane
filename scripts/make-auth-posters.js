@@ -57,7 +57,8 @@ async function shot(browser, theme, up, tree, season){
   const focusX = tree ? (POSTER.treeX + 1) * H : POSTER.left * H;
   const context = await browser.newContext({viewport:{width:W, height:H}, locale:'es-ES'});
   const page = await context.newPage();
-  await page.addInitScript((t) => { try{ localStorage.setItem('workhub_theme', t); }catch(e){} }, theme);
+  /* El acceso sale sin paisaje salvo que se pida (boot.js): aquí se pide, que es lo que se fotografía. */
+  await page.addInitScript((t) => { try{ localStorage.setItem('workhub_theme', t); localStorage.setItem('workhub_scene', 'on'); }catch(e){} }, theme);
   if(!tree) await page.route(/\/(sakura|tree-\w+)\.webp/,(route) => route.abort());
   for(let i = 0; ; i++){
     try{ await page.goto('http://localhost:' + port + '/app/?estacion=' + season, {waitUntil:'load'}); break; }

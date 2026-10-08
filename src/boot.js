@@ -78,11 +78,12 @@
       if(south) season = (season + 2) % 4;
     }
     root.setAttribute('data-season', SEASONS[season]);
-    /* El paisaje del acceso se puede quitar (el botón de la pantalla de acceso, ver
-       WORKHUB_AUTH.setScene en auth-early.js): queda apuntado aquí y, desde el primer
-       fotograma, html.scene-off deja el fondo liso y a Sumi en el panel (auth.css). */
-    var sceneOff = false;
-    try{ sceneOff = localStorage.getItem('workhub_scene') === 'off'; }catch(e){}
+    /* El acceso sale sin paisaje (html.scene-off: el agua con Sumi, auth.css) salvo que se haya
+       pedido el paisaje con el botón de la pantalla de acceso (WORKHUB_AUTH.setScene, en
+       auth-early.js), que lo apunta aquí como 'on'. Al principio era al revés: el paisaje salía
+       siempre y se podía quitar; el dueño lo cambió, y quien lo tenía quitado ('off') sigue igual. */
+    var sceneOff = true;
+    try{ sceneOff = localStorage.getItem('workhub_scene') !== 'on'; }catch(e){}
     if(sceneOff) root.classList.add('scene-off');
     /* Las fotos de espera del paisaje de esa estación (assets/css/seasons/, las genera
        scripts/make-auth-posters.js). Solo donde puede salir el acceso con paisaje: no en modo

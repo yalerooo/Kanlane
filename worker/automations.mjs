@@ -176,6 +176,9 @@ export function restStore(env, deps) {
     /* Documentos de una colección raíz con un campo igual a un valor: [{id, data}]. */
     where: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
       where: {fieldFilter: Object.assign(field(path), {op: 'EQUAL', value: encode(value)})}, limit: n}),
+    /* Lo mismo, con el campo igual a alguno de los valores (hasta 30, el tope de Firestore). */
+    whereIn: (collection, path, values, n) => query('', {from: [{collectionId: collection}],
+      where: {fieldFilter: Object.assign(field(path), {op: 'IN', value: encode(values.slice(0, 30))})}, limit: n}),
     /* Identificadores de los documentos de una colección raíz con un campo menor que un valor. */
     olderThan: (collection, path, value, n) => query('', {from: [{collectionId: collection}],
       where: {fieldFilter: Object.assign(field(path), {op: 'LESS_THAN', value: encode(value)})}, limit: n}).then((rows) => rows.map((r) => r.id)),

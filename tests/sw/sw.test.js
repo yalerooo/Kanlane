@@ -39,8 +39,13 @@ const self = {
   location: new URL('https://w.test/sw.js'),
   addEventListener: (t, f) => { listeners[t] = f; },
   skipWaiting: async () => { activated++; },
-  clients: {claim: async () => {}}
+  clients: {claim: async () => {}, matchAll: async () => windows, openWindow: async (url) => { opened.push(url); }},
+  registration: {showNotification: async (title, options) => { shown.push({title, options}); }}
 };
+/* Avisos push: lo que se enseña, las pestañas abiertas y lo que se abre al pulsar un aviso. */
+const shown = [];
+const opened = [];
+let windows = [];
 class SwRequest extends Request{ constructor(i, o){ super(typeof i === 'string' ? new URL(i, 'https://w.test').href : i, o); } }
 new Function('self', 'caches', 'fetch', 'Request', 'Response', 'URL', src)(self, caches, netFetch, SwRequest, Response, URL);
 
@@ -94,6 +99,28 @@ ok(manifest.scope === '/app/' && manifest.start_url.indexOf(manifest.scope) === 
 
   const rAsset = await fire('fetch', {request: new Request('https://w.test/src/a.js?v=2')});
   ok(rAsset.ok && (await rAsset.text()).indexOf('/src/a.js') !== -1, 'archivo de la app sin conexión sale de la caché (ignora ?v=)');
+
+  /* Avisos push (worker/notify.mjs): se enseña lo que manda el servidor y al pulsarlo se abre la tarea. */
+  const pushed = (data) => fire('push', {data: data === undefined ? null : {json: () => { if(data === 'roto') throw new Error('x'); return data; }}});
+  await pushed({title: 'Ana te mencionó', body: '«Portada» · Estudio', tag: 'kl-a1', project: 't:equipo1', task: 'a1'});
+  ok(shown.length === 1 && shown[0].title === 'Ana te mencionó' && shown[0].options.body === '«Portada» · Estudio' && shown[0].options.tag === 'kl-a1' &&
+    shown[0].options.data.project === 't:equipo1' && shown[0].options.data.task === 'a1', 'push: enseña el aviso con su título, su texto y la tarea');
+  await pushed('roto');
+  await pushed();
+  await pushed({title: 5, project: 'javascript:alert(1)', task: '../x'});
+  ok(shown.length === 4 && shown.slice(1).every((n) => n.title === 'Kanlane' && n.options.data === null), 'push: un aviso vacío o mal formado se enseña sin enlace (nunca se queda sin enseñar)');
+  const click = (data) => fire('notificationclick', {notification: {close: () => {}, data: data}});
+  await click({project: 't:equipo1', task: 'a1'});
+  ok(opened.length === 1 && opened[0] === '/app/#tarea=' + encodeURIComponent('t:equipo1/a1'), 'push: sin Kanlane abierto, pulsar el aviso lo abre en esa tarea');
+  const posted = [];
+  let focused = 0;
+  windows = [{url: 'https://w.test/legal/privacidad/', postMessage: () => { posted.push('legal'); }, focus: async () => {}},
+    {url: 'https://w.test/app/', postMessage: (m) => { posted.push(m); }, focus: async () => { focused++; }}];
+  await click({project: 't:equipo1', task: 'a1'});
+  ok(opened.length === 1 && focused === 1 && posted.length === 1 && posted[0].type === 'kanlane-open-task' && posted[0].task === 'a1', 'push: con Kanlane abierto, se le pasa la tarea a esa pestaña y no se abre otra');
+  await click(null);
+  ok(focused === 2 && posted.length === 1, 'push: un aviso sin enlace solo trae Kanlane al frente');
+  windows = [];
 
   let handled = true;
   try{ const p = await fire('fetch', {request: new Request('https://w.test/__/auth/handler')}); handled = p !== undefined; }catch(e){ handled = false; }

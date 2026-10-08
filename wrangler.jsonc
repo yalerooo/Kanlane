@@ -23,7 +23,7 @@
     // Solo las páginas pasan antes por el Worker (redirecciones entre dominios y
     // cabecera noindex del espejo). Los scripts, estilos e imágenes se sirven
     // directamente, sin gastar peticiones del Worker (100 000 al día en el plan gratuito).
-    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/servidor-mcp", "/servidor-mcp/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/auth/*", "/__/firebase/*", "/__/kms/*", "/__/capture/*", "/__/mcp/*"]
+    "run_worker_first": ["/", "/index.html", "/app/*", "/demo/*", "/alternativa-a-trello", "/alternativa-a-trello/*", "/alternativa-a-asana", "/alternativa-a-asana/*", "/alternativa-a-notion", "/alternativa-a-notion/*", "/gestion-de-proyectos", "/gestion-de-proyectos/*", "/gestor-de-clientes", "/gestor-de-clientes/*", "/crm-para-autonomos", "/crm-para-autonomos/*", "/gestor-de-contrasenas-para-clientes", "/gestor-de-contrasenas-para-clientes/*", "/servidor-mcp", "/servidor-mcp/*", "/en", "/en/*", "/legal/*", "/sw.js", "/__/auth/*", "/__/firebase/*", "/__/kms/*", "/__/capture/*", "/__/mcp/*", "/__/notify/*"]
   },
 
   // Dominios (todos apuntan a este mismo Worker; ver worker/index.js):

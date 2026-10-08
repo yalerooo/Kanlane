@@ -12,7 +12,7 @@
      frecuente (mover, reprogramar, reordenar), e identificadores opacos. */
   const CLEAR = {
     tasks: ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
-            'assignees', 'linkedContacts', 'linkedVault'],
+            'assignees', 'linkedContacts', 'linkedVault', 'followers'],
     notes: ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'assetIds'],
     clients: ['color', 'createdAt'],
     contacts: ['createdAt', 'updatedAt'],
@@ -38,7 +38,7 @@
     vault: {label: 500}
   };
   const LIST_MAX = {
-    tasks: {labels: 1000, checklist: 200, assignees: 50},
+    tasks: {labels: 1000, checklist: 200, assignees: 50, followers: 50},
     notes: {attachments: 20, assetIds: 400}
   };
 

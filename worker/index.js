@@ -27,7 +27,11 @@
 
    Servidor MCP (docs/MCP.md, worker/mcp.mjs): un asistente lee y mueve las tareas de un proyecto.
    - /__/mcp/v1: el servidor. JSON-RPC por POST con «Authorization: Bearer kl_…» (un token del proyecto).
-   - /__/mcp/v1/tokens: crear, ver y revocar esos tokens, con el mismo «Authorization» que /__/kms/. */
+   - /__/mcp/v1/tokens: crear, ver y revocar esos tokens, con el mismo «Authorization» que /__/kms/.
+
+   Avisos push con Kanlane cerrado (docs/NOTIFICACIONES.md, worker/notify.mjs):
+   - /__/notify/v1: activar los avisos en un navegador y avisar de una mención, una asignación o un
+     cambio en una tarea seguida, con el mismo «Authorization» que /__/kms/. */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -98,6 +102,8 @@ const TOTP_TOKEN = /^[A-Za-z0-9_-]{64}$/;
 
 const CAPTURE_PATH = '/__/capture/v1';
 const CAPTURE_BODY_MAX = 4096;
+
+const NOTIFY_PATH = '/__/notify/v1';
 
 const MCP_PATH = '/__/mcp/v1';
 const MCP_TOKENS_PATH = '/__/mcp/v1/tokens';
@@ -280,6 +286,41 @@ async function mcpTokens(request, env, url) {
   }
 }
 
+/* Avisos push. Como en la captura: quién llama sale del ID token verificado; a quién se avisa y
+   con qué texto lo decide worker/notify.mjs mirando el equipo y la tarea. */
+async function notify(request, env, url) {
+  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+  if (env.AUTH_RATE_LIMIT) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const {success} = await env.AUTH_RATE_LIMIT.limit({key: ip});
+    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+  }
+  const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
+  let uid = null;
+  try {
+    uid = auth ? await verifiedUid(auth[1]) : null;
+  } catch (e) {
+    return json(503, {error: 'unavailable'});
+  }
+  if (!uid) return json(401, {error: 'auth'});
+  let body = null;
+  try {
+    const raw = await request.text();
+    if (raw.length <= CAPTURE_BODY_MAX) body = JSON.parse(raw);
+  } catch (e) { body = null; }
+  if (!body || typeof body !== 'object') return json(400, {error: 'request'});
+  try {
+    const m = await import('./notify.mjs');
+    const out = await m.manage({uid: uid}, body, env);
+    return json(out.status, out.body);
+  } catch (e) {
+    console.error('avisos: ' + (e && e.message));
+    return json(503, {error: 'unavailable'});
+  }
+}
+
 /* El servidor MCP. No es para navegadores: una página de otro origen no entra (y la propia web no
    lo usa). Dos límites: por IP, antes de mirar nada, y por token (MCP_RATE_LIMIT). Un token
    inventado se descarta en worker/mcp.mjs sin leer la base de datos. En los registros no queda ni
@@ -431,7 +472,11 @@ export default {
       /* Y los contadores del servidor MCP de días pasados. */
       .then(() => import('./mcp.mjs')).then((m) => m.sweep(env)).then((out) => {
         if (out.configured && out.rate) console.log('mcp: limpieza, ' + out.rate + ' contadores caducados');
-      }, (err) => console.error('mcp: limpieza, ' + (err && err.message)));
+      }, (err) => console.error('mcp: limpieza, ' + (err && err.message)))
+      /* Y los de los avisos push. */
+      .then(() => import('./notify.mjs')).then((m) => m.sweep(env)).then((out) => {
+        if (out.configured && out.rate) console.log('avisos: limpieza, ' + out.rate + ' contadores caducados');
+      }, (err) => console.error('avisos: limpieza, ' + (err && err.message)));
     ctx.waitUntil(job);
     return job;
   },
@@ -481,6 +526,7 @@ export default {
     if (url.pathname === KMS_PATH) return kms(request, env, url);
     if (url.pathname === TOTP_PATH) return totp(request, env, url);
     if (url.pathname === CAPTURE_PATH) return capture(request, env, url);
+    if (url.pathname === NOTIFY_PATH) return notify(request, env, url);
     if (url.pathname === MCP_TOKENS_PATH) return mcpTokens(request, env, url);
     if (url.pathname === MCP_PATH) return mcp(request, env, url);
 

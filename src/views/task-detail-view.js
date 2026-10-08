@@ -64,6 +64,8 @@
       this.btnClose = $('btnTvClose');
       this.btnEdit = $('btnTvEdit');
       this.btnArchive = $('btnTvArchive');
+      this.btnFollow = $('btnTvFollow');
+      this.followText = $('tvFollowText');
       this.btnDone = $('btnTvDone');
       this.stamp = $('tvStamp');
       this.taskId = null;
@@ -117,6 +119,11 @@
         else this.commentSend.click();
       });
       this.commentText.addEventListener('input', () => this.fitComment());
+      /* «@» en un comentario de equipo: lista de miembros para mencionar (antes que Intro = enviar). */
+      if(Workhub.views.mentions){
+        const T = Workhub.views.team;
+        Workhub.views.mentions.attach(this.commentText, this.commentForm, () => (T.enabled() ? T.members().filter((m) => m.uid !== T.meUid()) : []));
+      }
     }
     clearCommentImage(){ this.picker.clear(); }
     fitComment(){
@@ -176,6 +183,9 @@
     }
 
     bindEdit(handler){ this.btnEdit.addEventListener('click', () => handler(this.taskId)); }
+
+    /* «Seguir»: avisos de lo que pase en esta tarea (solo en equipos). */
+    bindFollow(handler){ this.btnFollow.addEventListener('click', () => { if(this.taskId) handler(this.taskId); }); }
 
     /* «Archivar tarea»: sale del tablero y se puede restaurar desde Archivados. */
     bindArchive(handler){ this.btnArchive.addEventListener('click', () => { if(this.taskId) handler(this.taskId); }); }
@@ -273,6 +283,9 @@
       const team = Workhub.views.team;
       /* Añadir una nota (o un comentario, en un equipo) desde la propia ficha. */
       this.commentForm.hidden = !team.canEdit();
+      const following = team.enabled() && Array.isArray(t.followers) && t.followers.indexOf(team.meUid()) !== -1;
+      this.btnFollow.setAttribute('aria-pressed', following ? 'true' : 'false');
+      this.followText.textContent = Workhub.t(following ? 'Siguiendo' : 'Seguir');
       const say = this.commentLabels();
       this.commentText.placeholder = say.hint;
       if(!this.commentSend.disabled) this.commentSend.textContent = say.send;
@@ -377,6 +390,9 @@
         ? docs.map(noteHtml).join('')
         : '<p class="tv-empty">Sin notas todavía.</p>';
       platform.hydrateAssetImages(this.notes);
+      /* Menciones de los comentarios («@Nombre»), solo en equipos. */
+      const T = Workhub.views.team;
+      if(Workhub.views.mentions && T.enabled()) this.notes.querySelectorAll('.tv-note-text').forEach((el) => Workhub.views.mentions.mark(el, T.members(), T.meUid()));
     }
 
     showNotesError(){

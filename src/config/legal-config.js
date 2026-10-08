@@ -25,6 +25,6 @@ window.WORKHUB_LEGAL = {
   ubicacionDatosEn: 'the European Union (Google Cloud Firestore "eur3" region)',
   /* Fecha de la última revisión de los textos (AAAA-MM-DD) y número de versión. Súbela
      cuando cambies algo de fondo en las páginas legales. */
-  actualizado: '2026-10-07',
-  version: 13
+  actualizado: '2026-10-08',
+  version: 14
 };

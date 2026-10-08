@@ -38,8 +38,9 @@
    descansa un rato y vuelve a probar. La calidad en la que se asienta se guarda en el
    navegador (MEMO_KEY) y la visita siguiente arranca ya en ella y se enseña enseguida. Con la
    escena a la vista no cambia de calidad delante de nadie: si hay que bajar, se retira un
-   instante tras la foto desenfocada y vuelve ya cambiada (retreat); si se podría subir, se
-   apunta para la próxima visita. Se pinta solo mientras la pantalla de
+   instante tras la foto desenfocada y vuelve ya cambiada (retreat), y a la vista no sube. La
+   primera vez la calidad se elige de una carrera de fotogramas, sin subir escalón a escalón
+   (sprint). Se pinta solo mientras la pantalla de
    acceso está a la vista, y no se prepara nada hasta que se ve por primera vez. Los
    sombreadores se compilan en segundo plano (compilarlos de golpe dejaba el navegador entero
    parado varios segundos). Hasta que acaban se enseña una imagen de la escena hecha de antemano
@@ -429,7 +430,8 @@
     /* ve: queda tras las sierras y solo asoma su resplandor. */
     /* A pleno día el sol está alto, pero sigue al fondo: la hierba se ve siempre a contraluz. */
     'vec3 sunDir(){ return normalize(mix(mix(vec3(.21, .108, .97), vec3(.26, .50, .83), uDay), vec3(.17, .235, .955), uNight)); }',
-    /* Nivel del agua del lago. */
+    /* El nivel del agua del lago que hubo al fondo a la derecha: ya no se pinta, pero su
+       hondonada sigue ahí y en ella no crecen árboles ni flores. */
     'const float WATER_Y = .62;',
     /* El cielo sin nubes ni estrellas: el degradado y el resplandor del sol. Es barato: lo usan */
     /* la bruma, los reflejos y la hierba. */
@@ -644,8 +646,11 @@
     '}',
     'vec2 groundGrad(vec2 p){',
     '  float e = .06;',
-    '  float g0 = terrain(p);',
-    '  return vec2(terrain(p + vec2(e, 0.)) - g0, terrain(p + vec2(0., e)) - g0) / e;',
+    /* Las tres alturas, en un bucle que el compilador no puede desenrollar (uZero): escritas */
+    /* una a una, terrain() se copiaba entera tres veces y compilar tardaba más. */
+    '  vec3 g = vec3(0.);',
+    '  for(int i = uZero; i < 3; i++) g[i] = terrain(p + (i == 1 ? vec2(e, 0.) : (i == 2 ? vec2(0., e) : vec2(0.))));',
+    '  return vec2(g.y - g.x, g.z - g.x) / e;',
     '}',
     /* Las sombras que no se mueven: la del ordenador y la del propio terreno. */
     'float groundShadow(vec3 p, float base, vec3 L){',
@@ -793,7 +798,7 @@
   const COMP = [
     /* ---------- La escena: lo que se pone en cada fotograma ---------- */
     /* Lee la imagen intermedia que pintan las partes (ver FRAG) y le pone el final: el cerezo, */
-    /* el halo, el revelado y la profundidad (del lago, uScene trae cuánto hay en el píxel). */
+    /* el halo, el revelado y la profundidad. */
     'uniform sampler2D uGeo;',
     'uniform sampler2D uShade;',
     'uniform sampler2D uScene;',
@@ -818,14 +823,14 @@
     '  vec3 col = px.rgb;',
     '  float glass = texelFetch(uShade, at, 0).y;',
     '  float tGround = tHit > 0. ? tHit : -1.;',
-    '  float tFin = tGround > 0. ? mix(tGround, (WATER_Y - ro.y) / min(rd.y, -1e-4), px.a) : -1.;',
+    '  float tFin = tGround;',
     '  if(tObj > 0. && (tGround < 0. || tObj < tGround)) tFin = tObj;',
     '  vec3 treeB = vec3(gTree.x, TREE_H + .22 * treeSc, gTree.y);',
     '  vec3 fogCol = fogColor(rd, L);'
   ].concat(TAIL, ['}']).join('\n');
   const FRAG = [
     /* La escena va por partes, una por cada cosa que puede haber en un píxel: el cielo con sus */
-    /* sierras (PART 1), el suelo con el lago (PART 2), la carcasa del ordenador (PART 3) y su */
+    /* sierras (PART 1), el suelo (PART 2), la carcasa del ordenador (PART 3) y su */
     /* pantalla (GLASS). Cada una descarta los píxeles que no son suyos, así que entre todas */
     /* pintan la pantalla entera sin pisarse. No pintan en el lienzo, sino en una imagen */
     /* intermedia (uScene), sin el cerezo ni el revelado final: eso lo pone COMP encima, en cada */
@@ -923,8 +928,6 @@
     '  vec3 ffCol = vec3(.80, 1., .34);',
     '  float tFin = -1.;',
     '  float glass = 0.;',
-    /* Cuánto lago hay en el píxel (0 si no hay). */
-    '  float wet = 0.;',
 
     /* ---------- Hierba y suelo ---------- */
     '  vec3 gcol = vec3(0.);',
@@ -1109,30 +1112,9 @@
     '#endif',
     '    col = gcol;',
     '    tFin = tGround;',
-    /* El lago: donde el terreno queda bajo el nivel del agua. Refleja el cielo, con ondas */
-    /* finas. */
-    '    float tW = (WATER_Y - ro.y) / min(rd.y, -1e-4);',
-    '    if(rd.y < 0. && tW < tGround){',
-    '      vec3 pw = ro + rd * tW;',
-    '      float depth = WATER_Y - terrain(pw.xz);',
-    '      float rip = noise(pw.xz * vec2(1.2, 5.) + vec2(uTime * .25, uTime * .1)) + .5 * noise(pw.xz * vec2(3., 11.) - uTime * .3);',
-    '      vec3 wn = normalize(vec3((rip - .75) * .05, 1., (noise(pw.xz * vec2(1.5, 6.) + 5. - uTime * .2) - .5) * .09));',
-    '      vec3 wr = reflect(rd, wn);',
-    '      wr.y = abs(wr.y);',
-    '      vec3 wc = sky(wr, L) * mix(.80, .92, uNight);',
-    /* El reflejo de las sierras, oscuro, cerca de la orilla del fondo. */
-    '      wc = mix(wc, wc * vec3(.42, .36, .42), smoothstep(.10, .02, wr.y) * .7);',
-    '      wc += pal(vec3(1.2, .78, .40), vec3(.90, .90, .84), vec3(.40, .46, .70)) * pow(max(dot(wr, normalize(vec3(L.x, .05, L.z))), 0.), 40.) * .35;',
-    /* Agua, solo de la colina hacia el fondo: el terreno también queda por debajo de su nivel */
-    /* al pie de la colina, pegado a la cámara, y ahí asomaba un charco en la esquina de abajo */
-    /* a la izquierda de las ventanas anchas; eso es hierba. */
-    '      float shore = smoothstep(0., .10, depth) * smoothstep(0., 6., pw.z);',
-    '      wet = shore;',
-    '      col = mix(col, wc, shore * .94);',
-    /* Un filo claro en la orilla. */
-    '      col += pal(vec3(.50, .32, .20), vec3(.50, .56, .60), vec3(.10, .12, .20)) * smoothstep(.06, .0, abs(depth - .03)) * .5;',
-    '      tFin = mix(tGround, tW, shore);',
-    '    }',
+    /* Aquí había un lago, donde el terreno queda bajo WATER_Y: reflejaba el cielo entero, con
+       sus nubes y sus estrellas, y solo por eso este programa tardaba una cuarta parte más
+       en compilar. Se quitó (lo pidió el dueño): la hondonada es ahora pradera. */
     '  }',
     '#endif',
 
@@ -1272,7 +1254,7 @@
     '    col = mix(col, mistColor(), mist * mix(.42, .56, uDawn * (1. - uDay)) * (1. - .45 * uDay));',
     '  }',
     '#if PART != 0',
-    '  fragColor = vec4(col, wet);',
+    '  fragColor = vec4(col, 0.);',
     '#else'
   ].concat(TAIL, ['#endif', '}']).join('\n');
   const TREES_VERT = [
@@ -3750,19 +3732,16 @@
         if(guess(i) <= 0.8 * room(i) && (m.l >= level - 2 || guess(i) <= 0.5 * room(i))) to = i;
         else if(m.l === level - 1 && m.n === step && ms <= 0.72 * room(i)) to = i;
       }
-      if(to < 0){ steady = true; ups = 0; if(!later) remember(mode); return; }
-      /* Con la escena ya a la vista, subir se notaría (cambia la resolución) y no hace falta
-         para que vaya fluida: si lleva un rato pidiéndolo, se apunta para la próxima visita,
-         que arrancará en ese modo, y aquí se queda como está. */
-      if(shown){
-        if(++ups >= 3 && !later){ later = true; remember(to); }
-        return;
-      }
+      if(to < 0){ steady = true; ups = 0; remember(mode); return; }
+      /* Con la escena ya a la vista no se sube: se notaría (cambia la resolución) y no hace
+         falta para que vaya fluida. Tampoco se apunta para la próxima visita: lo que tardaría
+         el modo de arriba es una estimación, y cuando fallaba la visita siguiente arrancaba
+         demasiado alto y tenía que retirarse para bajar (medido). La calidad guardada caduca
+         (MEMO_DAYS) y entonces se elige de nuevo. */
+      if(shown) return;
       note(ms);
       setMode(to);
     }
-    /* later: ya hay apuntado un modo mejor para la próxima visita; no se pisa con el de ahora. */
-    let later = false;
     /* Con la escena ya a la vista, si hay que bajar de calidad (otra ventana, el equipo más
        cargado que cuando se asentó) no se cambia delante de nadie: la escena se retira un
        instante tras la foto desenfocada, cambia, vuelve a asentarse sin verse y se enseña otra
@@ -3770,7 +3749,6 @@
     function retreat(to){
       swapping = true;
       shown = false;
-      later = false;
       canvas.classList.add('is-swap');
       canvas.classList.remove('is-on');
       setTimeout(() => {
@@ -3795,6 +3773,68 @@
         wake();
       }, restWait);
       restWait = Math.min(restWait * 2, 240000);
+    }
+    /* La primera visita (sin calidad guardada), con reloj. Subir desde lo más ligero midiendo
+       fotogramas al ritmo de la pantalla llevaba uno o dos segundos con la escena ya lista y
+       sin enseñar, y era casi todo lo que tardaba en salir en un equipo modesto. Aquí se
+       mide de una carrera: unos fotogramas seguidos en lo más ligero, que no ahoga a nadie, y
+       con lo que tardan y lo que pesa cada modo (weight) se salta al mejor que quepa; allí se
+       comprueba con otra carrera y, si no cabe, se baja al que diga esa medida, que ya es de
+       cerca. Tres o cuatro tandas, unas décimas. Después sigue el reloj de siempre (decide). */
+    function burst(n){
+      return new Promise((resolve) => {
+        /* Los fotogramas van con la hora que les tocaría en pantalla, para que hagan lo que
+           harían de verdad (los turnos del cielo, el suelo y la luz de la hierba van por
+           tiempo). El primero rehace lo que no cambia y no cuenta. */
+        const gap = frameMs * step, from = performance.now();
+        draw(from);
+        const q = gl.createQuery();
+        gl.beginQuery(clock.TIME_ELAPSED_EXT, q);
+        for(let i = 1; i <= n; i++) draw(from + i * gap);
+        gl.endQuery(clock.TIME_ELAPSED_EXT);
+        gl.flush();
+        const poll = () => {
+          if(dead || gl.isContextLost()){ resolve(0); return; }
+          if(!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)){
+            if(performance.now() - from > 3000){ gl.deleteQuery(q); resolve(0); return; }
+            setTimeout(poll, 4);
+            return;
+          }
+          const ms = gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6 / n, clean = !gl.getParameter(clock.GPU_DISJOINT_EXT);
+          gl.deleteQuery(q);
+          resolve(clean ? ms : 0);
+        };
+        setTimeout(poll, 4);
+      });
+    }
+    async function sprint(){
+      measuring = true;
+      /* El mejor modo en el que cabría, por lo que tarda este y lo que pesa cada uno. */
+      const fit = (ms) => {
+        for(let i = 0; i < MODES.length; i++) if(ms * weight(MODES[i].l) / weight(level) <= 0.75 * room(i)) return i;
+        return MODES.length - 1;
+      };
+      /* floor: de ahí para arriba ya se ha visto que no cabe. */
+      let floor = 0, ok = false;
+      for(let round = 0; round < 4; round++){
+        const ms = await burst(4);
+        if(!(ms > 0) || dead || pinned) break;
+        took = ms;
+        seen[level] = {ms, at:performance.now()};
+        note(ms);
+        const fits = ms <= 0.82 * room(mode);
+        if(!fits) floor = mode + 1;
+        const to = Math.min(MODES.length - 1, Math.max(fit(ms), floor));
+        if(to === mode || (fits && to > mode)){ ok = fits; break; }
+        setMode(to);
+      }
+      measuring = false;
+      if(dead) return;
+      /* Lo que la carrera ha adelantado en el reloj de la escena se olvida. */
+      prev = 0; lightAt = 0; turnAt = 0;
+      if(ok && !pinned){ steady = true; remember(mode); }
+      settle = performance.now() + 120;
+      wake();
     }
     /* Sin reloj: una tanda de fotogramas de prueba (pace) y a decidir con eso. Se repite poco
        después si ha cambiado algo (hay que medir el modo nuevo) y, si se bajó, cuando toque
@@ -3832,6 +3872,17 @@
     function loop(now){
       raf = 0;
       if(dead || away(screen) || document.hidden || measuring) return;
+      /* Lo que dura un fotograma de esta pantalla: lo habitual entre dos llamadas seguidas. Se
+         mide ya mientras se compila, para saberlo cuando haya que elegir la calidad (sprint). */
+      if(beatAt && now - beatAt > 3 && now - beatAt < 60){
+        beats.push(now - beatAt);
+        if(beats.length >= 30){
+          beats.sort((a, b) => a - b);
+          frameMs = Math.min(Math.max(beats[9], 4), 34);
+          beats.length = 0;
+        }
+      }
+      beatAt = now;
       /* Aún se está compilando: la imagen de espera, con la pantalla del ordenador en vivo. */
       if(!live){
         loadPoster();
@@ -3845,17 +3896,11 @@
         if(!isStill()) raf = requestAnimationFrame(loop);
         return;
       }
-      if(!liveAt){ liveAt = now; probeAt = now + 100; }
-      /* Lo que dura un fotograma de esta pantalla: lo habitual entre dos llamadas seguidas. */
-      if(beatAt && now - beatAt > 3 && now - beatAt < 60){
-        beats.push(now - beatAt);
-        if(beats.length >= 30){
-          beats.sort((a, b) => a - b);
-          frameMs = Math.min(Math.max(beats[9], 4), 34);
-          beats.length = 0;
-        }
+      if(!liveAt){
+        liveAt = now; probeAt = now + 100;
+        /* La primera vez en este equipo: la calidad se elige de una carrera, no subiendo. */
+        if(clockOn && !memo && !pinned && !isStill()){ sprint(); return; }
       }
-      beatAt = now;
       if(clockOn) readClock();
       /* Con movimiento reducido (o ahorro de datos) es una sola imagen: en el mejor escalón, que
          no hay que moverla. */

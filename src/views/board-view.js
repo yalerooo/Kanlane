@@ -12,6 +12,8 @@
   const MODES = ['board', 'list', 'table', 'timeline'];
   /* Clientes que se ofrecen como filtro rápido (los que más tareas abiertas tienen). */
   const QUICK_CLIENTS = 5;
+  /* Opción «Sin etiqueta» del filtro por etiqueta (un valor que no puede ser el nombre de una). */
+  const NO_LABEL = '::none';
 
   /* Lunes y domingo de la semana en curso, como AAAA-MM-DD. */
   function weekRange(){
@@ -39,6 +41,7 @@
       this.filterLabel = document.getElementById('filterLabel');
       this.filterLabelField = document.getElementById('filterLabelField');
       this.filterDue = document.getElementById('filterDue');
+      this.filterDone = document.getElementById('filterDone');
       this.btnNew = document.getElementById('btnNew');
       this.tabs = document.getElementById('boardTabs');
       this.keyboardStatus = document.getElementById('boardKeyboardStatus');
@@ -144,6 +147,7 @@
       this.filterAssignee.addEventListener('change', handler);
       this.filterLabel.addEventListener('change', handler);
       this.filterDue.addEventListener('change', handler);
+      this.filterDone.addEventListener('change', handler);
       const pick = (el, value) => {
         el.value = el.value === value ? '' : value;
         el.dispatchEvent(new Event('change', {bubbles:true}));
@@ -174,11 +178,11 @@
       this._refilter = handler;
     }
 
-    /* Quita cliente, miembro, etiqueta, fecha y «esta semana» (la búsqueda escrita se deja). */
+    /* Quita cliente, miembro, etiqueta, fecha, completadas y «esta semana» (la búsqueda escrita se deja). */
     clearFilters(){
       this.week = false;
       let fired = false;
-      [this.filterCliente, this.filterAssignee, this.filterLabel, this.filterDue].forEach((el) => {
+      [this.filterCliente, this.filterAssignee, this.filterLabel, this.filterDue, this.filterDone].forEach((el) => {
         if(!el.value) return;
         el.value = '';
         el.dispatchEvent(new Event('change', {bubbles:true}));
@@ -193,6 +197,7 @@
       /* Las etiquetas son de cada proyecto; la fecha se quita con ellas para empezar sin filtros. */
       this.filterLabel.value = '';
       this.filterDue.value = '';
+      this.filterDone.value = '';
       this.setSelecting(false);
     }
 
@@ -338,7 +343,7 @@
       const T = Workhub.views.team;
       const cliente = this.filterCliente.value, assignee = this.filterAssignee.value;
       this._syncLabelOptions(all);
-      const more = this.filterLabel.value || this.filterDue.value;
+      const more = this.filterLabel.value || this.filterDue.value || this.filterDone.value;
       const chip = (kind, label, on, extra) => '<button type="button" class="chip" data-quick="' + kind + '"' + (extra || '') + ' aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>';
       let html = chip('all', esc(Workhub.t('Todas')), !cliente && !assignee && !more && !this.week);
       if(T.enabled()) html += chip('mine', esc(Workhub.t('Asignadas a mí')), assignee === 'me') + chip('unassigned', esc(Workhub.t('Sin asignar')), assignee === 'none');
@@ -373,9 +378,10 @@
         this._labelSig = sig;
         const current = this.filterLabel.value.toLowerCase();
         this.filterLabel.innerHTML = '<option value="">' + esc(Workhub.t('Todas las etiquetas')) + '</option>' +
+          '<option value="' + NO_LABEL + '">' + esc(Workhub.t('Sin etiqueta')) + '</option>' +
           names.map((n) => '<option value="' + esc(n) + '" translate="no">' + esc(n) + '</option>').join('');
         /* Si la etiqueta elegida ya no existe, el filtro se quita (se ve en el tablero al momento). */
-        const keep = names.find((n) => n.toLowerCase() === current);
+        const keep = current === NO_LABEL ? NO_LABEL : names.find((n) => n.toLowerCase() === current);
         this.filterLabel.value = keep || '';
         if(current && !keep && this._refilter) setTimeout(() => this._refilter(), 0);
       }
@@ -563,7 +569,8 @@
 
     filters(){
       return {query:this.search.value, cliente:this.filterCliente.value, assignee:this.filterAssignee.value, week:this.week,
-        label:this.filterLabel.value, due:this.filterDue.value};
+        label:this.filterLabel.value === NO_LABEL ? '' : this.filterLabel.value, noLabel:this.filterLabel.value === NO_LABEL,
+        due:this.filterDue.value, done:this.filterDone.value};
     }
 
     /* Filtro por miembro (solo en equipos). Sin miembros se vacía y se olvida la elección. */

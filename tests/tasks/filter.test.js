@@ -67,6 +67,33 @@ assert.equal(ids('', '', 'me', {label:'web', due:'overdue'}), 'a');
 assert.equal(ids('', '', 'bob', {due:'overdue'}), '', 'una combinación sin resultados');
 ok('combinados entre sí y con búsqueda, cliente y miembro');
 
+assert.equal(ids('', '', '', {noLabel:true}), 'e', 'las que no llevan ninguna etiqueta (o no tienen el campo)');
+assert.equal(ids('', 'Acme', '', {noLabel:true}), '');
+ok('sin etiqueta');
+
+/* b vence en 5 días; g mañana, h hoy, i en 20 días, j en 40; k mañana pero ya completada. */
+const base = m.everything().slice();
+m.items = base.concat([
+  {id:'g', title:'Mañana', status:'todo', dueDate:day(1)},
+  {id:'h', title:'Hoy', status:'todo', dueDate:day(0)},
+  {id:'i', title:'Veinte', status:'todo', dueDate:day(20)},
+  {id:'j', title:'Cuarenta', status:'todo', dueDate:day(40)},
+  {id:'k', title:'Hecha', status:'done', dueDate:day(1)}
+]);
+assert.equal(ids('', '', '', {due:'day'}), 'gh', 'de hoy a mañana, sin las vencidas ni las completadas');
+assert.equal(ids('', '', '', {due:'week'}), 'bgh');
+assert.equal(ids('', '', '', {due:'month'}), 'bghi');
+assert.equal(ids('', 'Acme', '', {due:'month'}), 'b');
+ok('por fecha límite: vencen pronto (2, 7 y 30 días)');
+
+assert.equal(ids('', '', '', {done:'done'}), 'dk');
+assert.equal(ids('', '', '', {done:'open'}), 'abceghij');
+assert.equal(ids('', '', '', {done:'done', label:'web'}), 'd');
+assert.equal(ids('', '', '', {done:'done', due:'overdue'}), '', 'una completada nunca está vencida');
+assert.equal(ids('', '', '', {done:'open', due:'none'}), 'ce');
+ok('completadas y sin completar');
+m.items = base;
+
 /* Fuera de un equipo no hay asignaciones: ese filtro no se aplica y los nuevos sí. */
 teamOn = false;
 assert.equal(ids('', '', 'none', {label:'web'}), 'acd');

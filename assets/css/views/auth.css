@@ -521,11 +521,10 @@ html.scene-off .auth-ink{display:block;}
 .auth-swimmer .sumi{width:100%;height:100%;transform-origin:50% 42%;}
 /* Una tarea en el agua: la misma tarjeta del tablero, que sube del fondo y espera flotando a
    que Sumi la rescate. .is-held: ya la lleva él, colgada de los brazos. */
-.auth-float{position:absolute;left:0;top:0;width:86px;padding:10px 10px 11px 13px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:inset 3px 0 0 var(--st-pend), 0 0 0 1px var(--line), 0 12px 24px -10px hsl(222 60% 10% / .55);will-change:transform, opacity;}
+.auth-float{position:absolute;left:0;top:0;width:86px;padding:10px 10px 11px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--line), 0 12px 24px -10px hsl(222 60% 10% / .55);will-change:transform, opacity;}
 .auth-float::before,.auth-float::after{content:"";display:block;height:5px;border-radius:3px;}
 .auth-float::before{width:72%;background:var(--ink);opacity:.5;}
 .auth-float::after{width:34%;margin-top:7px;background:var(--st-pend);opacity:.55;}
-.auth-float.is-done{box-shadow:inset 3px 0 0 var(--st-done), 0 0 0 1px var(--line), 0 12px 24px -10px hsl(222 60% 10% / .55);}
 .auth-float.is-done::after{background:var(--st-done);opacity:1;}
 .auth-float.is-held{left:50%;top:80%;margin-left:-43px;transform-origin:50% 0;}
 @media (prefers-reduced-motion: no-preference){

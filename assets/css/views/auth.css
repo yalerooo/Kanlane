@@ -455,7 +455,6 @@ html.scene-off .auth-aside{background:var(--surface-2);border-left:1px solid var
 html.scene-off .auth-desk{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:28px 20px;color:var(--ink);}
 /* Un Sumi por pantalla: con el del panel a la vista, el de la esquina del formulario sobra. */
 html.scene-off .auth-sumi{display:none;}
-.auth-desk-sumi{display:block;width:112px;height:112px;}
 .auth-desk-board{display:grid;grid-template-columns:repeat(3, 98px);gap:10px;align-items:stretch;}
 .auth-desk-col{display:flex;flex-direction:column;gap:7px;min-height:168px;padding:9px 8px;background:var(--surface-2);border-radius:var(--r-lg);}
 .auth-desk-col > b{display:flex;align-items:center;gap:6px;margin:0 1px 2px;font-size:10.5px;font-weight:600;line-height:1.3;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -476,118 +475,106 @@ html.scene-off .auth-sumi{display:none;}
   html.scene-off .auth-sumi{display:block;}
 }
 
-/* ---------- Agua de fondo (.auth-ink) ----------
-   Sin paisaje (html.scene-off) y en móviles y tabletas, donde nunca lo hay, el fondo liso
-   quedaba soso (lo dijo el dueño). Detrás de la tarjeta va ahora el sitio de Sumi, que es un
-   pulpo: agua. De arriba abajo, la superficie vista desde dentro (reflejos que se deslizan), los
-   rayos de luz que entran inclinados y se mecen, el agua más clara arriba y más honda abajo,
-   burbujas que suben haciendo eses y, flotando, un Sumi grande y tenue con los brazos sueltos
-   (sumi.js, flow). En escritorio queda medio escondido tras el cristal del panel derecho, que
-   lo desenfoca, y los brazos le asoman por debajo de la tarjeta.
-   Todo se mueve solo con transform y opacity, que el navegador anima sin repintar la página
-   (los brazos de Sumi, no: son tres trazos). Con «reducir movimiento» se queda quieto.
+/* ---------- Agua de fondo (.auth-ink) y Sumi nadando ----------
+   Sin paisaje (html.scene-off) y en móviles y tabletas, donde nunca lo hay, detrás de la
+   tarjeta hay agua, y en ella vive Sumi (AuthView.playDesk): nada de un lado a otro, rescata
+   las tareas que suben del fondo, se las lleva al panel de cristal y las pega en el tablero,
+   y después las va pasando de columna. El panel es el cristal de un acuario: Sumi queda
+   detrás, algo desenfocado, y las tarjetas, delante y nítidas. Detrás de la tarjeta del
+   formulario no se le ve: pasa por detrás. Es un solo Sumi para toda la pantalla.
+   El agua: más clara arriba y más honda abajo, dos manchas de color que derivan, unos rayos
+   de luz muy tenues y burbujas (las de siempre, que suben solas, y las que suelta Sumi al
+   nadar). Todo se mueve con transform y opacity; con «reducir movimiento», quieto.
    --water y --water-2: el azul y el verde del agua (tono, saturación y claridad). */
-.auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;--water:199 92% 56%;--water-2:176 72% 44%;}
+.auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;--water:199 92% 56%;--water-2:176 72% 44%;
+  background:linear-gradient(180deg, hsl(var(--water) / .17), hsl(var(--water) / .07) 40%, transparent 66%), linear-gradient(0deg, hsl(222 70% 22% / .30), transparent 50%);}
 html.scene-off .auth-ink{display:block;}
-/* El agua: clara y azul arriba, por donde entra la luz, y más honda hacia el fondo. */
-.auth-ink{background:linear-gradient(180deg, hsl(var(--water) / .20), hsl(var(--water) / .07) 36%, transparent 62%), linear-gradient(0deg, hsl(222 70% 22% / .30), transparent 48%);}
-/* La superficie, vista desde abajo: dos filas de reflejos que se cruzan despacio. */
-.auth-ink-surface{position:absolute;left:-260px;right:-260px;top:0;height:70px;opacity:.9;background:radial-gradient(ellipse 70px 13px at 50% 0, hsl(var(--water) / .50), transparent 72%) 0 0 / 190px 70px repeat-x;-webkit-mask-image:linear-gradient(#000, transparent);mask-image:linear-gradient(#000, transparent);will-change:transform;}
-.auth-ink-surface:nth-of-type(2){height:46px;opacity:.7;background-size:128px 46px;background-position:40px 0;}
-/* Los rayos: franjas de luz que cuelgan de la superficie, cada una con su inclinación. */
-.auth-ink-ray{position:absolute;top:-12%;left:10%;width:15vmax;height:120%;transform-origin:50% 0;transform:rotate(17deg);background:linear-gradient(180deg, hsl(var(--water) / .17), hsl(var(--water) / .05) 55%, transparent 82%);-webkit-mask-image:linear-gradient(90deg, transparent, #000 38%, #000 62%, transparent);mask-image:linear-gradient(90deg, transparent, #000 38%, #000 62%, transparent);will-change:transform, opacity;--a:17deg;--b:22deg;}
-.auth-ink-ray:nth-of-type(4){left:34%;width:9vmax;--a:13deg;--b:19deg;}
-.auth-ink-ray:nth-of-type(5){left:58%;width:20vmax;--a:20deg;--b:15deg;}
-.auth-ink-ray:nth-of-type(6){left:82%;width:11vmax;--a:15deg;--b:23deg;}
-/* Dos manchas de color que derivan, para que el agua no sea un degradado quieto. */
-.auth-ink-blob{position:absolute;left:-24vmax;top:-30vmax;width:74vmax;height:74vmax;border-radius:50%;background:radial-gradient(closest-side, hsl(var(--water-2) / .16), transparent);will-change:transform;}
-.auth-ink-blob:nth-of-type(8){left:auto;top:auto;right:-30vmax;bottom:-34vmax;background:radial-gradient(closest-side, hsl(var(--water) / .15), transparent);}
-/* Sumi: tras el panel de cristal, con los brazos colgando por debajo de la tarjeta. La tarjeta
-   va centrada, así que se coloca desde el centro de la ventana. */
-.auth-ink-sumi{position:absolute;left:calc(50% + 170px);top:calc(50% + 4px);width:clamp(300px, 46vmin, 430px);color:var(--ink);opacity:.085;will-change:transform;}
-.auth-ink-sumi .sumi{width:100%;height:auto;}
-/* Burbujas: un aro con su brillo. */
-.auth-ink-bubbles i{position:absolute;left:6%;bottom:-48px;width:16px;height:16px;border-radius:50%;opacity:0;will-change:transform, opacity;
-  background:radial-gradient(circle at 31% 29%, hsl(0 0% 100% / .75) 0 9%, transparent 12%), radial-gradient(circle, hsl(var(--water) / .10) 52%, hsl(var(--water) / .75) 60% 68%, transparent 72%);
-  --dx:22px;--t:12s;--d:0s;}
-.auth-ink-bubbles i:nth-child(2){left:15%;width:8px;height:8px;--dx:-14px;--t:9s;--d:-3s;}
-.auth-ink-bubbles i:nth-child(3){left:27%;width:24px;height:24px;--dx:30px;--t:15s;--d:-7s;}
-.auth-ink-bubbles i:nth-child(4){left:39%;width:11px;height:11px;--dx:-20px;--t:10s;--d:-5s;}
-.auth-ink-bubbles i:nth-child(5){left:52%;width:18px;height:18px;--dx:18px;--t:13s;--d:-9s;}
-.auth-ink-bubbles i:nth-child(6){left:63%;width:7px;height:7px;--dx:-12px;--t:8s;--d:-1s;}
-.auth-ink-bubbles i:nth-child(7){left:71%;width:13px;height:13px;--dx:20px;--t:11s;--d:-6s;}
-.auth-ink-bubbles i:nth-child(8){left:80%;width:21px;height:21px;--dx:-26px;--t:16s;--d:-11s;}
-.auth-ink-bubbles i:nth-child(9){left:88%;width:9px;height:9px;--dx:14px;--t:9.5s;--d:-4s;}
-.auth-ink-bubbles i:nth-child(10){left:95%;width:15px;height:15px;--dx:-18px;--t:14s;--d:-8s;}
+/* Los rayos: muy tenues y sin borde arriba, que no se vea de dónde cuelgan. */
+.auth-ink-ray{position:absolute;top:-10%;left:14%;width:16vmax;height:120%;transform-origin:50% 0;transform:rotate(17deg);background:linear-gradient(180deg, transparent, hsl(var(--water) / .09) 22%, hsl(var(--water) / .04) 60%, transparent 85%);-webkit-mask-image:linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);mask-image:linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);will-change:transform, opacity;--a:17deg;--b:21deg;}
+.auth-ink-ray.is-2{left:46%;width:22vmax;--a:20deg;--b:15deg;}
+.auth-ink-ray.is-3{left:78%;width:12vmax;--a:14deg;--b:20deg;}
+.auth-ink-blob{position:absolute;left:-24vmax;top:-30vmax;width:74vmax;height:74vmax;border-radius:50%;background:radial-gradient(closest-side, hsl(var(--water-2) / .15), transparent);will-change:transform;}
+.auth-ink-blob.is-2{left:auto;top:auto;right:-30vmax;bottom:-34vmax;background:radial-gradient(closest-side, hsl(var(--water) / .15), transparent);}
+/* Burbujas. Una esfera de aire: casi transparente, con el borde más marcado por abajo, donde
+   se ve el agua a través, y un brillo arriba a la izquierda. Las de fondo suben solas haciendo
+   eses; .auth-bub son las que suelta Sumi (las crea y las mueve AuthView). */
+.auth-ink-bubbles i,.auth-bub{position:absolute;box-sizing:border-box;border-radius:50%;border:1px solid hsl(var(--water) / .62);background:radial-gradient(circle at 32% 30%, hsl(0 0% 100% / .62), transparent 34%), hsl(var(--water) / .07);box-shadow:inset 0 -1px 2px hsl(var(--water) / .35);}
+.auth-ink-bubbles i{left:7%;bottom:-48px;width:13px;height:13px;opacity:0;will-change:transform, opacity;--dx:16px;--t:13s;--d:0s;}
+.auth-ink-bubbles i:nth-child(2){left:18%;width:6px;height:6px;--dx:-10px;--t:9s;--d:-3s;}
+.auth-ink-bubbles i:nth-child(3){left:31%;width:19px;height:19px;--dx:22px;--t:16s;--d:-7s;}
+.auth-ink-bubbles i:nth-child(4){left:47%;width:8px;height:8px;--dx:-14px;--t:10s;--d:-5s;}
+.auth-ink-bubbles i:nth-child(5){left:63%;width:14px;height:14px;--dx:14px;--t:14s;--d:-9s;}
+.auth-ink-bubbles i:nth-child(6){left:76%;width:5px;height:5px;--dx:-8px;--t:8s;--d:-1s;}
+.auth-ink-bubbles i:nth-child(7){left:88%;width:10px;height:10px;--dx:16px;--t:11s;--d:-6s;}
+.auth-ink-bubbles i:nth-child(8){left:95%;width:16px;height:16px;--dx:-18px;--t:17s;--d:-11s;}
+.auth-bub{left:0;top:0;will-change:transform, opacity;}
+/* Sumi. Lo coloca AuthView con transform; aquí solo su tamaño y su tinta. */
+.auth-swimmer{position:absolute;left:0;top:0;width:104px;height:104px;color:var(--ink);opacity:0;will-change:transform;}
+.auth-swimmer.is-in{opacity:1;transition:opacity .5s ease;}
+.auth-swimmer .sumi{width:100%;height:100%;}
+/* Una tarea en el agua: la misma tarjeta del tablero, que sube del fondo y espera flotando a
+   que Sumi la rescate. .is-held: ya la lleva él, colgada de los brazos. */
+.auth-float{position:absolute;left:0;top:0;width:82px;padding:9px 9px 10px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--line), 0 10px 22px -10px hsl(222 60% 10% / .55);will-change:transform, opacity;}
+.auth-float::before,.auth-float::after{content:"";display:block;height:5px;border-radius:3px;}
+.auth-float::before{width:72%;background:var(--ink);opacity:.5;}
+.auth-float::after{width:34%;margin-top:7px;background:var(--st-pend);opacity:.55;}
+.auth-float.is-done::after{background:var(--st-done);opacity:1;}
+.auth-float.is-held{left:50%;top:78%;margin-left:-41px;}
 @media (prefers-reduced-motion: no-preference){
-  .auth-ink-surface{animation:ink-surface 17s linear infinite;}
-  .auth-ink-surface:nth-of-type(2){animation-duration:11s;animation-direction:reverse;}
-  .auth-ink-ray{animation:ink-ray 9s ease-in-out infinite alternate;}
-  .auth-ink-ray:nth-of-type(4){animation-duration:12s;animation-delay:-4s;}
-  .auth-ink-ray:nth-of-type(5){animation-duration:14s;animation-delay:-7s;}
-  .auth-ink-ray:nth-of-type(6){animation-duration:10s;animation-delay:-2s;}
+  .auth-ink-ray{animation:ink-ray 11s ease-in-out infinite alternate;}
+  .auth-ink-ray.is-2{animation-duration:15s;animation-delay:-6s;}
+  .auth-ink-ray.is-3{animation-duration:12s;animation-delay:-3s;}
   .auth-ink-blob{animation:ink-drift 26s ease-in-out infinite alternate;}
-  .auth-ink-blob:nth-of-type(8){animation-duration:33s;animation-direction:alternate-reverse;}
-  .auth-ink-sumi{animation:ink-float 13s ease-in-out infinite;}
+  .auth-ink-blob.is-2{animation-duration:33s;animation-direction:alternate-reverse;}
   .auth-ink-bubbles i{animation:ink-rise var(--t) linear var(--d) infinite;}
+  .auth-float:not(.is-held){animation:ink-bob 3.4s ease-in-out infinite;}
 }
 html[data-motion="reduced"] .auth-ink *{animation:none !important;}
-@keyframes ink-surface{to{transform:translate3d(190px, 0, 0);}}
-@keyframes ink-ray{from{transform:rotate(var(--a));opacity:.55;}to{transform:rotate(var(--b));opacity:1;}}
+@keyframes ink-ray{from{transform:rotate(var(--a));opacity:.6;}to{transform:rotate(var(--b));opacity:1;}}
 @keyframes ink-drift{from{transform:translate3d(0, 0, 0) scale(1);}to{transform:translate3d(9vmax, 7vmax, 0) scale(1.14);}}
-/* Sube, se ladea, baja: como algo que flota, no como algo que gira sobre un eje. */
-@keyframes ink-float{0%,100%{transform:translate3d(0, 0, 0) rotate(-4deg);}33%{transform:translate3d(-16px, -22px, 0) rotate(1deg);}66%{transform:translate3d(10px, -34px, 0) rotate(4deg);}}
 /* Suben haciendo eses y crecen un poco, que arriba hay menos presión. */
 @keyframes ink-rise{
   0%{transform:translate3d(0, 0, 0) scale(.55);opacity:0;}
-  8%{opacity:.75;}
+  8%{opacity:.8;}
   25%{transform:translate3d(var(--dx), -28vh, 0) scale(.7);}
   50%{transform:translate3d(calc(var(--dx) * -.6), -56vh, 0) scale(.85);}
-  75%{transform:translate3d(var(--dx), -84vh, 0) scale(1);opacity:.6;}
+  75%{transform:translate3d(var(--dx), -84vh, 0) scale(1);opacity:.65;}
   100%{transform:translate3d(0, -114vh, 0) scale(1.1);opacity:0;}
 }
+/* La tarjeta que espera se mece: con `translate` y `rotate`, que se suman al transform con el
+   que AuthView la tiene colocada. */
+@keyframes ink-bob{0%,100%{translate:0 0;rotate:-3deg;}50%{translate:0 -7px;rotate:3deg;}}
 @media (max-width: 860px), (hover: none) and (pointer: coarse){
-  /* En el móvil la tarjeta ocupa casi todo: Sumi asoma por arriba, a la derecha, y los brazos
-     le bajan por detrás de ella. */
+  /* En el móvil no hay panel: Sumi nada por arriba y por abajo de la tarjeta (por detrás de
+     ella no se le ve) y sube las tareas hasta arriba. El de la esquina del formulario sobra. */
   .auth-ink{display:block;}
-  .auth-ink-sumi{left:auto;right:-14vmin;top:-6vmin;width:74vmin;opacity:.10;}
+  .auth-sumi{display:none !important;}
+  .auth-swimmer{width:84px;height:84px;}
+  .auth-float{width:70px;}
+  .auth-float.is-held{margin-left:-35px;}
   .auth-ink-ray{width:30vmax;}
-  .auth-ink-ray:nth-of-type(4){width:18vmax;}
-  .auth-ink-ray:nth-of-type(5){width:36vmax;}
-  .auth-ink-ray:nth-of-type(6){width:22vmax;}
+  .auth-ink-ray.is-2{width:36vmax;}
+  .auth-ink-ray.is-3{width:22vmax;}
 }
 
-/* El panel derecho, sin paisaje: un cristal delante del agua. Lo de detrás (los rayos, las
-   burbujas que pasan, Sumi) se ve desenfocado a través de él; tiene su reflejo fijo y un
-   destello que lo cruza de vez en cuando. Donde el navegador no sabe desenfocar lo de detrás,
-   queda más opaco para que el tablero se siga leyendo. */
-html.scene-off .auth-aside{position:relative;overflow:hidden;background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 62%, transparent), color-mix(in srgb, var(--surface-solid) 40%, transparent));border-left:1px solid color-mix(in srgb, var(--ink) 11%, transparent);box-shadow:inset 0 1px 0 hsl(0 0% 100% / .14), inset 1px 0 0 hsl(0 0% 100% / .06);}
+/* El panel derecho, sin paisaje: el cristal del acuario. Lo de detrás (Sumi, las burbujas) se
+   ve a través de él un poco desenfocado, lo justo para que se note el cristal y a Sumi se le
+   siga reconociendo. Donde el navegador no sabe desenfocar lo de detrás, queda más opaco. */
+html.scene-off .auth-aside{position:relative;overflow:hidden;background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 58%, transparent), color-mix(in srgb, var(--surface-solid) 38%, transparent));border-left:1px solid color-mix(in srgb, var(--ink) 11%, transparent);box-shadow:inset 0 1px 0 hsl(0 0% 100% / .14), inset 1px 0 0 hsl(0 0% 100% / .06);}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
-  html.scene-off .auth-aside{background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 34%, transparent), color-mix(in srgb, var(--surface-solid) 14%, transparent));-webkit-backdrop-filter:blur(13px) saturate(1.6);backdrop-filter:blur(13px) saturate(1.6);}
+  html.scene-off .auth-aside{background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 20%, transparent), color-mix(in srgb, var(--surface-solid) 7%, transparent));-webkit-backdrop-filter:blur(2.5px) saturate(1.5);backdrop-filter:blur(2.5px) saturate(1.5);}
 }
-html.scene-off .auth-aside::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg, hsl(0 0% 100% / .11), transparent 30%, transparent 70%, hsl(var(--water, 199 92% 56%) / .07));}
-html.scene-off .auth-aside::after{content:"";position:absolute;top:-30%;left:-55%;width:42%;height:160%;pointer-events:none;background:linear-gradient(100deg, transparent, hsl(0 0% 100% / .09), transparent);transform:skewX(-14deg);will-change:transform;}
-@media (prefers-reduced-motion: no-preference){
-  html.scene-off .auth-aside::after{animation:glass-glint 11s ease-in-out infinite;}
-}
-html[data-motion="reduced"] .auth-aside::after{animation:none !important;}
-@keyframes glass-glint{0%,55%{transform:translate3d(0, 0, 0) skewX(-14deg);}85%,100%{transform:translate3d(420%, 0, 0) skewX(-14deg);}}
+html.scene-off .auth-aside::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg, hsl(0 0% 100% / .10), transparent 30%, transparent 72%, hsl(199 92% 56% / .06));}
 html.scene-off .auth-desk{position:relative;z-index:1;}
 /* Las columnas del tablero, también de cristal, un punto más claro que el panel. */
-html.scene-off .auth-desk-col{background:color-mix(in srgb, var(--surface-solid) 34%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);}
+html.scene-off .auth-desk-col{background:color-mix(in srgb, var(--surface-solid) 46%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);}
 
-/* El tablero de Sumi (AuthView.playDesk): su sombra en el suelo, que respira con él; la tarjeta
-   que vuela va por encima de las demás; al llegar a «Hecho» suelta un anillo verde y el punto de
-   la columna a la que llega parpadea (no crece: su rótulo lo recortaría). */
-html.scene-off .auth-desk-sumi{position:relative;}
-html.scene-off .auth-desk-sumi::after{content:"";position:absolute;left:20%;right:20%;bottom:-9px;height:9px;border-radius:50%;background:var(--ink);opacity:.10;}
+/* El tablero (AuthView.playDesk): la tarjeta que cambia de columna va por encima de las demás;
+   al pegarse al cristal o llegar a «Hecho» suelta un anillo, y el punto de la columna a la que
+   llega parpadea (no crece: su rótulo lo recortaría). */
 .auth-desk-card.is-fly{position:relative;z-index:2;}
 .auth-desk-card.is-landed{animation:desk-land .6s ease-out 1;}
 .auth-desk-col.is-hit > b::before{animation:desk-dot .5s ease-out 1;}
-@media (prefers-reduced-motion: no-preference){
-  html.scene-off .auth-desk-sumi::after{animation:desk-shadow 3.2s ease-in-out infinite;}
-}
-@keyframes desk-shadow{0%,100%{transform:scaleX(1);opacity:.10;}50%{transform:scaleX(.84);opacity:.06;}}
 @keyframes desk-land{0%{box-shadow:0 0 0 1px var(--line), 0 0 0 0 color-mix(in srgb, var(--st-done) 60%, transparent);}100%{box-shadow:0 0 0 1px var(--line), 0 0 0 10px transparent;}}
 @keyframes desk-dot{40%{opacity:.25;}}
 

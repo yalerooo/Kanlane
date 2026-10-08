@@ -29,14 +29,6 @@
    entero, su extremo redondeado de arriba, que va escondido dentro del cuerpo, asomaba por debajo
    y el brazo parecía una pieza suelta pegada al cuerpo. Llega igual de lejos (6 de 64). */
 @keyframes sumi-dip{0%,100%{transform:scaleY(1);}50%{transform:scaleY(1.26);}}
-/* Sumi de fondo en el acceso sin paisaje (auth.css, .auth-ink): flota y parpadea todo el rato. Es
-   la excepción a «una vez y termina», como el reposo: lo pidió el dueño para que esa pantalla no
-   quedara sosa. Los brazos no se mueven desde aquí: ondulan con su propio trazo (sumi.js, flow).
-   Antes eran las cápsulas de siempre girando sobre su raíz, y se veían a tirones y con un corte
-   donde se unen al cuerpo. */
-@media (prefers-reduced-motion: no-preference){
-  .sumi.is-drift .sumi-face{animation:sumi-blink 5.4s infinite;}
-}
 @keyframes sumi-wave{0%,100%{transform:rotate(0);}50%{transform:rotate(-38deg);}}
 @keyframes sumi-nod{0%,100%{transform:rotate(0);}30%{transform:rotate(-7deg);}60%{transform:rotate(5deg);}}
 @keyframes sumi-pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}

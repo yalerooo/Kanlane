@@ -163,27 +163,44 @@
       if(s) s.signal(o);
     }
 
-    /* ---------- Sin paisaje: Sumi y su tablero ----------
-       Con el paisaje quitado (html.scene-off), en el panel de la derecha va Sumi sobre un
-       tablero pequeño. Sigue el cursor con los ojos y los cierra mientras se escribe la
-       contraseña, como el de la esquina del formulario, al que sustituye. */
+    /* ---------- Sin paisaje (y en móviles): Sumi en el agua ----------
+       Detrás de la tarjeta hay agua (auth.css, .auth-ink) y en ella nada Sumi, uno solo para
+       toda la pantalla. Rescata las tareas que suben del fondo, se las lleva al panel de
+       cristal, las pega en el tablero y las va pasando de columna; en el móvil, que no tiene
+       panel, las sube hasta arriba y las suelta ya hechas. Sigue el cursor con los ojos y los
+       cierra mientras se escribe la contraseña. Va por detrás de todo: tras el cristal se le
+       ve desenfocado y tras la tarjeta del formulario no se le ve. */
     buildDesk(){
       const sumi = Workhub.views.sumi;
       this.desk = $('authDesk');
-      $('authDeskSumi').innerHTML = sumi.svg({size:112, cls:'is-alive'});
-      this.deskSumi = $('authDeskSumi').firstChild;
+      this.ink = this.screen.querySelector('.auth-ink');
+      this.swimmer = $('authSwimmer');
+      this.swimmer.innerHTML = sumi.svg({size:104, cls:'is-alive', flow:true, calm:this.deskCalm()});
+      this.deskSumi = this.swimmer.firstChild;
       this.deskMood = 'normal';
       this.deskTimers = [];
+      this.deskRun = 0;
+      this.deskTrail = 0;
       sumi.follow(this.deskSumi);
       this.pass.addEventListener('focus', () => sumi.setMood(this.deskSumi, 'cerrado'));
       this.pass.addEventListener('blur', () => sumi.setMood(this.deskSumi, this.deskMood));
+      /* Al pasar de ventana ancha a estrecha (o al revés) cambia lo que hace: se empieza de nuevo. */
+      if(EARLY.plain.addEventListener) EARLY.plain.addEventListener('change', () => this.playDesk());
+    }
+
+    deskCalm(){
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
     }
 
     stopDesk(){
+      /* deskRun cambia: lo que estuviera a medias (playDesk) no sigue. */
+      this.deskRun++;
       this.deskTimers.splice(0).forEach(clearTimeout);
-      const host = this.deskSumi.parentNode, face = this.deskSumi.querySelector('.sumi-face');
-      host.getAnimations().forEach((a) => a.cancel());
-      if(face) face.style.translate = '';
+      clearInterval(this.deskTrail);
+      /* Solo lo que se animó desde aquí: el reposo de Sumi (una animación de CSS) no se toca. */
+      [this.swimmer, this.deskSumi].forEach((n) => n.getAnimations().forEach((a) => { if(!(window.CSSAnimation && a instanceof CSSAnimation)) a.cancel(); }));
+      this.swimmer.classList.remove('is-in');
+      this.ink.querySelectorAll('.auth-float, .auth-bub').forEach((n) => n.remove());
       this.desk.querySelectorAll('.auth-desk-card').forEach((c) => {
         c.getAnimations().forEach((a) => a.cancel());
         c.classList.remove('is-fly', 'is-landed');
@@ -191,93 +208,231 @@
       this.desk.querySelectorAll('.auth-desk-col').forEach((c) => c.classList.remove('is-hit'));
     }
 
-    /* Sumi va avanzando las tareas, una a una, y al llevar la última a «Hecho» lo celebra; el
-       tablero se vacía y vuelve a empezar, en bucle mientras el panel esté a la vista. Su
-       cuaderno (docs/marca/cuaderno-sumi.html) dice que todo ocurre una vez y termina: esto es
-       la excepción, junto con el Sumi del fondo (auth.css, .auth-ink), que pidió el dueño para
-       que el acceso sin paisaje no quedara soso. Con «reducir movimiento» se ve ya el final.
-       Cada tarea: Sumi mira a la columna de destino, se inclina hacia ella y estira el brazo
-       central; la tarjeta se levanta, cruza en arco y se posa, y las que deja atrás suben a
-       ocupar su hueco. */
+    /* Lo que hace Sumi, en bucle mientras la pantalla esté a la vista. Su cuaderno
+       (docs/marca/cuaderno-sumi.html) dice que todo ocurre una vez y termina: esta pantalla es
+       la excepción, a petición del dueño. Con «reducir movimiento» se queda quieto, con el
+       tablero ya adelantado. Cada vuelta:
+       1. Sube una tarea del fondo; Sumi nada hasta ella y la coge.
+       2. Se la lleva tras el cristal y la pega en «Por hacer» (en el móvil la sube y la suelta).
+       3. Pasa la que haya en «En curso» a «Hecho» y lo celebra con una voltereta; luego, una
+          de «Por hacer» a «En curso». Si en «Hecho» hay más de dos, la más antigua se va.
+       4. Da un paseo por el agua y vuelve a empezar.
+       Todo se mide en el momento (dónde está la tarjeta, cuánta agua queda a la vista), así
+       que sirve para cualquier tamaño de ventana. */
     playDesk(){
       this.stopDesk();
-      const sumi = Workhub.views.sumi, el = this.deskSumi, host = el.parentNode;
-      const face = el.querySelector('.sumi-face');
+      const run = this.deskRun, alive = () => run === this.deskRun;
+      const sumi = Workhub.views.sumi, el = this.deskSumi, me = this.swimmer, ink = this.ink;
+      const plain = EARLY.plain.matches;
       const cols = Array.from(this.desk.querySelectorAll('.auth-desk-col'));
-      const cards = Array.from(this.desk.querySelectorAll('.auth-desk-card'));
       const mood = (m) => { this.deskMood = m; if(document.activeElement !== this.pass) sumi.setMood(el, m); };
-      /* Como al principio: dos por hacer y una en curso. */
-      const reset = () => cards.forEach((c, i) => cols[i < 2 ? 0 : 1].appendChild(c));
-      reset();
+      const card = () => { const c = document.createElement('i'); c.className = 'auth-desk-card'; return c; };
+      /* El tablero, como al principio: una por hacer y una en curso. */
+      this.desk.querySelectorAll('.auth-desk-card').forEach((c) => c.remove());
+      cols[0].appendChild(card());
+      cols[1].appendChild(card());
       mood('normal');
-      if(this.screen.hidden || !EARLY.sceneOff() || EARLY.plain.matches) return;
-      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced'){
-        cards.forEach((c) => cols[2].appendChild(c));
+      if(this.screen.hidden || (!plain && !EARLY.sceneOff())) return;
+
+      const size = me.offsetWidth || 104, reach = size * 0.52;
+      const wait = (ms) => new Promise((done) => this.deskTimers.push(setTimeout(done, ms)));
+      const again = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
+      const mid = (node) => { const r = node.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+      const count = (i) => cols[i].querySelectorAll('.auth-desk-card').length;
+      const first = (i) => cols[i].querySelector('.auth-desk-card');
+      /* Dónde se pone Sumi para tocar una tarjeta del tablero: encima de su columna, con los
+         brazos colgando sobre ella. Si se pusiera a la altura de la tarjeta, como va por
+         detrás, el tablero lo taparía. */
+      const over = (node) => { const r = node.getBoundingClientRect(); return [r.left + r.width / 2, node.closest('.auth-desk-col').getBoundingClientRect().top - size * 0.34]; };
+      const move = (x, y) => 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+      /* Dónde hay agua a la vista, fuera de la tarjeta: a los lados, por debajo y por arriba. */
+      const spots = () => {
+        const s = this.screen.querySelector('.auth-shell').getBoundingClientRect(), w = window.innerWidth, h = window.innerHeight, out = [];
+        if(s.left > size * 1.3) out.push([s.left / 2, h * 0.38], [s.left / 2, h * 0.68]);
+        if(w - s.right > size * 1.3) out.push([(s.right + w) / 2, h * 0.34], [(s.right + w) / 2, h * 0.7]);
+        if(h - s.bottom > size * 1.25) out.push([w * 0.3, (s.bottom + h) / 2], [w * 0.64, (s.bottom + h) / 2]);
+        if(s.top > size * 1.25) out.push([w * 0.3, s.top / 2], [w * 0.6, s.top / 2]);
+        if(!out.length) out.push([size * 0.7, h - size * 0.7], [w - size * 0.7, h - size * 0.7]);
+        return out;
+      };
+      /* Un sitio de esos, más bien lejos de donde está, para que se le vea cruzar. */
+      let pos = spots()[0];
+      const pick = () => {
+        let best = null, far = -1;
+        spots().forEach((p) => { const d = Math.hypot(p[0] - pos[0], p[1] - pos[1]) + Math.random() * 240; if(d > far){ far = d; best = p; } });
+        return [best[0] + (Math.random() - 0.5) * 50, best[1] + (Math.random() - 0.5) * 36];
+      };
+      const at = (x, y, turn) => move(x - size / 2, y - size / 2) + ' rotate(' + (turn || 0) + 'deg)';
+      const place = (x, y) => { pos = [x, y]; me.style.transform = at(x, y); };
+
+      /* Burbujas sueltas en ese punto, que suben y se deshacen. */
+      const puff = (x, y, n) => {
+        for(let i = 0; i < n; i++){
+          const b = document.createElement('i'), s = 4 + Math.random() * 7;
+          const x0 = x + (Math.random() - 0.5) * 24 - s / 2, up = 70 + Math.random() * 120, sway = (Math.random() - 0.5) * 34;
+          b.className = 'auth-bub';
+          b.style.width = b.style.height = s.toFixed(1) + 'px';
+          ink.appendChild(b);
+          b.animate([
+            {transform:move(x0, y) + ' scale(.5)', opacity:0},
+            {opacity:0.9, offset:0.15},
+            {transform:move(x0 + sway, y - up) + ' scale(1.1)', opacity:0}
+          ], {duration:1100 + Math.random() * 900, easing:'ease-out'}).onfinish = () => b.remove();
+        }
+      };
+      /* Nada hasta ahí: en curva, ladeándose hacia donde va y dejando un rastro de burbujas. */
+      const swim = (x, y) => {
+        const from = pos, dx = x - from[0], dy = y - from[1], d = Math.hypot(dx, dy);
+        if(d < 4) return wait(60);
+        const ms = Math.min(2600, Math.max(650, d * 3.6));
+        const lean = Math.max(-16, Math.min(16, dx / d * 16)), bend = Math.min(60, d * 0.16) * (Math.random() < 0.5 ? -1 : 1);
+        const a = me.animate([
+          {transform:at(from[0], from[1])},
+          {transform:at(from[0] + dx / 2 - dy / d * bend, from[1] + dy / 2 + dx / d * bend, lean), offset:0.5},
+          {transform:at(x, y)}
+        ], {duration:ms, easing:'cubic-bezier(.45,.05,.35,1)'});
+        const t0 = performance.now();
+        clearInterval(this.deskTrail);
+        this.deskTrail = setInterval(() => {
+          const k = Math.min(1, (performance.now() - t0) / ms);
+          puff(from[0] + dx * k, from[1] + dy * k + size * 0.18, 1);
+        }, 170);
+        place(x, y);
+        return new Promise((done) => { a.onfinish = () => { clearInterval(this.deskTrail); done(); }; });
+      };
+      /* Una tarea que sube del fondo y se queda flotando en ese punto. */
+      const float = (x, y) => {
+        const f = document.createElement('i');
+        f.className = 'auth-float';
+        ink.insertBefore(f, me);
+        const left = x - f.offsetWidth / 2, top = y - f.offsetHeight / 2;
+        f.style.transform = move(left, top);
+        f.animate([{transform:move(left, top + 120), opacity:0}, {transform:move(left, top), opacity:1}], {duration:1100, easing:'cubic-bezier(.2,.7,.3,1)'});
+        puff(x, y + 34, 4);
+        return f;
+      };
+      /* Estira el brazo y se la cuelga. */
+      const grab = async (f) => {
+        sumi.play(el, 'dip');
+        await wait(280);
+        f.getAnimations().forEach((a) => a.cancel());
+        f.style.transform = '';
+        f.classList.add('is-held');
+        me.appendChild(f);
+      };
+      /* La lleva tras el cristal y la pega en «Por hacer»: la del agua desaparece y aparece la
+         del tablero, que ya estaba puesta en su sitio, sin verse, para saber adónde ir. */
+      const deliver = async (f) => {
+        const c = card();
+        c.style.visibility = 'hidden';
+        cols[0].appendChild(c);
+        const to = mid(c), up = over(c);
+        await swim(up[0], up[1]);
+        if(!alive()){ c.remove(); return; }
+        sumi.play(el, 'dip');
+        await wait(240);
+        f.remove();
+        c.style.visibility = '';
+        c.animate([{transform:'scale(.6)', opacity:0}, {transform:'scale(1.07)', opacity:1, offset:0.6}, {transform:'none', opacity:1}], {duration:420, easing:'ease-out'});
+        again(cols[0], 'is-hit');
+        again(c, 'is-landed');
+        puff(to[0], to[1], 5);
+        await wait(520);
+      };
+      /* Sin panel (móvil): la sube hasta arriba y la suelta, ya hecha; se va hacia la superficie. */
+      const surface = async (f) => {
+        const s = this.screen.querySelector('.auth-shell').getBoundingClientRect();
+        await swim(window.innerWidth * (0.24 + Math.random() * 0.4), Math.max(size * 0.62, s.top * 0.52));
+        if(!alive()) return;
+        f.classList.add('is-done');
+        mood('contento');
+        await wait(420);
+        const r = f.getBoundingClientRect();
+        ink.insertBefore(f, me);
+        f.classList.remove('is-held');
+        f.style.transform = move(r.left, r.top);
+        f.animate([{transform:move(r.left, r.top), opacity:1}, {transform:move(r.left, r.top - 130), opacity:0}], {duration:950, easing:'ease-in'}).onfinish = () => f.remove();
+        puff(r.left + r.width / 2, r.top, 5);
+        await wait(900);
+        mood('normal');
+      };
+      /* Pasa esa tarjeta a otra columna: va hasta ella, la empuja con el brazo y la acompaña.
+         Las que deja atrás suben a ocupar su hueco. */
+      const push = async (c, to) => {
+        const here = mid(c), up = over(c);
+        await swim(up[0], up[1]);
+        if(!alive()) return;
+        sumi.play(el, 'dip');
+        await wait(250);
+        const all = Array.from(this.desk.querySelectorAll('.auth-desk-card')), before = all.map((n) => n.getBoundingClientRect());
+        cols[to].appendChild(c);
+        let there = here;
+        all.forEach((n, i) => {
+          const now = n.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
+          if(n === c) there = [now.left + now.width / 2, now.top + now.height / 2];
+          if(!dx && !dy) return;
+          const from = 'translate(' + dx + 'px,' + dy + 'px)';
+          if(n !== c){
+            n.animate([{transform:from}, {transform:'none'}], {duration:420, delay:140, fill:'backwards', easing:'cubic-bezier(.2,.8,.2,1)'});
+            return;
+          }
+          n.classList.add('is-fly');
+          n.animate([
+            {transform:from + ' rotate(0deg) scale(1)'},
+            {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 24) + 'px) rotate(' + (dx < 0 ? 7 : -7) + 'deg) scale(1.09)', offset:0.5},
+            {transform:'translate(0px,-3px) rotate(0deg) scale(1.03)', offset:0.86},
+            {transform:'none'}
+          ], {duration:720, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => n.classList.remove('is-fly');
+        });
+        again(cols[to], 'is-hit');
+        const next = over(c);
+        await swim(next[0], next[1]);
+        if(!alive() || to !== 2) return;
+        /* A «Hecho»: anillo verde, burbujas y una voltereta. */
+        again(c, 'is-landed');
+        puff(there[0], there[1], 6);
+        mood('contento');
+        el.animate([{rotate:'0deg'}, {rotate:'360deg'}], {duration:760, easing:'cubic-bezier(.4,0,.3,1)'});
+        await wait(1000);
+        mood('normal');
+      };
+      const release = (c) => {
+        const r = c.getBoundingClientRect();
+        c.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(-16px) scale(.9)'}], {duration:420, easing:'ease-in', fill:'forwards'}).onfinish = () => c.remove();
+        puff(r.left + r.width / 2, r.top, 4);
+      };
+
+      place(pos[0], pos[1]);
+      me.classList.add('is-in');
+      if(this.deskCalm()){
+        cols[2].appendChild(card());
         mood('contento');
         return;
       }
-      const later = (fn, ms) => this.deskTimers.push(setTimeout(fn, ms));
-      const again = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
-      /* Los ojos, hacia esa columna (0, 1 o 2; sin ella, al frente). Si el cursor se mueve, lo
-         siguen a él (sumi.follow). */
-      const look = (to) => { if(face) face.style.translate = to == null ? '' : ((to - 1) * 1.7) + 'px 1.2px'; };
-      const move = (card, to) => {
-        look(to);
-        host.animate([
-          {transform:'none'},
-          {transform:'translateY(5px) rotate(' + (to - 1) * 5 + 'deg)', offset:0.42},
-          {transform:'none'}
-        ], {duration:760, easing:'cubic-bezier(.3,.6,.3,1)'});
-        sumi.play(el, 'dip');
-        /* La tarjeta sale cuando el brazo llega abajo. */
-        later(() => {
-          const before = cards.map((c) => c.getBoundingClientRect());
-          cols[to].appendChild(card);
-          cards.forEach((c, i) => {
-            const now = c.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
-            if(!dx && !dy) return;
-            const from = 'translate(' + dx + 'px,' + dy + 'px)';
-            if(c !== card){
-              c.animate([{transform:from}, {transform:'none'}], {duration:420, delay:140, fill:'backwards', easing:'cubic-bezier(.2,.8,.2,1)'});
-              return;
-            }
-            c.classList.add('is-fly');
-            c.animate([
-              {transform:from + ' rotate(0deg) scale(1)'},
-              {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 26) + 'px) rotate(' + (dx < 0 ? 7 : -7) + 'deg) scale(1.09)', offset:0.5},
-              {transform:'translate(0px,-3px) rotate(0deg) scale(1.03)', offset:0.86},
-              {transform:'none'}
-            ], {duration:700, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => c.classList.remove('is-fly');
-          });
-          again(cols[to], 'is-hit');
-          if(to === 2) later(() => again(card, 'is-landed'), 600);
-        }, 250);
-      };
-      /* Qué tarea pasa a qué columna, por orden. */
-      const steps = [[2, 2], [0, 1], [0, 2], [1, 1], [1, 2]];
-      const STEP = 1500, FIRST = 900;
-      const round = () => {
-        this.deskTimers.length = 0;
-        steps.forEach((s, i) => later(() => move(cards[s[0]], s[1]), FIRST + i * STEP));
-        const end = FIRST + (steps.length - 1) * STEP + 1050;
-        later(() => {
-          look(null);
-          mood('fiesta');
-          sumi.play(el, 'nod');
-          host.animate([{transform:'none'}, {transform:'translateY(-11px)', offset:0.35}, {transform:'none'}, {transform:'translateY(-5px)', offset:0.8}, {transform:'none'}], {duration:900, easing:'ease-out'});
-        }, end);
-        later(() => mood('contento'), end + 2200);
-        /* Y vuelta a empezar: las tarjetas se van, vuelven a su sitio y el tablero arranca otra vez. */
-        later(() => cards.forEach((c, i) => c.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(7px) scale(.94)'}], {duration:260, delay:i * 70, fill:'forwards', easing:'ease-in'})), end + 3700);
-        later(() => {
-          cards.forEach((c) => { c.getAnimations().forEach((a) => a.cancel()); c.classList.remove('is-landed'); });
-          reset();
-          mood('normal');
-          cards.forEach((c, i) => c.animate([{opacity:0, transform:'translateY(-8px) scale(.94)'}, {opacity:1, transform:'none'}], {duration:380, delay:i * 90, fill:'backwards', easing:'cubic-bezier(.2,1.3,.4,1)'}));
-          round();
-        }, end + 3700 + 520);
-      };
-      round();
+      (async () => {
+        await wait(600);
+        while(alive()){
+          if(plain || count(0) < 2){
+            const p = pick(), f = float(p[0], p[1]);
+            await wait(650);
+            await swim(p[0], p[1] - reach * 0.9);
+            if(!alive()) return;
+            await grab(f);
+            if(!alive()) return;
+            await (plain ? surface(f) : deliver(f));
+            if(!alive()) return;
+          }
+          if(!plain){
+            if(count(1)){ await push(first(1), 2); if(!alive()) return; }
+            if(count(0)){ await push(first(0), 1); if(!alive()) return; }
+            if(count(2) > 2) release(first(2));
+          }
+          const p = pick();
+          await swim(p[0], p[1]);
+          if(!alive()) return;
+          await wait(500 + Math.random() * 700);
+        }
+      })();
     }
 
     /* Acceso correcto: la pantalla del ordenador lo celebra un instante antes de pasar a la app.

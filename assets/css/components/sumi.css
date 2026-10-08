@@ -25,7 +25,10 @@
 @keyframes sumi-blink{0%,46%,50%,100%{transform:scaleY(1);}48%{transform:scaleY(.1);}}
 @keyframes sumi-wink{0%,100%{transform:scaleY(1);}50%{transform:scaleY(.1);}}
 @keyframes sumi-look{0%,100%{transform:translateX(0);}25%{transform:translateX(-2.2px);}65%{transform:translateX(2.2px);}}
-@keyframes sumi-dip{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
+/* El brazo se estira desde su raíz, que no se mueve (el origen es su borde de arriba): si bajara
+   entero, su extremo redondeado de arriba, que va escondido dentro del cuerpo, asomaba por debajo
+   y el brazo parecía una pieza suelta pegada al cuerpo. Llega igual de lejos (6 de 64). */
+@keyframes sumi-dip{0%,100%{transform:scaleY(1);}50%{transform:scaleY(1.26);}}
 @keyframes sumi-wave{0%,100%{transform:rotate(0);}50%{transform:rotate(-38deg);}}
 @keyframes sumi-nod{0%,100%{transform:rotate(0);}30%{transform:rotate(-7deg);}60%{transform:rotate(5deg);}}
 @keyframes sumi-pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}

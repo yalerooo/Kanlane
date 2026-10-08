@@ -85,14 +85,13 @@
 
 <div id="authScreen" class="auth-screen" hidden>
   <div class="auth-scene" aria-hidden="true"><canvas id="authCanvas"></canvas></div>
-  <!-- Sin paisaje y en móviles: agua de fondo (auth.css, .auth-ink). Por orden: la superficie (dos
-       filas de reflejos), cuatro rayos de luz, dos manchas de color, Sumi y las burbujas. -->
+  <!-- Sin paisaje y en móviles: agua de fondo (auth.css, .auth-ink) y, en ella, Sumi, que nada y
+       rescata tareas (AuthView.playDesk). Rayos de luz, manchas de color, burbujas y Sumi. -->
   <div class="auth-ink" aria-hidden="true">
-    <i class="auth-ink-surface"></i><i class="auth-ink-surface"></i>
-    <i class="auth-ink-ray"></i><i class="auth-ink-ray"></i><i class="auth-ink-ray"></i><i class="auth-ink-ray"></i>
-    <i class="auth-ink-blob"></i><i class="auth-ink-blob"></i>
-    <span class="auth-ink-sumi" data-sumi="normal" data-sumi-size="430" data-sumi-class="is-drift" data-sumi-eye="var(--bg)" data-sumi-flow></span>
-    <span class="auth-ink-bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <i class="auth-ink-ray"></i><i class="auth-ink-ray is-2"></i><i class="auth-ink-ray is-3"></i>
+    <i class="auth-ink-blob"></i><i class="auth-ink-blob is-2"></i>
+    <span class="auth-ink-bubbles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="auth-swimmer" id="authSwimmer"></span>
   </div>
   <header class="auth-top">
     <div class="auth-tools">
@@ -178,9 +177,8 @@
       </section>
 
       <div class="auth-aside" id="authWindow" aria-hidden="true">
-        <!-- Sin paisaje (html.scene-off): Sumi y un tablero pequeño; lo mueve AuthView.playDesk. -->
+        <!-- Sin paisaje (html.scene-off): un tablero pequeño sobre el cristal; las tarjetas las trae y las mueve Sumi (AuthView.playDesk). -->
         <div class="auth-desk" id="authDesk">
-          <span class="auth-desk-sumi" id="authDeskSumi"></span>
           <div class="auth-desk-board">
             <div class="auth-desk-col"><b>Por hacer</b><i class="auth-desk-card"></i><i class="auth-desk-card"></i></div>
             <div class="auth-desk-col"><b>En curso</b><i class="auth-desk-card"></i></div>

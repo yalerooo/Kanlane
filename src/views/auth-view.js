@@ -209,7 +209,33 @@
       /* El formulario manda. Con la contraseña deja lo que esté haciendo, se va al cristal y se
          da la vuelta para no mirar; al escribir el correo (o el nombre) se va también al
          cristal y acompaña lo que se escribe. Al salir del campo vuelve a lo suyo. */
-      const attend = (what, field) => { this.deskFocus = what; this.deskField = field || null; if(this.deskOn) this.playDesk(true); };
+      const attend = (what, field) => {
+        /* Mientras espera a Google o a GitHub no lo distrae el foco, que al abrirse y cerrarse
+           esa ventana sale del campo y vuelve a entrar. */
+        if(this.deskFocus === 'wait' && what !== 'wait') return;
+        this.deskFocus = what; this.deskField = field || null;
+        if(this.deskOn) this.playDesk(true);
+      };
+      /* Entrar con Google o con GitHub (setBusy): mientras su ventana está abierta, Sumi espera
+         el resultado en el cristal (playDesk, 'wait'). deskVia: se está entrando así, para que
+         al conseguirlo lo celebre más; dura un poco más que la espera, porque el formulario se
+         libera a la vez que llega la sesión. deskLeaving: ya se entró y Sumi se está yendo. */
+      this.deskVia = false;
+      this.deskLeaving = false;
+      this.deskWait = (busy, who) => {
+        const btn = busy && who && who !== 'submit' ? this.alt.querySelector('[data-provider="' + who + '"]') : null;
+        if(btn){
+          clearTimeout(this.deskViaTimer);
+          this.deskVia = true;
+          attend('wait', btn);
+          return;
+        }
+        if(busy || this.deskFocus !== 'wait') return;
+        this.deskViaTimer = setTimeout(() => { this.deskVia = false; }, 2000);
+        this.deskFocus = document.activeElement === this.pass ? 'pass' : null;
+        this.deskField = null;
+        if(this.deskOn && !this.deskLeaving) this.playDesk(true);
+      };
       this.pass.addEventListener('focus', () => attend('pass'));
       this.pass.addEventListener('blur', () => attend(null));
       [this.email, this.name].forEach((field) => {
@@ -331,6 +357,7 @@
       /* El tablero, como al principio: una por hacer y una en curso. Al cambiar de tarea
          (keep) se queda como esté. */
       if(!keep){
+        this.deskLeaving = false;
         this.desk.querySelectorAll('.auth-desk-card').forEach((c) => c.remove());
         cols[0].appendChild(card());
         cols[1].appendChild(card());
@@ -367,30 +394,41 @@
       const start = keep && this.deskAt ? this.deskAt : spots()[0];
       this.deskOn = true;
       /* x, y: dónde está (su centro); vx, vy: velocidad; rot: cuánto se ladea; sx, sy: cuánto
-         se encoge o se estira; to: adónde va (null: flota); beat: por dónde va de la brazada;
-         pose: un encogimiento o estirón pedido a mano, que se va solo. */
-      const body = {x:start[0], y:start[1], vx:0, vy:0, rot:0, sx:1, sy:1, to:null, done:null, beat:0, pose:null, poseT:0, t:0};
-      /* Los brazos: de cada uno, dónde lleva la punta respecto a su sitio (ox, oy) y a qué
-         velocidad (vx, vy). reach: lo que se alarga de más el del medio para coger o empujar. */
-      const geo = sumi.geometry(false);
-      const arms = geo.arms.map((a, i) => ({node:el.querySelector('.sumi-arm-' + i), x:a[0] + a[1] / 2, len:(a[2] - geo.top) * 1.45 - 8, ox:0, oy:0, vx:0, vy:0, w:1.3 + i * 0.37, ph:i * 2.1}));
-      let reach = 0, reachTo = 0;
-      /* El saludo: cuánto tiene levantado el brazo derecho (0, colgando; 1, arriba). No se usa
-         el gesto de siempre (sumi.css, .is-wave), que gira el brazo entero sobre su raíz: con
-         los brazos sueltos, al girar se le abría una muesca en la unión con el cuerpo (lo vio el
-         dueño). Aquí el brazo sigue saliendo recto del cuerpo y lo que sube es su curva. */
-      const hand = [0, 0], handTo = [0, 0];
-      const wave = (ms) => { handTo[1] = 1; this.deskTimers.push(setTimeout(() => { handTo[1] = 0; }, ms)); };
-      /* Los dos brazos arriba, en uve y más altos que al saludar, y un meneo del cuerpo que se
-         va apagando: para celebrar. high: cuánto de «arriba del todo»; party: cuánto se menea. */
+         se encoge o se estira (vsx, vsy: a qué velocidad cambia, porque es de gelatina: se pasa
+         un poco y vuelve); to: adónde va (null: flota); home: su sitio, al que vuelve solo si
+         algo lo mueve; beat: por dónde va de la brazada; pose: un encogimiento o estirón pedido
+         a mano, que se va solo; jump: un salto en marcha; fly: sale disparado. */
+      const body = {x:start[0], y:start[1], vx:0, vy:0, rot:0, sx:1, sy:1, vsx:0, vsy:0, to:null, done:null, home:null, beat:0, pose:null, poseT:0, t:0, jump:null, fly:false};
+      /* Los brazos. Cada uno es una cadena de SEG tramos, todos igual de largos, que cuelga de
+         su hombro: un punto dentro del cuerpo, a medio ancho de brazo del borde, así que el
+         extremo redondo del trazo no asoma nunca y el brazo puede girar entero sin que se le
+         abra una muesca en la unión. De cada tramo se guarda hacia dónde apunta (a, en
+         radianes; 0 es hacia abajo) y a qué velocidad gira (w). El hombro persigue la postura
+         que se le pide y cada tramo, a medias, esa postura y al tramo anterior, con su
+         retraso: el gesto baja por el brazo como por un látigo, y la punta llega la última y
+         se pasa un poco. El agua, además, los arrastra: se quedan atrás de por donde va. El brazo mide siempre lo mismo salvo lo que
+         se le pida (ext): antes, al levantarlo, se estiraba como una goma hasta el doble.
+         lift: cuánto lo tiene levantado (0, colgando; 1, abierto hacia fuera y arriba; algo menos
+         de 0, recogido). hook: cuánto de más se le enrosca la punta hacia arriba. */
+      const geo = sumi.geometry(false), SEG = 6;
+      const arms = geo.arms.map((a, i) => {
+        const top = geo.root - a[1] / 2;
+        return {node:el.querySelector('.sumi-arm-' + i), x:a[0] + a[1] / 2, y:top, side:i - 1, len:(a[2] - geo.top) * 1.45 - (top - geo.top),
+          a:Array.from({length:SEG}, () => 0), w:Array.from({length:SEG}, () => 0), ext:0, extV:0, lift:0, liftTo:0, hook:0, sp:1.3 + i * 0.37, ph:i * 2.1};
+      });
+      /* reach: lo que se alarga de más el del medio para coger o empujar. */
+      let reachTo = 0;
+      /* El saludo: levanta el brazo derecho y lo agita desde el hombro. */
+      const wave = (ms) => { arms[2].liftTo = 1; this.deskTimers.push(setTimeout(() => { arms[2].liftTo = 0; }, ms)); };
+      /* Para celebrar: los dos brazos de fuera arriba, en uve, y un meneo del cuerpo que
+         empieza y se apaga solo; el del medio lo encoge, como quien salta con las piernas
+         recogidas. high: cuánto de «arriba del todo»; party: lo que le queda
+         de meneo. */
       let high = 0, highTo = 0, party = 0;
       /* shake: cuánto niega con la cabeza (se apaga solo). asleep: dormido del todo; el bucle
          de cada fotograma se para. */
       let shake = 0, asleep = false;
-      const cheer = (ms) => {
-        handTo[0] = handTo[1] = 1; highTo = 1; party = 1;
-        this.deskTimers.push(setTimeout(() => { handTo[0] = handTo[1] = 0; highTo = 0; }, ms));
-      };
+      const cheer = (on) => { arms[0].liftTo = arms[2].liftTo = on ? 1 : 0; highTo = on ? 1 : 0; reachTo = on ? -12 : 0; if(on) party = 1; };
       /* Lo que lleva colgado y cuánto se balancea. */
       let held = null, swing = 0, swingV = 0;
       /* Burbujas sueltas en ese punto, que suben y se deshacen. */
@@ -428,11 +466,27 @@
         body.t += dt;
         this.deskAt = [body.x, body.y];
         let tsx = 1, tsy = 1, curl = 0, spread = 0;
-        if(body.to){
+        if(body.fly || body.jump){
+          if(body.fly){
+            /* Sale disparado hacia arriba, cada vez más deprisa, soltando burbujas. */
+            body.vy -= 2600 * dt;
+            if(Math.random() < dt * 34) puff(body.x + (Math.random() - 0.5) * size * 0.4, body.y + size * 0.45, 1);
+          } else {
+            /* Un salto: sube frenándose, arriba la gravedad afloja (se queda un instante
+               colgado, que es cuando se le ve la cara) y cae cada vez más deprisa hasta su sitio. */
+            const j = body.jump;
+            body.vy += j.g * (Math.abs(body.vy) < j.v * 0.3 ? 0.5 : 1) * dt;
+            if(body.vy > 0 && body.y >= j.y){ body.y = j.y; body.vy = 0; body.jump = null; j.done(); }
+          }
+          body.vx *= Math.exp(-dt * 3);
+          /* En el aire se estira según lo deprisa que va, y adelgaza lo que se alarga. */
+          tsy = 1 + Math.min(0.2, Math.abs(body.vy) / 1900); tsx = 1 - (tsy - 1) * 0.85;
+        } else if(body.to){
           const dx = body.to[0] - body.x, dy = body.to[1] - body.y, d = Math.hypot(dx, dy) || 1;
           if(d < 7 && Math.hypot(body.vx, body.vy) < 40){
             /* Ha llegado. */
             const done = body.done;
+            body.home = body.to;
             body.to = null; body.done = null;
             if(done) done();
           } else {
@@ -447,66 +501,76 @@
             body.vx += (dx * k - body.vx) * Math.min(1, dt * 3.2);
             body.vy += (dy * k - body.vy) * Math.min(1, dt * 3.2);
             tsx = 1 - 0.045 * beat * go; tsy = 1 + 0.055 * beat * go;
-            spread = -beat * 2.6 * go; curl = beat * 2.2 * go;
+            spread = -beat * 0.24 * go; curl = beat * 2.2 * go;
             if(Math.random() < dt * 2.4 * go) puff(body.x, body.y + size * 0.3, 1);
           }
-        } else if(body.fly){
-          /* Sale disparado hacia arriba, cada vez más deprisa, soltando burbujas. */
-          body.vy -= 2600 * dt;
-          if(Math.random() < dt * 34) puff(body.x + (Math.random() - 0.5) * size * 0.4, body.y + size * 0.45, 1);
         } else {
-          const stop = Math.exp(-dt * 3);
+          /* Flota en su sitio: si algo lo mueve (un respingo, un toque), vuelve meciéndose. Sin
+             esto, cada respingo lo dejaba un poco más arriba y acababa saliéndose. */
+          if(body.home){ body.vx += (body.home[0] - body.x) * 18 * dt; body.vy += (body.home[1] - body.y) * 18 * dt; }
+          const stop = Math.exp(-dt * 4);
           body.vx *= stop; body.vy *= stop;
         }
         body.x += body.vx * dt; body.y += body.vy * dt;
-        /* Se ladea un poco hacia donde va; no se tumba. */
+        /* Se ladea un poco hacia donde va; no se tumba. El meneo de la fiesta entra y sale de
+           cero, sin golpe. */
         const lean = clamp(body.vx * 0.045, -13, 13);
-        const sway = (party > 0 ? Math.sin((1 - party) * 9.4) * 10 * party : 0) + (shake > 0 ? Math.sin((1 - shake) * 21) * 14 * shake : 0);
+        const sway = (party > 0 ? Math.sin((1 - party) * 15.7) * 7 * Math.sin(party * 3.1416) : 0) + (shake > 0 ? Math.sin((1 - shake) * 21) * 14 * shake : 0);
         body.rot += (lean - body.rot) * Math.min(1, dt * 4);
         if(body.pose){
           if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
           else body.pose = null;
         }
-        body.sx += (tsx - body.sx) * Math.min(1, dt * 16);
-        body.sy += (tsy - body.sy) * Math.min(1, dt * 16);
+        body.vsx += ((tsx - body.sx) * 240 - body.vsx * 17) * dt; body.sx += body.vsx * dt;
+        body.vsy += ((tsy - body.sy) * 240 - body.vsy * 17) * dt; body.sy += body.vsy * dt;
         me.style.transform = move(body.x - size / 2, body.y - size / 2) + ' rotate(' + (body.rot + sway).toFixed(2) + 'deg)';
         el.style.scale = body.sx.toFixed(3) + ' ' + body.sy.toFixed(3);
 
-        /* Los brazos. La velocidad, vista desde el propio Sumi (que va ladeado): las puntas se
-           quedan atrás de por donde va, se mecen cada una a su ritmo y, al encogerse o
-           estirarse el cuerpo, se recogen o se alargan. Cada punta es un muelle. */
+        /* Los brazos. fx, fy: cómo le viene el agua, vista desde el propio Sumi (que va
+           ladeado): al contrario de por donde va. */
         const c = Math.cos(-body.rot / 57.3), s = Math.sin(-body.rot / 57.3);
-        const lx = (body.vx * c - body.vy * s) * unit, ly = (body.vx * s + body.vy * c) * unit;
-        reach += (reachTo - reach) * Math.min(1, dt * 18);
-        hand[0] += (handTo[0] - hand[0]) * Math.min(1, dt * 9);
-        hand[1] += (handTo[1] - hand[1]) * Math.min(1, dt * 9);
-        high += (highTo - high) * Math.min(1, dt * 10);
-        party = Math.max(0, party - dt * 0.95);
+        let fx = -(body.vx * c - body.vy * s) * unit, fy = -(body.vx * s + body.vy * c) * unit;
+        const f = Math.hypot(fx, fy);
+        if(f > 330){ fx *= 330 / f; fy *= 330 / f; }
+        high += (highTo - high) * Math.min(1, dt * 8);
+        party = Math.max(0, party - dt * 0.7);
         shake = Math.max(0, shake - dt * 1.05);
         arms.forEach((a, i) => {
-          const tx = clamp(-lx * 0.05, -5, 5) + Math.sin(body.t * a.w + a.ph) * 1.8 + (i - 1) * spread;
-          const ty = clamp(-ly * 0.04, -3, 6) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.8 + curl;
-          a.vx += ((tx - a.ox) * 46 - a.vx * 6.5) * dt; a.ox += a.vx * dt;
-          a.vy += ((ty - a.oy) * 46 - a.vy * 7.5) * dt; a.oy += a.vy * dt;
-          /* Sale recta del cuerpo hasta pasada su raíz (que no se vea corte en la unión) y de
-             ahí para abajo se curva hasta la punta. */
-          const len = Math.max(6, a.len + a.oy + (i === 1 ? reach : 0)), y = geo.top + 8;
-          /* Los tres puntos de la curva: colgando y, el derecho al saludar, hacia fuera y arriba,
-             agitando la punta. Se pasa de una forma a otra poco a poco (hand). */
-          let p = [a.x, y + len * 0.42, a.x + a.ox * 0.5, y + len * 0.74, a.x + a.ox, y + len];
-          const lift = i === 1 ? 0 : hand[i >> 1];
-          if(lift > 0.01){
-            /* side: hacia qué lado se abre (el izquierdo, a la izquierda). Los dos brazos agitan
-               la punta a contratiempo. Al celebrar (high) suben más y se abren en uve. */
-            const side = i - 1, wag = Math.sin(body.t * (10 + 4 * high) + i * 1.6) * 3.2;
-            const up = [a.x + 2 * side, y + 11 - 2 * high, a.x + side * (15 + wag * 0.4), y + 15 - 6 * high, a.x + side * (20 + wag), y + 2 + Math.abs(wag) * 0.4 - 11 * high];
-            p = p.map((v, n) => v + (up[n] - v) * lift);
+          /* Sube deprisa (lo lanza) y baja despacio (lo deja caer). */
+          a.lift += (a.liftTo - a.lift) * Math.min(1, dt * (a.liftTo > a.lift ? 15 : 5.5));
+          const up = a.lift, wag = Math.sin(body.t * (9.5 + 2.5 * high) + i * 0.45);
+          /* La postura: adónde apunta el hombro y cuánto se dobla cada tramo respecto al
+             anterior. Levantado, sale hacia fuera y la punta se le curva hacia arriba, y lo agita desde el
+             hombro; al nadar, los de fuera se abren y se cierran con la brazada. */
+          const base = a.side * (up * (1.6 + 0.1 * high + 0.26 * wag) + spread);
+          const bend = a.side * (up * 0.08 + a.hook);
+          for(let k = 0; k < SEG; k++){
+            const und = Math.sin(body.t * a.sp - k * 0.85 + a.ph) * (0.05 + k * 0.012) * (1 - 0.6 * Math.max(0, up));
+            const want = (k ? (a.a[k - 1] + bend) * 0.55 + (base + k * bend) * 0.45 : base) + und;
+            const stiff = k ? 170 - k * 14 : 170 + 90 * Math.max(0, up), damp = k ? 14 - k * 0.9 : 16;
+            /* El agua empuja cada tramo de lado (más cuanto más cerca de la punta) y, al caer,
+               le abre los brazos de fuera. A un brazo levantado lo mueve menos: lo sujeta él. */
+            const drag = ((fx * Math.cos(a.a[k]) - fy * Math.sin(a.a[k])) * 0.1 * (0.35 + k * 0.3) + a.side * Math.max(0, -fy) * 0.05) * (1 - 0.75 * Math.max(0, up));
+            a.w[k] += ((want - a.a[k]) * stiff - a.w[k] * damp + drag) * dt;
+            a.a[k] += a.w[k] * dt;
           }
-          a.node.setAttribute('d', 'M' + a.x + ' ' + geo.top + 'V' + y + 'C' + p.map((v) => v.toFixed(2)).join(' '));
+          const extTo = (i === 1 ? reachTo : 0) + curl + (up > 0 ? up * (i ? 3 : 6) : up * 3);
+          a.extV += ((extTo - a.ext) * 300 - a.extV * 24) * dt; a.ext += a.extV * dt;
+          /* El trazo: de la mitad de un tramo a la mitad del siguiente con una curva que tiene
+             la articulación por punto de control, así que no se le ve ningún codo. */
+          const seg = Math.max(1.6, (a.len + a.ext) / SEG);
+          let px = a.x, py = a.y, d = 'M' + px + ' ' + py;
+          for(let k = 0; k < SEG; k++){
+            const nx = px + seg * Math.sin(a.a[k]), ny = py + seg * Math.cos(a.a[k]);
+            const mx = ((px + nx) / 2).toFixed(2) + ' ' + ((py + ny) / 2).toFixed(2);
+            d += k ? 'Q' + px.toFixed(2) + ' ' + py.toFixed(2) + ' ' + mx : 'L' + mx;
+            px = nx; py = ny;
+          }
+          a.node.setAttribute('d', d + 'L' + px.toFixed(2) + ' ' + py.toFixed(2));
         });
         /* Lo que lleva colgado se balancea: un péndulo que tira hacia atrás de donde va. */
         if(held){
-          swingV += ((clamp(-lx * 0.9, -32, 32) - swing) * 34 - swingV * 4.5) * dt;
+          swingV += ((clamp(fx * 0.9, -32, 32) - swing) * 34 - swingV * 4.5) * dt;
           swing += swingV * dt;
           held.style.rotate = swing.toFixed(2) + 'deg';
         }
@@ -515,6 +579,7 @@
       /* Nada hasta ahí. Mira adonde va. */
       const swim = (x, y) => new Promise((done) => {
         look([x, y]);
+        body.home = null;
         body.to = [x, y];
         body.done = done;
       });
@@ -525,6 +590,19 @@
         body.vy -= power || 150;
         pose(0.9, 1.13, 190);
         puff(body.x, body.y + size * 0.3, 3);
+      };
+      /* Un salto de verdad, de esa altura y más o menos esos segundos: sube, se queda un
+         instante arriba y cae en el mismo sitio (lo lleva tick). Se cumple al tocar suelo. */
+      const leap = (h, secs) => new Promise((done) => {
+        const g = 8 * h / (secs * secs), v = Math.sqrt(2 * g * h);
+        body.to = null; body.done = null; body.home = null;
+        body.jump = {y:body.y, g:g, v:v, done:() => { body.home = [body.x, body.y]; done(); }};
+        body.vy = -v;
+      });
+      /* Los destellos de la cara de fiesta, que salen de golpe y se asientan. */
+      const sparkle = () => {
+        const x = el.querySelector('.sumi-extra');
+        if(x) x.animate([{transform:'scale(.2) rotate(-20deg)', opacity:0}, {transform:'scale(1.3) rotate(6deg)', opacity:1, offset:0.55}, {transform:'none', opacity:1}], {duration:460, easing:'cubic-bezier(.2,.8,.3,1)'});
       };
       /* Una tarea que sube del fondo y se queda flotando en ese punto. */
       const float = (x, y) => {
@@ -649,39 +727,45 @@
         await Promise.all([swim(next[0], next[1]), landed]);
         if(!alive() || to !== 2) return;
         /* A «Hecho»: anillo verde y burbujas en la tarjeta, y Sumi lo celebra como lo haría un
-           dibujo animado: se agacha para coger impulso (anticipación), salta estirado con los
-           brazos colgando detrás, arriba los lanza en uve y se menea con cara de fiesta, cae y,
-           al posarse, se aplasta un poco y se recompone. Antes daba una voltereta de 360º
-           girando en bloque sobre su centro, que no se parecía a nada. */
+           dibujo animado: se agacha y recoge los brazos para coger impulso (anticipación),
+           salta estirado con los brazos arrastrando detrás, al llegar arriba los lanza en uve y
+           se menea con cara de fiesta, cae, se aplasta al posarse, da un botecito más pequeño
+           y se recompone mientras los brazos bajan solos. Antes el salto era un empujón que se
+           frenaba en el agua y luego volvía nadando, y los brazos se estiraban al doble
+           doblándose en U y agitando la punta a sacudidas. */
         again(c, 'is-landed');
         puff(mid(c)[0], mid(c)[1], 7);
         look(null);
         mood('contento');
-        pose(1.17, 0.83, 190);
-        reachTo = -6;
-        await wait(190);
-        if(!alive()) return;
-        mood('fiesta');
-        body.vy -= 250;
-        pose(0.86, 1.17, 230);
-        reachTo = 5;
-        puff(body.x, body.y + size * 0.42, 5);
+        pose(1.2, 0.8, 210);
+        reachTo = -5;
+        arms[0].liftTo = arms[2].liftTo = -0.2;
         await wait(210);
         if(!alive()) return;
+        mood('fiesta');
+        sparkle();
         reachTo = 0;
-        cheer(880);
-        puff(body.x - size * 0.5, body.y - size * 0.2, 2);
-        puff(body.x + size * 0.5, body.y - size * 0.2, 2);
-        await wait(640);
+        arms[0].liftTo = arms[2].liftTo = 0;
+        puff(body.x, body.y + size * 0.42, 6);
+        const air = leap(size * 0.62, 0.66);
+        await wait(110);
         if(!alive()) return;
-        /* Baja a su sitio y se posa. */
-        await swim(next[0], next[1]);
+        cheer(true);
+        puff(body.x - size * 0.5, body.y - size * 0.3, 2);
+        puff(body.x + size * 0.5, body.y - size * 0.3, 2);
+        await air;
         if(!alive()) return;
-        look(null);
-        pose(1.11, 0.91, 150);
-        await wait(170);
-        pose(0.97, 1.04, 140);
-        await wait(520);
+        /* Se posa: se aplasta, suelta burbujas y bota una vez más, más bajo. */
+        pose(1.2, 0.8, 110);
+        reachTo = 0;
+        puff(body.x, body.y + size * 0.45, 4);
+        await wait(120);
+        if(!alive()) return;
+        await leap(size * 0.2, 0.36);
+        if(!alive()) return;
+        pose(1.11, 0.9, 110);
+        cheer(false);
+        await wait(760);
         mood('normal');
       };
       const release = (c) => {
@@ -763,25 +847,51 @@
           {duration:fall ? 1050 : 560, easing:fall ? 'cubic-bezier(.45,0,.85,.55)' : 'ease-out', fill:'forwards'}).onfinish = () => f.remove();
       };
       const recent = (when) => when && performance.now() - when < 300;
-      /* Acceso correcto: la tarjeta que llevara se desvanece y él se agacha y sale disparado
-         hacia arriba, fuera de la pantalla, mientras se pasa a la aplicación. */
+      /* Acceso correcto: la tarjeta que llevara se desvanece y él se agacha, recoge los brazos y
+         sale disparado hacia arriba, fuera de la pantalla, mientras se pasa a la aplicación.
+         Si se entró con Google o GitHub (deskVia), que lo ha tenido esperando en el cristal,
+         antes lo celebra con un salto y los brazos arriba. */
       if(recent(this.deskOkAt)){
+        const via = this.deskVia;
         this.deskOkAt = 0;
+        this.deskVia = false;
         if(this.deskDropped) ghost(this.deskDropped, 'rise');
         this.deskDropped = null;
         this.deskBack = false;
         sumi.setMood(el, 'fiesta');
+        sparkle();
         look(null);
         (async () => {
-          pose(1.18, 0.82, 170);
-          await wait(170);
+          const crouch = async () => {
+            pose(1.2, 0.8, 180);
+            arms[0].liftTo = arms[2].liftTo = -0.2;
+            reachTo = -5;
+            await wait(180);
+            reachTo = 0;
+          };
+          await crouch();
           if(!alive()) return;
-          pose(0.84, 1.2, 1200);
-          cheer(1200);
-          body.to = null;
+          if(via){
+            puff(body.x, body.y + size * 0.42, 6);
+            const air = leap(size * 0.58, 0.6);
+            await wait(90);
+            if(!alive()) return;
+            cheer(true);
+            puff(body.x - size * 0.5, body.y - size * 0.3, 3);
+            puff(body.x + size * 0.5, body.y - size * 0.3, 3);
+            await air;
+            if(!alive()) return;
+            puff(body.x, body.y + size * 0.45, 4);
+            await crouch();
+            if(!alive()) return;
+          }
+          /* Despega con los brazos pegados al cuerpo; el agua se los deja atrás. */
+          cheer(false);
+          party = 0;
+          body.to = null; body.home = null;
           body.vy = -240;
           body.fly = true;
-          puff(body.x, body.y + size * 0.4, 6);
+          puff(body.x, body.y + size * 0.4, 8);
         })();
         return;
       }
@@ -834,6 +944,41 @@
         })();
         return;
       }
+      if(this.deskFocus === 'wait'){
+        /* Se ha abierto la ventana de Google o de GitHub: se va a su sitio en el cristal y
+           espera el resultado con los ojos como platos, mirando al botón que se pulsó, los
+           brazos a medio levantar y dando botecitos de impaciencia; de vez en cuando mira al
+           frente, a quien está al otro lado. Lo que venga después (entrar, un error o cerrar
+           la ventana) lo saca de aquí. */
+        (async () => {
+          const btn = this.deskField, at = glass();
+          const eye = () => look(btn ? mid(btn) : null);
+          await intro;
+          if(!alive()) return;
+          mood('normal');
+          await swim(at[0], at[1]);
+          if(!alive()) return;
+          eye();
+          mood('aviso');
+          await hop(110);
+          arms[0].liftTo = arms[2].liftTo = 0.25;
+          arms[0].hook = arms[2].hook = 0.2;
+          for(let n = 1; alive(); n++){
+            await wait(560 + Math.random() * 240);
+            if(!alive()) return;
+            pose(1.08, 0.93, 140);
+            body.vy -= 46;
+            arms[0].extV += 34; arms[2].extV += 34;
+            if(n % 2) puff(body.x + (Math.random() - 0.5) * size * 0.5, body.y + size * 0.45, 1);
+            if(n % 4 === 0){
+              look(null);
+              mood('contento');
+              this.deskTimers.push(setTimeout(() => { if(alive()){ eye(); mood('aviso'); } }, 700));
+            }
+          }
+        })();
+        return;
+      }
       if(this.deskFocus === 'mail'){
         /* El correo: se va a su sitio en el cristal, saluda y mira lo que se escribe. Con cada
            letra da un toquecito con un brazo, alternando, como si tecleara él también; y
@@ -847,7 +992,7 @@
             if(!alive()) return;
             eye();
             side = 2 - side;
-            arms[side].vy += 75; arms[1].vy += 28;
+            arms[side].extV += 70; arms[1].extV += 26;
             pose(1.05, 0.95, 90);
             body.vy -= 12;
             if(Math.random() < 0.3) puff(body.x + (side - 1) * size * 0.25, body.y + size * 0.45, 1);
@@ -910,9 +1055,12 @@
       const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
       /* Sin paisaje lo celebra Sumi: sale disparado hacia arriba y eso hace de paso a la app. */
       if(this.deskOn && !calm && !this.screen.hidden){
+        /* Con Google o GitHub lo celebra antes de irse (playDesk): dura algo más. */
+        const via = this.deskVia;
+        this.deskLeaving = true;
         this.setBusy(true);
         this.deskReact('ok');
-        return new Promise((resolve) => setTimeout(resolve, 780));
+        return new Promise((resolve) => setTimeout(resolve, via ? 1500 : 780));
       }
       if(!st || st.frozen || calm || this.screen.hidden) return null;
       this.setBusy(true);
@@ -1320,6 +1468,7 @@
       });
       [this.name, this.email, this.pass].forEach((el) => { el.readOnly = busy; });
       this.scene({busy:busy});
+      if(this.deskWait) this.deskWait(busy, who);
     }
 
     showMessage(text, isInfo){

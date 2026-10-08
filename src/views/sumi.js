@@ -46,12 +46,16 @@
     };
   }
 
-  function bodyPath(g){
-    let d = 'M' + g.head[0][0] + ' ' + g.head[0][1];
+  /* soft: las dos esquinas de abajo, redondeadas con el radio de medio brazo y el centro en
+     su hombro. Con los brazos colgando no se nota (las tapan), y es lo que deja levantar un
+     brazo de fuera sin que debajo asome la esquina del cuerpo como un escalón. */
+  function bodyPath(g, soft){
+    const r = soft ? g.arms[0][1] / 2 : 0, y = g.head[0][1];
+    let d = 'M' + g.head[0][0] + ' ' + y;
     g.head.forEach((c) => { d += 'C' + c.slice(2).join(' '); });
-    d += 'V' + g.root;
+    d += r ? 'A' + r + ' ' + r + ' 0 0 1 ' + (g.x1 - r) + ' ' + g.root : 'V' + g.root;
     for(let i = 1; i >= 0; i--) d += 'H' + (g.gaps[i][0] + g.gaps[i][1]) + 'a' + g.gaps[i][1] + ' ' + g.gaps[i][1] + ' 0 0 0 ' + (-2 * g.gaps[i][1]) + ' 0';
-    return d + 'H' + g.x0 + 'Z';
+    return d + 'H' + (g.x0 + r) + (r ? 'A' + r + ' ' + r + ' 0 0 1 ' + g.x0 + ' ' + y : '') + 'Z';
   }
 
   /* flow: los brazos sueltos, para un Sumi que flota (el del fondo del acceso). Cada brazo deja
@@ -121,7 +125,7 @@
     const body = o.body || 'currentColor';
     const cut = !o.eye;
     const parts = face(o.mood, g, cut ? '#000' : o.eye);
-    const shape = '<path d="' + bodyPath(g) + '"/>' + armsMarkup(g, body, !!o.flow, !!o.calm);
+    const shape = '<path d="' + bodyPath(g, !!o.flow) + '"/>' + armsMarkup(g, body, !!o.flow, !!o.calm);
     const extra = '<path class="sumi-extra" d="' + parts.extra + '" fill="none" stroke="' + body + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
     /* Solo el Sumi suelto y completo: ni el logotipo (lleva eye) ni los iconos (bg) ni el reducido. */
     const auto = cut && !o.bg && !o.mini && !parts.extra;

@@ -106,7 +106,10 @@
     checkMeta(){
       if(this.metaState !== null) return Promise.resolve(this.metaState);
       return this.getMeta().then((snap) => {
-        if(!snap.exists && Workhub.services.platform.mode() === 'firebase') return this.getMeta(true);
+        /* «No existe» solo vale si lo dice el servidor: una respuesta de la caché (sin conexión)
+           se confirma con él. Si ya venía del servidor, no se lee otra vez. */
+        const cached = !snap.metadata || snap.metadata.fromCache !== false;
+        if(!snap.exists && cached && Workhub.services.platform.mode() === 'firebase') return this.getMeta(true);
         return snap;
       }).then((snap) => {
         if(snap.exists) return (snap.data() || {}).saltPassword ? 'current' : 'legacy';

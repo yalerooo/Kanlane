@@ -11,6 +11,8 @@
   const MAX_TOTAL_BYTES_ENCRYPTED = 600 * 1024;
   const INSTALL_KIND = 'plugin-install';
   const INSTALL_PREFIX = 'install:';
+  /* Bases de datos en las que la migración de los datos antiguos ya se comprobó en esta sesión. */
+  const MIGRATED = new WeakSet();
 
   function fail(code, message){
     const e = new Error(message);
@@ -45,7 +47,9 @@
           this.emit('change');
         }, (err) => { if(gen === this.generation) this.emit('error', err); });
       };
-      if(this.main) PluginModel.migrateLegacyMain(db).catch((err) => {
+      /* La migración se comprueba una vez por sesión y base de datos: al volver al proyecto
+         principal desde otro no se vuelven a leer sus marcas. Si falla, se reintenta la próxima vez. */
+      if(this.main && !MIGRATED.has(db)) PluginModel.migrateLegacyMain(db).then(() => { MIGRATED.add(db); }).catch((err) => {
         if(gen === this.generation) this.emit('error', err);
       }).then(subscribe);
       else subscribe();

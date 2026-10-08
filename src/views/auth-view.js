@@ -161,6 +161,8 @@
     scene(o){
       const s = Workhub.views.authScene;
       if(s) s.signal(o);
+      /* Sin paisaje, quien se entera es Sumi. */
+      if(o.error && this.deskReact) this.deskReact('error');
     }
 
     /* ---------- Sin paisaje (y en móviles): Sumi en el agua ----------
@@ -194,6 +196,15 @@
       this.deskTap = null;
       this.deskOn = false;
       this.deskPointer = null;
+      /* deskErrorAt, deskOkAt: cuándo dijo el formulario que algo fue mal o que se entró;
+         deskDropped: dónde estaba la tarjeta que llevaba en ese momento. deskSleep: dormido;
+         deskWoke: lo acaban de despertar; deskSeen: la última vez que se tocó algo. */
+      this.deskErrorAt = 0;
+      this.deskOkAt = 0;
+      this.deskDropped = null;
+      this.deskSleep = false;
+      this.deskWoke = false;
+      this.deskSeen = performance.now();
       sumi.follow(this.deskSumi);
       /* El formulario manda. Con la contraseña deja lo que esté haciendo, se va al cristal y se
          da la vuelta para no mirar; al escribir el correo (o el nombre) se va también al
@@ -216,6 +227,50 @@
       });
       /* Por dónde anda el cursor, por si le da por acercarse a curiosear. */
       document.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') this.deskPointer = [ev.clientX, ev.clientY, performance.now()]; }, {passive:true});
+      /* El cursor mueve dos cosas más (auth.css): la luz del cristal, que lo sigue por el panel
+         (--gx, --gy; --go la enciende cuando anda cerca), y la profundidad del agua, cuyas
+         motas se desplazan un poco al contrario, las de cerca más (--px, --py, de -1 a 1). */
+      const pane = this.desk.parentNode;
+      let lit = 0;
+      document.addEventListener('pointermove', (ev) => {
+        if(ev.pointerType !== 'mouse' || this.screen.hidden || lit) return;
+        lit = requestAnimationFrame(() => {
+          lit = 0;
+          const r = pane.getBoundingClientRect();
+          const near = r.width && ev.clientX > r.left - 150 && ev.clientX < r.right + 150 && ev.clientY > r.top - 150 && ev.clientY < r.bottom + 150;
+          pane.style.setProperty('--gx', Math.round(ev.clientX - r.left) + 'px');
+          pane.style.setProperty('--gy', Math.round(ev.clientY - r.top) + 'px');
+          pane.style.setProperty('--go', near ? '1' : '0');
+          this.ink.style.setProperty('--px', ((ev.clientX / window.innerWidth - 0.5) * 2).toFixed(3));
+          this.ink.style.setProperty('--py', ((ev.clientY / window.innerHeight - 0.5) * 2).toFixed(3));
+        });
+      }, {passive:true});
+      /* Lo que le dice el formulario: 'error' (algo fue mal) u 'ok' (se entró). Deja lo que
+         esté haciendo y reacciona (playDesk). */
+      this.deskReact = (kind) => {
+        if(!this.deskOn) return;
+        const carried = this.ink.querySelector('.auth-float.is-held');
+        this.deskDropped = carried ? carried.getBoundingClientRect() : null;
+        if(kind === 'ok') this.deskOkAt = performance.now();
+        else this.deskErrorAt = performance.now();
+        this.playDesk(true);
+      };
+      /* Un minuto sin que nadie toque nada: se duerme, y todo lo del agua se para (también
+         ahorra batería). Cualquier movimiento lo despierta, con un respingo. */
+      const stir = () => {
+        this.deskSeen = performance.now();
+        if(!this.deskSleep) return;
+        this.deskSleep = false;
+        this.deskWoke = true;
+        this.ink.classList.remove('is-asleep');
+        if(this.deskOn) this.playDesk(true);
+      };
+      ['pointermove', 'pointerdown', 'keydown', 'touchstart'].forEach((type) => document.addEventListener(type, stir, {passive:true}));
+      setInterval(() => {
+        if(!this.deskOn || this.deskSleep || this.deskFocus || this.deskCalm() || document.hidden || performance.now() - this.deskSeen < 60000) return;
+        this.deskSleep = true;
+        this.playDesk(true);
+      }, 5000);
       /* Al pasar de ventana ancha a estrecha (o al revés) cambia lo que hace: se empieza de nuevo. */
       if(EARLY.plain.addEventListener) EARLY.plain.addEventListener('change', () => this.playDesk());
     }
@@ -236,7 +291,8 @@
       this.deskSumi.getAnimations().forEach((a) => { if(!(window.CSSAnimation && a instanceof CSSAnimation)) a.cancel(); });
       this.deskSumi.style.scale = '';
       if(!keep) this.swimmer.classList.remove('is-in');
-      this.ink.querySelectorAll('.auth-float, .auth-bub').forEach((n) => n.remove());
+      this.ink.querySelectorAll('.auth-float:not(.is-ghost), .auth-bub').forEach((n) => n.remove());
+      if(!keep) this.ink.classList.remove('is-asleep');
       this.desk.querySelectorAll('.auth-desk-card').forEach((c) => {
         c.getAnimations().forEach((a) => a.cancel());
         c.classList.remove('is-fly', 'is-landed');
@@ -328,6 +384,9 @@
       /* Los dos brazos arriba, en uve y más altos que al saludar, y un meneo del cuerpo que se
          va apagando: para celebrar. high: cuánto de «arriba del todo»; party: cuánto se menea. */
       let high = 0, highTo = 0, party = 0;
+      /* shake: cuánto niega con la cabeza (se apaga solo). asleep: dormido del todo; el bucle
+         de cada fotograma se para. */
+      let shake = 0, asleep = false;
       const cheer = (ms) => {
         handTo[0] = handTo[1] = 1; highTo = 1; party = 1;
         this.deskTimers.push(setTimeout(() => { handTo[0] = handTo[1] = 0; highTo = 0; }, ms));
@@ -362,7 +421,7 @@
 
       let last = 0;
       const tick = (now) => {
-        if(!alive()) return;
+        if(!alive() || asleep) return;
         this.deskRaf = requestAnimationFrame(tick);
         const dt = Math.min(0.034, last ? (now - last) / 1000 : 0.016);
         last = now;
@@ -391,6 +450,10 @@
             spread = -beat * 2.6 * go; curl = beat * 2.2 * go;
             if(Math.random() < dt * 2.4 * go) puff(body.x, body.y + size * 0.3, 1);
           }
+        } else if(body.fly){
+          /* Sale disparado hacia arriba, cada vez más deprisa, soltando burbujas. */
+          body.vy -= 2600 * dt;
+          if(Math.random() < dt * 34) puff(body.x + (Math.random() - 0.5) * size * 0.4, body.y + size * 0.45, 1);
         } else {
           const stop = Math.exp(-dt * 3);
           body.vx *= stop; body.vy *= stop;
@@ -398,7 +461,7 @@
         body.x += body.vx * dt; body.y += body.vy * dt;
         /* Se ladea un poco hacia donde va; no se tumba. */
         const lean = clamp(body.vx * 0.045, -13, 13);
-        const sway = party > 0 ? Math.sin((1 - party) * 9.4) * 10 * party : 0;
+        const sway = (party > 0 ? Math.sin((1 - party) * 9.4) * 10 * party : 0) + (shake > 0 ? Math.sin((1 - shake) * 21) * 14 * shake : 0);
         body.rot += (lean - body.rot) * Math.min(1, dt * 4);
         if(body.pose){
           if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
@@ -419,6 +482,7 @@
         hand[1] += (handTo[1] - hand[1]) * Math.min(1, dt * 9);
         high += (highTo - high) * Math.min(1, dt * 10);
         party = Math.max(0, party - dt * 0.95);
+        shake = Math.max(0, shake - dt * 1.05);
         arms.forEach((a, i) => {
           const tx = clamp(-lx * 0.05, -5, 5) + Math.sin(body.t * a.w + a.ph) * 1.8 + (i - 1) * spread;
           const ty = clamp(-ly * 0.04, -3, 6) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.8 + curl;
@@ -685,11 +749,76 @@
         if(!plain && b && b.offsetParent){ const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top - size * 0.62]; }
         return [window.innerWidth / 2, Math.max(size * 0.62, shell().top * 0.52)];
       };
+      /* Una tarjeta suelta en el agua, donde estaba la que llevaba: se le cae (fall) o se va
+         hacia arriba, ya hecha (rise). */
+      const ghost = (r, how) => {
+        const f = document.createElement('i');
+        f.className = 'auth-float is-ghost' + (how === 'rise' ? ' is-done' : '');
+        f.style.animation = 'none';
+        ink.insertBefore(f, me);
+        const fall = how === 'fall';
+        f.animate(fall
+          ? [{transform:move(r.left, r.top) + ' rotate(0deg)', opacity:1}, {transform:move(r.left - 16, r.top + 60) + ' rotate(-16deg)', opacity:1, offset:0.45}, {transform:move(r.left + 10, r.top + 190) + ' rotate(-34deg)', opacity:0}]
+          : [{transform:move(r.left, r.top), opacity:1}, {transform:move(r.left, r.top - 70) + ' scale(.9)', opacity:0}],
+          {duration:fall ? 1050 : 560, easing:fall ? 'cubic-bezier(.45,0,.85,.55)' : 'ease-out', fill:'forwards'}).onfinish = () => f.remove();
+      };
+      const recent = (when) => when && performance.now() - when < 300;
+      /* Acceso correcto: la tarjeta que llevara se desvanece y él se agacha y sale disparado
+         hacia arriba, fuera de la pantalla, mientras se pasa a la aplicación. */
+      if(recent(this.deskOkAt)){
+        this.deskOkAt = 0;
+        if(this.deskDropped) ghost(this.deskDropped, 'rise');
+        this.deskDropped = null;
+        this.deskBack = false;
+        sumi.setMood(el, 'fiesta');
+        look(null);
+        (async () => {
+          pose(1.18, 0.82, 170);
+          await wait(170);
+          if(!alive()) return;
+          pose(0.84, 1.2, 1200);
+          cheer(1200);
+          body.to = null;
+          body.vy = -240;
+          body.fly = true;
+          puff(body.x, body.y + size * 0.4, 6);
+        })();
+        return;
+      }
+      /* Dormido: se le cierran los ojos, deja de nadar y, al rato, se para todo lo del agua
+         (él sigue meciéndose). Lo despierta cualquier movimiento (stir, en buildDesk). */
+      if(this.deskSleep){
+        (async () => {
+          mood('dormido');
+          look(null);
+          await wait(1800);
+          if(!alive()) return;
+          ink.classList.add('is-asleep');
+          asleep = true;
+        })();
+        return;
+      }
+      /* Lo que hace antes de ponerse a otra cosa: negar con la cabeza si algo fue mal en el
+         formulario (y se le cae lo que llevara), o el respingo de quien se acaba de despertar. */
+      let intro = Promise.resolve();
+      if(recent(this.deskErrorAt)){
+        if(this.deskDropped) ghost(this.deskDropped, 'fall');
+        this.deskDropped = null;
+        shake = 1;
+        if(!this.deskBack) sumi.setMood(el, 'triste');
+        intro = wait(1150).then(() => { if(alive() && !this.deskBack) sumi.setMood(el, this.deskMood); });
+      } else if(this.deskWoke){
+        this.deskWoke = false;
+        sumi.setMood(el, 'aviso');
+        intro = hop(160).then(() => wait(560)).then(() => { if(alive() && !this.deskBack) sumi.setMood(el, this.deskMood); });
+      }
       if(this.deskBack && this.deskFocus !== 'pass') turn(false);
       if(this.deskFocus === 'pass'){
         /* La contraseña: deja lo que estuviera haciendo, se va a su sitio en el cristal y se
            da la vuelta. De espaldas, silba (unas burbujas) y se balancea hasta que se sale. */
         (async () => {
+          await intro;
+          if(!alive()) return;
           const at = glass();
           await swim(at[0], at[1]);
           if(!alive()) return;
@@ -730,6 +859,8 @@
             }
             seen = ok;
           };
+          await intro;
+          if(!alive()) return;
           mood('contento');
           await swim(at[0], at[1]);
           if(!alive()) return;
@@ -739,6 +870,7 @@
         return;
       }
       (async () => {
+        await intro;
         await wait(700);
         while(alive()){
           if(plain || count(0) < 2){
@@ -776,6 +908,12 @@
       const s = Workhub.views.authScene;
       const st = s && s.state();
       const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.getAttribute('data-motion') === 'reduced';
+      /* Sin paisaje lo celebra Sumi: sale disparado hacia arriba y eso hace de paso a la app. */
+      if(this.deskOn && !calm && !this.screen.hidden){
+        this.setBusy(true);
+        this.deskReact('ok');
+        return new Promise((resolve) => setTimeout(resolve, 780));
+      }
       if(!st || st.frozen || calm || this.screen.hidden) return null;
       this.setBusy(true);
       s.signal({ok:true});

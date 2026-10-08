@@ -576,6 +576,65 @@ html.scene-off .auth-desk{position:relative;z-index:1;}
 /* Las columnas del tablero, también de cristal, un punto más claro que el panel. */
 html.scene-off .auth-desk-col{background:color-mix(in srgb, var(--surface-solid) 46%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);}
 
+/* ---------- Detalles del acceso sin paisaje ----------
+   Cosas pequeñas que reaccionan a lo que se hace, sin añadir nada fijo a la vista. */
+
+/* La luz del cristal: un brillo suave que sigue al cursor por el panel, como luz sobre un
+   vidrio. Dos capas, las dos con el centro donde esté el cursor (--gx, --gy, que pone AuthView):
+   una mancha de luz muy tenue por dentro y, más viva, el filo del panel. La del filo es un
+   degradado pintado solo en el borde: la máscara le quita todo menos un marco de 1,5 px.
+   --go la enciende cuando el cursor anda cerca y la apaga al alejarse. */
+html.scene-off .auth-aside::after{content:"";position:absolute;inset:0;padding:1.5px;pointer-events:none;opacity:var(--go, 0);transition:opacity .45s ease;
+  background:radial-gradient(280px circle at var(--gx, -400px) var(--gy, -400px), hsl(0 0% 100% / .62), transparent 72%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);}
+html.scene-off .auth-desk::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:var(--go, 0);transition:opacity .45s ease;background:radial-gradient(340px circle at var(--gx, -400px) var(--gy, -400px), hsl(0 0% 100% / .075), transparent 70%);}
+
+/* Profundidad en el agua: tres motas a distinta distancia (la grande y borrosa, cerca; la
+   pequeña y nítida, lejos), que derivan muy despacio y se desplazan un poco al contrario que
+   el cursor, las de cerca más (--px y --py, de -1 a 1, que pone AuthView). Van con
+   `translate`, que se suma al transform con el que derivan. */
+.auth-ink-mote{position:absolute;left:17%;top:26%;width:9px;height:9px;border-radius:50%;background:hsl(var(--water) / .55);filter:blur(1.5px);opacity:.5;translate:calc(var(--px, 0) * -16px) calc(var(--py, 0) * -11px);transition:translate 1s cubic-bezier(.2,.7,.2,1);will-change:transform;}
+.auth-ink-mote.is-2{left:74%;top:15%;width:24px;height:24px;filter:blur(6px);opacity:.34;translate:calc(var(--px, 0) * -38px) calc(var(--py, 0) * -26px);}
+.auth-ink-mote.is-3{left:57%;top:80%;width:5px;height:5px;filter:blur(.6px);opacity:.6;translate:calc(var(--px, 0) * -6px) calc(var(--py, 0) * -4px);}
+@media (prefers-reduced-motion: no-preference){
+  .auth-ink-mote{animation:ink-mote 21s ease-in-out infinite alternate;}
+  .auth-ink-mote.is-2{animation-duration:29s;animation-direction:alternate-reverse;}
+  .auth-ink-mote.is-3{animation-duration:17s;animation-delay:-6s;}
+}
+@keyframes ink-mote{from{transform:translate3d(0, 0, 0);}to{transform:translate3d(28px, -36px, 0);}}
+
+/* Dormido (AuthView): se para todo lo del agua menos el propio Sumi, que sigue meciéndose. */
+.auth-ink.is-asleep > :not(.auth-swimmer),.auth-ink.is-asleep .auth-ink-bubbles i{animation-play-state:paused !important;}
+
+/* La tarjeta del acceso, un punto de cristal sin dejar de ser opaca (el texto se tiene que
+   leer igual): una luz muy leve arriba a la izquierda, un filo fino con degradado alrededor
+   de toda la tarjeta (de luz arriba a la izquierda a un toque de agua abajo a la derecha) y
+   una sombra más blanda. En el móvil, lo mismo. */
+html.scene-off .auth-shell{position:relative;box-shadow:0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent), 0 36px 72px -32px hsl(222 60% 8% / .55), 0 4px 12px -6px hsl(222 60% 8% / .22);}
+html.scene-off .auth-shell::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(140deg, hsl(0 0% 100% / .36), hsl(0 0% 100% / .05) 32%, hsl(0 0% 100% / .02) 64%, hsl(var(--water, 199 92% 56%) / .30));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);}
+html.scene-off .auth-card{background:linear-gradient(166deg, color-mix(in srgb, #fff 4.5%, var(--surface-solid)), var(--surface-solid) 44%);}
+@media (max-width: 860px), (hover: none) and (pointer: coarse){
+  .auth-shell{position:relative;box-shadow:0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent), 0 30px 60px -30px hsl(222 60% 8% / .55), 0 4px 12px -6px hsl(222 60% 8% / .22);}
+  .auth-shell::after{content:"";position:absolute;inset:0;z-index:3;border-radius:inherit;padding:1px;pointer-events:none;
+    background:linear-gradient(140deg, hsl(0 0% 100% / .36), hsl(0 0% 100% / .05) 32%, hsl(0 0% 100% / .02) 64%, hsl(199 92% 56% / .30));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);}
+  .auth-card{background:linear-gradient(166deg, color-mix(in srgb, #fff 4.5%, var(--surface-solid)), var(--surface-solid) 44%);}
+}
+
+/* El botón de entrar, mientras espera la respuesta: en vez de los tres carriles, unas burbujas
+   que suben por dentro del botón (no se salen de él). Con «reducir movimiento» se quedan los
+   carriles. Las burbujas son dos piezas con varias copias cada una (las sombras). */
+.auth-submit{position:relative;overflow:hidden;}
+@media (prefers-reduced-motion: no-preference){
+  .auth-submit.is-busy > .auth-spin{display:none;}
+  .auth-submit.is-busy::before,.auth-submit.is-busy::after{content:"";position:absolute;left:14%;bottom:-9px;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0;pointer-events:none;
+    box-shadow:52px 9px 0 -1px currentColor, 118px 3px 0 0 currentColor, 186px 12px 0 -1.5px currentColor, 244px 5px 0 -.5px currentColor;animation:auth-bubbles 1.5s ease-in infinite;}
+  .auth-submit.is-busy::after{left:22%;width:4px;height:4px;box-shadow:70px 14px 0 .5px currentColor, 150px 7px 0 0 currentColor, 214px 16px 0 1px currentColor;animation-duration:1.9s;animation-delay:-.8s;}
+}
+@keyframes auth-bubbles{0%{transform:translateY(0);opacity:0;}18%{opacity:.3;}100%{transform:translateY(-62px);opacity:0;}}
+
 /* El tablero (AuthView.playDesk): la tarjeta que cambia de columna va por encima de las demás;
    al pegarse al cristal o llegar a «Hecho» suelta un anillo, y el punto de la columna a la que
    llega parpadea (no crece: su rótulo lo recortaría). */

@@ -312,6 +312,12 @@
       const geo = sumi.geometry(false);
       const arms = geo.arms.map((a, i) => ({node:el.querySelector('.sumi-arm-' + i), x:a[0] + a[1] / 2, len:(a[2] - geo.top) * 1.45 - 8, ox:0, oy:0, vx:0, vy:0, w:1.3 + i * 0.37, ph:i * 2.1}));
       let reach = 0, reachTo = 0;
+      /* El saludo: cuánto tiene levantado el brazo derecho (0, colgando; 1, arriba). No se usa
+         el gesto de siempre (sumi.css, .is-wave), que gira el brazo entero sobre su raíz: con
+         los brazos sueltos, al girar se le abría una muesca en la unión con el cuerpo (lo vio el
+         dueño). Aquí el brazo sigue saliendo recto del cuerpo y lo que sube es su curva. */
+      let hand = 0, handTo = 0;
+      const wave = (ms) => { handTo = 1; this.deskTimers.push(setTimeout(() => { handTo = 0; }, ms)); };
       /* Lo que lleva colgado y cuánto se balancea. */
       let held = null, swing = 0, swingV = 0;
       /* Burbujas sueltas en ese punto, que suben y se deshacen. */
@@ -394,6 +400,7 @@
         const c = Math.cos(-body.rot / 57.3), s = Math.sin(-body.rot / 57.3);
         const lx = (body.vx * c - body.vy * s) * unit, ly = (body.vx * s + body.vy * c) * unit;
         reach += (reachTo - reach) * Math.min(1, dt * 18);
+        hand += (handTo - hand) * Math.min(1, dt * 9);
         arms.forEach((a, i) => {
           const tx = clamp(-lx * 0.05, -5, 5) + Math.sin(body.t * a.w + a.ph) * 1.8 + (i - 1) * spread;
           const ty = clamp(-ly * 0.04, -3, 6) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.8 + curl;
@@ -402,7 +409,15 @@
           /* Sale recta del cuerpo hasta pasada su raíz (que no se vea corte en la unión) y de
              ahí para abajo se curva hasta la punta. */
           const len = Math.max(6, a.len + a.oy + (i === 1 ? reach : 0)), y = geo.top + 8;
-          a.node.setAttribute('d', 'M' + a.x + ' ' + geo.top + 'V' + y + 'C' + a.x + ' ' + (y + len * 0.42).toFixed(2) + ' ' + (a.x + a.ox * 0.5).toFixed(2) + ' ' + (y + len * 0.74).toFixed(2) + ' ' + (a.x + a.ox).toFixed(2) + ' ' + (y + len).toFixed(2));
+          /* Los tres puntos de la curva: colgando y, el derecho al saludar, hacia fuera y arriba,
+             agitando la punta. Se pasa de una forma a otra poco a poco (hand). */
+          let p = [a.x, y + len * 0.42, a.x + a.ox * 0.5, y + len * 0.74, a.x + a.ox, y + len];
+          if(i === 2 && hand > 0.01){
+            const wag = Math.sin(body.t * 10) * 3.2;
+            const up = [a.x + 2, y + 11, a.x + 15 + wag * 0.4, y + 15, a.x + 20 + wag, y + 2 + Math.abs(wag) * 0.4];
+            p = p.map((v, n) => v + (up[n] - v) * hand);
+          }
+          a.node.setAttribute('d', 'M' + a.x + ' ' + geo.top + 'V' + y + 'C' + p.map((v) => v.toFixed(2)).join(' '));
         });
         /* Lo que lleva colgado se balancea: un péndulo que tira hacia atrás de donde va. */
         if(held){
@@ -577,7 +592,7 @@
           if(!alive()) return;
           look(null);
           mood('contento');
-          sumi.play(el, 'wave');
+          wave(1500);
           await wait(1500);
           mood('normal');
           return;
@@ -670,7 +685,7 @@
           await swim(at[0], at[1]);
           if(!alive()) return;
           eye();
-          sumi.play(el, 'wave');
+          wave(1500);
         })();
         return;
       }

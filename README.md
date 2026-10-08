@@ -30,7 +30,7 @@
 ## Qué puedes hacer
 
 ### Organizar el trabajo
-- **Tableros kanban por proyecto.** Arrastra las tareas entre etapas, o míralas en lista, con filtros rápidos por cliente, por lo que vence esta semana y por lo que tienes asignado. Elige un tipo de proyecto (soporte, desarrollo, kanban con revisión) o define tus propias etapas, con color, orden y límite de tarjetas por columna.
+- **Tableros kanban por proyecto.** Arrastra las tareas entre etapas, ordena una columna por fecha límite, título o fecha de creación, o míralas en lista, con filtros rápidos por cliente, por lo que vence esta semana y por lo que tienes asignado. Elige un tipo de proyecto (soporte, desarrollo, kanban con revisión) o define tus propias etapas, con color, orden y límite de tarjetas por columna.
 - **Archivo.** Archiva tareas o columnas enteras en vez de borrarlas: salen del tablero, se conservan con todo lo que tenían y se restauran desde «Archivados». Eliminar sigue siendo una acción aparte.
 - **Duplicar.** Duplica una tarea o una columna entera con sus tarjetas. Las copias conservan subtareas, etiquetas y personas asignadas, y son independientes de la original.
 - **Menciones, seguir y avisos.** En los equipos, `@Nombre` en un comentario avisa a esa persona, «Seguir» una tarea te avisa de sus comentarios y movimientos, y las asignaciones también avisan: como notificaciones del sistema aunque Kanlane esté cerrado, si las activas en Ajustes.
@@ -186,7 +186,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 ## What you can do
 
 ### Organize your work
-- **Kanban boards per project.** Drag tasks between stages, or view them as a list, with quick filters by client, by what is due this week and by what is assigned to you. Pick a project type (support, development, kanban with review) or define your own stages, with colors, order and per-column card limits.
+- **Kanban boards per project.** Drag tasks between stages, sort a column by due date, title or date created, or view them as a list, with quick filters by client, by what is due this week and by what is assigned to you. Pick a project type (support, development, kanban with review) or define your own stages, with colors, order and per-column card limits.
 - **Archive.** Archive tasks or whole columns instead of deleting them: they leave the board, keep everything they had and can be restored from "Archived". Deleting is still a separate action.
 - **Duplicate.** Duplicate a task or a whole column with its cards. Copies keep subtasks, labels and assigned people, and are independent of the original.
 - **Mentions, following and notifications.** In teams, `@Name` in a comment notifies that person, following a task notifies you of its comments and moves, and assignments notify too: as system notifications even when Kanlane is closed, if you turn them on in Settings.

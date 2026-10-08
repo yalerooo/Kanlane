@@ -453,6 +453,7 @@
         move: (status, dir) => this.moveColumn(status, dir),
         duplicate: (status) => this.duplicateColumn(status),
         archive: (status) => this.archiveColumn(status),
+        sort: (status, by) => this.sortColumn(status, by),
         archiveAll: (status) => this.archiveTasks(this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).map((t) => t.id)),
         remove: (status) => this.removeColumn(status),
         removeAll: (status) => this.removeAllTasks(status)
@@ -473,6 +474,15 @@
       });
       this.board.bindShowHidden(() => this.setHiddenColumns([]));
       this.board.bindColumnMove((status, before) => this.reorderColumn(status, before));
+    }
+
+    /* Ordena las tarjetas de una columna una vez (by: 'due' | 'title' | 'created'); después se
+       puede seguir arrastrando. */
+    sortColumn(status, by){
+      if(!this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      const before = this.tasks.sortColumn(status, by);
+      if(!before){ toast.success('La columna ya estaba en ese orden', {important:true}); return; }
+      toast.undoable('Columna ordenada', () => { this.tasks.setOrders(before); return Promise.resolve(); }, 'Orden anterior restaurado');
     }
 
     moveColumn(status, dir){

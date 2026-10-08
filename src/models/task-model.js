@@ -469,6 +469,39 @@
       moved();
     }
 
+    /* Ordena las tarjetas de una columna por 'due' (fecha y hora límite; sin fecha, al final),
+       'title' o 'created' (las más antiguas primero). Se ordena una vez: reescribe el orden
+       manual y después se puede seguir arrastrando. En los empates manda el orden que había.
+       Devuelve el orden anterior ([{id, order}], para setOrders) o null si ya estaba así. */
+    sortColumn(status, by){
+      if(!this.isReady()) return null;
+      const column = this.inStatus(status);
+      const locale = Workhub.i18n ? Workhub.i18n.locale : undefined;
+      const due = (t) => (t.dueDate ? t.dueDate + ' ' + (t.dueTime || '24:00') : '~');
+      const compare = by === 'due' ? (a, b) => (due(a) < due(b) ? -1 : due(a) > due(b) ? 1 : 0)
+        : by === 'title' ? (a, b) => String(a.title || '').localeCompare(String(b.title || ''), locale, {numeric:true, sensitivity:'base'})
+        : by === 'created' ? (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
+        : null;
+      if(!compare) return null;
+      const sorted = column.slice().sort((a, b) => compare(a, b) || column.indexOf(a) - column.indexOf(b));
+      if(sorted.every((t, i) => t === column[i])) return null;
+      const before = column.map((t) => ({id:t.id, order:TaskModel.orderOf(t)}));
+      this.setOrders(sorted.map((t, i) => ({id:t.id, order:(i + 1) * ORDER_STEP})));
+      return before;
+    }
+
+    /* Escribe el orden manual de varias tareas: [{id, order}]. */
+    setOrders(list){
+      if(!this.isReady()) return;
+      list.forEach((x) => {
+        const t = this.find(x.id);
+        if(!t || t.order === x.order) return;
+        t.order = x.order;
+        this.update(x.id, {order:x.order}).catch(() => {});
+      });
+      this.emit('change');
+    }
+
     reschedule(id, dueDate){
       const t = this.find(id);
       if(!t || t.dueDate === dueDate || !this.isReady()) return;

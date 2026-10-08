@@ -14,6 +14,7 @@
     trash: svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'),
     archive: svg('<path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/>'),
     copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'),
+    sort: svg('<path d="M3 6h11M3 12h8M3 18h5M18 5v14M14.5 15.5 18 19l3.5-3.5"/>'),
     left: svg('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
     right: svg('<path d="M5 12h14M12 5l7 7-7 7"/>')
   };
@@ -61,7 +62,7 @@
 
     /* ---------- Menú ---------- */
 
-    /* handlers: {edit(status, field), hide, duplicate, archive, archiveAll, removeAll, remove, move(status, dir)} */
+    /* handlers: {edit(status, field), hide, duplicate, archive, sort(status, by), archiveAll, removeAll, remove, move(status, dir)} */
     bindMenu(handlers){
       this.menu.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-act]');
@@ -74,6 +75,7 @@
         else if(act === 'hide') handlers.hide(status);
         else if(act === 'duplicate') handlers.duplicate(status);
         else if(act === 'archive') handlers.archive(status);
+        else if(act === 'sort') handlers.sort(status, b.getAttribute('data-by'));
         else if(act === 'archiveAll') handlers.archiveAll(status);
         else if(act === 'removeAll') handlers.removeAll(status);
         else if(act === 'remove') handlers.remove(status);
@@ -89,7 +91,7 @@
       this.trigger = btn;
       const item = (act, icon, label, opts) => {
         const o = opts || {};
-        return '<button type="button" class="dd-option' + (o.danger ? ' is-danger' : '') + '" role="menuitem" data-act="' + act + '"' + (o.disabled ? ' disabled' : '') + (o.title ? ' title="' + esc(o.title) + '"' : '') + '>' +
+        return '<button type="button" class="dd-option' + (o.danger ? ' is-danger' : '') + '" role="menuitem" data-act="' + act + '"' + (o.by ? ' data-by="' + o.by + '"' : '') + (o.disabled ? ' disabled' : '') + (o.title ? ' title="' + esc(o.title) + '"' : '') + '>' +
           icon + '<span class="dd-text">' + label + '</span></button>';
       };
       this.menu.innerHTML =
@@ -100,6 +102,10 @@
         item('duplicate', ICONS.copy, 'Duplicar columna', {disabled: !info.canDuplicate}) +
         item('archive', ICONS.archive, 'Archivar columna', {disabled: !info.canArchive, title: info.canArchive ? '' : info.archiveWhy}) +
         item('remove', ICONS.trash, 'Eliminar columna', {danger:true, disabled: !info.canRemove}) +
+        '<div class="dd-sep"></div><p class="project-menu-label">Ordenar por</p>' +
+        item('sort', ICONS.sort, 'Fecha límite', {by:'due', disabled: info.tasks < 2}) +
+        item('sort', ICONS.sort, 'Título', {by:'title', disabled: info.tasks < 2}) +
+        item('sort', ICONS.sort, 'Fecha de creación', {by:'created', disabled: info.tasks < 2}) +
         '<div class="dd-sep"></div><p class="project-menu-label">Tarjetas</p>' +
         item('archiveAll', ICONS.archive, 'Archivar todas', {disabled: !info.tasks}) +
         item('removeAll', ICONS.trash, 'Eliminar todas', {danger:true, disabled: !info.tasks}) +

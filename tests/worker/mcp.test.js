@@ -131,6 +131,26 @@ const STAGES = [{key: 'todo', label: 'Por hacer'}, {key: 'doing', label: 'En cur
     assert.deepEqual([one.tasks.length, one.truncated], [1, true]);
   });
 
+  await test('lo archivado en la app (una tarea o una columna entera) no se lista ni se mueve', async () => {
+    const w = world();
+    const token = await personal(w);
+    w.store.put(ROOT + '/tasks/x', task({title: 'Archivada', order: 15, archivedAt: NOW - 1000}));
+    assert.deepEqual((await w.call(token, 'list_tasks', {include_done: true})).tasks.map((t) => t.id), ['a', 'b', 'c']);
+    assert.deepEqual((await w.call(token, 'list_tasks', {column: 'todo'})).tasks.map((t) => t.id), ['a']);
+    assert.equal((await w.call(token, 'get_task', {id: 'x'})).archived, true, 'leerla sí, y dice que está archivada');
+    assert.equal((await w.call(token, 'get_task', {id: 'a'})).archived, undefined);
+    assert.match((await w.call(token, 'move_task', {id: 'x', column: 'done'})).error, /archived/);
+    assert.equal(w.store.data(ROOT + '/tasks/x').status, 'todo', 'no se ha movido');
+    /* La columna «En curso» archivada: deja de ser una columna y sus tareas no caen en la primera. */
+    w.store.put(ROOT, {nombre: 'Personal', tipo: 'personalizado', stages: [STAGES[0], Object.assign({archived: true}, STAGES[1]), STAGES[2]]});
+    const open = await w.call(token, 'list_tasks', {include_done: true});
+    assert.deepEqual(open.columns.map((c) => c.key), ['todo', 'done']);
+    assert.deepEqual(open.tasks.map((t) => t.id), ['a', 'c']);
+    assert.match((await w.call(token, 'list_tasks', {column: 'En curso'})).error, /Unknown column/);
+    assert.match((await w.call(token, 'move_task', {id: 'b', column: 'done'})).error, /archived/);
+    assert.match((await w.call(token, 'move_task', {id: 'a', column: 'doing'})).error, /Unknown column/, 'tampoco se mueve nada a una columna archivada');
+  });
+
   await test('get_task: la tarea entera con sus notas, de la más antigua a la más reciente', async () => {
     const w = world();
     const token = await personal(w);

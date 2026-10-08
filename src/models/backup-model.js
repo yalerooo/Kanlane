@@ -159,6 +159,8 @@
         if(CF.validDate(t.startDate) && (!t.dueDate || t.startDate <= t.dueDate)) extra.startDate = t.startDate;
         const custom = CF.values(fields, t.custom);
         if(Object.keys(custom).length) extra.custom = custom;
+        /* Una tarea archivada sigue archivada al importarla. */
+        if(+t.archivedAt > 0) extra.archivedAt = +t.archivedAt;
         /* linkedContacts/linkedVault no se importan: guardan ids de documentos
            que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
         counts.tasks++;

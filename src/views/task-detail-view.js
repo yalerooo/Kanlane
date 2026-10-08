@@ -63,6 +63,7 @@
       this.estado = $('tvEstado');
       this.btnClose = $('btnTvClose');
       this.btnEdit = $('btnTvEdit');
+      this.btnArchive = $('btnTvArchive');
       this.btnDone = $('btnTvDone');
       this.stamp = $('tvStamp');
       this.taskId = null;
@@ -175,6 +176,9 @@
     }
 
     bindEdit(handler){ this.btnEdit.addEventListener('click', () => handler(this.taskId)); }
+
+    /* «Archivar tarea»: sale del tablero y se puede restaurar desde Archivados. */
+    bindArchive(handler){ this.btnArchive.addEventListener('click', () => { if(this.taskId) handler(this.taskId); }); }
 
     /* «Marcar como completada»: pasa la tarea a la primera etapa final (como elegirla en Estado). */
     bindDone(handler){

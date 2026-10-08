@@ -77,6 +77,7 @@
   const tr = (text) => (Workhub.t ? Workhub.t(text) : text);
 
   const copyStages = (list) => list.map((s) => ({key:s.key, label:s.label, color:s.color, done:!!s.done}));
+  const isActive = (s) => !s.archived;
 
   const ProjectTemplates = {
     DEFAULT_TYPE: DEFAULT_TYPE,
@@ -106,7 +107,8 @@
     },
 
     /* Limpia lo que escribe el usuario: etiquetas recortadas, claves únicas,
-       color válido y al menos una etapa que cuente como terminada. */
+       color válido y al menos una etapa que cuente como terminada. Las columnas
+       archivadas (archived) se conservan en su sitio, pero no cuentan para eso. */
     normalizeStages(list){
       const seen = {};
       const out = [];
@@ -124,23 +126,38 @@
         /* Límite de tarjetas de la columna: entero de 1 a 999; sin él, sin límite. */
         const limit = Math.floor(+s.limit);
         if(limit >= 1 && limit <= 999) stage.limit = limit;
+        if(s.archived) stage.archived = true;
         out.push(stage);
       });
-      if(out.length && !out.some((s) => s.done)) out[out.length - 1].done = true;
+      const active = out.filter(isActive);
+      if(active.length && !active.some((s) => s.done)) active[active.length - 1].done = true;
       return out;
     },
 
-    /* Configuración efectiva de un proyecto: {tipo, stages, clients}. */
+    /* Todas las etapas guardadas de un proyecto, archivadas incluidas y en su orden (copia
+       editable). resolve() las separa: lo que se ve en el tablero y lo archivado. */
+    allStages(project){
+      const tipo = project && project.tipo ? project.tipo : DEFAULT_TYPE;
+      if(tipo === CUSTOM_TYPE){
+        const stages = ProjectTemplates.normalizeStages(project.stages);
+        if(stages.filter(isActive).length >= MIN_STAGES) return stages;
+      }
+      return ProjectTemplates.stagesOf(tipo === CUSTOM_TYPE ? CUSTOM_TYPE : tipo);
+    },
+
+    /* Configuración efectiva de un proyecto: {tipo, stages, clients, archived}. stages son las
+       columnas del tablero; archived, las archivadas (no se ven hasta que se restauran). */
     resolve(project){
       const tipo = project && project.tipo ? project.tipo : DEFAULT_TYPE;
       if(tipo === CUSTOM_TYPE){
         const stages = ProjectTemplates.normalizeStages(project.stages);
-        if(stages.length >= MIN_STAGES){
-          return {tipo:tipo, stages:stages, clients:!!project.clients};
+        const active = stages.filter(isActive);
+        if(active.length >= MIN_STAGES){
+          return {tipo:tipo, stages:active, clients:!!project.clients, archived:stages.filter((s) => s.archived)};
         }
       }
       const t = ProjectTemplates.template(tipo === CUSTOM_TYPE ? CUSTOM_TYPE : tipo);
-      return {tipo:t.key, stages:copyStages(t.stages), clients:t.clients};
+      return {tipo:t.key, stages:copyStages(t.stages), clients:t.clients, archived:[]};
     },
 
     /* Campos que se guardan en el documento del proyecto. */

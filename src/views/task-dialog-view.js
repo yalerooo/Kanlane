@@ -46,6 +46,7 @@
       this.cliente = new Workhub.views.ClientSelect('f');
       this.btnCancel = $('btnCancel');
       this.btnDelete = $('btnDelete');
+      this.btnArchive = $('btnArchiveTask');
 
       this.notesSection = $('taskNotesSection');
       this.notesList = $('taskNotesList');
@@ -261,6 +262,10 @@
 
     bindDelete(handler){
       this.btnDelete.addEventListener('click', () => handler(this.fields.id.value));
+    }
+
+    bindArchive(handler){
+      this.btnArchive.addEventListener('click', () => handler(this.fields.id.value));
     }
 
     bindAddNote(handler){
@@ -480,6 +485,7 @@
       this.linksSection.hidden = true;
       this.linksSection2.hidden = true;
       this.btnDelete.hidden = true;
+      this.btnArchive.hidden = true;
       this.dlg.showModal();
     }
 
@@ -509,6 +515,7 @@
       this._renderLabels();
       this.cliente.reset(clientNames, t.cliente || '');
       this.btnDelete.hidden = false;
+      this.btnArchive.hidden = false;
       this.notesSection.hidden = false;
       this.notesList.innerHTML = 'Cargando notas…';
       this.linksSection.hidden = false;

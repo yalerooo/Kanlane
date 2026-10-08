@@ -62,6 +62,17 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
     return this.items.find((x) => x.id === id);
   }
 
+  /* Todos los documentos de la colección. Es `items`, salvo en un modelo que aparte algunos de
+     lo que enseña (las tareas archivadas): lo que se copia, se borra o se renombra en bloque
+     tiene que contar también con ellos. */
+  everything(){
+    return this.items;
+  }
+
+  findAny(id){
+    return this.everything().find((x) => x.id === id);
+  }
+
   doc(id){
     return this.col.doc(id);
   }
@@ -94,7 +105,7 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
   idsWhere(field, value){
     if(this.cipher && !Workhub.models.EncSchema.isClear(this.name, field)){
       if(!this.loaded) return Promise.reject(Workhub.models.ProjectCipher.error('not-ready'));
-      return Promise.resolve(this.items.filter((x) => !x._undecryptable && x[field] === value).map((x) => x.id));
+      return Promise.resolve(this.everything().filter((x) => !x._undecryptable && x[field] === value).map((x) => x.id));
     }
     return this.col.where(field, '==', value).get().then((snap) => snap.docs.map((d) => d.id));
   }
@@ -113,7 +124,7 @@ Workhub.models.CollectionModel = class CollectionModel extends Workhub.Emitter {
   /* Copia de documentos para poder devolverlos con restore() (deshacer un borrado).
      Guarda la colección de ahora: si se cambia de proyecto entre medias, no restaura. */
   snapshot(ids){
-    const items = (Array.isArray(ids) ? ids : [ids]).map((id) => this.find(id)).filter(Boolean).map((x) => {
+    const items = (Array.isArray(ids) ? ids : [ids]).map((id) => this.findAny(id)).filter(Boolean).map((x) => {
       const copy = Object.assign({}, x);
       /* Lo que no se pudo descifrar se devuelve tal cual estaba guardado. */
       if(this.cipher && x._undecryptable && this._plain[x.id]) copy._raw = this._plain[x.id].raw;

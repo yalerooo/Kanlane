@@ -64,7 +64,7 @@ asistente → POST https://kanlane.com/__/mcp/v1   (Authorization: Bearer kl_…
 
 Detalles que conviene saber:
 
-- **Columnas.** Son las del proyecto, no tres estados fijos. El asistente puede nombrarlas por su clave o por su nombre, sin distinguir mayúsculas. Una tarea cuyo estado ya no existe aparece en la primera columna, como en la app.
+- **Columnas.** Son las del proyecto, no tres estados fijos. El asistente puede nombrarlas por su clave o por su nombre, sin distinguir mayúsculas. Las tareas y las columnas archivadas en la aplicación no se listan; `get_task` devuelve una tarea archivada con `archived: true` y `move_task` no la mueve hasta que se restaure. Una tarea cuyo estado ya no existe aparece en la primera columna, como en la app.
 - **Firma.** Lo que hace un token se nota: la actividad dice «Movida de «Por hacer» a «En curso» por Ana · MCP (token «Portátil»).» y las notas llevan de autor «Ana · MCP» (en un proyecto personal, «MCP»).
 - **Si la tarea cambia mientras tanto**, `move_task` no la pisa: Firestore rechaza la escritura y el asistente recibe el aviso de que vuelva a leerla.
 - **Tareas que se repiten.** Al completar una (moverla a una columna de «hechas»), se crea la siguiente en la misma escritura, igual que hace la app, y una sola vez por tarea.

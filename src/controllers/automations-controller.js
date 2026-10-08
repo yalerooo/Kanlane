@@ -236,7 +236,9 @@
         v: 1,
         tz: tz,
         rules: active.filter((r) => ['due', 'moved', 'completed'].indexOf(r.trigger.type) !== -1),
-        ctx: {stages:ctx.stages.map((s) => ({key:s.key, label:s.raw, done:!!s.done})), labels:ctx.labels, members:ctx.members, team:ctx.team}
+        /* Las columnas archivadas van marcadas: el servidor no toca sus tareas. */
+        ctx: {stages:ctx.stages.map((s) => ({key:s.key, label:s.raw, done:!!s.done}))
+          .concat(TaskModel.ARCHIVED.map((s) => ({key:s.key, label:s.raw, done:!!s.done, archived:true}))), labels:ctx.labels, members:ctx.members, team:ctx.team}
       };
     }
 

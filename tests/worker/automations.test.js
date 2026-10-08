@@ -128,6 +128,19 @@ const notesOf = (s) => s.commits.flat().filter((w) => w.create && w.path.indexOf
     assert.deepEqual(s.tasks[0].data.labels, []);
   });
 
+  await test('las tareas archivadas, y las de una columna archivada, no se tocan', async () => {
+    const s = fakeStore([
+      {id:'cerca', data:{title:'A', status:'todo', dueDate:'2026-10-08', labels:[]}},
+      {id:'archivada', data:{title:'B', status:'todo', dueDate:'2026-10-08', labels:[], archivedAt:NOW - 1000}},
+      {id:'columna', data:{title:'C', status:'vieja', dueDate:'2026-10-08', labels:[]}}
+    ]);
+    const j = job();
+    j.ctx = Object.assign({}, j.ctx, {stages:j.ctx.stages.concat({key:'vieja', label:'Vieja', done:false, archived:true})});
+    assert.deepEqual(await M.runJob('u~ana~main', j, s, NOW), {status:'ok', ran:1, warns:[]});
+    assert.deepEqual(s.tasks.map((t) => t.data.labels), [['Urgente'], [], []]);
+    assert.deepEqual(notesOf(s).map((n) => n[0]), ['cerca']);
+  });
+
   await test('respeta las marcas que dejó un navegador y las de otras reglas', async () => {
     const s = fakeStore([{id:'t', data:{status:'todo', dueDate:'2026-10-07', labels:[]}}], {values:{fired:JSON.stringify({'d:t':'2026-10-07', 'otra:x':'2026-01-01'})}, updatedAt:5});
     assert.equal((await M.runJob('u~ana~main', job(), s, NOW)).status, 'idle');

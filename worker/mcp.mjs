@@ -258,6 +258,10 @@ export function nextDue(dueDate, repeat, today, day) {
 /* Una tarea cuyo estado ya no existe cae en la primera columna, como en la app. */
 const stageOf = (stages, t) => stages.find((s) => s.key === t.status) || stages[0];
 
+/* Archivada en la app (ella o su columna): no está en el tablero, así que tampoco se lista ni se mueve. */
+const isArchived = (project, t) => +t.archivedAt > 0 || list(project.archived).indexOf(t.status) !== -1;
+const ARCHIVED = 'This task is archived. Restore it in Kanlane (Tasks, Archived) before changing it.';
+
 /* La columna que pide el asistente: por su clave o por su nombre (sin distinguir mayúsculas). */
 function findStage(stages, wanted) {
   const w = String(wanted == null ? '' : wanted).trim();
@@ -347,7 +351,8 @@ async function listTasks(who, args, store) {
   }
   const rows = await store.list(who.project.root, 'tasks', SCAN_MAX, filter);
   const index = (t) => stages.indexOf(stageOf(stages, t));
-  const mine = rows.filter((r) => { const s = stageOf(stages, r.data); return wanted ? s === wanted : withDone || !s.done; })
+  const mine = rows.filter((r) => !isArchived(who.project, r.data))
+    .filter((r) => { const s = stageOf(stages, r.data); return wanted ? s === wanted : withDone || !s.done; })
     .sort((a, b) => index(a.data) - index(b.data) || orderOf(a.data) - orderOf(b.data));
   return ok({project: String(who.project.doc.nombre || ''), columns: columnsOf(stages), tasks: mine.slice(0, limit).map((r) => summary(stages, r.id, r.data)),
     truncated: mine.length > limit || rows.length >= SCAN_MAX});
@@ -360,6 +365,7 @@ async function getTask(who, args, store) {
   if (!t) return fail('Task not found.');
   const notes = await store.list(path, 'notes', NOTES_MAX, null, {field: 'createdAt', desc: true});
   const out = summary(who.project.stages, args.id, t);
+  if (isArchived(who.project, t)) out.archived = true;
   out.description = String(t.desc || '');
   if (t.contacto) out.contact = String(t.contacto);
   if (t.startDate) out.start_date = String(t.startDate);
@@ -386,6 +392,7 @@ async function moveTask(who, args, store, now) {
   const snap = await store.getDoc(path);
   if (!snap) return fail('Task not found.');
   const t = snap.data;
+  if (isArchived(who.project, t)) return fail(ARCHIVED);
   const from = stageOf(stages, t);
   if (from === to && t.status === to.key) return ok({moved: false, message: 'The task is already in that column.', task: summary(stages, args.id, t)});
   const w = await writer(who, store, now);

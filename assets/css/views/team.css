@@ -11,6 +11,7 @@ body.is-readonly .col-add,
 body.is-readonly .col-new,
 body.is-readonly #btnTvDone,
 body.is-readonly #btnTvEdit,
+body.is-readonly #btnTvArchive,
 body.is-readonly .tv-status-edit{display:none !important;}
 
 /* Avatares de miembros */

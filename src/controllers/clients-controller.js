@@ -275,7 +275,7 @@
       if(!client || !this.clients.isReady() || !this.tasks.isReady() || this.busy) return;
       this.setBusy('Eliminando…');
       const name = client.nombre;
-      const taskSnap = this.tasks.snapshot(this.tasks.items.filter((t) => t.cliente === name).map((t) => t.id));
+      const taskSnap = this.tasks.snapshot(this.tasks.everything().filter((t) => t.cliente === name).map((t) => t.id));
       const clientSnap = this.clients.snapshot(client.id);
       this.clients.removeWithTasks(client.id, this.tasks, this.progress('Eliminando… {n} de {total}')).then(() => {
         toast.undoable('Cliente «' + name + '» eliminado', () => this.clients.restore(clientSnap).then(() => this.tasks.restore(taskSnap)), 'Cliente «' + name + '» restaurado');

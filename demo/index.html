@@ -108,6 +108,7 @@
         </div>
       </div>
       <button type="button" class="icon-only" id="btnTaskSelect" aria-label="Seleccionar tareas" title="Seleccionar varias tareas" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.8 2.8L16 9.5"/></svg></button>
+      <button type="button" class="icon-only" id="btnArchive" aria-label="Archivados" title="Tareas y columnas archivadas" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/></svg></button>
       <button type="button" class="icon-only" id="btnAutomations" aria-label="Automatizaciones" title="Automatizaciones" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
       <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
     </div>
@@ -128,6 +129,7 @@
         <span class="select-hint">Pulsa las tareas para marcarlas.</span>
         <span class="bar-push" aria-hidden="true"></span>
         <button type="button" class="btn btn-ghost btn-sm" id="btnSelectAll">Seleccionar todas</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnSelectArchive" disabled>Archivar</button>
         <button type="button" class="btn btn-danger btn-sm" id="btnSelectDelete" disabled>Eliminar</button>
         <button type="button" class="btn btn-ghost btn-sm" id="btnSelectCancel">Cancelar</button>
       </div>
@@ -149,6 +151,7 @@
     </div>
     <div class="tv-head-actions">
       <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
+      <button type="button" class="icon-only" id="btnTvArchive" aria-label="Archivar tarea" title="Archivar tarea"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/></svg></button>
       <button type="button" class="btn btn-ghost btn-sm" id="btnTvEdit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
       <button type="button" class="icon-only tv-close" id="btnTvClose" data-dismiss aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>

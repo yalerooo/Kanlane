@@ -5,6 +5,10 @@
   /* Etapas del proyecto abierto. Es un único array que se rellena en el sitio
      (setStages), así todos los que lo leen ven siempre las etapas actuales. */
   const STATUS = [];
+  /* Columnas archivadas del proyecto abierto: no están en el tablero y sus tareas tampoco. */
+  const ARCHIVED = [];
+  /* Sube cuando cambian las columnas: lo que cada modelo tiene por archivado se vuelve a calcular. */
+  let stagesRev = 0;
 
   const stageView = (s) => {
     const c = Workhub.models.ProjectTemplates.colorOf(s.color);
@@ -62,10 +66,100 @@
       super('tasks');
     }
 
-    /* Cambia las etapas del tablero (al abrir otro proyecto o editar el actual). */
-    static setStages(stages){
+    /* Cambia las etapas del tablero (al abrir otro proyecto o editar el actual).
+       archived (opcional): las columnas archivadas. */
+    static setStages(stages, archived){
       STATUS.length = 0;
       stages.forEach((s) => STATUS.push(stageView(s)));
+      ARCHIVED.length = 0;
+      (archived || []).forEach((s) => ARCHIVED.push(stageView(s)));
+      stagesRev++;
+    }
+
+    /* Archivada: ella misma (archivedAt, cuándo) o porque lo está su columna. No sale en el
+       tablero ni en el resto de la aplicación hasta que se restaura; no se borra nada. */
+    static isArchived(t){
+      return !!t && (+t.archivedAt > 0 || ARCHIVED.some((s) => s.key === t.status));
+    }
+
+    /* `items` son las tareas a la vista: lo que leen el tablero, el calendario, los avisos, los
+       plugins… Las archivadas siguen en la colección (everything, archivedItems). */
+    get items(){
+      if(this._activeOf !== this._all || this._activeRev !== stagesRev){
+        this._active = (this._all || []).filter((t) => !TaskModel.isArchived(t));
+        this._activeOf = this._all;
+        this._activeRev = stagesRev;
+      }
+      return this._active;
+    }
+
+    set items(list){
+      this._all = list;
+      this._activeOf = null;
+    }
+
+    everything(){
+      return this._all || [];
+    }
+
+    /* Las tareas archivadas una a una, la más reciente primero. */
+    archivedItems(){
+      return this.everything().filter((t) => +t.archivedAt > 0).sort((a, b) => b.archivedAt - a.archivedAt);
+    }
+
+    /* Las tareas que se fueron con una columna archivada. */
+    inArchivedStage(key){
+      return this.everything().filter((t) => !(+t.archivedAt > 0) && t.status === key);
+    }
+
+    patchLocal(id, patch){
+      const item = this.findAny(id);
+      if(!item) return null;
+      Object.assign(item, patch);
+      this._activeOf = null;
+      this.emit('change');
+      return item;
+    }
+
+    /* Archiva tareas: desaparecen de la vista al momento. → promesa con los ids archivados (las
+       que no se pudieron guardar vuelven al tablero). No toca updatedAt: no es un cambio de contenido. */
+    archive(ids){
+      const list = (Array.isArray(ids) ? ids : [ids]).map((id) => this.find(id)).filter((t) => t && !t._undecryptable);
+      if(!list.length || !this.isReady()) return Promise.resolve([]);
+      const at = Date.now();
+      list.forEach((t) => { t.archivedAt = at; });
+      this._activeOf = null;
+      this.emit('change');
+      return Promise.all(list.map((t) => this.update(t.id, {archivedAt:at}).then(() => t.id, () => null))).then((res) => {
+        const failed = list.filter((t, i) => !res[i]);
+        if(failed.length){
+          failed.forEach((t) => { const now = this.findAny(t.id); if(now) now.archivedAt = 0; });
+          this._activeOf = null;
+          this.emit('change');
+        }
+        return res.filter(Boolean);
+      });
+    }
+
+    /* Devuelve al tablero una tarea archivada, con todo lo que tenía. Si su columna está archivada
+       o ya no existe, vuelve al final de la primera. */
+    unarchive(id){
+      const t = this.findAny(id);
+      if(!t || !this.isReady()) return Promise.reject(new Error('not-found'));
+      const patch = {archivedAt:0};
+      if(STATUS.length && !STATUS.some((s) => s.key === t.status)){
+        const column = this.inStatus(STATUS[0].key);
+        const last = column[column.length - 1];
+        patch.status = STATUS[0].key;
+        patch.order = last ? TaskModel.orderOf(last) + ORDER_STEP : Date.now();
+      }
+      const before = {};
+      Object.keys(patch).forEach((k) => { before[k] = t[k]; });
+      this.patchLocal(id, patch);
+      return this.update(id, patch).then(() => patch, (err) => {
+        this.patchLocal(id, before);
+        throw err;
+      });
     }
 
     static statusOf(key){
@@ -259,7 +353,7 @@
 
     /* Avisa de lo que se borra (la integración con GitHub no debe volver a importarlo). */
     remove(id){
-      const t = this.find(id);
+      const t = this.findAny(id);
       if(t) this.emit('removed', t);
       return super.remove(id);
     }
@@ -469,7 +563,7 @@
 
     /* Copia de todas las tareas con sus notas incrustadas (para exportar). */
     withNotes(){
-      return Promise.all(this.items.map((t) => {
+      return Promise.all(this.everything().map((t) => {
         return this.notes(t.id).get().then((snap) => {
           const copy = Object.assign({}, t);
           if(this.cipher){
@@ -486,6 +580,7 @@
   }
 
   TaskModel.STATUS = STATUS;
+  TaskModel.ARCHIVED = ARCHIVED;
   TaskModel.REPEATS = REPEATS;
   TaskModel.daysBetween = daysBetween;
   TaskModel.shiftYmd = shiftYmd;

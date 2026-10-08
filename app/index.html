@@ -259,6 +259,7 @@
         </div>
       </div>
       <button type="button" class="icon-only" id="btnTaskSelect" aria-label="Seleccionar tareas" title="Seleccionar varias tareas" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.8 2.8L16 9.5"/></svg></button>
+      <button type="button" class="icon-only" id="btnArchive" aria-label="Archivados" title="Tareas y columnas archivadas" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/></svg></button>
       <button type="button" class="icon-only" id="btnFields" aria-label="Campos personalizados" title="Campos personalizados" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="11" height="6" rx="2"/><path d="M18 14v6M15 17h6"/></svg></button>
       <button type="button" class="icon-only" id="btnAutomations" aria-label="Automatizaciones" title="Automatizaciones" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
       <button class="btn btn-primary" id="btnNew"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nueva tarea</button>
@@ -379,6 +380,7 @@
         <span class="select-hint">Pulsa las tareas para marcarlas.</span>
         <span class="bar-push" aria-hidden="true"></span>
         <button type="button" class="btn btn-ghost btn-sm" id="btnSelectAll">Seleccionar todas</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnSelectArchive" disabled>Archivar</button>
         <button type="button" class="btn btn-danger btn-sm" id="btnSelectDelete" disabled>Eliminar</button>
         <button type="button" class="btn btn-ghost btn-sm" id="btnSelectCancel">Cancelar</button>
       </div>
@@ -1022,6 +1024,7 @@
     <p class="lock-error" id="fFormError" role="alert" hidden></p>
     <div class="dlg-actions">
       <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
+      <button type="button" class="btn btn-ghost" id="btnArchiveTask" title="La tarea sale del tablero y se puede restaurar desde Archivados" hidden>Archivar</button>
       <div class="right">
         <button type="button" class="btn btn-ghost" id="btnCancel" data-dismiss>Cancelar</button>
         <button type="submit" class="btn btn-primary" id="btnSave">Guardar</button>
@@ -1071,6 +1074,7 @@
     </div>
     <div class="tv-head-actions">
       <div class="ext-slot tv-ext" id="tvExtSlot" data-ext-slot="task.actions" hidden></div>
+      <button type="button" class="icon-only" id="btnTvArchive" aria-label="Archivar tarea" title="Archivar tarea"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/></svg></button>
       <button type="button" class="btn btn-ghost btn-sm" id="btnTvEdit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar tarea</button>
       <button type="button" class="icon-only tv-close" id="btnTvClose" data-dismiss aria-label="Cerrar" title="Cerrar"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
@@ -1504,6 +1508,28 @@
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlgArchive" class="archive-dlg" aria-labelledby="archiveTitle">
+  <div class="dlg-inner">
+    <h2 id="archiveTitle">Archivados</h2>
+    <p class="dlg-lead">Lo que archivas sale del tablero, pero no se borra: aquí puedes restaurarlo con todo lo que tenía.</p>
+    <p class="cf-empty" id="archiveEmpty" hidden>No hay nada archivado en este proyecto.</p>
+    <section id="archiveColumnsWrap" hidden>
+      <h3 class="archive-head">Columnas <span class="count" id="archiveColumnsCount"></span></h3>
+      <div class="archive-list" id="archiveColumns"></div>
+    </section>
+    <section id="archiveTasksWrap" hidden>
+      <h3 class="archive-head">Tareas <span class="count" id="archiveTasksCount"></span></h3>
+      <input type="search" id="archiveSearch" class="archive-search" aria-label="Buscar en las tareas archivadas" placeholder="Buscar en las tareas archivadas…" hidden>
+      <div class="archive-list" id="archiveTasks"></div>
+    </section>
+    <div class="dlg-actions">
+      <div class="right">
+        <button type="button" class="btn btn-ghost" id="btnArchiveClose" data-dismiss>Cerrar</button>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="dlgColumn">
@@ -2112,6 +2138,7 @@
 <script src="../src/views/task-table-view.js"></script>
 <script src="../src/views/task-timeline-view.js"></script>
 <script src="../src/views/column-view.js"></script>
+<script src="../src/views/archive-view.js"></script>
 <script src="../src/views/task-dialog-view.js"></script>
 <script src="../src/views/task-detail-view.js"></script>
 <script src="../src/views/calendar-view.js"></script>

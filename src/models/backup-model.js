@@ -164,6 +164,12 @@
       const fields = CF.merge(had, data.customFields);
       const fieldsSaved = fields.length > had.length && this.onCustomFields ? Promise.resolve(this.onCustomFields(fields)).catch(() => false) : Promise.resolve(true);
 
+      /* Relaciones entre tareas: guardan ids, que cambian al importar. Se apunta el id nuevo de
+         cada tarea del archivo y, cuando están todas, se enlazan las que hayan llegado. */
+      const newIds = {};
+      const related = [];
+      const relationIds = (v) => list(v).filter((id) => typeof id === 'string' && id).slice(0, 50);
+
       const taskPromises = list(data.tasks).map((t) => {
         if(!t || !t.title) return Promise.resolve();
         const extra = {};
@@ -193,6 +199,8 @@
           createdAt: t.createdAt || Date.now(),
           updatedAt: Date.now()
         })).then((ref) => {
+          if(typeof t.id === 'string' && t.id) newIds[t.id] = ref.id;
+          if(relationIds(t.relatedTo).length || relationIds(t.blockedBy).length) related.push({id:ref.id, relatedTo:relationIds(t.relatedTo), blockedBy:relationIds(t.blockedBy)});
           return Promise.all(list(t.notes).map((n) => {
             if(!n) return Promise.resolve();
             counts.notes++;
@@ -249,7 +257,16 @@
         });
       });
 
-      return Promise.all(clientPromises.concat(taskPromises, contactPromises, meetingPromises, [fieldsSaved])).then(() => {
+      const tasksDone = Promise.all(taskPromises).then(() => Promise.all(related.map((r) => {
+        const patch = {};
+        ['relatedTo', 'blockedBy'].forEach((f) => {
+          const ids = r[f].map((id) => newIds[id]).filter((id, i, all) => id && id !== r.id && all.indexOf(id) === i);
+          if(ids.length) patch[f] = ids;
+        });
+        return Object.keys(patch).length ? m.tasks.update(r.id, patch).catch(() => null) : null;
+      })));
+
+      return Promise.all(clientPromises.concat([tasksDone], contactPromises, meetingPromises, [fieldsSaved])).then(() => {
         return this.inTeam() ? null : m.vault.getMeta();
       }).then((metaSnap) => {
         const vaultData = data.vault || {};

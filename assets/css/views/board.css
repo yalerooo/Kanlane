@@ -181,6 +181,19 @@ body.is-grabbing .card:not(.drag-ghost):hover{transform:none;box-shadow:var(--sh
 .card-cover{display:block;height:28px;margin:-12px -12px 10px;border-radius:calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;background:var(--cv, var(--surface-2));}
 .card-cover.is-image{width:calc(100% + 24px);height:112px;object-fit:cover;background:var(--surface-2);}
 .card-cover.is-image:not([src]){display:none;}
+/* Tarea bloqueada por otra: etiqueta en la tarjeta y en la fila de la lista. */
+.blocked-badge{display:inline-flex;align-items:center;gap:5px;flex:none;height:22px;padding:0 8px;font-size:12px;border-radius:var(--r-sm);background:var(--late-bg);color:var(--late);white-space:nowrap;}
+.blocked-badge .icon{display:inline-flex;color:inherit !important;margin:0;}
+.tl-extra .blocked-badge{padding:0 6px;font-size:0;gap:0;}
+/* Relaciones entre tareas en el formulario: tipo y tarea, uno al lado del otro. */
+.relation-add{display:grid;grid-template-columns:minmax(0, 190px) minmax(0, 1fr);gap:8px;}
+.linked-row.is-blocking .linked-meta{color:var(--late);}
+@media (max-width:560px){ .relation-add{grid-template-columns:1fr;} }
+/* Aviso de bloqueo en la ficha: bloque plano con borde fino. */
+.tv-blocked{display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;padding:9px 12px;font-size:13px;line-height:1.45;color:var(--late);background:var(--late-bg);border:1px solid var(--line-strong);border-color:color-mix(in srgb, var(--late) 30%, transparent);border-radius:var(--r-md);}
+.tv-blocked svg{flex:none;margin-top:3px;}
+.tv-blocked-task{padding:0;border:0;background:none;font:inherit;font-weight:600;color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
+.tv-link .agenda-ring{margin:0 4px;flex:none;}
 /* Selector de portada del formulario: «Sin portada», los colores y las imágenes de las notas. */
 .cover-picker{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
 .cover-none{height:28px;padding:0 10px;font:inherit;font-size:12.5px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-sm);cursor:pointer;}

@@ -17,8 +17,10 @@
   };
 
   const ORDER_STEP = 1024;
+  /* Relaciones de cada tipo que guarda una tarea, como mucho (el tope de firestore.rules). */
+  const RELATIONS_MAX = 50;
   /* Campos de una tarea que no pasan a su copia (ver copyOf). */
-  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned',
+  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned', 'relatedTo', 'blockedBy',
     'ghItemId', 'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels', 'ghPrs', 'ghSyncedAt', 'ghRemoteAt'];
   /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
   const DUE_SPAN = {day:1, week:7, month:30};
@@ -213,6 +215,90 @@
       if(typeof c.asset === 'string' && c.asset && c.asset.length <= 200) return {asset:c.asset};
       if(typeof c.color === 'string' && Workhub.models.ProjectTemplates.COLORS.some((x) => x.key === c.color)) return {color:c.color};
       return null;
+    }
+
+    /* Ids de una lista de relaciones tal como se guardó: cadenas no vacías y sin repetir. */
+    static relationIds(v){
+      return (Array.isArray(v) ? v : []).filter((id, i, all) => typeof id === 'string' && id && all.indexOf(id) === i);
+    }
+
+    /* Relaciones de una tarea con otras del proyecto. Cada una se guarda en una sola tarea y se lee
+       desde las dos: `relatedTo` (relacionada con, sin dirección) y `blockedBy` (esta no puede
+       avanzar hasta que termine aquella); «bloquea» es `blockedBy` visto desde la otra.
+       → [{id, kind:'blockedBy' | 'blocks' | 'related', task}], solo con las tareas que siguen a la
+       vista: una eliminada o archivada no cuenta, y vuelve a contar si se restaura. */
+    relationsOf(id){
+      const t = this.find(id);
+      if(!t) return [];
+      const out = [];
+      const seen = {};
+      const add = (other, kind) => {
+        if(!other || other.id === id || seen[other.id]) return;
+        seen[other.id] = true;
+        out.push({id:other.id, kind:kind, task:other});
+      };
+      TaskModel.relationIds(t.blockedBy).forEach((x) => add(this.find(x), 'blockedBy'));
+      this.items.forEach((x) => { if(TaskModel.relationIds(x.blockedBy).indexOf(id) !== -1) add(x, 'blocks'); });
+      TaskModel.relationIds(t.relatedTo).forEach((x) => add(this.find(x), 'related'));
+      this.items.forEach((x) => { if(TaskModel.relationIds(x.relatedTo).indexOf(id) !== -1) add(x, 'related'); });
+      return out;
+    }
+
+    /* Las tareas sin terminar que bloquean a esta ([] si no está bloqueada o ya está terminada). */
+    blockersOf(id){
+      const t = this.find(id);
+      if(!t || TaskModel.isDone(t)) return [];
+      return TaskModel.relationIds(t.blockedBy).map((x) => this.find(x)).filter((x) => x && x.id !== id && !TaskModel.isDone(x));
+    }
+
+    /* Pone, cambia o quita la relación entre dos tareas. kind: 'related', 'blockedBy' (id espera a
+       otherId), 'blocks' (otherId espera a id) o '' para quitarla; entre dos tareas hay una sola.
+       Promesa con '' si se guardó o el motivo por el que no: 'missing', 'self', 'cycle' (las dos
+       acabarían esperándose) o 'limit'. Se rechaza si falla la escritura (y lo local se deshace). */
+    setRelation(id, otherId, kind){
+      const a = this.find(id), b = this.find(otherId);
+      if(!a || !b || !this.isReady()) return Promise.resolve('missing');
+      if(id === otherId) return Promise.resolve('self');
+      const ids = TaskModel.relationIds;
+      const next = {};
+      next[id] = {relatedTo:ids(a.relatedTo).filter((x) => x !== otherId), blockedBy:ids(a.blockedBy).filter((x) => x !== otherId)};
+      next[otherId] = {relatedTo:ids(b.relatedTo).filter((x) => x !== id), blockedBy:ids(b.blockedBy).filter((x) => x !== id)};
+      /* ¿`from` espera, directa o indirectamente, a `target`? */
+      const waitsFor = (from, target) => {
+        const seen = {};
+        const walk = (x) => {
+          if(x === target) return true;
+          if(seen[x]) return false;
+          seen[x] = true;
+          const t = this.find(x);
+          return (next[x] ? next[x].blockedBy : ids(t && t.blockedBy)).some(walk);
+        };
+        return walk(from);
+      };
+      const waiting = kind === 'blockedBy' ? id : kind === 'blocks' ? otherId : '';
+      const blocker = waiting === id ? otherId : id;
+      if(waiting){
+        if(waitsFor(blocker, waiting)) return Promise.resolve('cycle');
+        next[waiting].blockedBy.push(blocker);
+      } else if(kind === 'related'){
+        next[id].relatedTo.push(otherId);
+      } else if(kind) return Promise.resolve('missing');
+      if(Object.keys(next).some((k) => next[k].relatedTo.length > RELATIONS_MAX || next[k].blockedBy.length > RELATIONS_MAX)) return Promise.resolve('limit');
+
+      /* Solo se escribe lo que cambia: una tarea sin relaciones no lleva los campos. */
+      const writes = [];
+      [a, b].forEach((t) => {
+        const patch = {}, before = {};
+        ['relatedTo', 'blockedBy'].forEach((f) => {
+          if(ids(t[f]).join() === next[t.id][f].join()) return;
+          patch[f] = next[t.id][f];
+          before[f] = ids(t[f]);
+        });
+        if(!Object.keys(patch).length) return;
+        this.patchLocal(t.id, patch);
+        writes.push(this.update(t.id, patch).catch((err) => { this.patchLocal(t.id, before); throw err; }));
+      });
+      return Promise.all(writes).then(() => '');
     }
 
     /* Día del mes del que parte la repetición mensual o anual de una tarea. Una tarea del día 31

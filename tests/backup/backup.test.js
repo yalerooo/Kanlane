@@ -108,4 +108,18 @@ const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meet
   assert.deepEqual(JSON.parse(JSON.stringify(made.tasks.map((t) => t.cover || null))), [{color:'blue'}, null, null, null, null, null]);
   assert.deepEqual(JSON.parse(JSON.stringify(covers)), {t2:{asset:'nueva-i1'}, t3:{asset:'vieja'}});
   console.log('OK   copia: las portadas de color y de imagen se conservan al importar');
+
+  /* Relaciones entre tareas: los ids cambian al importar y los vínculos siguen a las tareas nuevas;
+     lo que apunta a una tarea que no viene en el archivo se queda fuera. */
+  made.tasks.length = made.notes.length = 0;
+  const patches = {};
+  store.update = async (id, patch) => { patches[id] = patch; };
+  await plain.import({tasks:[
+    {id:'viejo-a', title:'A', blockedBy:['viejo-b', 'no-viene'], relatedTo:['viejo-c', 'viejo-c', 'viejo-a']},
+    {id:'viejo-b', title:'B'},
+    {id:'viejo-c', title:'C', blockedBy:['no-viene'], relatedTo:'mal'}
+  ]});
+  assert.ok(made.tasks.every((t) => !('blockedBy' in t) && !('relatedTo' in t)), 'la tarea se crea sin ids del archivo');
+  assert.deepEqual(JSON.parse(JSON.stringify(patches)), {t1:{relatedTo:['t3'], blockedBy:['t2']}});
+  console.log('OK   copia: las relaciones entre tareas siguen a las tareas importadas');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

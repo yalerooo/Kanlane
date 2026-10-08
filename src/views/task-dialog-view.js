@@ -9,6 +9,8 @@
   const attachments = Workhub.views.attachments;
 
   const $ = (id) => document.getElementById(id);
+  /* Cómo se nombra cada relación desde la tarea abierta. */
+  const RELATION_LABEL = {related:'Relacionada con', blockedBy:'Bloqueada por', blocks:'Bloquea a'};
 
   class TaskDialogView {
     constructor(){
@@ -65,6 +67,12 @@
       this.linkContactPicker = $('linkContactPicker');
       this.linkedVaultList = $('linkedVaultList');
       this.linkVaultPicker = $('linkVaultPicker');
+      /* Relaciones con otras tareas: se guardan al momento, como los demás vínculos. */
+      this.relationsSection = $('taskRelationsSection');
+      this.relatedList = $('relatedTasksList');
+      this.relationKind = $('relationKind');
+      this.relationPicker = $('relationTaskPicker');
+      this.relationError = $('relationError');
 
       /* Asignadas a (solo en equipos): uids de los miembros elegidos. */
       this.assigneesEl = $('fAssignees');
@@ -281,7 +289,8 @@
 
     /* Lo que hay escrito en el formulario, para saber si ha cambiado desde que se abrió. */
     _snapshot(){
-      const controls = Array.prototype.filter.call(this.form.elements, (el) => el.tagName !== 'BUTTON' && el.tagName !== 'FIELDSET')
+      /* data-transient: controles que no son datos de la tarea (el tipo de relación que se va a añadir). */
+      const controls = Array.prototype.filter.call(this.form.elements, (el) => el.tagName !== 'BUTTON' && el.tagName !== 'FIELDSET' && !el.hasAttribute('data-transient'))
         .map((el, i) => [el.id || el.name || i, el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value]);
       return JSON.stringify([controls, this.checklist, this.selected, this.assigned, this.cover]);
     }
@@ -351,7 +360,40 @@
       };
       this.linkedContactsList.addEventListener('click', delegate);
       this.linkedVaultList.addEventListener('click', delegate);
+      this.relatedList.addEventListener('click', delegate);
     }
+
+    /* handler(kind, taskId): relacionar la tarea abierta con otra ('related' | 'blockedBy' | 'blocks'). */
+    bindRelationPicker(handler){
+      this.relationPicker.addEventListener('change', () => {
+        const id = this.relationPicker.value;
+        this.relationPicker.value = '';
+        this.relationError.hidden = true;
+        if(id) handler(this.relationKind.value, id);
+      });
+    }
+
+    /* relations: [{id, kind, task}] (TaskModel.relationsOf); candidates: tareas que aún se pueden elegir. */
+    renderRelations(relations, candidates){
+      const TaskModel = Workhub.models.TaskModel;
+      const t = Workhub.t;
+      this.relatedList.innerHTML = relations.length ? relations.map((r) => {
+        const s = TaskModel.statusOf(r.task.status);
+        const waiting = r.kind === 'blockedBy' && !TaskModel.isDone(r.task);
+        return '<div class="linked-row' + (waiting ? ' is-blocking' : '') + '" data-id="' + esc(r.id) + '">' +
+          '<div class="linked-main"><div class="linked-title" translate="no">' + esc(r.task.title || t('Sin título')) + '</div>' +
+          '<div class="linked-meta">' + esc(t(RELATION_LABEL[r.kind])) + ' · <span translate="no">' + esc(s.label) + '</span></div></div>' +
+          '<div class="linked-actions">' +
+          '<button type="button" class="icon-btn" data-action="open-task" data-id="' + esc(r.id) + '">' + esc(t('Abrir')) + '</button>' +
+          '<button type="button" class="icon-btn" data-action="unlink-task" data-id="' + esc(r.id) + '">' + esc(t('Quitar')) + '</button>' +
+          '</div></div>';
+      }).join('') : '<p class="linked-empty">' + esc(t('Sin tareas relacionadas.')) + '</p>';
+      this.relationPicker.innerHTML = '<option value="">' + esc(t('+ Elegir tarea…')) + '</option>' +
+        candidates.map((c) => '<option value="' + esc(c.id) + '">' + esc((c.title || t('Sin título')) + ' — ' + TaskModel.statusOf(c.status).label) + '</option>').join('');
+      this.relationPicker.closest('.relation-add').hidden = !candidates.length;
+    }
+
+    showRelationError(msg){ showMessage(this.relationError, msg); }
 
     /* ---------- Subtareas ---------- */
 
@@ -523,6 +565,7 @@
       this.notesSection.hidden = true;
       this.linksSection.hidden = true;
       this.linksSection2.hidden = true;
+      this.relationsSection.hidden = true;
       this.btnDelete.hidden = true;
       this.btnArchive.hidden = true;
       this.dlg.showModal();
@@ -563,6 +606,9 @@
       this.notesList.innerHTML = 'Cargando notas…';
       this.linksSection.hidden = false;
       this.linksSection2.hidden = false;
+      this.relationsSection.hidden = false;
+      this.relationKind.value = 'related';
+      this.relationError.hidden = true;
       this.dlg.showModal();
     }
 

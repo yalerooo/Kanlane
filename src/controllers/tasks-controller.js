@@ -37,6 +37,7 @@
         this.board.showLoaded();
         this.render();
         this.refreshDetail();
+        this.renderRelations();
         this.tryTaskLink();
       });
       this.tasks.on('recurred', (r) => toast.success(Workhub.t('Próxima repetición creada para el {fecha}', {fecha:Workhub.utils.dates.fmtDate(r.date)}), {important:true}));
@@ -121,6 +122,7 @@
         (id) => this.link('vault', id)
       );
       this.dialog.bindLinkedActions((action, id, btn) => this.onLinkedAction(action, id, btn));
+      this.dialog.bindRelationPicker((kind, id) => this.relate(kind, id));
 
       this.detail.bindClose(() => this.closeDetail());
       this.detail.bindEdit((id) => {
@@ -258,7 +260,14 @@
     moveWithActivity(id, status, beforeId){
       const before = this.tasks.find(id);
       const oldStatus = before && before.status;
+      /* Se termina una tarea que seguía bloqueada por otra: se deja hacer, pero se avisa. */
+      const blockers = before && oldStatus !== status && Workhub.models.TaskModel.statusOf(status).done ? this.tasks.blockersOf(id) : [];
       this.tasks.move(id, status, beforeId);
+      if(blockers.length){
+        toast.success(blockers.length === 1
+          ? Workhub.t('Has terminado una tarea que seguía bloqueada por «{title}».', {title:blockers[0].title || ''})
+          : Workhub.t('Has terminado una tarea que seguía bloqueada por {n} tareas sin terminar.', {n:blockers.length}), {important:true, mood:'normal', duration:6000});
+      }
       if(before && oldStatus !== status) this.pushEvent(id, 'moved', [], {column:status});
       if(before && oldStatus !== status && Workhub.models.TaskModel.statusOf(status).done){
         document.dispatchEvent(new CustomEvent('sumi:done'));
@@ -734,7 +743,7 @@
 
     detailContext(){
       const autos = this.app.controllers && this.app.controllers.automations;
-      return {contacts:this.contacts.items, vault:this.vault, buttons:autos ? autos.buttons() : []};
+      return {contacts:this.contacts.items, vault:this.vault, tasks:this.tasks, buttons:autos ? autos.buttons() : []};
     }
 
     openDetail(id){
@@ -789,6 +798,9 @@
           this.closeDetail();
           this.app.controllers.clients.showContact(id);
           break;
+        case 'open-task':
+          this.openDetail(id);
+          break;
         case 'toggle-linked-vault':
           if(!this.vault.find(id)) return;
           this.vault.toggleVisible(id).then(() => this.refreshDetail()).catch(() => {});
@@ -839,6 +851,7 @@
 
       try{
         this.currentId = t.id;
+        this.renderRelations();
         this.stopNotes = this.tasks.watchNotes(t.id,
           (docs) => this.dialog.renderNotes(docs),
           () => this.dialog.showNotesError());
@@ -961,6 +974,30 @@
       this.persistLinks();
     }
 
+    /* ---------- Relaciones entre tareas ---------- */
+
+    /* Las relaciones de la tarea abierta en el formulario y las tareas con las que aún se puede relacionar. */
+    renderRelations(){
+      if(!this.currentId || !this.dialog.isOpen()) return;
+      const relations = this.tasks.relationsOf(this.currentId);
+      const taken = relations.map((r) => r.id);
+      const candidates = this.tasks.items.filter((t) => t.id !== this.currentId && !t._undecryptable && taken.indexOf(t.id) === -1)
+        .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), Workhub.i18n.locale, {numeric:true, sensitivity:'base'}));
+      this.dialog.renderRelations(relations, candidates);
+    }
+
+    /* Relaciona la tarea abierta con otra, o quita la relación (kind ''). Se guarda al momento. */
+    relate(kind, otherId){
+      if(!this.currentId || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      const why = {
+        cycle:'No se puede: esas dos tareas acabarían esperándose la una a la otra.',
+        limit:'Una tarea admite hasta 50 relaciones de cada tipo.'
+      };
+      this.tasks.setRelation(this.currentId, otherId, kind).then((reason) => {
+        if(reason) this.dialog.showRelationError(why[reason] || 'No se pudo guardar la relación.');
+      }, () => this.dialog.showRelationError('No se pudo guardar la relación.')).then(() => this.renderRelations());
+    }
+
     onLinkedAction(action, id, btn){
       switch(action){
         case 'unlink-contact':
@@ -976,6 +1013,13 @@
         case 'open-contact':
           this.closeDialog();
           this.app.controllers.clients.showContact(id);
+          break;
+        case 'open-task':
+          this.closeDialog();
+          this.openDetail(id);
+          break;
+        case 'unlink-task':
+          this.relate('', id);
           break;
         case 'toggle-linked-vault':
           if(!this.vault.find(id)) return;

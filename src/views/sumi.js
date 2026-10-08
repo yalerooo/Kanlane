@@ -203,7 +203,9 @@
   function mount(host){
     if(host._sumi) return host._sumi;
     const d = host.dataset, mood = d.sumi || 'normal';
-    host.innerHTML = svg({mood: mood, size: +d.sumiSize || 64, mini: d.sumiMini === '1', cls: d.sumiClass || ''});
+    /* data-sumi-eye: color de los ojos, pintados en vez de recortados (ver svg): para un Sumi
+       grande que se mueve todo el rato, recortarlos obliga a rehacer la máscara en cada fotograma. */
+    host.innerHTML = svg({mood: mood, size: +d.sumiSize || 64, mini: d.sumiMini === '1', cls: d.sumiClass || '', eye: d.sumiEye || undefined});
     const el = host._sumi = host.firstChild;
     if(d.sumiFollow !== undefined) follow(el);
     if(d.sumiPlay) whenSeen(host, () => play(el, d.sumiPlay));

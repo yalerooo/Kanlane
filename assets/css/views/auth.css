@@ -476,6 +476,63 @@ html.scene-off .auth-sumi{display:none;}
   html.scene-off .auth-sumi{display:block;}
 }
 
+/* ---------- Tinta de fondo (.auth-ink) ----------
+   Sin paisaje (html.scene-off) y en móviles y tabletas, donde nunca lo hay, el fondo liso
+   quedaba soso (lo dijo el dueño). Detrás de la tarjeta va ahora lo de Sumi, que es tinta: tres
+   manchas de color que derivan despacio, burbujas que suben y un Sumi grande y muy tenue que
+   flota y mece los brazos (sumi.css, .is-drift). Todo se mueve solo con transform y opacity, que
+   el navegador anima sin repintar la página: esta pantalla es la de quien no quiere, o no puede,
+   mover el paisaje. Con «reducir movimiento» se queda quieto. */
+.auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;}
+html.scene-off .auth-ink{display:block;}
+.auth-ink-blob{position:absolute;left:-24vmax;top:-28vmax;width:72vmax;height:72vmax;border-radius:50%;background:radial-gradient(closest-side, color-mix(in srgb, var(--accent-solid) 22%, transparent), transparent);will-change:transform;}
+.auth-ink-blob:nth-child(2){left:auto;top:auto;right:-28vmax;bottom:-32vmax;background:radial-gradient(closest-side, color-mix(in srgb, var(--st-proc, var(--accent-solid)) 17%, transparent), transparent);}
+.auth-ink-blob:nth-child(3){left:26vw;top:34vh;width:46vmax;height:46vmax;background:radial-gradient(closest-side, color-mix(in srgb, var(--st-done, var(--accent-solid)) 11%, transparent), transparent);}
+.auth-ink-sumi{position:absolute;right:-110px;bottom:-128px;width:min(560px, 62vmin);color:var(--ink);opacity:.065;will-change:transform;}
+.auth-ink-sumi .sumi{width:100%;height:auto;}
+.auth-ink-bubbles i{position:absolute;left:8%;bottom:-40px;width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink);opacity:0;will-change:transform, opacity;--dx:26px;--t:13s;--d:0s;}
+.auth-ink-bubbles i:nth-child(2){left:19%;width:8px;height:8px;--dx:-18px;--t:10s;--d:-3s;}
+.auth-ink-bubbles i:nth-child(3){left:33%;width:20px;height:20px;--dx:34px;--t:16s;--d:-7s;}
+.auth-ink-bubbles i:nth-child(4){left:48%;width:10px;height:10px;--dx:-22px;--t:11s;--d:-5s;}
+.auth-ink-bubbles i:nth-child(5){left:61%;width:16px;height:16px;--dx:20px;--t:14s;--d:-9s;}
+.auth-ink-bubbles i:nth-child(6){left:73%;width:7px;height:7px;--dx:-14px;--t:9s;--d:-1s;}
+.auth-ink-bubbles i:nth-child(7){left:84%;width:12px;height:12px;--dx:24px;--t:12s;--d:-6s;}
+.auth-ink-bubbles i:nth-child(8){left:93%;width:18px;height:18px;--dx:-28px;--t:17s;--d:-11s;}
+@media (prefers-reduced-motion: no-preference){
+  .auth-ink-blob{animation:ink-drift 26s ease-in-out infinite alternate;}
+  .auth-ink-blob:nth-child(2){animation-duration:32s;animation-direction:alternate-reverse;}
+  .auth-ink-blob:nth-child(3){animation-duration:21s;animation-delay:-8s;}
+  .auth-ink-sumi{animation:ink-float 15s ease-in-out infinite;}
+  .auth-ink-bubbles i{animation:ink-rise var(--t) linear var(--d) infinite;}
+}
+html[data-motion="reduced"] .auth-ink *{animation:none !important;}
+@keyframes ink-drift{from{transform:translate3d(0, 0, 0) scale(1);}to{transform:translate3d(9vmax, 7vmax, 0) scale(1.14);}}
+@keyframes ink-float{0%,100%{transform:translate3d(0, 0, 0) rotate(-5deg);}50%{transform:translate3d(-30px, -38px, 0) rotate(3deg);}}
+@keyframes ink-rise{0%{transform:translate3d(0, 0, 0) scale(.6);opacity:0;}12%{opacity:.17;}80%{opacity:.10;}100%{transform:translate3d(var(--dx), -112vh, 0) scale(1.1);opacity:0;}}
+@media (max-width: 860px), (hover: none) and (pointer: coarse){
+  /* En el móvil la tarjeta ocupa casi todo: Sumi asoma por arriba, a la derecha, y se ve más. */
+  .auth-ink{display:block;}
+  .auth-ink-sumi{right:-22vmin;bottom:auto;top:-10vmin;width:78vmin;opacity:.085;}
+  .auth-ink-blob{width:110vmax;height:110vmax;left:-50vmax;top:-46vmax;}
+  .auth-ink-blob:nth-child(2){right:-56vmax;bottom:-52vmax;}
+  .auth-ink-blob:nth-child(3){left:-10vw;top:44vh;width:80vmax;height:80vmax;}
+}
+
+/* El tablero de Sumi (AuthView.playDesk): su sombra en el suelo, que respira con él; la tarjeta
+   que vuela va por encima de las demás; al llegar a «Hecho» suelta un anillo verde y el punto de
+   la columna a la que llega parpadea (no crece: su rótulo lo recortaría). */
+html.scene-off .auth-desk-sumi{position:relative;}
+html.scene-off .auth-desk-sumi::after{content:"";position:absolute;left:20%;right:20%;bottom:-9px;height:9px;border-radius:50%;background:var(--ink);opacity:.10;}
+.auth-desk-card.is-fly{position:relative;z-index:2;}
+.auth-desk-card.is-landed{animation:desk-land .6s ease-out 1;}
+.auth-desk-col.is-hit > b::before{animation:desk-dot .5s ease-out 1;}
+@media (prefers-reduced-motion: no-preference){
+  html.scene-off .auth-desk-sumi::after{animation:desk-shadow 3.2s ease-in-out infinite;}
+}
+@keyframes desk-shadow{0%,100%{transform:scaleX(1);opacity:.10;}50%{transform:scaleX(.84);opacity:.06;}}
+@keyframes desk-land{0%{box-shadow:0 0 0 1px var(--line), 0 0 0 0 color-mix(in srgb, var(--st-done) 60%, transparent);}100%{box-shadow:0 0 0 1px var(--line), 0 0 0 10px transparent;}}
+@keyframes desk-dot{40%{opacity:.25;}}
+
 .auth-screen.is-theming .auth-shell,
 .auth-screen.is-theming .auth-shell *,
 .auth-screen.is-theming .auth-tools,

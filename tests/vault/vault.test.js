@@ -47,6 +47,23 @@ console.log('OK   credenciales: la web admite http(s) o un dominio y el correo, 
   await assert.rejects(broken.create('password'), /offline/);
   assert.equal(writes, 0, 'no se reemplazan metadatos cuando falla la lectura');
 
+  /* Sin cofre todavía: si el servidor ya ha dicho que no existe, no se le pregunta otra vez; una
+     respuesta de la caché (o de la que no se sabe el origen) sí se confirma con el servidor. */
+  const stateWith = async (metadata, exists) => {
+    const vault = new VaultModel();
+    const reads = [];
+    vault.db = {doc:() => ({get:async (opts) => {
+      reads.push(opts && opts.source ? opts.source : 'default');
+      return {exists:!!exists, data:() => ({saltPassword:'salt'}), metadata:reads.length === 1 ? metadata : {fromCache:false}};
+    }})};
+    return [await vault.checkMeta(), reads.join('+')];
+  };
+  assert.deepEqual(await stateWith({fromCache:false}, false), ['none', 'default'], 'respuesta del servidor: una sola lectura');
+  assert.deepEqual(await stateWith({fromCache:true}, false), ['none', 'default+server'], 'respuesta de la caché: se confirma');
+  assert.deepEqual(await stateWith(undefined, false), ['none', 'default+server'], 'origen desconocido: se confirma');
+  assert.deepEqual(await stateWith({fromCache:true}, true), ['current', 'default'], 'si el cofre existe, basta con lo que haya');
+  console.log('OK   cofre: el estado sin cofre se lee del servidor una sola vez');
+
   async function migration(failSecond){
     const vault = new VaultModel();
     const entries = [{id:'a', iv:'old-iv', cipher:'old-cipher'}, {id:'b', iv:'old-iv', cipher:'old-cipher'}];

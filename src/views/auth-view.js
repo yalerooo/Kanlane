@@ -185,6 +185,16 @@
       /* Con los brazos sueltos (flow) pero sin que ondulen solos (calm): los mueve playDesk. */
       this.swimmer.innerHTML = sumi.svg({size:104, cls:'is-alive', flow:true, calm:true});
       this.deskSumi = this.swimmer.firstChild;
+      /* La tinta, fundida: el cuerpo y los brazos se pintan desenfocados y se vuelven a
+         recortar, con lo que cada rincón donde un brazo se junta con el cuerpo (o con otro
+         brazo) queda redondeado, como una sola pieza. Sin esto, al abrir un brazo se le veía
+         el pico de la unión junto a la cabeza. Los ojos se recortan después (la máscara va
+         detrás del filtro), así que no se emborronan. */
+      const whole = this.deskSumi.querySelector('g[mask]');
+      if(whole){
+        this.deskSumi.insertAdjacentHTML('afterbegin', '<filter id="sumi-goo" filterUnits="userSpaceOnUse" x="-48" y="-40" width="160" height="190" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="1.25"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 16 -7.5"/></filter>');
+        whole.setAttribute('filter', 'url(#sumi-goo)');
+      }
       this.deskMood = 'normal';
       this.deskTimers = [];
       this.deskRun = 0;
@@ -192,14 +202,32 @@
       /* deskFocus: a qué campo del formulario atiende ('pass', 'mail' o null); deskBack: está de
          espaldas; deskAt: dónde está, para seguir desde ahí al cambiar de tarea; deskTap: lo que
          hace con cada letra del correo; deskPeek: lo que hace al enseñar u ocultar la contraseña;
+         deskKey: lo que hace con cada tecla de la contraseña;
          deskOn: está en marcha. */
       this.deskFocus = null;
       this.deskBack = false;
       this.deskAt = null;
       this.deskTap = null;
       this.deskPeek = null;
+      this.deskKey = null;
       this.deskOn = false;
       this.deskPointer = null;
+      /* Las caricias (playDesk las atiende): deskStroke, por dónde va el dedo o el cursor y
+         cuándo; deskRub, cuánto se ha movido desde el último fotograma. Un toque cuenta como
+         una palmadita. */
+      this.deskStroke = null;
+      this.deskRub = 0;
+      const stroke = (ev, pat) => {
+        if(!this.deskOn) return;
+        const now = performance.now(), was = this.deskStroke;
+        if(was && now - was[2] < 200) this.deskRub += Math.min(60, Math.hypot(ev.clientX - was[0], ev.clientY - was[1]));
+        this.deskRub += pat;
+        this.deskStroke = [ev.clientX, ev.clientY, now];
+      };
+      document.addEventListener('pointermove', (ev) => stroke(ev, 0), {passive:true});
+      document.addEventListener('pointerdown', (ev) => stroke(ev, 150), {passive:true});
+      /* Cada tecla de la contraseña la oye, aunque no mire. */
+      this.pass.addEventListener('input', () => { if(this.deskKey) this.deskKey(); });
       /* deskErrorAt, deskOkAt: cuándo dijo el formulario que algo fue mal o que se entró;
          deskDropped: dónde estaba la tarjeta que llevaba en ese momento. deskSleep: dormido;
          deskWoke: lo acaban de despertar; deskSeen: la última vez que se tocó algo. */
@@ -320,13 +348,14 @@
       this.deskOn = false;
       this.deskTap = null;
       this.deskPeek = null;
+      this.deskKey = null;
       this.deskTimers.splice(0).forEach(clearTimeout);
       cancelAnimationFrame(this.deskRaf);
       /* Solo lo que se animó desde aquí: el reposo de Sumi (una animación de CSS) no se toca. */
       this.deskSumi.getAnimations().forEach((a) => { if(!(window.CSSAnimation && a instanceof CSSAnimation)) a.cancel(); });
       this.deskSumi.style.scale = '';
       if(!keep) this.swimmer.classList.remove('is-in');
-      this.ink.querySelectorAll('.auth-float:not(.is-ghost), .auth-bub').forEach((n) => n.remove());
+      this.ink.querySelectorAll('.auth-float:not(.is-ghost), .auth-bub, .auth-heart').forEach((n) => n.remove());
       if(!keep) this.ink.classList.remove('is-asleep');
       this.desk.querySelectorAll('.auth-desk-card').forEach((c) => {
         c.getAnimations().forEach((a) => a.cancel());
@@ -361,8 +390,22 @@
       const plain = EARLY.plain.matches;
       const cols = Array.from(this.desk.querySelectorAll('.auth-desk-col'));
       /* De espaldas no hay cara que cambiar. */
-      const mood = (m) => { this.deskMood = m; if(!this.deskBack) sumi.setMood(el, m); };
-      const card = () => { const c = document.createElement('i'); c.className = 'auth-desk-card'; return c; };
+      /* petting: lo están acariciando (tick); mientras dura, la cara es la de gusto. */
+      let petting = false, pet = 0, petE = 0, petDx = 0, heartT = 0;
+      /* De los destellos de la cara de fiesta sobra aquí el que va pegado al borde del cuerpo:
+         con Sumi moviéndose parecía un pico que le salía de la cabeza. */
+      const trim = () => { const x = el.querySelector('.sumi-extra'); if(x) x.setAttribute('d', (x.getAttribute('d') || '').replace('M58 22v3', '')); };
+      const mood = (m) => { this.deskMood = m; if(!this.deskBack && !petting){ sumi.setMood(el, m); trim(); } };
+      /* Una tarjeta del tablero: cada una con su título y su etiqueta de un largo distinto, y
+         la marca de hecha (auth.css la enseña en la tercera columna). */
+      const card = () => {
+        const c = document.createElement('i');
+        c.className = 'auth-desk-card';
+        c.style.setProperty('--w', (50 + Math.round(Math.random() * 36)) + '%');
+        c.style.setProperty('--t', (24 + Math.round(Math.random() * 18)) + '%');
+        c.innerHTML = '<s></s>';
+        return c;
+      };
       /* El tablero, como al principio: una por hacer y una en curso. Al cambiar de tarea
          (keep) se queda como esté. */
       if(!keep){
@@ -438,6 +481,8 @@
       /* shake: cuánto niega con la cabeza (se apaga solo). asleep: dormido del todo; el bucle
          de cada fotograma se para. */
       let shake = 0, asleep = false;
+      /* hum: se mece de lado a lado, tarareando (de espaldas con la contraseña). */
+      let hum = 0, humS = 0;
       const cheer = (on) => { arms[0].liftTo = arms[2].liftTo = on ? 1 : 0; highTo = on ? 1 : 0; reachTo = on ? -7 : 0; if(on) party = 1; };
       /* Lo que lleva colgado y cuánto se balancea. */
       let held = null, swing = 0, swingV = 0;
@@ -455,6 +500,19 @@
             {transform:move(x0 + sway, y - up) + ' scale(1.1)', opacity:0}
           ], {duration:1100 + Math.random() * 900, easing:'ease-out'}).onfinish = () => b.remove();
         }
+      };
+      /* Un corazón que sale de ahí, sube y se deshace: lo que suelta cuando lo acarician. */
+      const heart = (x, y) => {
+        const b = document.createElement('i'), s = 11 + Math.random() * 6, sway = (Math.random() - 0.5) * 44;
+        b.className = 'auth-heart';
+        b.style.width = b.style.height = s.toFixed(1) + 'px';
+        b.innerHTML = '<svg viewBox="0 0 16 16"><path fill="currentColor" d="M8 14.2S1.6 10.3 1.6 5.7C1.6 3.5 3.2 2 5.1 2 6.3 2 7.4 2.6 8 3.7 8.6 2.6 9.7 2 10.9 2c1.9 0 3.5 1.5 3.5 3.7C14.4 10.3 8 14.2 8 14.2Z"/></svg>';
+        ink.appendChild(b);
+        b.animate([
+          {transform:move(x - s / 2, y) + ' scale(.3) rotate(-14deg)', opacity:0},
+          {transform:move(x - s / 2 + sway * 0.25, y - 18) + ' scale(1.12) rotate(0deg)', opacity:1, offset:0.25},
+          {transform:move(x - s / 2 + sway, y - 78) + ' scale(.85) rotate(12deg)', opacity:0}
+        ], {duration:1250 + Math.random() * 400, easing:'cubic-bezier(.3,.6,.4,1)'}).onfinish = () => b.remove();
       };
       /* Hacia dónde mira: los ojos se van hacia ese punto (sin punto, al frente). Si el cursor
          se mueve, lo siguen a él (sumi.follow). */
@@ -476,6 +534,26 @@
         body.t += dt;
         this.deskAt = [body.x, body.y];
         let tsx = 1, tsy = 1, curl = 0, spread = 0;
+        /* Caricias. Si el cursor (o el dedo) se mueve encima de él, donde se le ve (en el agua
+           o tras el cristal, no detrás del formulario), se va llenando petE; con bastante, se
+           deja hacer: casi se para, pone cara de gusto, se aplasta un poco bajo la mano y se
+           inclina hacia ella, ronronea y suelta corazones. Al dejarlo, sigue con lo suyo. */
+        const rub = this.deskRub, sp = this.deskStroke;
+        this.deskRub = 0;
+        let touch = false;
+        if(sp && performance.now() - sp[2] < 260 && !this.deskBack && !body.fly && !body.jump){
+          const dx = sp[0] - body.x, dy = sp[1] - (body.y - size * 0.06);
+          if(dx * dx + dy * dy < size * size * 0.3){
+            const s = shell(), g = this.desk.parentNode.getBoundingClientRect();
+            touch = sp[0] < s.left || sp[0] > s.right || sp[1] < s.top || sp[1] > s.bottom || (!plain && sp[0] > g.left && sp[0] < g.right && sp[1] > g.top && sp[1] < g.bottom);
+            if(touch) petDx += (dx - petDx) * Math.min(1, dt * 8);
+          }
+        }
+        petE = Math.max(0, Math.min(1.5, petE + (touch ? rub / 240 : 0)) - dt * 0.8);
+        if(!petting && petE > 0.5){ petting = true; sumi.setMood(el, 'contento'); heartT = 0.12; }
+        else if(petting && petE < 0.12){ petting = false; if(!this.deskBack){ sumi.setMood(el, this.deskMood); trim(); } }
+        pet += ((petting ? 1 : 0) - pet) * Math.min(1, dt * 6);
+        if(petting && (heartT -= dt) < 0){ heartT = 0.4 + Math.random() * 0.3; heart(body.x + (Math.random() - 0.5) * size * 0.5, body.y - size * 0.42); }
         if(body.fly || body.jump){
           if(body.fly){
             /* Sale disparado hacia arriba, cada vez más deprisa, soltando burbujas. */
@@ -506,7 +584,7 @@
                mayor cuanto más lejos está (hasta un tope) y la que lleva la persigue, así que
                arranca despacio, no se pasa de largo y llega posándose. Encima va el pulso de un
                pulpo al nadar: abre los brazos, los cierra, y con cada cierre avanza un poco más. */
-            const top = held ? 340 : 430, want = Math.min(top, d * 2.8), go = want / top;
+            const top = held ? 340 : 430, want = Math.min(top, d * 2.8) * (1 - 0.92 * pet), go = want / top;
             body.beat += dt * 1.3;
             const beat = Math.sin(body.beat * 6.283);
             const k = want * (1 + 0.2 * beat) / d;
@@ -526,13 +604,15 @@
         body.x += body.vx * dt; body.y += body.vy * dt;
         /* Se ladea un poco hacia donde va; no se tumba. El meneo de la fiesta entra y sale de
            cero, sin golpe. */
-        const lean = clamp(body.vx * 0.045, -13, 13) + body.tilt;
+        humS += (hum - humS) * Math.min(1, dt * 3);
+        const lean = clamp(body.vx * 0.045, -13, 13) + body.tilt + Math.sin(body.t * 2.5) * 4.5 * humS + clamp(petDx * 0.22, -9, 9) * pet;
         const sway = (party > 0 ? Math.sin((1 - party) * 9.42) * 5 * Math.sin(party * 3.1416) : 0) + (shake > 0 ? Math.sin((1 - shake) * 21) * 14 * shake : 0);
         body.rot += (lean - body.rot) * Math.min(1, dt * 4);
         if(body.pose){
           if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
           else body.pose = null;
         }
+        if(pet > 0.01){ tsx += 0.06 * pet; tsy -= (0.07 - Math.sin(body.t * 31) * 0.012) * pet; }
         body.vsx += ((tsx - body.sx) * 200 - body.vsx * 21) * dt; body.sx += body.vsx * dt;
         body.vsy += ((tsy - body.sy) * 200 - body.vsy * 21) * dt; body.sy += body.vsy * dt;
         body.face += (body.faceTo - body.face) * Math.min(1, dt * 11);
@@ -551,7 +631,7 @@
         arms.forEach((a, i) => {
           /* Lo sube con calma y lo baja más despacio todavía (lo deja caer). */
           a.lift += (a.liftTo - a.lift) * Math.min(1, dt * (a.liftTo > a.lift ? 7 : 4.5));
-          const up = a.lift, wag = Math.sin(body.t * (6 + high) + i * 0.45);
+          const up = a.lift + (a.side ? pet * 0.16 : 0), wag = Math.sin(body.t * (6 + high) + i * 0.45);
           /* La postura: adónde apunta el hombro y cuánto se dobla cada tramo respecto al
              anterior. El hombro se abre poco: el brazo sale siempre por abajo, por donde está
              unido al cuerpo, y es la curva la que lo lleva hacia fuera y le sube la punta. Si
@@ -566,7 +646,7 @@
             const stiff = k ? 150 - k * 12 : 170, damp = k ? 16 - k : 21;
             /* El agua empuja cada tramo de lado (más cuanto más cerca de la punta) y, al caer,
                le abre los brazos de fuera. A un brazo levantado lo mueve menos: lo sujeta él. */
-            const drag = ((fx * Math.cos(a.a[k]) - fy * Math.sin(a.a[k])) * 0.1 * (0.35 + k * 0.3) + a.side * Math.max(0, -fy) * 0.05) * (1 - 0.75 * Math.max(0, up));
+            const drag = ((fx * Math.cos(a.a[k]) - fy * Math.sin(a.a[k])) * 0.075 * (0.3 + k * 0.2) + a.side * Math.max(0, -fy) * 0.05) * (1 - 0.75 * Math.max(0, up));
             a.w[k] += ((want - a.a[k]) * stiff - a.w[k] * damp + drag) * dt;
             a.a[k] += a.w[k] * dt;
             /* Topes: ni el hombro se abre más de la cuenta ni un tramo se quiebra sobre el
@@ -623,6 +703,7 @@
       /* Los destellos de la cara de fiesta, que salen de golpe y se asientan. */
       const sparkle = () => {
         const x = el.querySelector('.sumi-extra');
+        trim();
         if(x) x.animate([{transform:'scale(.4) rotate(-14deg)', opacity:0}, {transform:'scale(1.12) rotate(3deg)', opacity:1, offset:0.6}, {transform:'none', opacity:1}], {duration:620, easing:'cubic-bezier(.3,.7,.3,1)'});
       };
       /* Una tarea que sube del fondo y se queda flotando en ese punto. */
@@ -643,24 +724,49 @@
       /* La coge: toma impulso hacia arriba, alarga el brazo del medio hasta ella y, al
          recogerlo, se la queda colgada. */
       const grab = async (f) => {
-        pose(1.1, 0.9, 150);
-        body.vy -= 50;
-        await wait(170);
-        reachTo = 9;
-        pose(0.93, 1.1, 220);
+        /* La mira, se ensancha y abre los brazos de fuera, como quien va a abrazar algo. */
+        look(mid(f));
+        pose(1.09, 0.92, 200);
+        arms[0].liftTo = arms[2].liftTo = 0.55;
+        body.vy -= 36;
         await wait(230);
+        if(!alive()) return;
+        /* Baja el del medio hasta tocarla, estirándose entero hacia ella. */
+        reachTo = 11;
+        pose(0.95, 1.08, 260);
+        await wait(270);
+        if(!alive()) return;
+        /* La tiene: pasa a colgar de él sin dar un salto (va desde donde estaba hasta su sitio)
+           y lo nota, aplastándose y recuperándose. */
         f.getAnimations().forEach((a) => a.cancel());
+        const was = f.getBoundingClientRect();
         f.style.transform = '';
         f.classList.add('is-held');
         me.appendChild(f);
-        held = f; swing = 0; swingV = 140;
+        const now = f.getBoundingClientRect();
+        held = f; swing = 0; swingV = 80;
+        f.animate([
+          {translate:(was.left - now.left).toFixed(1) + 'px ' + (was.top - now.top).toFixed(1) + 'px', scale:'1.1 .9'},
+          {translate:'0 -3px', scale:'.96 1.05', offset:0.6},
+          {translate:'0 0', scale:'1 1'}
+        ], {duration:440, easing:'cubic-bezier(.3,.7,.3,1)'});
+        /* Recoge el brazo y cierra los de fuera sobre ella, con la punta hacia dentro: la abraza. */
         reachTo = 2;
-        f.animate([{scale:'1.18 .84'}, {scale:'.94 1.07', offset:0.5}, {scale:'1 1'}], {duration:360, easing:'ease-out'});
+        arms[0].liftTo = arms[2].liftTo = -0.12;
+        arms[0].hook = arms[2].hook = -0.07;
+        body.vy -= 30;
         puff(body.x, body.y + size * 0.6, 3);
         mood('concentrado');
-        await wait(260);
+        await wait(340);
       };
-      const drop = () => { const f = held; held = null; reachTo = 0; if(f) f.style.rotate = ''; return f; };
+      const drop = () => {
+        const f = held;
+        held = null; reachTo = 0;
+        arms[0].liftTo = arms[2].liftTo = 0;
+        arms[0].hook = arms[2].hook = 0;
+        if(f) f.style.rotate = '';
+        return f;
+      };
       /* La lleva tras el cristal y la pega en «Por hacer»: la del agua desaparece y aparece la
          del tablero, que ya estaba puesta en su sitio, sin verse, para saber adónde ir. */
       const deliver = async () => {
@@ -670,10 +776,14 @@
         const to = mid(c), up = over(c);
         await swim(up[0], up[1]);
         if(!alive()){ c.remove(); return; }
+        /* La baja hasta su hueco: abre los brazos que la abrazaban y alarga el del medio. */
         look(to);
+        arms[0].hook = arms[2].hook = 0;
+        arms[0].liftTo = arms[2].liftTo = 0.45;
         reachTo = 10;
-        pose(0.94, 1.08, 200);
-        await wait(210);
+        pose(0.94, 1.08, 240);
+        await wait(250);
+        if(!alive()){ c.remove(); return; }
         const f = drop();
         if(f) f.remove();
         c.style.visibility = '';
@@ -962,6 +1072,9 @@
             face.innerHTML = '<ellipse cx="' + near + '" cy="' + (open ? e.y : e.y + 1.1) + '" rx="' + e.rx + '" ry="' + (open ? e.ry : 1.9) + '" fill="' + tint + '"/>' +
               '<path fill="none" stroke="' + tint + '" stroke-width="2.6" stroke-linecap="round" d="M' + (far - 3.2) + ' ' + (e.y + 1.6) + 'H' + (far + 3.2) + '"/>';
             face.style.translate = (side * (open ? 4.4 : 2.8)).toFixed(1) + 'px .4px';
+            /* Para el vistazo se gira un poco más y se inclina hacia el formulario; luego vuelve. */
+            body.faceTo = open ? 0.82 : 0.66;
+            body.tilt = side * (open ? 11 : 6);
           };
           /* Se pone de canto y, al abrirse, ya está a medias (on) o de espaldas del todo. */
           let peeking = false;
@@ -975,8 +1088,29 @@
             else if(face){ face.innerHTML = ''; face.style.translate = ''; }
             body.faceTo = on ? 0.68 : 1;
             body.tilt = on ? side * 6 : 0;
+            /* De reojo, el brazo de ese lado sube a medias, como quien se tapa a medias la cara. */
+            const arm = arms[side < 0 ? 0 : 2];
+            arm.liftTo = on ? 0.32 : 0;
+            arm.hook = on ? 0.12 : 0;
+            hum = on ? 0 : 1;
           };
           this.deskPeek = (on) => { if(alive() && this.deskBack) peek(on); };
+          /* Cada tecla. De espaldas, la acompaña con un toque de un brazo y del otro, como
+             quien sigue el ritmo sin mirar; de reojo, se le va el ojo a cada letra. */
+          let keys = 0, shut = 0, beats = 0;
+          this.deskKey = () => {
+            if(!alive() || !this.deskBack) return;
+            keys++;
+            if(peeking){
+              glance(true);
+              clearTimeout(shut);
+              this.deskTimers.push(shut = setTimeout(() => { if(alive() && peeking) glance(false); }, 380));
+              return;
+            }
+            arms[keys % 2 ? 0 : 2].extV += 55;
+            pose(1.035, 0.965, 90);
+            body.vy -= 9;
+          };
           await intro;
           if(!alive()) return;
           await swim(at[0], at[1]);
@@ -985,6 +1119,7 @@
           if(!this.deskBack) await turn(true);
           else if(face){ face.innerHTML = ''; face.style.translate = ''; }
           if(!alive()) return;
+          hum = 1;
           if(this.pass.type === 'text'){ await wait(260); if(alive()) await peek(true); }
           while(alive()){
             await wait(peeking ? 1100 + Math.random() * 900 : 1500 + Math.random() * 900);
@@ -997,6 +1132,22 @@
               if(!peeking) continue;
               glance(false);
               if(Math.random() < 0.6) puff(body.x - side * size * 0.16, body.y - size * 0.04, 1);
+              continue;
+            }
+            /* Cada tres veces, si ya hay algo escrito, le puede la curiosidad: empieza a
+               girarse hacia el formulario, se da cuenta, vuelve a su sitio y niega con la cabeza. */
+            if(++beats % 3 === 0 && this.pass.value){
+              hum = 0;
+              body.faceTo = 0.76;
+              body.tilt = side * 8;
+              await wait(460);
+              if(!alive()) return;
+              if(peeking) continue;
+              body.faceTo = 1;
+              body.tilt = 0;
+              shake = 0.5;
+              hum = 1;
+              puff(body.x + size * 0.16, body.y - size * 0.04, 1);
               continue;
             }
             pose(1.05, 0.95, 240);

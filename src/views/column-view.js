@@ -13,6 +13,7 @@
     hide: svg('<path d="M9.9 4.2A10 10 0 0 1 12 4c6 0 10 8 10 8a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s4 8 10 8a9.7 9.7 0 0 0 5.4-1.6"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/>'),
     trash: svg('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'),
     archive: svg('<path d="M3 4h18v5H3z"/><path d="M5 9v11h14V9"/><path d="M10 13h4"/>'),
+    copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>'),
     left: svg('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
     right: svg('<path d="M5 12h14M12 5l7 7-7 7"/>')
   };
@@ -60,7 +61,7 @@
 
     /* ---------- Menú ---------- */
 
-    /* handlers: {edit(status, field), hide, archive, archiveAll, removeAll, remove, move(status, dir)} */
+    /* handlers: {edit(status, field), hide, duplicate, archive, archiveAll, removeAll, remove, move(status, dir)} */
     bindMenu(handlers){
       this.menu.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-act]');
@@ -71,6 +72,7 @@
         if(act === 'edit') handlers.edit(status);
         else if(act === 'limit') handlers.edit(status, 'limit');
         else if(act === 'hide') handlers.hide(status);
+        else if(act === 'duplicate') handlers.duplicate(status);
         else if(act === 'archive') handlers.archive(status);
         else if(act === 'archiveAll') handlers.archiveAll(status);
         else if(act === 'removeAll') handlers.removeAll(status);
@@ -80,7 +82,7 @@
       });
     }
 
-    /* info: {index, count, visible, tasks, canRemove, canArchive, archiveWhy}
+    /* info: {index, count, visible, tasks, canRemove, canArchive, archiveWhy, canDuplicate}
        archiveWhy: por qué no se puede archivar la columna (se enseña al pasar el ratón). */
     openMenu(btn, status, info){
       this.status = status;
@@ -95,6 +97,7 @@
         item('edit', ICONS.edit, 'Editar detalles') +
         item('limit', ICONS.limit, 'Establecer límite') +
         item('hide', ICONS.hide, 'Ocultar de la vista', {disabled: info.visible <= 1}) +
+        item('duplicate', ICONS.copy, 'Duplicar columna', {disabled: !info.canDuplicate}) +
         item('archive', ICONS.archive, 'Archivar columna', {disabled: !info.canArchive, title: info.canArchive ? '' : info.archiveWhy}) +
         item('remove', ICONS.trash, 'Eliminar columna', {danger:true, disabled: !info.canRemove}) +
         '<div class="dd-sep"></div><p class="project-menu-label">Tarjetas</p>' +

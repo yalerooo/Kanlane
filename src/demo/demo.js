@@ -141,6 +141,7 @@
   detail.bindClose(() => $('dlgTaskView').close());
   detail.bindEdit(() => lock('edit'));
   detail.bindArchive(() => lock('edit'));
+  detail.bindDuplicate(() => lock('edit'));
   detail.bindStatus((id, status) => { tasks.move(id, status); });
   detail.bindDone((id, status) => { tasks.move(id, status); });
   detail.bindChecklist((id, itemId, done) => tasks.toggleCheck(id, itemId, done));

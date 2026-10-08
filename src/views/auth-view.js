@@ -167,23 +167,32 @@
        Detrás de la tarjeta hay agua (auth.css, .auth-ink) y en ella nada Sumi, uno solo para
        toda la pantalla. Rescata las tareas que suben del fondo, se las lleva al panel de
        cristal, las pega en el tablero y las va pasando de columna; en el móvil, que no tiene
-       panel, las sube hasta arriba y las suelta ya hechas. Sigue el cursor con los ojos y los
-       cierra mientras se escribe la contraseña. Va por detrás de todo: tras el cristal se le
-       ve desenfocado y tras la tarjeta del formulario no se le ve. */
+       panel, las sube hasta arriba y las suelta ya hechas. Va por detrás de todo: tras el
+       cristal se le ve desenfocado y tras la tarjeta del formulario no se le ve.
+       Está animado como un personaje, no movido de un punto a otro (playDesk): nada a
+       brazadas, se encoge antes de impulsarse y se estira al salir, los brazos le van detrás
+       con su retraso, lo que lleva colgado se balancea, mira adonde va y cambia de cara según
+       lo que hace. */
     buildDesk(){
       const sumi = Workhub.views.sumi;
       this.desk = $('authDesk');
       this.ink = this.screen.querySelector('.auth-ink');
       this.swimmer = $('authSwimmer');
-      this.swimmer.innerHTML = sumi.svg({size:104, cls:'is-alive', flow:true, calm:this.deskCalm()});
+      /* Con los brazos sueltos (flow) pero sin que ondulen solos (calm): los mueve playDesk. */
+      this.swimmer.innerHTML = sumi.svg({size:104, cls:'is-alive', flow:true, calm:true});
       this.deskSumi = this.swimmer.firstChild;
       this.deskMood = 'normal';
       this.deskTimers = [];
       this.deskRun = 0;
-      this.deskTrail = 0;
+      this.deskRaf = 0;
+      this.deskShy = false;
+      this.deskPointer = null;
       sumi.follow(this.deskSumi);
-      this.pass.addEventListener('focus', () => sumi.setMood(this.deskSumi, 'cerrado'));
-      this.pass.addEventListener('blur', () => sumi.setMood(this.deskSumi, this.deskMood));
+      /* Con la contraseña no mira: cierra los ojos y se queda quieto hasta que se sale del campo. */
+      this.pass.addEventListener('focus', () => { this.deskShy = true; sumi.setMood(this.deskSumi, 'cerrado'); });
+      this.pass.addEventListener('blur', () => { this.deskShy = false; sumi.setMood(this.deskSumi, this.deskMood); });
+      /* Por dónde anda el cursor, por si le da por acercarse a curiosear. */
+      document.addEventListener('pointermove', (ev) => { if(ev.pointerType === 'mouse') this.deskPointer = [ev.clientX, ev.clientY, performance.now()]; }, {passive:true});
       /* Al pasar de ventana ancha a estrecha (o al revés) cambia lo que hace: se empieza de nuevo. */
       if(EARLY.plain.addEventListener) EARLY.plain.addEventListener('change', () => this.playDesk());
     }
@@ -196,9 +205,10 @@
       /* deskRun cambia: lo que estuviera a medias (playDesk) no sigue. */
       this.deskRun++;
       this.deskTimers.splice(0).forEach(clearTimeout);
-      clearInterval(this.deskTrail);
+      cancelAnimationFrame(this.deskRaf);
       /* Solo lo que se animó desde aquí: el reposo de Sumi (una animación de CSS) no se toca. */
-      [this.swimmer, this.deskSumi].forEach((n) => n.getAnimations().forEach((a) => { if(!(window.CSSAnimation && a instanceof CSSAnimation)) a.cancel(); }));
+      this.deskSumi.getAnimations().forEach((a) => { if(!(window.CSSAnimation && a instanceof CSSAnimation)) a.cancel(); });
+      this.deskSumi.style.scale = '';
       this.swimmer.classList.remove('is-in');
       this.ink.querySelectorAll('.auth-float, .auth-bub').forEach((n) => n.remove());
       this.desk.querySelectorAll('.auth-desk-card').forEach((c) => {
@@ -212,20 +222,28 @@
        (docs/marca/cuaderno-sumi.html) dice que todo ocurre una vez y termina: esta pantalla es
        la excepción, a petición del dueño. Con «reducir movimiento» se queda quieto, con el
        tablero ya adelantado. Cada vuelta:
-       1. Sube una tarea del fondo; Sumi nada hasta ella y la coge.
-       2. Se la lleva tras el cristal y la pega en «Por hacer» (en el móvil la sube y la suelta).
-       3. Pasa la que haya en «En curso» a «Hecho» y lo celebra con una voltereta; luego, una
-          de «Por hacer» a «En curso». Si en «Hecho» hay más de dos, la más antigua se va.
-       4. Da un paseo por el agua y vuelve a empezar.
-       Todo se mide en el momento (dónde está la tarjeta, cuánta agua queda a la vista), así
-       que sirve para cualquier tamaño de ventana. */
+       1. Sube una tarea del fondo. Sumi la ve (se sorprende, da un respingo), nada hasta ella
+          y la coge estirando el brazo del medio.
+       2. Concentrado, se la lleva tras el cristal y la pega en «Por hacer» (en el móvil la
+          sube y la suelta).
+       3. Pasa la que haya en «En curso» a «Hecho» y lo celebra; luego, una de «Por hacer» a
+          «En curso». Si en «Hecho» hay más de dos, la más antigua se va.
+       4. Un rato a su aire: se acerca al cursor si anda por el agua, saluda, guiña un ojo o
+          se da un paseo.
+       Cómo se mueve (tick): no va de un punto a otro con una curva hecha, sino que se le dice
+       adónde ir y nada hasta allí a brazadas. En cada brazada se encoge un instante
+       (anticipación), sale impulsado y estirado, y planea frenándose. Los brazos son tres
+       muelles que persiguen a su raíz: van con retraso y se pasan un poco al frenar; lo que
+       lleva colgado es un péndulo. Todo se mide en el momento, así que sirve para cualquier
+       tamaño de ventana. */
     playDesk(){
       this.stopDesk();
       const run = this.deskRun, alive = () => run === this.deskRun;
       const sumi = Workhub.views.sumi, el = this.deskSumi, me = this.swimmer, ink = this.ink;
+      const face = el.querySelector('.sumi-face');
       const plain = EARLY.plain.matches;
       const cols = Array.from(this.desk.querySelectorAll('.auth-desk-col'));
-      const mood = (m) => { this.deskMood = m; if(document.activeElement !== this.pass) sumi.setMood(el, m); };
+      const mood = (m) => { this.deskMood = m; if(!this.deskShy) sumi.setMood(el, m); };
       const card = () => { const c = document.createElement('i'); c.className = 'auth-desk-card'; return c; };
       /* El tablero, como al principio: una por hacer y una en curso. */
       this.desk.querySelectorAll('.auth-desk-card').forEach((c) => c.remove());
@@ -234,20 +252,21 @@
       mood('normal');
       if(this.screen.hidden || (!plain && !EARLY.sceneOff())) return;
 
-      const size = me.offsetWidth || 104, reach = size * 0.52;
+      const size = me.offsetWidth || 104, unit = 64 / size;
       const wait = (ms) => new Promise((done) => this.deskTimers.push(setTimeout(done, ms)));
       const again = (node, cls) => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); };
       const mid = (node) => { const r = node.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
       const count = (i) => cols[i].querySelectorAll('.auth-desk-card').length;
       const first = (i) => cols[i].querySelector('.auth-desk-card');
-      /* Dónde se pone Sumi para tocar una tarjeta del tablero: encima de su columna, con los
-         brazos colgando sobre ella. Si se pusiera a la altura de la tarjeta, como va por
-         detrás, el tablero lo taparía. */
-      const over = (node) => { const r = node.getBoundingClientRect(); return [r.left + r.width / 2, node.closest('.auth-desk-col').getBoundingClientRect().top - size * 0.34]; };
       const move = (x, y) => 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const shell = () => this.screen.querySelector('.auth-shell').getBoundingClientRect();
+      /* Dónde se pone Sumi para tocar una tarjeta del tablero: encima de su columna, con los
+         brazos colgando sobre ella. A la altura de la tarjeta, como va por detrás, lo taparía. */
+      const over = (node) => { const r = node.getBoundingClientRect(); return [r.left + r.width / 2, node.closest('.auth-desk-col').getBoundingClientRect().top - size * 0.36]; };
       /* Dónde hay agua a la vista, fuera de la tarjeta: a los lados, por debajo y por arriba. */
       const spots = () => {
-        const s = this.screen.querySelector('.auth-shell').getBoundingClientRect(), w = window.innerWidth, h = window.innerHeight, out = [];
+        const s = shell(), w = window.innerWidth, h = window.innerHeight, out = [];
         if(s.left > size * 1.3) out.push([s.left / 2, h * 0.38], [s.left / 2, h * 0.68]);
         if(w - s.right > size * 1.3) out.push([(s.right + w) / 2, h * 0.34], [(s.right + w) / 2, h * 0.7]);
         if(h - s.bottom > size * 1.25) out.push([w * 0.3, (s.bottom + h) / 2], [w * 0.64, (s.bottom + h) / 2]);
@@ -255,16 +274,20 @@
         if(!out.length) out.push([size * 0.7, h - size * 0.7], [w - size * 0.7, h - size * 0.7]);
         return out;
       };
-      /* Un sitio de esos, más bien lejos de donde está, para que se le vea cruzar. */
-      let pos = spots()[0];
-      const pick = () => {
-        let best = null, far = -1;
-        spots().forEach((p) => { const d = Math.hypot(p[0] - pos[0], p[1] - pos[1]) + Math.random() * 240; if(d > far){ far = d; best = p; } });
-        return [best[0] + (Math.random() - 0.5) * 50, best[1] + (Math.random() - 0.5) * 36];
-      };
-      const at = (x, y, turn) => move(x - size / 2, y - size / 2) + ' rotate(' + (turn || 0) + 'deg)';
-      const place = (x, y) => { pos = [x, y]; me.style.transform = at(x, y); };
 
+      /* ---- El cuerpo ---- */
+      const start = spots()[0];
+      /* x, y: dónde está (su centro); vx, vy: velocidad; rot: cuánto se ladea; sx, sy: cuánto
+         se encoge o se estira; to: adónde va (null: flota); beat: por dónde va de la brazada;
+         pose: un encogimiento o estirón pedido a mano, que se va solo. */
+      const body = {x:start[0], y:start[1], vx:0, vy:0, rot:0, sx:1, sy:1, to:null, done:null, beat:1, pose:null, poseT:0, t:0};
+      /* Los brazos: de cada uno, dónde lleva la punta respecto a su sitio (ox, oy) y a qué
+         velocidad (vx, vy). reach: lo que se alarga de más el del medio para coger o empujar. */
+      const geo = sumi.geometry(false);
+      const arms = geo.arms.map((a, i) => ({node:el.querySelector('.sumi-arm-' + i), x:a[0] + a[1] / 2, len:(a[2] - geo.top) * 1.45 - 8, ox:0, oy:0, vx:0, vy:0, w:1.3 + i * 0.37, ph:i * 2.1}));
+      let reach = 0, reachTo = 0;
+      /* Lo que lleva colgado y cuánto se balancea. */
+      let held = null, swing = 0, swingV = 0;
       /* Burbujas sueltas en ese punto, que suben y se deshacen. */
       const puff = (x, y, n) => {
         for(let i = 0; i < n; i++){
@@ -280,25 +303,114 @@
           ], {duration:1100 + Math.random() * 900, easing:'ease-out'}).onfinish = () => b.remove();
         }
       };
-      /* Nada hasta ahí: en curva, ladeándose hacia donde va y dejando un rastro de burbujas. */
-      const swim = (x, y) => {
-        const from = pos, dx = x - from[0], dy = y - from[1], d = Math.hypot(dx, dy);
-        if(d < 4) return wait(60);
-        const ms = Math.min(2600, Math.max(650, d * 3.6));
-        const lean = Math.max(-16, Math.min(16, dx / d * 16)), bend = Math.min(60, d * 0.16) * (Math.random() < 0.5 ? -1 : 1);
-        const a = me.animate([
-          {transform:at(from[0], from[1])},
-          {transform:at(from[0] + dx / 2 - dy / d * bend, from[1] + dy / 2 + dx / d * bend, lean), offset:0.5},
-          {transform:at(x, y)}
-        ], {duration:ms, easing:'cubic-bezier(.45,.05,.35,1)'});
-        const t0 = performance.now();
-        clearInterval(this.deskTrail);
-        this.deskTrail = setInterval(() => {
-          const k = Math.min(1, (performance.now() - t0) / ms);
-          puff(from[0] + dx * k, from[1] + dy * k + size * 0.18, 1);
-        }, 170);
-        place(x, y);
-        return new Promise((done) => { a.onfinish = () => { clearInterval(this.deskTrail); done(); }; });
+      /* Hacia dónde mira: los ojos se van hacia ese punto (sin punto, al frente). Si el cursor
+         se mueve, lo siguen a él (sumi.follow). */
+      const look = (p) => {
+        if(!face) return;
+        if(!p){ face.style.translate = ''; return; }
+        const dx = p[0] - body.x, dy = p[1] - body.y, d = Math.hypot(dx, dy) || 1;
+        face.style.translate = (dx / d * 1.8).toFixed(2) + 'px ' + (dy / d * 1.3).toFixed(2) + 'px';
+      };
+      /* Un gesto del cuerpo: se pone así de ancho y de alto durante ms y vuelve solo. */
+      const pose = (sx, sy, ms) => { body.pose = [sx, sy]; body.poseT = body.t + ms / 1000; };
+
+      let last = 0;
+      const tick = (now) => {
+        if(!alive()) return;
+        this.deskRaf = requestAnimationFrame(tick);
+        const dt = Math.min(0.034, last ? (now - last) / 1000 : 0.016);
+        last = now;
+        body.t += dt;
+        const shy = this.deskShy;
+        let tsx = 1, tsy = 1, curl = 0;
+        if(body.to && !shy){
+          const dx = body.to[0] - body.x, dy = body.to[1] - body.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+          const speed = Math.hypot(body.vx, body.vy);
+          if(d < 10 && speed < 46){
+            /* Ha llegado. */
+            const done = body.done;
+            body.to = null; body.done = null; body.beat = 1;
+            if(done) done();
+          } else {
+            /* La brazada: 0,62 s. Primero se encoge y recula un pelo; a los 0,1 s sale
+               impulsada, estirada, y después planea. Cerca del sitio, brazadas más flojas, y el
+               último tramo lo acerca un muelle, para que llegue y no dé vueltas alrededor. */
+            body.beat += dt / 0.62;
+            if(body.beat >= 1 && d > 26){ body.beat = 0; body.kick = false; }
+            if(body.beat < 0.2){
+              tsx = 1.13; tsy = 0.87; curl = -3.5;
+              body.vx -= ux * 60 * dt; body.vy -= uy * 60 * dt;
+              if(!body.kick && body.beat >= 0.16){
+                body.kick = true;
+                const push = clamp(140 + d * 2, 160, held ? 520 : 640);
+                body.vx += ux * push; body.vy += uy * push;
+                puff(body.x - ux * size * 0.2, body.y + size * 0.25, 2);
+              }
+            } else if(body.beat < 0.5){
+              const k = 1 - (body.beat - 0.2) / 0.3;
+              tsx = 1 - 0.1 * k; tsy = 1 + 0.13 * k; curl = 5 * k;
+            }
+            if(d < 70){
+              const brake = Math.exp(-dt * 3.2);
+              body.vx = (body.vx + ux * d * 9 * dt) * brake; body.vy = (body.vy + uy * d * 9 * dt) * brake;
+            }
+          }
+        }
+        /* El agua frena. Con la contraseña se queda quieto y se hunde un poco. */
+        const drag = Math.exp(-dt * (shy ? 4 : 1.9));
+        body.vx *= drag; body.vy *= drag;
+        if(shy) body.vy += 14 * dt;
+        body.x += body.vx * dt; body.y += body.vy * dt;
+        /* Se ladea hacia donde va, como quien nada de cabeza, sin llegar a tumbarse. */
+        const lean = clamp(Math.atan2(body.vx, Math.abs(body.vy) + 90) * 57.3 * 1.25, -30, 30);
+        body.rot += (lean - body.rot) * Math.min(1, dt * 5);
+        if(body.pose){
+          if(body.t < body.poseT){ tsx = body.pose[0]; tsy = body.pose[1]; }
+          else body.pose = null;
+        }
+        body.sx += (tsx - body.sx) * Math.min(1, dt * 16);
+        body.sy += (tsy - body.sy) * Math.min(1, dt * 16);
+        me.style.transform = move(body.x - size / 2, body.y - size / 2) + ' rotate(' + body.rot.toFixed(2) + 'deg)';
+        el.style.scale = body.sx.toFixed(3) + ' ' + body.sy.toFixed(3);
+
+        /* Los brazos. La velocidad, vista desde el propio Sumi (que va ladeado): las puntas se
+           quedan atrás de por donde va, se mecen cada una a su ritmo y, al encogerse o
+           estirarse el cuerpo, se recogen o se alargan. Cada punta es un muelle. */
+        const c = Math.cos(-body.rot / 57.3), s = Math.sin(-body.rot / 57.3);
+        const lx = (body.vx * c - body.vy * s) * unit, ly = (body.vx * s + body.vy * c) * unit;
+        reach += (reachTo - reach) * Math.min(1, dt * 18);
+        arms.forEach((a, i) => {
+          const tx = clamp(-lx * 0.085, -9, 9) + Math.sin(body.t * a.w + a.ph) * 2.2;
+          const ty = clamp(-ly * 0.06, -5, 9) + Math.cos(body.t * a.w * 0.8 + a.ph) * 0.9 + curl;
+          a.vx += ((tx - a.ox) * 46 - a.vx * 6.5) * dt; a.ox += a.vx * dt;
+          a.vy += ((ty - a.oy) * 46 - a.vy * 7.5) * dt; a.oy += a.vy * dt;
+          /* Sale recta del cuerpo hasta pasada su raíz (que no se vea corte en la unión) y de
+             ahí para abajo se curva hasta la punta. */
+          const len = Math.max(6, a.len + a.oy + (i === 1 ? reach : 0)), y = geo.top + 8;
+          a.node.setAttribute('d', 'M' + a.x + ' ' + geo.top + 'V' + y + 'C' + a.x + ' ' + (y + len * 0.42).toFixed(2) + ' ' + (a.x + a.ox * 0.5).toFixed(2) + ' ' + (y + len * 0.74).toFixed(2) + ' ' + (a.x + a.ox).toFixed(2) + ' ' + (y + len).toFixed(2));
+        });
+        /* Lo que lleva colgado se balancea: un péndulo que tira hacia atrás de donde va. */
+        if(held){
+          swingV += ((clamp(-lx * 0.9, -32, 32) - swing) * 34 - swingV * 4.5) * dt;
+          swing += swingV * dt;
+          held.style.rotate = swing.toFixed(2) + 'deg';
+        }
+      };
+
+      /* Nada hasta ahí. Mira adonde va. */
+      const swim = (x, y) => new Promise((done) => {
+        look([x, y]);
+        body.to = [x, y];
+        body.done = done;
+        body.beat = 1;
+      });
+      /* Un respingo: se encoge, salta un poco y se estira. */
+      const hop = async (power) => {
+        pose(1.14, 0.86, 130);
+        await wait(130);
+        body.vy -= power || 150;
+        pose(0.9, 1.13, 190);
+        puff(body.x, body.y + size * 0.3, 3);
       };
       /* Una tarea que sube del fondo y se queda flotando en ese punto. */
       const float = (x, y) => {
@@ -307,119 +419,191 @@
         ink.insertBefore(f, me);
         const left = x - f.offsetWidth / 2, top = y - f.offsetHeight / 2;
         f.style.transform = move(left, top);
-        f.animate([{transform:move(left, top + 120), opacity:0}, {transform:move(left, top), opacity:1}], {duration:1100, easing:'cubic-bezier(.2,.7,.3,1)'});
-        puff(x, y + 34, 4);
+        f.animate([
+          {transform:move(left - 14, top + 150) + ' rotate(-14deg)', opacity:0},
+          {transform:move(left + 8, top + 50) + ' rotate(9deg)', opacity:1, offset:0.55},
+          {transform:move(left, top) + ' rotate(0deg)', opacity:1}
+        ], {duration:1300, easing:'cubic-bezier(.2,.7,.3,1)'});
+        puff(x, y + 40, 5);
         return f;
       };
-      /* Estira el brazo y se la cuelga. */
+      /* La coge: toma impulso hacia arriba, alarga el brazo del medio hasta ella y, al
+         recogerlo, se la queda colgada. */
       const grab = async (f) => {
-        sumi.play(el, 'dip');
-        await wait(280);
+        pose(1.1, 0.9, 150);
+        body.vy -= 50;
+        await wait(170);
+        reachTo = 9;
+        pose(0.93, 1.1, 220);
+        await wait(230);
         f.getAnimations().forEach((a) => a.cancel());
         f.style.transform = '';
         f.classList.add('is-held');
         me.appendChild(f);
+        held = f; swing = 0; swingV = 140;
+        reachTo = 2;
+        f.animate([{scale:'1.18 .84'}, {scale:'.94 1.07', offset:0.5}, {scale:'1 1'}], {duration:360, easing:'ease-out'});
+        puff(body.x, body.y + size * 0.6, 3);
+        mood('concentrado');
+        await wait(260);
       };
+      const drop = () => { const f = held; held = null; reachTo = 0; if(f) f.style.rotate = ''; return f; };
       /* La lleva tras el cristal y la pega en «Por hacer»: la del agua desaparece y aparece la
          del tablero, que ya estaba puesta en su sitio, sin verse, para saber adónde ir. */
-      const deliver = async (f) => {
+      const deliver = async () => {
         const c = card();
         c.style.visibility = 'hidden';
         cols[0].appendChild(c);
         const to = mid(c), up = over(c);
         await swim(up[0], up[1]);
         if(!alive()){ c.remove(); return; }
-        sumi.play(el, 'dip');
-        await wait(240);
-        f.remove();
+        look(to);
+        reachTo = 10;
+        pose(0.94, 1.08, 200);
+        await wait(210);
+        const f = drop();
+        if(f) f.remove();
         c.style.visibility = '';
-        c.animate([{transform:'scale(.6)', opacity:0}, {transform:'scale(1.07)', opacity:1, offset:0.6}, {transform:'none', opacity:1}], {duration:420, easing:'ease-out'});
+        c.animate([{transform:'translateY(-14px) scale(.7)', opacity:0}, {transform:'translateY(2px) scale(1.08, .94)', opacity:1, offset:0.55}, {transform:'translateY(-1px) scale(.98, 1.03)', offset:0.8}, {transform:'none', opacity:1}], {duration:480, easing:'ease-out'});
         again(cols[0], 'is-hit');
         again(c, 'is-landed');
         puff(to[0], to[1], 5);
-        await wait(520);
+        mood('contento');
+        pose(1.08, 0.93, 160);
+        await wait(620);
+        mood('normal');
       };
       /* Sin panel (móvil): la sube hasta arriba y la suelta, ya hecha; se va hacia la superficie. */
-      const surface = async (f) => {
-        const s = this.screen.querySelector('.auth-shell').getBoundingClientRect();
-        await swim(window.innerWidth * (0.24 + Math.random() * 0.4), Math.max(size * 0.62, s.top * 0.52));
+      const surface = async () => {
+        const s = shell();
+        await swim(window.innerWidth * (0.26 + Math.random() * 0.4), Math.max(size * 0.62, s.top * 0.52));
         if(!alive()) return;
+        const f = drop();
+        if(!f) return;
         f.classList.add('is-done');
-        mood('contento');
-        await wait(420);
+        mood('fiesta');
         const r = f.getBoundingClientRect();
         ink.insertBefore(f, me);
         f.classList.remove('is-held');
         f.style.transform = move(r.left, r.top);
-        f.animate([{transform:move(r.left, r.top), opacity:1}, {transform:move(r.left, r.top - 130), opacity:0}], {duration:950, easing:'ease-in'}).onfinish = () => f.remove();
-        puff(r.left + r.width / 2, r.top, 5);
+        f.animate([{transform:move(r.left, r.top), opacity:1}, {transform:move(r.left + 10, r.top - 70) + ' rotate(8deg)', opacity:1, offset:0.5}, {transform:move(r.left - 6, r.top - 150) + ' rotate(-6deg)', opacity:0}], {duration:1200, easing:'ease-in'}).onfinish = () => f.remove();
+        puff(r.left + r.width / 2, r.top, 6);
+        await hop(170);
         await wait(900);
         mood('normal');
       };
-      /* Pasa esa tarjeta a otra columna: va hasta ella, la empuja con el brazo y la acompaña.
-         Las que deja atrás suben a ocupar su hueco. */
+      /* Pasa esa tarjeta a otra columna: va hasta ella, le da un toque con el brazo (la tarjeta
+         se encoge antes de salir) y la acompaña. Las que deja atrás suben a ocupar su hueco. */
       const push = async (c, to) => {
-        const here = mid(c), up = over(c);
+        const up = over(c);
         await swim(up[0], up[1]);
         if(!alive()) return;
-        sumi.play(el, 'dip');
-        await wait(250);
+        look(mid(c));
+        pose(1.08, 0.92, 140);
+        await wait(150);
+        reachTo = 10;
+        await wait(170);
+        c.animate([{transform:'none'}, {transform:'scale(1.1, .86)'}, {transform:'none'}], {duration:200, easing:'ease-out'});
+        await wait(170);
+        reachTo = 0;
         const all = Array.from(this.desk.querySelectorAll('.auth-desk-card')), before = all.map((n) => n.getBoundingClientRect());
         cols[to].appendChild(c);
-        let there = here;
         all.forEach((n, i) => {
           const now = n.getBoundingClientRect(), dx = before[i].left - now.left, dy = before[i].top - now.top;
-          if(n === c) there = [now.left + now.width / 2, now.top + now.height / 2];
           if(!dx && !dy) return;
           const from = 'translate(' + dx + 'px,' + dy + 'px)';
           if(n !== c){
-            n.animate([{transform:from}, {transform:'none'}], {duration:420, delay:140, fill:'backwards', easing:'cubic-bezier(.2,.8,.2,1)'});
+            n.animate([{transform:from}, {transform:'translateY(-3px)', offset:0.8}, {transform:'none'}], {duration:460, delay:160, fill:'backwards', easing:'cubic-bezier(.2,.8,.2,1)'});
             return;
           }
           n.classList.add('is-fly');
           n.animate([
             {transform:from + ' rotate(0deg) scale(1)'},
-            {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 24) + 'px) rotate(' + (dx < 0 ? 7 : -7) + 'deg) scale(1.09)', offset:0.5},
-            {transform:'translate(0px,-3px) rotate(0deg) scale(1.03)', offset:0.86},
+            {transform:'translate(' + dx * 0.5 + 'px,' + (dy * 0.5 - 30) + 'px) rotate(' + (dx < 0 ? 9 : -9) + 'deg) scale(1.1)', offset:0.5},
+            {transform:'translate(0px,3px) rotate(0deg) scale(1.06, .92)', offset:0.82},
+            {transform:'translate(0px,-2px) scale(.98, 1.03)', offset:0.92},
             {transform:'none'}
-          ], {duration:720, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => n.classList.remove('is-fly');
+          ], {duration:760, easing:'cubic-bezier(.3,.7,.3,1)'}).onfinish = () => n.classList.remove('is-fly');
         });
         again(cols[to], 'is-hit');
         const next = over(c);
         await swim(next[0], next[1]);
         if(!alive() || to !== 2) return;
-        /* A «Hecho»: anillo verde, burbujas y una voltereta. */
+        /* A «Hecho»: anillo verde, burbujas, cara de fiesta y una voltereta. */
         again(c, 'is-landed');
-        puff(there[0], there[1], 6);
-        mood('contento');
-        el.animate([{rotate:'0deg'}, {rotate:'360deg'}], {duration:760, easing:'cubic-bezier(.4,0,.3,1)'});
-        await wait(1000);
+        puff(mid(c)[0], mid(c)[1], 7);
+        mood('fiesta');
+        look(null);
+        pose(1.14, 0.86, 140);
+        await wait(140);
+        body.vy -= 190;
+        pose(0.9, 1.12, 240);
+        el.animate([{rotate:'0deg'}, {rotate:'360deg'}], {duration:820, easing:'cubic-bezier(.35,0,.25,1)'});
+        await wait(1150);
         mood('normal');
       };
       const release = (c) => {
         const r = c.getBoundingClientRect();
-        c.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(-16px) scale(.9)'}], {duration:420, easing:'ease-in', fill:'forwards'}).onfinish = () => c.remove();
+        c.animate([{opacity:1, transform:'none'}, {opacity:0, transform:'translateY(-18px) scale(.9)'}], {duration:440, easing:'ease-in', fill:'forwards'}).onfinish = () => c.remove();
         puff(r.left + r.width / 2, r.top, 4);
       };
+      /* Un sitio con agua, más bien lejos de donde está, para que se le vea cruzar. */
+      const pick = () => {
+        let best = null, far = -1;
+        spots().forEach((p) => { const d = Math.hypot(p[0] - body.x, p[1] - body.y) + Math.random() * 240; if(d > far){ far = d; best = p; } });
+        return [best[0] + (Math.random() - 0.5) * 50, best[1] + (Math.random() - 0.5) * 36];
+      };
+      /* Un rato a su aire. Si el cursor anda por el agua (fuera de la tarjeta), se acerca a
+         curiosear; si no, se da un paseo. Y al llegar, a veces saluda o guiña un ojo. */
+      const idle = async () => {
+        const p = this.deskPointer, s = shell();
+        const inWater = p && performance.now() - p[2] < 4000 && (p[0] < s.left - 30 || p[0] > s.right + 30 || p[1] < s.top - 30 || p[1] > s.bottom + 30);
+        if(inWater){
+          await swim(clamp(p[0] + (p[0] < body.x ? 70 : -70), size * 0.6, window.innerWidth - size * 0.6), clamp(p[1] - 20, size * 0.6, window.innerHeight - size * 0.6));
+          if(!alive()) return;
+          look(null);
+          mood('contento');
+          sumi.play(el, 'wave');
+          await wait(1500);
+          mood('normal');
+          return;
+        }
+        const to = pick();
+        await swim(to[0], to[1]);
+        if(!alive()) return;
+        look(null);
+        const whim = Math.random();
+        if(whim < 0.3){ mood('guino'); await hop(90); await wait(700); mood('normal'); }
+        else if(whim < 0.55){ sumi.play(el, 'look'); await wait(1500); }
+        else await wait(500 + Math.random() * 600);
+      };
 
-      place(pos[0], pos[1]);
+      me.style.transform = move(body.x - size / 2, body.y - size / 2);
       me.classList.add('is-in');
       if(this.deskCalm()){
         cols[2].appendChild(card());
         mood('contento');
         return;
       }
+      this.deskRaf = requestAnimationFrame(tick);
       (async () => {
-        await wait(600);
+        await wait(700);
         while(alive()){
           if(plain || count(0) < 2){
             const p = pick(), f = float(p[0], p[1]);
-            await wait(650);
-            await swim(p[0], p[1] - reach * 0.9);
+            await wait(750);
+            /* La ve: se sorprende y da un respingo. */
+            look(p);
+            mood('aviso');
+            await hop(120);
+            await wait(430);
+            if(!alive()) return;
+            mood('normal');
+            await swim(p[0], p[1] - size * 0.62);
             if(!alive()) return;
             await grab(f);
             if(!alive()) return;
-            await (plain ? surface(f) : deliver(f));
+            await (plain ? surface() : deliver());
             if(!alive()) return;
           }
           if(!plain){
@@ -427,10 +611,8 @@
             if(count(0)){ await push(first(0), 1); if(!alive()) return; }
             if(count(2) > 2) release(first(2));
           }
-          const p = pick();
-          await swim(p[0], p[1]);
+          await idle();
           if(!alive()) return;
-          await wait(500 + Math.random() * 700);
         }
       })();
     }

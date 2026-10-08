@@ -489,6 +489,12 @@ html.scene-off .auth-sumi{display:none;}
 .auth-ink{display:none;position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;--water:199 92% 56%;--water-2:176 72% 44%;
   background:linear-gradient(180deg, hsl(var(--water) / .17), hsl(var(--water) / .07) 40%, transparent 66%), linear-gradient(0deg, hsl(222 70% 22% / .30), transparent 50%);}
 html.scene-off .auth-ink{display:block;}
+/* Con el tema oscuro el azul no pegaba con el resto de la app (lo dijo el dueño): el agua es
+   de noche, gris azulada y apagada. */
+:root[data-theme="dark"] .auth-ink{--water:216 20% 64%;--water-2:205 14% 52%;background:linear-gradient(180deg, hsl(var(--water) / .09), hsl(var(--water) / .035) 40%, transparent 66%), linear-gradient(0deg, hsl(228 28% 5% / .6), transparent 52%);}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .auth-ink{--water:216 20% 64%;--water-2:205 14% 52%;background:linear-gradient(180deg, hsl(var(--water) / .09), hsl(var(--water) / .035) 40%, transparent 66%), linear-gradient(0deg, hsl(228 28% 5% / .6), transparent 52%);}
+}
 /* Los rayos: muy tenues y sin borde arriba, que no se vea de dónde cuelgan. */
 .auth-ink-ray{position:absolute;top:-10%;left:14%;width:16vmax;height:120%;transform-origin:50% 0;transform:rotate(17deg);background:linear-gradient(180deg, transparent, hsl(var(--water) / .09) 22%, hsl(var(--water) / .04) 60%, transparent 85%);-webkit-mask-image:linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);mask-image:linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);will-change:transform, opacity;--a:17deg;--b:21deg;}
 .auth-ink-ray.is-2{left:46%;width:22vmax;--a:20deg;--b:15deg;}
@@ -511,15 +517,17 @@ html.scene-off .auth-ink{display:block;}
 /* Sumi. Lo coloca AuthView con transform; aquí solo su tamaño y su tinta. */
 .auth-swimmer{position:absolute;left:0;top:0;width:104px;height:104px;color:var(--ink);opacity:0;will-change:transform;}
 .auth-swimmer.is-in{opacity:1;transition:opacity .5s ease;}
-.auth-swimmer .sumi{width:100%;height:100%;}
+/* Se encoge y se estira (playDesk) desde la cabeza, no desde el centro de su caja. */
+.auth-swimmer .sumi{width:100%;height:100%;transform-origin:50% 42%;}
 /* Una tarea en el agua: la misma tarjeta del tablero, que sube del fondo y espera flotando a
    que Sumi la rescate. .is-held: ya la lleva él, colgada de los brazos. */
-.auth-float{position:absolute;left:0;top:0;width:82px;padding:9px 9px 10px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:0 0 0 1px var(--line), 0 10px 22px -10px hsl(222 60% 10% / .55);will-change:transform, opacity;}
+.auth-float{position:absolute;left:0;top:0;width:86px;padding:10px 10px 11px 13px;background:var(--surface-solid);border-radius:var(--r-md);box-shadow:inset 3px 0 0 var(--st-pend), 0 0 0 1px var(--line), 0 12px 24px -10px hsl(222 60% 10% / .55);will-change:transform, opacity;}
 .auth-float::before,.auth-float::after{content:"";display:block;height:5px;border-radius:3px;}
 .auth-float::before{width:72%;background:var(--ink);opacity:.5;}
 .auth-float::after{width:34%;margin-top:7px;background:var(--st-pend);opacity:.55;}
+.auth-float.is-done{box-shadow:inset 3px 0 0 var(--st-done), 0 0 0 1px var(--line), 0 12px 24px -10px hsl(222 60% 10% / .55);}
 .auth-float.is-done::after{background:var(--st-done);opacity:1;}
-.auth-float.is-held{left:50%;top:78%;margin-left:-41px;}
+.auth-float.is-held{left:50%;top:80%;margin-left:-43px;transform-origin:50% 0;}
 @media (prefers-reduced-motion: no-preference){
   .auth-ink-ray{animation:ink-ray 11s ease-in-out infinite alternate;}
   .auth-ink-ray.is-2{animation-duration:15s;animation-delay:-6s;}
@@ -550,8 +558,8 @@ html[data-motion="reduced"] .auth-ink *{animation:none !important;}
   .auth-ink{display:block;}
   .auth-sumi{display:none !important;}
   .auth-swimmer{width:84px;height:84px;}
-  .auth-float{width:70px;}
-  .auth-float.is-held{margin-left:-35px;}
+  .auth-float{width:72px;}
+  .auth-float.is-held{margin-left:-36px;}
   .auth-ink-ray{width:30vmax;}
   .auth-ink-ray.is-2{width:36vmax;}
   .auth-ink-ray.is-3{width:22vmax;}
@@ -564,7 +572,7 @@ html.scene-off .auth-aside{position:relative;overflow:hidden;background:linear-g
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   html.scene-off .auth-aside{background:linear-gradient(150deg, color-mix(in srgb, var(--surface-solid) 20%, transparent), color-mix(in srgb, var(--surface-solid) 7%, transparent));-webkit-backdrop-filter:blur(2.5px) saturate(1.5);backdrop-filter:blur(2.5px) saturate(1.5);}
 }
-html.scene-off .auth-aside::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg, hsl(0 0% 100% / .10), transparent 30%, transparent 72%, hsl(199 92% 56% / .06));}
+html.scene-off .auth-aside::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg, hsl(0 0% 100% / .10), transparent 30%, transparent 72%, hsl(0 0% 100% / .04));}
 html.scene-off .auth-desk{position:relative;z-index:1;}
 /* Las columnas del tablero, también de cristal, un punto más claro que el panel. */
 html.scene-off .auth-desk-col{background:color-mix(in srgb, var(--surface-solid) 46%, transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);}

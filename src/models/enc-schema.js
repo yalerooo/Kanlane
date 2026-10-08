@@ -38,7 +38,7 @@
     vault: {label: 500}
   };
   const LIST_MAX = {
-    tasks: {labels: 1000, checklist: 200, assignees: 50, followers: 50},
+    tasks: {labels: 1000, checklist: 200, assignees: 50, followers: 50, relatedTo: 50, blockedBy: 50},
     notes: {attachments: 20, assetIds: 400}
   };
 

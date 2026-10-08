@@ -319,6 +319,10 @@ async function t(name, fn){
   await t('una portada que no es un mapa se rechaza', () => assertFails(own.collection('tasks').doc('cover3').set({title:'a', cover:'blue'})));
   await t('una portada con una imagen incrustada se rechaza', () => assertFails(own.collection('tasks').doc('cover4').set({title:'a', cover:{asset:'data:image/png;base64,' + 'A'.repeat(300)}})));
   await t('una portada con campos de más se rechaza', () => assertFails(own.collection('tasks').doc('cover5').set({title:'a', cover:{color:'blue', asset:'x', size:'full'}})));
+  await t('una tarea admite relaciones con otras tareas', () => assertSucceeds(own.collection('tasks').doc('rel1').set({title:'a', relatedTo:['t1', 't2'], blockedBy:['t3']})));
+  await t('quitar las relaciones deja las listas vacías', () => assertSucceeds(own.collection('tasks').doc('rel1').update({relatedTo:[], blockedBy:[]})));
+  await t('unas relaciones que no son una lista se rechazan', () => assertFails(own.collection('tasks').doc('rel2').set({title:'a', blockedBy:'t3'})));
+  await t('más de 50 dependencias se rechazan', () => assertFails(own.collection('tasks').doc('rel3').set({title:'a', blockedBy:Array.from({length:51}, (_, i) => 't' + i)})));
   await t('una tarea admite la marca de archivada', () => assertSucceeds(own.collection('tasks').doc('archived').set({title:'a', status:'todo', archivedAt:1759900000000})));
   await t('restaurar una tarea archivada deja la marca a cero', () => assertSucceeds(own.collection('tasks').doc('archived').update({archivedAt:0})));
   await t('una marca de archivada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('archived2').set({title:'a', archivedAt:'ayer'})));

@@ -224,6 +224,45 @@ async function newProject(page, name){
     await page.locator('#dlgTaskView').waitFor({state:'hidden'});
     await page.locator('#taskMode [data-task-mode="board"]').click();
     assert.equal(await page.locator('#board').isVisible(), true);
+    /* Dependencia entre dos tareas desde el formulario: aviso de bloqueo en la tarjeta y en la ficha,
+       sigue tras recargar y se quita; la otra tarea no cambia de aspecto. */
+    {
+      const ids = await page.evaluate(() => Workhub.app.models.tasks.items.map((t) => [t.title, t.id]));
+      const monthId = ids.find((x) => x[0] === 'Vence dentro de un mes')[1];
+      const todayId = ids.find((x) => x[0] === 'Vence hoy')[1];
+      await page.evaluate((id) => Workhub.app.controllers.tasks.openEdit(id), monthId);
+      await page.locator('#dlg').waitFor({state:'visible'});
+      await page.locator('#taskRelationsSection').waitFor({state:'visible'});
+      await page.evaluate((id) => {
+        const kind = document.getElementById('relationKind'); kind.value = 'blockedBy';
+        const pick = document.getElementById('relationTaskPicker'); pick.value = id; pick.dispatchEvent(new Event('change', {bubbles:true}));
+      }, todayId);
+      await page.locator('#relatedTasksList .linked-row').filter({hasText:'Vence hoy'}).waitFor();
+      assert.equal(await page.evaluate(() => Workhub.app.controllers.tasks.dialog.isDirty()), false, 'las relaciones se guardan al momento');
+      await page.keyboard.press('Escape');
+      await page.locator('#dlg').waitFor({state:'hidden'});
+      /* «Vence hoy» ya está terminada: no bloquea. Al reabrirla, sí. */
+      assert.equal(await page.locator('.blocked-badge').count(), 0, 'una tarea terminada no bloquea');
+      await page.evaluate((id) => Workhub.app.controllers.tasks.moveWithActivity(id, 'todo'), todayId);
+      await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.blocked-badge').waitFor();
+      assert.equal(await page.locator('.card .blocked-badge').count(), 1);
+      await page.reload();
+      await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.blocked-badge').waitFor();
+      await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).click();
+      await page.locator('#tvBlocked').waitFor({state:'visible'});
+      assert.match(await page.locator('#tvBlocked').textContent(), /Vence hoy/);
+      assert.match(await page.locator('#tvLinks').textContent(), /Bloqueada por/);
+      await page.keyboard.press('Escape');
+      await page.locator('#dlgTaskView').waitFor({state:'hidden'});
+      await page.evaluate((id) => Workhub.app.controllers.tasks.openEdit(id), monthId);
+      await page.locator('#relatedTasksList [data-action="unlink-task"]').click();
+      await page.locator('#relatedTasksList .linked-empty').waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('#dlg').waitFor({state:'hidden'});
+      assert.equal(await page.locator('.blocked-badge').count(), 0);
+      await page.evaluate((id) => Workhub.app.controllers.tasks.moveWithActivity(id, 'done'), todayId);
+      await page.waitForFunction(() => Workhub.models.TaskModel.isDone(Workhub.app.models.tasks.items.find((t) => t.title === 'Vence hoy')));
+    }
     /* Portada de color desde el formulario: se ve en la tarjeta y en la ficha, sigue tras recargar y se quita. */
     const coverOf = (title) => page.evaluate((x) => Workhub.models.TaskModel.coverOf(Workhub.app.models.tasks.items.find((t) => t.title === x)), title);
     const editTask = async (title) => {

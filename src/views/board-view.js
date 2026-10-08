@@ -694,6 +694,15 @@
 
     render(tasks, all){
       all = all || tasks;
+      /* Tareas bloqueadas: las que esperan a otra que sigue a la vista y sin terminar. */
+      const byId = {};
+      all.forEach((t) => { byId[t.id] = t; });
+      blockedBy = {};
+      all.forEach((t) => {
+        if(TaskModel.isDone(t)) return;
+        const waiting = TaskModel.relationIds(t.blockedBy).map((id) => byId[id]).filter((x) => x && x.id !== t.id && !TaskModel.isDone(x));
+        if(waiting.length) blockedBy[t.id] = waiting.map((x) => x.title || '');
+      });
       const stages = TaskModel.STATUS.filter((s) => this.hidden.indexOf(s.key) === -1);
       const hiddenCount = TaskModel.STATUS.length - stages.length;
       /* Resumen compacto de lo que se está viendo (respeta búsqueda y filtro). */
@@ -767,6 +776,16 @@
 
   /* ---- Piezas comunes de la tarjeta y de la fila de la lista ---- */
 
+  /* Por id de tarea, los títulos de las tareas sin terminar que la bloquean (lo rellena render). */
+  let blockedBy = {};
+
+  /* Aviso de que la tarea está bloqueada por otra; al pasar el ratón dice por cuáles. */
+  function blockedHtml(t){
+    const titles = blockedBy[t.id];
+    if(!titles) return '';
+    return '<span class="blocked-badge" title="' + esc(Workhub.t('Bloqueada por: {tareas}', {tareas:titles.join(', ')})) + '">' + iconSpan('block') + esc(Workhub.t('Bloqueada')) + '</span>';
+  }
+
   /* Fecha límite; con fecha de inicio, el intervalo («05 oct – 12 oct»). Solo inicio: «Desde 05 oct». */
   function dueHtml(t){
     const r = TaskModel.rangeOf(t);
@@ -820,6 +839,7 @@
     const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
     const top = clientHtml(t) + tagsHtml(t);
     const foot = [
+      blockedHtml(t),
       dueHtml(t),
       progressHtml(t),
       links ? '<span class="links" title="Vínculos">' + iconSpan('clip') + links + '</span>' : '',
@@ -851,7 +871,7 @@
       /* Cada dato en su columna (vacía si no lo hay), para que las filas queden alineadas. */
       (clientHtml(t) || '<span class="card-client"></span>') +
       (tagsHtml(t) || '<span class="card-tag"></span>') +
-      '<span class="tl-extra">' + progressHtml(t) + (t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '') + '</span>' +
+      '<span class="tl-extra">' + blockedHtml(t) + progressHtml(t) + (t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '') + '</span>' +
       (who ? '<span class="card-assignees">' + who + '</span>' : '') +
       '<span class="tl-due">' + dueHtml(t) + '</span>' +
       '</div>';

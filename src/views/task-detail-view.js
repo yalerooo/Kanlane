@@ -25,6 +25,7 @@
   const TICK_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
   const BOLT_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>';
   const LOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  const BLOCK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>';
 
   class TaskDetailView {
     constructor(){
@@ -210,10 +211,13 @@
 
     /* handler(action, id, button): open-contact, toggle-linked-vault, copy-linked-vault, goto-vault */
     bindLinkActions(handler){
-      this.links.addEventListener('click', (ev) => {
+      const delegate = (ev) => {
         const btn = closest(ev.target, 'button[data-action]');
         if(btn) handler(btn.getAttribute('data-action'), btn.getAttribute('data-id'), btn);
-      });
+      };
+      this.links.addEventListener('click', delegate);
+      /* El aviso de bloqueo enlaza a las tareas que la bloquean. */
+      $('tvBlocked').addEventListener('click', delegate);
     }
 
     /* ---------- Estado ---------- */
@@ -393,8 +397,15 @@
       const vaultIds = Array.isArray(t.linkedVault) ? t.linkedVault : [];
       const contacts = contactIds.map((id) => ctx.contacts.find((c) => c.id === id)).filter(Boolean);
       const entries = vaultIds.map((id) => ctx.vault.find(id)).filter(Boolean);
-      this.linksWrap.hidden = !contacts.length && !entries.length;
-      this.links.innerHTML = contacts.map(contactRowHtml).join('') + entries.map((v) => vaultRowHtml(v, ctx.vault)).join('');
+      /* Otras tareas: primero las que la bloquean. Y, arriba, el aviso si alguna sigue sin terminar. */
+      const relations = ctx.tasks ? ctx.tasks.relationsOf(t.id) : [];
+      const blockers = ctx.tasks ? ctx.tasks.blockersOf(t.id) : [];
+      const blocked = $('tvBlocked');
+      blocked.hidden = !blockers.length;
+      blocked.innerHTML = blockers.length ? BLOCK_ICON + '<span>' + esc(Workhub.t(blockers.length === 1 ? 'Bloqueada: no puede avanzar hasta que termine' : 'Bloqueada: no puede avanzar hasta que terminen')) + ' ' +
+        blockers.map((b) => '<button type="button" class="tv-blocked-task" data-action="open-task" data-id="' + esc(b.id) + '" translate="no">' + esc(b.title || Workhub.t('Sin título')) + '</button>').join(', ') + '</span>' : '';
+      this.linksWrap.hidden = !contacts.length && !entries.length && !relations.length;
+      this.links.innerHTML = relations.map(taskRowHtml).join('') + contacts.map(contactRowHtml).join('') + entries.map((v) => vaultRowHtml(v, ctx.vault)).join('');
     }
 
     renderNotes(docs){
@@ -574,6 +585,18 @@
       '<span class="avatar is-sm" style="--h:' + hueFor(name) + '" aria-hidden="true">' + esc(initials(c.nombre)) + '</span>' +
       '<div class="tv-link-main"><div class="tv-link-title" translate="no">' + esc(name) + '</div><div class="tv-link-meta">' + esc(meta) + '</div></div>' +
       '<div class="tv-link-actions"><button type="button" class="icon-btn" data-action="open-contact" data-id="' + esc(c.id) + '">Abrir</button></div>' +
+      '</div>';
+  }
+
+  /* Otra tarea relacionada con esta: {id, kind, task} (TaskModel.relationsOf). */
+  function taskRowHtml(r){
+    const s = TaskModel.statusOf(r.task.status);
+    const label = {related:'Relacionada con', blockedBy:'Bloqueada por', blocks:'Bloquea a'}[r.kind];
+    return '<div class="tv-link">' +
+      '<span class="agenda-ring' + (s.done ? ' is-final' : '') + '" style="--st:' + s.dot + '" aria-hidden="true"></span>' +
+      '<div class="tv-link-main"><div class="tv-link-title" translate="no">' + esc(r.task.title || Workhub.t('Sin título')) + '</div>' +
+      '<div class="tv-link-meta">' + esc(Workhub.t(label)) + ' · <span translate="no">' + esc(s.label) + '</span></div></div>' +
+      '<div class="tv-link-actions"><button type="button" class="icon-btn" data-action="open-task" data-id="' + esc(r.id) + '">' + esc(Workhub.t('Abrir')) + '</button></div>' +
       '</div>';
   }
 

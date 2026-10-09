@@ -28,6 +28,8 @@
   };
   const KEY = 'workhub_lang';
   const ATTRS = ['placeholder', 'title', 'aria-label', 'data-short', 'data-placeholder-text', 'alt'];
+  /* Páginas legales que tienen versión en otro idioma (en/legal/). */
+  const LEGAL = {en: {'/legal/terminos/':'/en/legal/terms/', '/legal/privacidad/':'/en/legal/privacy/', '/legal/cookies/':'/en/legal/cookies/'}};
   const SKIP = {SCRIPT:1, STYLE:1, TEXTAREA:1, INPUT:1, CODE:1, IFRAME:1, svg:1, SVG:1};
   /* De los campos se traducen los atributos (placeholder…), nunca su valor. */
   const FIELDS = {INPUT:1, TEXTAREA:1};
@@ -141,6 +143,15 @@
         sourceAttrs.set(el, kept);
         el.setAttribute(a, out);
       }
+    }
+    /* Los enlaces a las páginas legales van a su versión en el idioma en uso. */
+    const href = el.nodeName === 'A' && el.getAttribute('href');
+    const to = href && LEGAL[lang] && LEGAL[lang][href];
+    if(to){
+      const kept = sourceAttrs.get(el) || {};
+      kept.href = {src:href, out:to};
+      sourceAttrs.set(el, kept);
+      el.setAttribute('href', to);
     }
   }
 

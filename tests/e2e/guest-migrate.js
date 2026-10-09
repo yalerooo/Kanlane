@@ -214,6 +214,10 @@ async function slow(browser){
   assert.ok(await page.evaluate(() => localStorage.getItem('workhub_guest_migrate')), 'lo pendiente sigue apuntado hasta que termine');
   /* Vuelve la conexión: la copia termina por detrás. */
   await context.unroute('**://127.0.0.1:8187/**', cut);
+  /* Como cuando vuelve la red de verdad: el navegador avisa y Firestore reconecta al momento. Sin
+     el aviso reintenta cuando le toca, con esperas cada vez más largas (hasta un minuto), y el
+     aviso de abajo llegaba unas veces en un segundo y otras fuera de plazo. */
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.locator('.toast').filter({hasText:'Tus datos de invitado ya están en tu cuenta.'}).waitFor({timeout:90000});
   await page.locator('.card').filter({hasText:'Tarea que tarda en llegar'}).waitFor({timeout:30000});
   const after = await page.evaluate(async () => ({

@@ -128,4 +128,26 @@ const backup = new Workhub.models.BackupModel({tasks:empty, contacts:empty, meet
   await plain.import({tasks:[{title:'Con sitio', location:'  Puerta del Sol  ', votes:['uid-de-otro']}, {title:'Sitio raro', location:{lat:1}}, {title:'Sin nada'}]});
   assert.deepEqual(JSON.parse(JSON.stringify(made.tasks.map((t) => [t.location || null, 'votes' in t]))), [['Puerta del Sol', false], [null, false], [null, false]]);
   console.log('OK   copia: la ubicación se conserva y los votos no se importan');
+
+  /* Repetición: se conserva con su día original (repeatAnchor) si es de esa fecha; sin fecha límite
+     o con una frecuencia desconocida, la tarea entra sin repetición. */
+  made.tasks.length = 0;
+  await plain.import({tasks:[
+    {title:'Recortada', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30', repeatSpawned:true},
+    {title:'Semanal', dueDate:'2026-11-30', repeat:'weekly', repeatAnchor:'31@2026-11-30'},
+    {title:'Día de otra fecha', dueDate:'2026-12-30', repeat:'monthly', repeatAnchor:'31@2026-11-30'},
+    {title:'Día raro', dueDate:'2026-11-30', repeat:'yearly', repeatAnchor:'40@2026-11-30', repeatSpawned:'sí'},
+    {title:'Sin fecha', repeat:'monthly', repeatAnchor:'31@2026-11-30'},
+    {title:'Frecuencia rara', dueDate:'2026-11-30', repeat:'hourly'},
+    {title:'Sin repetición', dueDate:'2026-11-30'}
+  ]});
+  assert.deepEqual(JSON.parse(JSON.stringify(made.tasks.map((t) => [t.repeat || null, t.repeatAnchor || null, t.repeatSpawned || null]))), [
+    ['monthly', '31@2026-11-30', true], ['weekly', null, null], ['monthly', null, null], ['yearly', null, null], [null, null, null], [null, null, null], [null, null, null]]);
+  /* Con las reglas sin publicar, que aún rechazan repeatAnchor: la tarea entra igual, sin él. */
+  made.tasks.length = 0;
+  const strict = Object.assign({}, store, {add:async (task) => { if(task.repeatAnchor) throw new Error('permission-denied'); return store.add(task); }});
+  const old = new Workhub.models.BackupModel({tasks:strict, contacts:empty, meetings:empty, clients:empty, vault});
+  const kept = await old.import({tasks:[{title:'Recortada', dueDate:'2026-11-30', repeat:'monthly', repeatAnchor:'31@2026-11-30'}]});
+  assert.deepEqual([made.tasks.length, made.tasks[0].repeat, 'repeatAnchor' in made.tasks[0], kept.counts.tasks], [1, 'monthly', false, 1]);
+  console.log('OK   copia: la repetición y su día original se conservan al importar');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

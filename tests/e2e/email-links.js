@@ -27,17 +27,28 @@ async function ready(){
   throw new Error('No arrancaron el servidor y el emulador de Authentication');
 }
 
-/* El enlace del último correo de ese tipo que el emulador «envió» a esa dirección, ya como lo
-   deja el Worker: en la app. */
+/* El enlace del botón del último correo de ese tipo que Kanlane «envió» a esa dirección. Los
+   correos los compone worker/account-mail.mjs (el servidor de desarrollo los deja en /__dev/mail
+   en vez de enviarlos); se comprueba de paso que son los nuestros, con botón. */
+const SUBJECTS = {VERIFY_EMAIL:'Verifica tu correo en Kanlane', PASSWORD_RESET:'Restablece tu contraseña de Kanlane'};
+const BUTTONS = {VERIFY_EMAIL:'Verificar correo', PASSWORD_RESET:'Cambiar contraseña'};
 async function link(email, type){
-  let code;
-  for(let i = 0; i < 50 && !code; i++){
-    const data = await (await fetch(authUrl + '/emulator/v1/projects/demo-workhub/oobCodes')).json();
-    code = (data.oobCodes || []).filter((item) => item.email === email && item.requestType === type).pop();
-    if(!code) await new Promise((resolve) => setTimeout(resolve, 100));
+  let mail;
+  for(let i = 0; i < 50 && !mail; i++){
+    const outbox = await (await fetch('http://localhost:' + port + '/__dev/mail')).json();
+    mail = outbox.filter((item) => item.to === email && item.subject === SUBJECTS[type]).pop();
+    if(!mail) await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  assert.ok(code, 'el emulador recibió el correo (' + type + ')');
-  return url + '?mode=' + (type === 'VERIFY_EMAIL' ? 'verifyEmail' : 'resetPassword') + '&oobCode=' + encodeURIComponent(code.oobCode) + '&lang=es';
+  assert.ok(mail, 'Kanlane envió el correo (' + type + ')');
+  const button = new RegExp('<a href="([^"]+)"[^>]*>' + BUTTONS[type] + '</a>').exec(mail.html);
+  assert.ok(button, 'el correo lleva su botón');
+  const href = button[1].replace(/&amp;/g, '&');
+  assert.ok(href.indexOf(url + '?mode=' + (type === 'VERIFY_EMAIL' ? 'verifyEmail' : 'resetPassword') + '&oobCode=') === 0, 'el botón lleva a la app');
+  /* El código del enlace es uno de los que Firebase generó para esa cuenta. */
+  const data = await (await fetch(authUrl + '/emulator/v1/projects/demo-workhub/oobCodes')).json();
+  const codes = (data.oobCodes || []).filter((item) => item.email === email && item.requestType === type).map((item) => item.oobCode);
+  assert.ok(codes.indexOf(new URL(href).searchParams.get('oobCode')) !== -1, 'el código es de Firebase');
+  return href;
 }
 
 async function open(context, to){

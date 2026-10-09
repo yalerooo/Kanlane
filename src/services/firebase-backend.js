@@ -151,8 +151,29 @@
     return !user.emailVerified && providers.length > 0 && providers.every((id) => id === 'password');
   }
 
+  /* Los correos de la cuenta los envía Kanlane (worker/account-mail.mjs, ruta /__/mail/v1), con su
+     diseño y en el idioma en uso. → true si lo ha enviado; false si no puede (sin configurar, cupo
+     agotado, sin Worker): entonces lo envía Firebase con su plantilla, como siempre. Si son
+     demasiados para esa cuenta o ese correo, se rechaza como lo haría Firebase. */
+  function workerMail(body, token){
+    const headers = {'Content-Type':'application/json'};
+    if(token) headers.Authorization = 'Bearer ' + token;
+    const lang = Workhub.i18n ? Workhub.i18n.lang : 'es';
+    return fetch('/__/mail/v1', {
+      method:'POST', cache:'no-store', credentials:'omit', headers:headers, body:JSON.stringify(Object.assign({lang:lang}, body))
+    }).then((res) => {
+      if(res.status !== 429) return res.ok;
+      const err = new Error('too-many-requests');
+      err.code = 'auth/too-many-requests';
+      throw err;
+    }, () => false);
+  }
+
   function sendVerification(){
-    return auth.currentUser ? auth.currentUser.sendEmailVerification() : Promise.resolve();
+    const user = auth.currentUser;
+    if(!user) return Promise.resolve();
+    return user.getIdToken().then((token) => workerMail({op:'verify'}, token), () => false)
+      .then((sent) => (sent ? undefined : user.sendEmailVerification()));
   }
 
   /* Tras pulsar el enlace del correo: recarga el usuario y renueva el token
@@ -296,7 +317,7 @@
   }
 
   function resetPassword(email){
-    return auth.sendPasswordResetEmail(email);
+    return workerMail({op:'reset', email:email}).then((sent) => (sent ? undefined : auth.sendPasswordResetEmail(email)));
   }
 
   /* ---------- Enlaces de los correos (worker/index.js los manda a la app con su código) ---------- */

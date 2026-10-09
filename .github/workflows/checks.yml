@@ -66,6 +66,7 @@ jobs:
           node tests/worker/mcp.test.js
           node tests/worker/webpush.test.js
           node tests/worker/notify.test.js
+          node tests/worker/account-mail.test.js
           node tests/tasks/mentions.test.js
           node tests/worker/totp.test.js
           node tests/worker/domains.test.js

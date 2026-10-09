@@ -61,6 +61,7 @@ const TOKEN = 'ghp_prueba_falsa';
 
     /* ---------- Ajustes → GitHub Projects ---------- */
     await page.evaluate(() => Workhub.app.navigate('settings'));
+    await page.locator('#settingsNav [data-sec="setIntegr"]').click();
     const token = page.locator('#ghToken');
     const fill = async () => {
       await page.locator('#ghUrl').fill(GH_URL);

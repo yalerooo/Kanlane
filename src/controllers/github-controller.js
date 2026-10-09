@@ -127,6 +127,7 @@
         /* Sin token en este navegador: se lleva al usuario a donde puede pegarlo. */
         if(!quiet){
           this.app.navigate('settings');
+          this.app.controllers.settings.view.showSection('setIntegr');
           toast.error('Añade el token de GitHub en este navegador para sincronizar.');
         }
         return Promise.resolve();

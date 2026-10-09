@@ -102,6 +102,22 @@ const ANA = {uid: 'ana', email: 'ana@ejemplo.test', emailVerified: false, name: 
     assert.equal((await w.manage(null, {op: 'otra'})).status, 400);
   });
 
+  /* QA del 6-oct-2026: «el correo de verificación no llega a un alias plus». Por parte de Kanlane
+     la dirección sale entera, con su «+», tanto hacia Firebase como hacia Resend, y un alias no
+     comparte tope con la dirección sin alias. */
+  await test('alias plus: la dirección llega entera a Firebase y a Resend', async () => {
+    const plus = 'omq0lg+migra1@mail.ejemplo.test';
+    const w = world([plus, 'omq0lg@mail.ejemplo.test']);
+    assert.equal((await w.manage({uid: 'qa', email: plus, emailVerified: false, name: ''}, {op: 'verify'})).status, 200);
+    assert.equal((await w.manage(null, {op: 'reset', email: plus})).status, 200);
+    assert.deepEqual(w.oob.map((o) => o.body.email), [plus, plus]);
+    assert.deepEqual(w.sent.map((s) => s.mail.to), [[plus], [plus]]);
+    assert.ok(w.sent[1].mail.html.includes('omq0lg+migra1@mail.ejemplo.test'), 'y así se nombra en el mensaje');
+    for (let i = 1; i < M.LIMITS.resetPerDay; i++) await w.manage(null, {op: 'reset', email: plus});
+    assert.equal((await w.manage(null, {op: 'reset', email: plus})).status, 429);
+    assert.equal((await w.manage(null, {op: 'reset', email: 'omq0lg@mail.ejemplo.test'})).status, 200, 'la dirección sin alias tiene su propio tope');
+  });
+
   await test('topes por cuenta y por correo, y limpieza de contadores', async () => {
     const w = world(['ana@ejemplo.test', 'bob@ejemplo.test']);
     for (let i = 0; i < M.LIMITS.verifyPerDay; i++) assert.equal((await w.manage(ANA, {op: 'verify'})).status, 200);

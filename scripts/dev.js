@@ -23,6 +23,10 @@ const CAPTURE_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT
   CAPTURE_DOMAINS: 'in.kanlane.test,respaldo.kanlane.test', CAPTURE_PLAN: 'paid'};
 /* Entorno del servidor MCP con los emuladores. */
 const MCP_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT: 'demo-workhub', MCP_SECRET: Buffer.alloc(32, 7).toString('base64')};
+/* Entorno de los correos de la cuenta con los emuladores, y los mensajes «enviados». */
+const MAIL_ENV = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9197', FIREBASE_PROJECT: 'demo-workhub',
+  MAIL_FROM: 'Kanlane <noreply@kanlane.test>', MAIL_DAILY_MAX: 100000};
+const outbox = [];
 const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
@@ -145,6 +149,39 @@ const server = http.createServer((req, res) => {
         return send(url === '/__/mcp/v1' ? 400 : 401, {error: url === '/__/mcp/v1' ? 'request' : 'auth'});
       }
       (url === '/__/mcp/v1' ? mcp.then((m) => m.rpc(bearer ? bearer[1] : '', body, MCP_ENV)) : mcp.then((m) => m.manage(who, body, MCP_ENV)))
+        .then((out) => send(out.status, out.body), () => send(503, {error: 'unavailable'}));
+    });
+    return;
+  }
+
+  /* Correos de la cuenta, SOLO con los emuladores: el mismo código que el Worker
+     (worker/account-mail.mjs) contra los emuladores de Authentication y Firestore, sin verificar
+     la firma del token. No se envía nada: los mensajes se quedan en memoria y se leen en
+     /__dev/mail (lo usa tests/e2e/email-links.js; también sirve para ver el diseño). */
+  if(url === '/__dev/mail' && emulator){
+    res.writeHead(200, {'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store'});
+    return res.end(JSON.stringify(outbox));
+  }
+  if(url === '/__/mail/v1' && emulator){
+    const send = (status, body) => { res.writeHead(status, {'Content-Type': TYPES['.json'], 'Cache-Control': 'no-store'}); res.end(JSON.stringify(body)); };
+    if(req.method !== 'POST') return send(405, {error: 'method'});
+    let raw = '';
+    req.on('data', (chunk) => { if(raw.length <= 4096) raw += chunk; });
+    req.on('end', () => {
+      let who = null, body;
+      try{
+        body = JSON.parse(raw);
+        if(body.op === 'verify'){
+          const token = /^Bearer ([A-Za-z0-9._-]+)$/.exec(req.headers.authorization || '');
+          const claims = JSON.parse(Buffer.from(token[1].split('.')[1], 'base64url').toString('utf8'));
+          who = {uid: claims.user_id || claims.sub, email: claims.email || '', emailVerified: claims.email_verified === true, name: claims.name || ''};
+          if(!who.uid) throw new Error('auth');
+        }
+      }catch(e){
+        return send(401, {error: 'auth'});
+      }
+      import(require('url').pathToFileURL(path.join(ROOT, 'worker/account-mail.mjs')).href)
+        .then((m) => m.manage(who, body, Object.assign({MAIL_LINK_ORIGIN: 'http://localhost:' + PORT}, MAIL_ENV), {send: async (mail) => { outbox.push(mail); if(outbox.length > 50) outbox.shift(); }}))
         .then((out) => send(out.status, out.body), () => send(503, {error: 'unavailable'}));
     });
     return;

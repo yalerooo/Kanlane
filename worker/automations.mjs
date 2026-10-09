@@ -109,31 +109,34 @@ const b64url = (bytes) => {
 const text = (s) => new TextEncoder().encode(s);
 
 /* El JWT firmado con la clave de la cuenta de servicio que Google cambia por un token de acceso. */
-export async function serviceJwt(account, nowMs) {
+export async function serviceJwt(account, nowMs, scope) {
   const pem = String(account.private_key || '').replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '');
   const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
   const key = await crypto.subtle.importKey('pkcs8', der, {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256'}, false, ['sign']);
   const iat = Math.floor(nowMs / 1000);
   const head = b64url(text(JSON.stringify({alg: 'RS256', typ: 'JWT'})));
-  const body = b64url(text(JSON.stringify({iss: account.client_email, scope: SCOPE, aud: TOKEN_URL, iat: iat, exp: iat + 3600})));
+  const body = b64url(text(JSON.stringify({iss: account.client_email, scope: scope || SCOPE, aud: TOKEN_URL, iat: iat, exp: iat + 3600})));
   const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, text(head + '.' + body));
   return head + '.' + body + '.' + b64url(sig);
 }
 
-let cached = {token: '', until: 0, email: ''};
+/* Un token por cuenta y permiso (`scope`; sin él, el de Firestore). */
+const cached = new Map();
 
-async function accessToken(account, deps) {
+export async function accessToken(account, deps, scope) {
   const now = deps.now();
-  if (cached.token && cached.email === account.client_email && now < cached.until) return cached.token;
+  const key = account.client_email + '|' + (scope || SCOPE);
+  const have = cached.get(key);
+  if (have && now < have.until) return have.token;
   const res = await deps.fetch(TOKEN_URL, {
     method: 'POST',
     headers: {'content-type': 'application/x-www-form-urlencoded'},
-    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + await serviceJwt(account, now)
+    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + await serviceJwt(account, now, scope)
   });
   if (!res.ok) throw new Error('token ' + res.status);
   const data = await res.json();
-  cached = {token: data.access_token, until: now + (Math.min(+data.expires_in || 3600, 3600) - 300) * 1000, email: account.client_email};
-  return cached.token;
+  cached.set(key, {token: data.access_token, until: now + (Math.min(+data.expires_in || 3600, 3600) - 300) * 1000});
+  return data.access_token;
 }
 
 /* ---------- Firestore por REST ---------- */

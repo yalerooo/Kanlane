@@ -33,7 +33,11 @@
 
    Avisos push con Kanlane cerrado (docs/NOTIFICACIONES.md, worker/notify.mjs):
    - /__/notify/v1: activar los avisos en un navegador y avisar de una mención, una asignación o un
-     cambio en una tarea seguida, con el mismo «Authorization» que /__/kms/. */
+     cambio en una tarea seguida, con el mismo «Authorization» que /__/kms/.
+
+   Correos de la cuenta (docs/CORREOS-CUENTA.md, worker/account-mail.mjs):
+   - /__/mail/v1: el correo de verificación y el de cambio de contraseña, con el diseño de Kanlane
+     y enviados con Resend. Si no puede, responde 503 y la app recurre al envío de Firebase. */
 
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
@@ -119,6 +123,7 @@ const CAPTURE_PATH = '/__/capture/v1';
 const CAPTURE_BODY_MAX = 4096;
 
 const NOTIFY_PATH = '/__/notify/v1';
+const MAIL_PATH = '/__/mail/v1';
 
 const MCP_PATH = '/__/mcp/v1';
 const MCP_TOKENS_PATH = '/__/mcp/v1/tokens';
@@ -167,8 +172,10 @@ async function verifiedUid(token) {
   return claims ? claims.sub : null;
 }
 
-/* Los datos de un ID token de Firebase válido ({sub, email, email_verified…}), o null. */
-async function verifiedClaims(token) {
+/* Los datos de un ID token de Firebase válido ({sub, email, email_verified…}), o null.
+   unverified: vale también una cuenta de correo y contraseña que aún no ha verificado el correo
+   (solo para pedir, justamente, el correo de verificación). */
+async function verifiedClaims(token, unverified) {
   const parts = String(token).split('.');
   if (parts.length !== 3) return null;
   let header, claims, signature;
@@ -198,7 +205,7 @@ async function verifiedClaims(token) {
   if (typeof claims.sub !== 'string' || !claims.sub || claims.sub.length > 128) return null;
   /* Como las reglas de Firestore: con correo y contraseña, el correo tiene que estar verificado. */
   const provider = claims.firebase && claims.firebase.sign_in_provider;
-  if (provider === 'password' && claims.email_verified !== true) return null;
+  if (!unverified && provider === 'password' && claims.email_verified !== true) return null;
   return claims;
 }
 
@@ -332,6 +339,49 @@ async function notify(request, env, url) {
     return json(out.status, out.body);
   } catch (e) {
     console.error('avisos: ' + (e && e.message));
+    return json(503, {error: 'unavailable'});
+  }
+}
+
+/* Correos de la cuenta (verificar el correo, cambiar la contraseña). 'verify' va con el ID token de
+   una cuenta que aún no ha verificado el correo; 'reset' no lleva sesión. Dos límites por IP (el
+   general y uno más corto, MAIL_RATE_LIMIT); los topes por cuenta y por correo, y el envío, están
+   en worker/account-mail.mjs. En los registros no queda ningún correo. */
+async function mail(request, env, url) {
+  if (request.method !== 'POST') return json(405, {error: 'method'}, {Allow: 'POST'});
+  const origin = request.headers.get('Origin');
+  if (origin && origin !== url.origin) return json(403, {error: 'origin'});
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  for (const limit of [env.AUTH_RATE_LIMIT, env.MAIL_RATE_LIMIT]) {
+    if (!limit) continue;
+    const {success} = await limit.limit({key: (limit === env.MAIL_RATE_LIMIT ? 'mail:' : '') + ip});
+    if (!success) return json(429, {error: 'rate'}, {'Retry-After': '60'});
+  }
+  let body = null;
+  try {
+    const raw = await request.text();
+    if (raw.length <= CAPTURE_BODY_MAX) body = JSON.parse(raw);
+  } catch (e) { body = null; }
+  if (!body || typeof body !== 'object') return json(400, {error: 'request'});
+  let who = null;
+  if (body.op === 'verify') {
+    const auth = /^Bearer ([A-Za-z0-9._-]{1,4096})$/.exec(request.headers.get('Authorization') || '');
+    let claims = null;
+    try {
+      claims = auth ? await verifiedClaims(auth[1], true) : null;
+    } catch (e) {
+      return json(503, {error: 'unavailable'});
+    }
+    if (!claims) return json(401, {error: 'auth'});
+    who = {uid: claims.sub, email: typeof claims.email === 'string' ? claims.email : '', emailVerified: claims.email_verified === true,
+      name: typeof claims.name === 'string' ? claims.name : ''};
+  }
+  try {
+    const m = await import('./account-mail.mjs');
+    const out = await m.manage(who, body, env);
+    return json(out.status, out.body, out.status === 429 ? {'Retry-After': '3600'} : undefined);
+  } catch (e) {
+    console.error('correos: ' + (e && e.message));
     return json(503, {error: 'unavailable'});
   }
 }
@@ -491,7 +541,11 @@ export default {
       /* Y los de los avisos push. */
       .then(() => import('./notify.mjs')).then((m) => m.sweep(env)).then((out) => {
         if (out.configured && out.rate) console.log('avisos: limpieza, ' + out.rate + ' contadores caducados');
-      }, (err) => console.error('avisos: limpieza, ' + (err && err.message)));
+      }, (err) => console.error('avisos: limpieza, ' + (err && err.message)))
+      /* Y los de los correos de la cuenta. */
+      .then(() => import('./account-mail.mjs')).then((m) => m.sweep(env)).then((out) => {
+        if (out.configured && out.rate) console.log('correos: limpieza, ' + out.rate + ' contadores caducados');
+      }, (err) => console.error('correos: limpieza, ' + (err && err.message)));
     ctx.waitUntil(job);
     return job;
   },
@@ -542,6 +596,7 @@ export default {
     if (url.pathname === TOTP_PATH) return totp(request, env, url);
     if (url.pathname === CAPTURE_PATH) return capture(request, env, url);
     if (url.pathname === NOTIFY_PATH) return notify(request, env, url);
+    if (url.pathname === MAIL_PATH) return mail(request, env, url);
     if (url.pathname === MCP_TOKENS_PATH) return mcpTokens(request, env, url);
     if (url.pathname === MCP_PATH) return mcp(request, env, url);
 

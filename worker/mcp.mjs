@@ -408,7 +408,7 @@ async function moveTask(who, args, store, now) {
   if (next) {
     const copy = {title: t.title || '', desc: t.desc || '', cliente: t.cliente || '', contacto: t.contacto || '', status: stages[0].key, dueDate: next, repeat: t.repeat,
       labels: list(t.labels).slice(), linkedContacts: list(t.linkedContacts).slice(), linkedVault: list(t.linkedVault).slice(),
-      checklist: list(t.checklist).filter(Boolean).map((c) => ({id: c.id, text: c.text, done: false})), order: now + 1, createdAt: now, updatedAt: now};
+      checklist: list(t.checklist).filter(Boolean).map((c) => Object.assign({id: c.id, text: c.text, done: false}, c.assignee ? {assignee: c.assignee} : {})), order: now + 1, createdAt: now, updatedAt: now};
     if (t.dueTime) copy.dueTime = t.dueTime;
     if (validDate(t.startDate) && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, Math.round((parseYmd(next) - parseYmd(t.dueDate)) / DAY_MS));
     if (t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);

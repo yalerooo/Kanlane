@@ -344,6 +344,19 @@
       return ymd(d);
     }
 
+    /* Una subtarea tal como se guarda: {id, text, done} y, en equipos, a quién está asignada
+       (assignee, un uid) y quién y cuándo la completó (doneBy, doneAt; solo mientras está hecha).
+       done (opcional): el estado con el que queda. */
+    static checkItem(c, done){
+      const out = {id:c.id, text:c.text, done:done === undefined ? !!c.done : !!done};
+      if(c.assignee) out.assignee = c.assignee;
+      if(out.done && c.doneBy){
+        out.doneBy = c.doneBy;
+        if(c.doneAt) out.doneAt = c.doneAt;
+      }
+      return out;
+    }
+
     /* {done, total} de las subtareas (total 0 si no tiene). */
     static checklistProgress(t){
       const list = Array.isArray(t && t.checklist) ? t.checklist : [];
@@ -421,7 +434,8 @@
       });
     }
 
-    /* Al terminar una tarea que se repite, crea la siguiente (sin subtareas marcadas). Una sola vez por tarea. */
+    /* Al terminar una tarea que se repite, crea la siguiente (sin subtareas marcadas, cada una con
+       su misma persona asignada). Una sola vez por tarea. */
     spawnNext(t){
       const day = TaskModel.repeatDay(t) || +String(t.dueDate || '').slice(8);
       const next = TaskModel.nextDue(t.dueDate, t.repeat, day);
@@ -432,7 +446,7 @@
         labels:Array.isArray(t.labels) ? t.labels.slice() : [],
         linkedContacts:Array.isArray(t.linkedContacts) ? t.linkedContacts.slice() : [],
         linkedVault:Array.isArray(t.linkedVault) ? t.linkedVault.slice() : [],
-        checklist:(Array.isArray(t.checklist) ? t.checklist : []).map((c) => ({id:c.id, text:c.text, done:false})),
+        checklist:(Array.isArray(t.checklist) ? t.checklist : []).map((c) => TaskModel.checkItem(c, false)),
         updatedAt:Date.now()
       };
       if(t.dueTime) copy.dueTime = t.dueTime;
@@ -456,13 +470,41 @@
       });
     }
 
-    /* Marca o desmarca una subtarea. */
-    toggleCheck(id, itemId, done){
+    /* Marca o desmarca una subtarea. by (opcional, en equipos): el uid de quien la completa;
+       queda en la subtarea con la hora, y se borra al reabrirla. */
+    toggleCheck(id, itemId, done, by){
       const t = this.find(id);
       if(!t || !Array.isArray(t.checklist)) return Promise.resolve();
-      const checklist = t.checklist.map((c) => c.id === itemId ? Object.assign({}, c, {done:!!done}) : c);
+      const checklist = t.checklist.map((c) => {
+        if(c.id !== itemId) return c;
+        const next = Object.assign({}, c, {done:!!done});
+        delete next.doneBy;
+        delete next.doneAt;
+        if(done && by){ next.doneBy = by; next.doneAt = Date.now(); }
+        return next;
+      });
       this.patchLocal(id, {checklist:checklist});
       return this.update(id, {checklist:checklist, updatedAt:Date.now()}).catch(() => {});
+    }
+
+    /* Asigna una subtarea a una persona (uid) o la deja sin asignar (''). No toca a quién está
+       asignada la tarea. → promesa con true si cambió algo. */
+    assignCheck(id, itemId, uid){
+      const t = this.find(id);
+      const item = t && Array.isArray(t.checklist) ? t.checklist.find((c) => c.id === itemId) : null;
+      if(!item || (item.assignee || '') === (uid || '')) return Promise.resolve(false);
+      const checklist = t.checklist.map((c) => {
+        if(c !== item) return c;
+        const next = Object.assign({}, c);
+        if(uid) next.assignee = uid; else delete next.assignee;
+        return next;
+      });
+      const before = t.checklist;
+      this.patchLocal(id, {checklist:checklist});
+      return this.update(id, {checklist:checklist, updatedAt:Date.now()}).then(() => true, (err) => {
+        this.patchLocal(id, {checklist:before});
+        throw err;
+      });
     }
 
     _create(body){

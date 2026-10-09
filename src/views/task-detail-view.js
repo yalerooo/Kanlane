@@ -194,6 +194,17 @@
       });
     }
 
+    /* Asignar una subtarea desde su avatar (solo en equipos). handler(taskId, itemId, uid): '' la deja sin asignar. */
+    bindCheckAssign(handler){
+      this.checks.addEventListener('click', (ev) => {
+        const btn = closest(ev.target, 'button[data-act="check-assign"]');
+        const row = btn && closest(btn, '[data-cid]');
+        if(!row || !this.taskId) return;
+        const taskId = this.taskId;
+        Workhub.views.team.pick(btn, btn.getAttribute('data-uid'), (uid) => handler(taskId, row.getAttribute('data-cid'), uid));
+      });
+    }
+
     bindEdit(handler){ this.btnEdit.addEventListener('click', () => handler(this.taskId)); }
 
     /* «Seguir»: avisos de lo que pase en esta tarea (solo en equipos). */
@@ -380,7 +391,7 @@
       this.checkProgressFill.style.width = percent + '%';
       this.checks.innerHTML = items.map((c) =>
         '<li data-cid="' + esc(c.id) + '"><label><input type="checkbox"' + (c.done ? ' checked' : '') + '>' +
-        '<span translate="no"' + (c.done ? ' class="is-done"' : '') + '>' + esc(c.text) + '</span></label></li>').join('');
+        '<span translate="no"' + (c.done ? ' class="is-done"' : '') + '>' + esc(c.text) + '</span></label>' + team.checkWho(c) + '</li>').join('');
 
       /* Etiquetas y pull requests (los datos completos de GitHub llegan después: renderGithub). */
       const L = Workhub.views.labels;

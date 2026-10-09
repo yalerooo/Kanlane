@@ -163,6 +163,7 @@
           this.vault.toggleVisible(id).then(() => this.view.renderDetailSecret(id, this.vault)).catch(() => {});
         },
         copy: (id, btn) => this.copyPassword(id, btn),
+        copyNotes: (id, btn) => this.copyNotes(id, btn),
         edit: (id) => this.openEdit(id)
       });
 
@@ -568,6 +569,12 @@
     copyPassword(id, btn){
       if(!this.vault.find(id)) return;
       this.vault.reveal(id).then((data) => this.view.copy(btn, data.password)).catch(() => {});
+    }
+
+    /* Las notas van cifradas con la contraseña: se copian con el mismo cuidado. */
+    copyNotes(id, btn){
+      if(!this.vault.find(id)) return;
+      this.vault.reveal(id).then((data) => this.view.copy(btn, data.notas || '')).catch(() => {});
     }
 
     openDetail(id){

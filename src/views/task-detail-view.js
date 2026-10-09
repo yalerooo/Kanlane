@@ -4,7 +4,7 @@
 (function(){
   const {esc, closest, iconSpan, initials, hueFor} = Workhub.utils.html;
   const {parseYmd, longDay, fmtDateTime, daysFromToday} = Workhub.utils.dates;
-  const {copyWithFeedback} = Workhub.utils.ui;
+  const {copySecret} = Workhub.utils.ui;
   const platform = Workhub.services.platform;
   const clientColors = Workhub.views.clientColors;
   const TaskModel = Workhub.models.TaskModel;
@@ -446,7 +446,8 @@
       this.notes.innerHTML = '<p class="tv-empty">No se pudieron cargar las notas.</p>';
     }
 
-    copy(btn, text){ return copyWithFeedback(btn, text); }
+    /* La contraseña de una credencial vinculada: se borra sola del portapapeles al minuto. */
+    copy(btn, text){ return copySecret(btn, text); }
   }
 
   /* Quién tiene asignada la tarea (solo en equipos), con acceso rápido para asignármela. */

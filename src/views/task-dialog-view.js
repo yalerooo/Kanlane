@@ -2,7 +2,7 @@
 (function(){
   const {esc, closest} = Workhub.utils.html;
   const {fmtDateTime} = Workhub.utils.dates;
-  const {copyWithFeedback, showMessage} = Workhub.utils.ui;
+  const {copySecret, showMessage} = Workhub.utils.ui;
   const platform = Workhub.services.platform;
   const VaultModel = Workhub.models.VaultModel;
   const md = Workhub.utils.markdown;
@@ -743,7 +743,8 @@
         }).join('');
     }
 
-    copy(btn, text){ return copyWithFeedback(btn, text); }
+    /* La contraseña de una credencial vinculada: se borra sola del portapapeles al minuto. */
+    copy(btn, text){ return copySecret(btn, text); }
   }
 
   function noteHtml(d){

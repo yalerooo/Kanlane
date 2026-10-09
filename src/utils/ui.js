@@ -3,10 +3,71 @@
   /* Copia texto al portapapeles y muestra "Copiado" en el botón durante un momento. */
   function copyWithFeedback(btn, text){
     if(!navigator.clipboard || !navigator.clipboard.writeText) return Promise.resolve();
+    /* Lo que hubiera pendiente de borrar ya no está en el portapapeles. */
+    forgetSecret();
     return navigator.clipboard.writeText(text || '').then(() => {
       flashLabel(btn, 'Copiado');
     }).catch(() => {});
   }
+
+  /* ---------- Contraseñas copiadas: se borran solas del portapapeles ---------- */
+
+  /* Tiempo para usar una contraseña copiada antes de que se borre del portapapeles. */
+  const SECRET_MS = 60000;
+  /* Lo copiado que está pendiente de borrar: {text, timer, onFocus}. */
+  let secret = null;
+
+  function forgetSecret(){
+    if(!secret) return;
+    clearTimeout(secret.timer);
+    if(secret.onFocus) window.removeEventListener('focus', secret.onFocus);
+    secret = null;
+  }
+
+  /* Si el navegador ya deja leer el portapapeles, se mira si sigue ahí lo copiado; si no se
+     puede saber (lo normal), se da por hecho que sí. Nunca se pide el permiso para esto. */
+  function stillThere(text){
+    if(!navigator.permissions || !navigator.clipboard.readText) return Promise.resolve(true);
+    return navigator.permissions.query({name:'clipboard-read'})
+      .then((p) => (p.state === 'granted' ? navigator.clipboard.readText().then((now) => now === text) : true))
+      .catch(() => true);
+  }
+
+  function wipeSecret(){
+    const mine = secret;
+    if(!mine) return;
+    stillThere(mine.text).then((there) => {
+      if(secret !== mine) return;
+      /* Se copió otra cosa desde otro sitio: no es nuestra, no se toca. */
+      if(!there){ forgetSecret(); return; }
+      navigator.clipboard.writeText('').then(() => {
+        if(secret !== mine) return;
+        forgetSecret();
+        if(Workhub.views.toast) Workhub.views.toast.success('Contraseña borrada del portapapeles', {important:true});
+      }, () => {
+        /* El navegador solo deja escribir con la pestaña delante: se borra al volver a ella. */
+        if(secret !== mine || mine.onFocus) return;
+        mine.onFocus = () => { mine.onFocus = null; wipeSecret(); };
+        window.addEventListener('focus', mine.onFocus, {once:true});
+      });
+    });
+  }
+
+  /* Copia una contraseña (o las notas cifradas de una): como copyWithFeedback, y pasado un minuto
+     se borra del portapapeles. Copiar otra cosa desde Kanlane, o copiar o cortar texto de la
+     página, cancela el borrado: lo que hay ya no es la contraseña. */
+  function copySecret(btn, text){
+    if(!navigator.clipboard || !navigator.clipboard.writeText) return Promise.resolve();
+    forgetSecret();
+    return navigator.clipboard.writeText(text || '').then(() => {
+      flashLabel(btn, 'Copiado');
+      if(!text) return;
+      secret = {text:text, onFocus:null, timer:setTimeout(wipeSecret, SECRET_MS)};
+      if(Workhub.views.toast) Workhub.views.toast.success('Copiada. Se borrará del portapapeles en 1 minuto.', {important:true});
+    }).catch(() => {});
+  }
+  document.addEventListener('copy', forgetSecret);
+  document.addEventListener('cut', forgetSecret);
 
   const DONE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
 
@@ -366,5 +427,5 @@
     vt.finished.then(clean, clean);
   }
 
-  Workhub.utils.ui = {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick, themeSwitch, dragGhostRect};
+  Workhub.utils.ui = {copyWithFeedback, copySecret, flashLabel, showMessage, bindDragAndDrop, consumeDragClick, themeSwitch, dragGhostRect};
 })();

@@ -3,7 +3,7 @@
 (function(){
   const {esc, iconSpan, closest} = Workhub.utils.html;
   const clientColors = Workhub.views.clientColors;
-  const {copyWithFeedback, flashLabel, showMessage, bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
+  const {copyWithFeedback, copySecret, flashLabel, showMessage, bindDragAndDrop, consumeDragClick} = Workhub.utils.ui;
   const VaultModel = Workhub.models.VaultModel;
   const $ = (id) => document.getElementById(id);
 
@@ -159,6 +159,7 @@
       this.vvPassValue = $('vvPassValue');
       this.btnVvToggle = $('btnVvToggle');
       this.btnVvCopy = $('btnVvCopy');
+      this.btnVvCopyNotas = $('btnVvCopyNotas');
       this.vvNotasWrap = $('vvNotasWrap');
       this.vvNotas = $('vvNotas');
       this.btnVvClose = $('btnVvClose');
@@ -239,9 +240,15 @@
       this.btnDelete.addEventListener('click', () => handler(this.f.vId.value));
     }
 
-    /* handlers: {toggle(id), copy(id, button), edit(id)} */
+    /* handlers: {toggle(id), copy(id, button), copyNotes(id, button), edit(id)} */
     bindDetail(handlers){
       const currentId = () => this.viewDlg.getAttribute('data-id');
+      /* Cada dato de la ficha (correo, web, usuario, host…) se copia con su botón. */
+      this.vvFields.addEventListener('click', (ev) => {
+        const btn = closest(ev.target, 'button[data-copy]');
+        if(btn) copyWithFeedback(btn, btn.getAttribute('data-copy'));
+      });
+      this.btnVvCopyNotas.addEventListener('click', () => handlers.copyNotes(currentId(), this.btnVvCopyNotas));
       this.btnVvToggle.addEventListener('click', () => handlers.toggle(currentId()));
       this.btnVvCopy.addEventListener('click', () => handlers.copy(currentId(), this.btnVvCopy));
       this.btnVvEdit.addEventListener('click', () => {
@@ -293,7 +300,8 @@
       this.stateMsg.textContent = msg;
     }
 
-    copy(btn, text){ return copyWithFeedback(btn, text); }
+    /* Una contraseña (o las notas de una credencial): se borra sola del portapapeles al minuto. */
+    copy(btn, text){ return copySecret(btn, text); }
 
     /* ---------- Ficha de solo lectura ---------- */
 
@@ -405,7 +413,8 @@
 
   function viewRow(label, value){
     if(!value) return '';
-    return '<div class="view-row"><span class="view-label">' + esc(label) + '</span><span class="view-value">' + esc(value) + '</span></div>';
+    return '<div class="view-row"><span class="view-label">' + esc(label) + '</span><span class="view-value" translate="no">' + esc(value) + '</span>' +
+      '<button type="button" class="icon-only is-sm view-copy" data-copy="' + esc(value) + '" aria-label="' + esc(Workhub.t('Copiar {name}', {name:Workhub.t(label).toLowerCase()})) + '" title="Copiar">' + COPY_ICON + '</button></div>';
   }
 
   function fieldRowsHtml(v){

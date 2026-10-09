@@ -55,6 +55,20 @@
     return null;
   }
 
+  /* Repetición de una tarea del archivo: {repeat} si tiene fecha límite y la frecuencia es de las
+     conocidas, con `repeatSpawned` si ya creó la siguiente y `repeatAnchor` («31@2026-11-30») si es
+     de esa fecha y la repetición va por meses o años. Sin repetición válida, {}. */
+  const REPEAT_KEYS = ['daily', 'weekly', 'biweekly', 'monthly', 'yearly'];
+  function repeatOf(t){
+    const out = {};
+    if(!t || !t.dueDate || REPEAT_KEYS.indexOf(t.repeat) === -1) return out;
+    out.repeat = t.repeat;
+    if(t.repeatSpawned === true) out.repeatSpawned = true;
+    const anchor = /^([1-9]|[12]\d|3[01])@(\d{4}-\d{2}-\d{2})$/.exec(typeof t.repeatAnchor === 'string' ? t.repeatAnchor : '');
+    if(anchor && anchor[2] === t.dueDate && (t.repeat === 'monthly' || t.repeat === 'yearly')) out.repeatAnchor = t.repeatAnchor;
+    return out;
+  }
+
   /* Campos personalizados del proyecto abierto. */
   function projectFields(){
     return Workhub.views && Workhub.views.fields ? Workhub.views.fields.list() : [];
@@ -187,8 +201,16 @@
         const moved = {};
         /* linkedContacts/linkedVault no se importan: guardan ids de documentos
            que cambian al importar (add() crea ids nuevos), así que quedarían rotos. */
+        /* La repetición se conserva, con el día original si el mes lo recortó (repeatAnchor). */
+        Object.assign(extra, repeatOf(t));
         counts.tasks++;
-        return m.tasks.add(Object.assign(t.dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') ? {dueTime:t.dueTime} : {}, extra, {
+        /* Si las reglas publicadas aún no admiten repeatAnchor, la tarea entra sin él (como en TaskModel.spawnNext). */
+        const add = (body) => m.tasks.add(body).catch((err) => {
+          if(!body.repeatAnchor) throw err;
+          delete body.repeatAnchor;
+          return m.tasks.add(body);
+        });
+        return add(Object.assign(t.dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') ? {dueTime:t.dueTime} : {}, extra, {
           title: t.title || '',
           desc: t.desc || '',
           cliente: t.cliente || '',

@@ -370,12 +370,13 @@ async function newProject(page, name){
     await todayBar.waitFor();
     assert.match(await todayBar.getAttribute('class'), /is-day/);
     assert.equal(await page.locator('#taskTimeline .tml-task').count(), 1, 'lo que cae fuera de estas fechas no se pinta');
-    await todayBar.focus();
-    await page.keyboard.press('Alt+ArrowRight');
+    /* Cada pulsación va a la barra (locator.press la enfoca antes): al guardar, el cronograma se
+       repinta y el foco vuelve a la barra un instante después de que cambie el dato. */
+    await todayBar.press('Alt+ArrowRight');
     await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.dueDate === d), await ymdOf(1));
-    await page.keyboard.press('Alt+ArrowLeft');
+    await todayBar.press('Alt+ArrowLeft');
     await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.dueDate === d), todayKey);
-    await page.keyboard.press('Alt+Shift+ArrowRight');
+    await todayBar.press('Alt+Shift+ArrowRight');
     await page.waitForFunction((d) => Workhub.app.models.tasks.items.some((t) => t.title === 'Vence hoy' && t.startDate === d[0] && t.dueDate === d[1]), [todayKey, await ymdOf(1)]);
     assert.doesNotMatch(await page.locator('#taskTimeline .tml-task').filter({hasText:'Vence hoy'}).getAttribute('class'), /is-day/, 'ya es una barra de dos días');
     /* Un intervalo al revés no se guarda. */

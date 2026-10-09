@@ -20,11 +20,12 @@ Gratis a esta escala. El plan gratuito de Resend da 3.000 correos al mes con un 
 
 ## Puesta en marcha (una vez)
 
-1. **Cuenta en Resend** (<https://resend.com>) → *Domains* → *Add domain* → `kanlane.com`.
-2. **DNS en Cloudflare**: crea los registros que enseña Resend, **copiando los valores de su panel**. Son de este tipo:
+1. **Cuenta en Resend** (<https://resend.com>) → *Domains* → *Add domain* → `kanlane.com`, región `eu-west-1`, *Custom Return-Path* `send`. El seguimiento de clics y de aperturas, **desactivado**: el de clics reescribe los enlaces para que pasen por un dominio de Resend, y el botón lleva un código de un solo uso.
+2. **DNS en Cloudflare**: con *Auto configure* Resend los crea solo; a mano, **copiando los valores de su panel**. **Hecho el 9-oct-2026** (dominio verificado). Son:
    - Un TXT `resend._domainkey` (DKIM).
-   - Un MX y un TXT (SPF) en el subdominio `send` (`send.kanlane.com`).
-   Todos **sin proxy** («Solo DNS»). No tocan lo que ya hay: el SPF y los MX de `kanlane.com` (Email Routing, tareas por correo) están en la raíz y los de Resend van en `send`; el DKIM de Firebase usa otros nombres (`firebase1._domainkey`, `firebase2._domainkey`). No hay que editar el SPF de la raíz.
+   - Dos CNAME, `send` y `rsend`, hacia `forge.rmta.net` (remitente de rebotes y SPF), **sin proxy** («Solo DNS»).
+   No tocan lo que ya hay: el SPF y los MX de `kanlane.com` (Email Routing, tareas por correo) están en la raíz; el DKIM de Firebase usa otros nombres (`firebase1._domainkey`, `firebase2._domainkey`). No hay que editar el SPF de la raíz.
+   **No actives «Enable Receiving»** en Resend: pediría cambiar los MX de la raíz, que son los de las tareas por correo.
 3. Espera a que Resend marque el dominio como **Verified**.
 4. **Clave de Resend**: *API Keys* → *Create API key* → permiso **Sending access**, limitada al dominio `kanlane.com`. Guárdala como secreto del Worker (no va en el repositorio):
    ```bash

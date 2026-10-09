@@ -113,6 +113,8 @@ jobs:
         run: node tests/e2e/keystore-check.js
       - name: Aviso antes de sincronizar con GitHub
         run: node tests/e2e/github-consent.js
+      - name: Smart GP, horas por subtarea
+        run: node tests/e2e/smartgp.js
       - name: Instalar emuladores de Firebase
         run: npm ci --prefix tests/rules --no-audit --no-fund
       - name: Alta y cofre con Firebase emulado

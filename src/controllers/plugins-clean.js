@@ -19,8 +19,16 @@
   const sameSet = (a, b) => a.length === b.length && a.every((x) => b.indexOf(x) !== -1);
 
   /* Copias limpias de los datos: nada de ids de vínculos a contraseñas. */
+  /* Subtareas: su texto y si están hechas. `mine` es false cuando la completó otra persona del
+     equipo (los uids no salen de la app): quien pregunte «¿cuánto le has dedicado?» lo necesita. */
+  const cleanChecklist = (t) => {
+    const T = Workhub.views.team;
+    return (Array.isArray(t.checklist) ? t.checklist : []).filter((c) => c && c.id).slice(0, 200).map((c) => ({
+      id:String(c.id), text:str(c.text, 500), done:!!c.done, mine:!(T && T.enabled() && c.done && c.doneBy && c.doneBy !== T.meUid())
+    }));
+  };
   const cleanTask = (t) => ({id:t.id, title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', status:TaskModel.stageKey(t),
-    dueDate:t.dueDate || '', contacto:t.contacto || '', createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
+    dueDate:t.dueDate || '', contacto:t.contacto || '', checklist:cleanChecklist(t), createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
   const cleanClient = (c) => ({id:c.id, nombre:c.nombre || '', color:typeof c.color === 'number' ? c.color : null});
   const cleanContact = (c) => ({id:c.id, cliente:c.cliente || '', nombre:c.nombre || '', email:c.email || '', telefono:c.telefono || '', notas:c.notas || ''});
   const cleanMeeting = (m) => ({id:m.id, title:m.title || '', cliente:m.cliente || '', date:m.date || '', start:m.start || '', end:m.end || '', link:m.link || '', notas:m.notas || ''});

@@ -196,7 +196,8 @@ Si falta una traducción se muestra el texto original. El nombre y la descripci�
 
 ```js
 await wh.tasks.list()
-// [{id, title, desc, cliente, status, dueDate, contacto, createdAt, updatedAt}]
+// [{id, title, desc, cliente, status, dueDate, contacto, checklist, createdAt, updatedAt}]
+// checklist: las subtareas, [{id, text, done, mine}]; `mine` es false si la completó otra persona del equipo
 
 await wh.tasks.create({title:'Llamar a Ana', desc:'', cliente:'Acme', status:'pendiente', dueDate:'2026-10-15', contacto:''})
 // {id}  — solo title es obligatorio; status por defecto 'pendiente'; dueDate 'AAAA-MM-DD'

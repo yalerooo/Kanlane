@@ -1633,7 +1633,7 @@
     'Informe de trabajo':'Work report',
     'Resumen de tareas por cliente y estado, lo que está vencido y lo completado esta semana. Cópialo como texto o descárgalo en CSV.':'Summary of tasks by client and status, what\'s overdue and what was done this week. Copy it as text or download it as CSV.',
     'Smart GP':'Smart GP',
-    'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.':'When you finish a task, log the hours, the days and the project. Then see it all in a calendar by day and project.',
+    'Al terminar una tarea o una subtarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.':'When you finish a task or a subtask, log the hours, the days and the project. Then see it all in a calendar by day and project.',
     'Mes anterior':'Previous month',
     'Mes siguiente':'Next month',
     '{n} día seleccionado':'{n} day selected',

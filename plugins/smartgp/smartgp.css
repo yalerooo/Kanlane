@@ -42,6 +42,9 @@
 /* Jornada del mes, en una línea. */
 .sg-limit{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:0 0 14px;font-size:12.5px;color:var(--ink-soft);}
 .sg-limit b{font-weight:550;color:var(--ink);}
+/* Opción al pie del calendario: preguntar las horas al completar una subtarea. */
+.sg-opt{display:flex;align-items:center;gap:8px;margin:16px 0 0;font-size:12.5px;color:var(--ink-soft);cursor:pointer;}
+.sg-opt input{margin:0;flex:none;}
 
 /* Cifras del mes: etiqueta arriba, número abajo. */
 .sg-stats{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:12px;margin-bottom:14px;}

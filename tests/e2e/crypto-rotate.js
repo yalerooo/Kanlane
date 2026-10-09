@@ -102,6 +102,15 @@ async function signUp(browser, name, email){
 async function invite(page, email, role){
   await page.evaluate(() => Workhub.app.controllers.team.open());
   await page.locator('#shInviteForm').waitFor({state:'visible'});
+  /* Diagnóstico: desde dónde se vacía el formulario mientras se rellena. */
+  await page.evaluate(() => {
+    const v = Workhub.app.controllers.team.view;
+    if(!v.__resets){
+      const original = v._resetSecrets.bind(v);
+      v._resetSecrets = function(){ v.__resets.push(String(new Error().stack).split('\n').slice(2, 6).join(' | ')); return original(); };
+    }
+    v.__resets = [];
+  });
   await page.locator('#shEmail').fill(email);
   await page.locator('#shRole').selectOption(role);
   await page.locator('#shInvitePass').fill(PASSWORD);
@@ -112,7 +121,8 @@ async function invite(page, email, role){
       const p = Workhub.app.controllers.team.current();
       return {proyecto: p && {id: p.id, team: p.team, role: p.role, cifrado: Workhub.models.ProjectModel.isEncrypted(p)},
         dialogo: document.getElementById('dlgShare').innerText.replace(/\s+/g, ' ').slice(0, 700),
-        avisos: Array.from(document.querySelectorAll('.toast')).map((t) => t.innerText), ocupado: document.getElementById('shInviteBtn').disabled};
+        avisos: Array.from(document.querySelectorAll('.toast')).map((t) => t.innerText), ocupado: document.getElementById('shInviteBtn').disabled,
+        clave: document.getElementById('shInvitePass').value.length, vaciados: Workhub.app.controllers.team.view.__resets};
     })));
     throw error;
   });

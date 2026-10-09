@@ -1,0 +1,206 @@
+/* ---------- Formulario de tarea (crear y editar) ----------
+   El mismo reparto que la ficha de tarea (task-detail.css), para que crear, ver y editar se
+   parezcan: una cabecera fina, a la izquierda el contenido (título, descripción, subtareas,
+   notas y vínculos) y a la derecha una franja con las propiedades, cada una con su etiqueta
+   encima. Los botones quedan fijos al pie. Cada zona se desplaza por su cuenta; en pantallas
+   estrechas se apilan y se desplazan juntas. */
+#dlg{
+  width:min(900px, calc(100vw - 32px));
+  height:min(760px, calc(100vh - 48px));
+  height:min(760px, calc(100dvh - 48px));
+  overflow:hidden;
+}
+#dlg[open]{display:flex;}
+#dlg .dlg-inner{
+  display:grid;
+  grid-template-rows:auto minmax(0, 1fr) auto;
+  flex:1;
+  min-width:0;
+  min-height:0;
+  padding:0;
+}
+/* Cabecera: dice qué se está haciendo, en pequeño; el título de verdad es el de la tarea. */
+#dlg .dlg-inner > h2{
+  display:flex;
+  align-items:center;
+  min-height:52px;
+  margin:0;
+  padding:0 56px 0 24px;
+  font-size:13px;
+  font-weight:550;
+  letter-spacing:0;
+  color:var(--ink-soft);
+  border-bottom:1px solid var(--line);
+}
+#dlg .dlg-close{top:11px;right:12px;}
+
+.tf-scroll{display:grid;grid-template-columns:minmax(0, 1fr) 296px;min-height:0;}
+.tf-main,.tf-side{
+  min-width:0;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-strong) transparent;
+}
+.tf-main{padding:22px 26px 24px;}
+.tf-side{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:18px 18px 20px;
+  border-left:1px solid var(--line);
+  background:var(--hover);
+}
+
+/* ---- Contenido ---- */
+.tf-main > .field{margin-bottom:0;}
+/* Título y descripción se escriben sobre la propia hoja, sin caja: como en la ficha. */
+#dlg .tf-title textarea,
+#dlg .tf-desc textarea{
+  display:block;
+  width:100%;
+  min-height:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  /* Crecen con lo escrito donde el navegador lo sabe hacer; donde no, los ajusta TaskDialogView. */
+  field-sizing:content;
+}
+/* El título es una sola línea de texto que salta de renglón si no cabe (Intro guarda). */
+#dlg .tf-title textarea{
+  font-size:22px;
+  font-weight:600;
+  line-height:1.3;
+  letter-spacing:-0.022em;
+  overflow:hidden;
+}
+#dlg .tf-title textarea::placeholder{color:var(--ink-faint);font-weight:550;}
+#dlg .tf-desc{margin-top:10px;gap:8px;}
+#dlg .tf-desc textarea{
+  min-height:72px;
+  max-height:340px;
+  font-size:14px;
+  line-height:1.6;
+  color:var(--ink-soft);
+}
+#dlg .tf-desc textarea:focus{color:var(--ink);}
+/* Sin caja, el foco se ve en una línea fina bajo el campo. */
+#dlg .tf-title,#dlg .tf-desc{padding-bottom:8px;border-bottom:1px solid transparent;transition:border-color .12s ease;}
+#dlg .tf-title:focus-within,#dlg .tf-desc:focus-within{border-bottom-color:var(--line-strong);}
+#dlg .tf-title .lock-error{margin:0;}
+
+/* Las ayudas solo acompañan mientras se está en su campo: fuera de él son ruido. */
+#dlg .field-help{display:none;line-height:1.45;}
+#dlg .field:focus-within > .field-help{display:block;}
+
+/* Secciones: título pequeño en versalitas con una línea fina, como en la ficha. */
+.tf-section{margin-top:26px;gap:10px;}
+.tf-section > label,
+.tf-section .check-heading .field-label{
+  font-size:11.5px;
+  font-weight:550;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+}
+.tf-section > label{display:flex;align-items:center;gap:8px;}
+.tf-section > label::after{content:"";flex:1;height:1px;background:var(--line);}
+.tf-section .check-heading{gap:10px;}
+/* En las subtareas, la barra de progreso va en el título, entre el nombre y el porcentaje. */
+#fChecklistField{display:grid;grid-template-columns:auto minmax(0, 1fr) auto;align-items:center;column-gap:10px;row-gap:8px;}
+#fChecklistField .check-heading{display:contents;}
+#fChecklistField .field-label{grid-area:1 / 1;}
+#fChecklistField .check-progress-bar{grid-area:1 / 2;}
+#fChecklistField .check-summary{grid-area:1 / 3;}
+#fChecklistField .check-edit,#fChecklistField .check-add{grid-column:1 / -1;}
+/* Sin subtareas no hay barra: la línea fina de las demás secciones ocupa su sitio. */
+#fChecklistField::before{content:"";grid-area:1 / 2 / auto / 4;height:1px;background:var(--line);}
+#fChecklistField:has(.check-row)::before{display:none;}
+/* Las subtareas, en un panel de superficie con una fila por subtarea. */
+#dlg .check-edit{gap:0;margin:0;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);}
+#dlg .check-row{border:0;border-radius:calc(var(--r-lg) - 4px);padding:1px 4px;}
+#dlg .check-row:hover,#dlg .check-row:focus-within{background:var(--hover);}
+#dlg .check-row.is-done{background:transparent;}
+#dlg .check-row input[type="text"],
+#dlg .check-row input[type="text"]:hover,
+#dlg .check-row input[type="text"]:focus{border-color:transparent;background:transparent;box-shadow:none;}
+/* Subir, bajar y quitar solo se enseñan en la fila en la que se está; el asa, atenuada. */
+#dlg .check-row .check-drag{opacity:.35;transition:opacity .12s ease;}
+#dlg .check-row .check-move,#dlg .check-row .check-del{opacity:0;transition:opacity .12s ease;}
+#dlg .check-row:hover .check-drag,#dlg .check-row:hover .check-move,#dlg .check-row:hover .check-del,
+#dlg .check-row:focus-within .check-drag,#dlg .check-row:focus-within .check-move,#dlg .check-row:focus-within .check-del{opacity:1;}
+#dlg .check-row .check-move:disabled{opacity:0;}
+#dlg .check-row:hover .check-move:disabled,#dlg .check-row:focus-within .check-move:disabled{opacity:.3;}
+@media (hover:none){
+  #dlg .check-row .check-drag,#dlg .check-row .check-move,#dlg .check-row .check-del{opacity:1;}
+  #dlg .check-row .check-move:disabled{opacity:.3;}
+}
+/* Añadir una subtarea: una línea discreta con su «+», no otro campo con botón. */
+#dlg .check-add{position:relative;gap:6px;}
+#dlg .check-add::before{
+  content:"";
+  position:absolute;
+  left:11px;
+  top:50%;
+  width:12px;
+  height:12px;
+  margin-top:-6px;
+  background:
+    linear-gradient(var(--ink-faint), var(--ink-faint)) center / 12px 1.5px no-repeat,
+    linear-gradient(var(--ink-faint), var(--ink-faint)) center / 1.5px 12px no-repeat;
+  pointer-events:none;
+}
+#dlg .check-add input{padding-left:32px;border-color:transparent;background:transparent;box-shadow:none;}
+#dlg .check-add input:hover{background:var(--hover);}
+#dlg .check-add input:focus{background:var(--surface);border-color:var(--line-strong);}
+#dlg .check-add .btn{visibility:hidden;}
+#dlg .check-add:focus-within .btn,#dlg .check-add input:not(:placeholder-shown) ~ .btn{visibility:visible;}
+#dlg .tf-main > .lock-error{margin:16px 0 0;}
+
+/* ---- Propiedades ---- */
+.tf-side > .field{margin-bottom:0;gap:6px;}
+.tf-side > .field > label,
+.tf-side > .field > .field-label{font-size:12px;font-weight:450;color:var(--ink-faint);}
+.tf-side .dd,.tf-side .dp,.tf-side .dd-trigger,.tf-side .dp-trigger,
+.tf-side input:not([type="checkbox"]):not([type="radio"]),.tf-side select{width:100%;}
+.tf-side .lock-error{margin:0;}
+.tf-side .cf-form{grid-template-columns:1fr;margin-top:0;}
+.tf-side .new-client-inline{margin-top:0;}
+.tf-side .label-new{margin-top:2px;}
+.tf-side .label-new input{flex:1 1 100%;}
+/* Portada: «sin portada» es un círculo tachado, del tamaño de los colores, para que quepan en una fila. */
+.tf-side .cover-picker{gap:8px;}
+.tf-side .cover-none{
+  position:relative;
+  width:26px;
+  height:26px;
+  padding:0;
+  border-radius:50%;
+  overflow:hidden;
+}
+.tf-side .cover-none > span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+.tf-side .cover-none::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1.5px;margin-left:-.75px;background:var(--ink-faint);transform:rotate(45deg);}
+
+/* ---- Pie ---- */
+#dlg .dlg-actions{position:static;margin:0;padding:12px 18px 12px 24px;}
+
+/* ---- Pantallas estrechas: una sola columna que se desplaza entera ---- */
+@media (max-width:760px){
+  #dlg{height:auto;max-height:calc(100vh - 48px);max-height:calc(100dvh - 48px);}
+  .tf-scroll{display:block;overflow-y:auto;overscroll-behavior:contain;}
+  .tf-main,.tf-side{overflow:visible;}
+  .tf-main{padding:18px 20px 22px;}
+  .tf-side{border-left:0;border-top:1px solid var(--line);padding:18px 20px 22px;}
+}
+@media (max-width:600px){
+  #dlg{max-height:calc(100dvh - 24px - env(safe-area-inset-top, 0px));}
+  #dlg .dlg-inner{padding:0;}
+  #dlg .dlg-inner > h2{padding-left:16px;}
+  .tf-main,.tf-side{padding-left:16px;padding-right:16px;}
+  #dlg .tf-title input{font-size:20px;}
+  #dlg .tf-desc textarea{font-size:16px;}
+  #dlg .dlg-actions{margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px));}
+}

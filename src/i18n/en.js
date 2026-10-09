@@ -1548,6 +1548,8 @@
     'Ese enlace para cambiar la contraseña ha caducado o ya se ha usado.':'That password reset link has expired or has already been used.',
     'Ese enlace de verificación ha caducado o ya se ha usado. Inicia sesión para pedir otro.':'That verification link has expired or has already been used. Sign in to request another one.',
     'Ese enlace ha caducado o ya se ha usado. Pulsa «Reenviar correo» para recibir otro.':'That link has expired or has already been used. Press “Resend email” to get another one.',
+    'Título de la tarea':'Task title',
+    'Añade una descripción…':'Add a description…',
     'Bloq Mayús está activado.':'Caps Lock is on.',
     'Mínimo 8 caracteres.':'At least 8 characters.',
     'Débil: alárgala o mezcla letras, números y símbolos.':'Weak: make it longer or mix letters, numbers and symbols.',

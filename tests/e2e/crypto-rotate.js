@@ -30,7 +30,7 @@ const KEY_RE = /^([0-9A-Z]{4}-){7}[0-9A-Z]{4}$/;
 const stamp = Date.now();
 
 async function ready(){
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 300; i++){
     try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) return; }catch(e){}
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
@@ -106,7 +106,16 @@ async function invite(page, email, role){
   await page.locator('#shRole').selectOption(role);
   await page.locator('#shInvitePass').fill(PASSWORD);
   await page.locator('#shInviteBtn').click();
-  await page.locator('#shCodePanel').waitFor({state:'visible', timeout:30000});
+  await page.locator('#shCodePanel').waitFor({state:'visible', timeout:30000}).catch(async (error) => {
+    /* Qué había en pantalla, para no tener que adivinarlo desde el registro de la CI. */
+    console.error('Sin código de acceso:', JSON.stringify(await page.evaluate(() => {
+      const p = Workhub.app.controllers.team.current();
+      return {proyecto: p && {id: p.id, team: p.team, role: p.role, cifrado: Workhub.models.ProjectModel.isEncrypted(p)},
+        dialogo: document.getElementById('dlgShare').innerText.replace(/\s+/g, ' ').slice(0, 700),
+        avisos: Array.from(document.querySelectorAll('.toast')).map((t) => t.innerText), ocupado: document.getElementById('shInviteBtn').disabled};
+    })));
+    throw error;
+  });
   const code = (await page.locator('#shCode').textContent()).trim();
   await page.locator('#shCodeDone').click();
   await page.locator('#btnShareClose').click();

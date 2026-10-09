@@ -16,7 +16,7 @@ const chrome = process.env.CHROME_PATH || [
 ].find((candidate) => fs.existsSync(candidate));
 
 async function ready(){
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 300; i++){
     try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) return; }catch(e){}
     await new Promise((resolve) => setTimeout(resolve, 100));
   }

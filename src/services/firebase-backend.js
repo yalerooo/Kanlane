@@ -280,12 +280,14 @@
     });
   }
 
+  /* El formulario se ve antes de que termine de cargar el SDK: si se envía en ese momento, se
+     espera a que el acceso esté listo en vez de fallar. */
   function signInWithEmail(email, password){
-    return auth.signInWithEmailAndPassword(email, password).then(finishLink);
+    return init().then(() => auth.signInWithEmailAndPassword(email, password)).then(finishLink);
   }
 
   function signUpWithEmail(email, password, name){
-    return auth.createUserWithEmailAndPassword(email, password).then((cred) => {
+    return init().then(() => auth.createUserWithEmailAndPassword(email, password)).then((cred) => {
       const profile = name && cred.user ? cred.user.updateProfile({displayName:name}) : Promise.resolve();
       /* Si el correo de verificación falla (p. ej. demasiados envíos), se puede
          reenviar desde la pantalla de verificación. */

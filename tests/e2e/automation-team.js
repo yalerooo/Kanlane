@@ -31,7 +31,7 @@ const stamp = Date.now();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function ready(){
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 300; i++){
     try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) return; }catch(e){}
     await sleep(100);
   }

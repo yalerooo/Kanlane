@@ -31,7 +31,7 @@ const CODE_RE = /^([0-9A-HJKMNP-TV-Z]{4}-){4}[0-9A-HJKMNP-TV-Z]{4}$/;
 const stamp = Date.now();
 
 async function ready(){
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 300; i++){
     try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) return; }catch(e){}
     await new Promise((resolve) => setTimeout(resolve, 100));
   }

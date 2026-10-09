@@ -143,7 +143,13 @@
         toast.success('Movida a «' + Workhub.t(Workhub.models.TaskModel.statusOf(status).label) + '»');
       });
       this.detail.bindChecklist((id, itemId, done) => {
-        this.tasks.toggleCheck(id, itemId, done).then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
+        const T = Workhub.views.team;
+        this.tasks.toggleCheck(id, itemId, done, T.enabled() ? T.meUid() : '').then(() => this.logActivity(id, done ? 'completó una subtarea' : 'reabrió una subtarea'));
+      });
+      this.detail.bindCheckAssign((id, itemId, uid) => {
+        this.tasks.assignCheck(id, itemId, uid).then(
+          (changed) => { if(changed) this.logActivity(id, uid ? 'asignó una subtarea' : 'quitó la asignación de una subtarea'); },
+          () => toast.error('No se pudo asignar la subtarea'));
       });
       this.detail.bindComment((id, text, files) => this.postComment(id, text, files));
       this.detail.bindAutoButton((id, ruleId) => { const autos = this.app.controllers.automations; if(autos) autos.press(ruleId, id); });

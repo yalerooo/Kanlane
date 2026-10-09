@@ -43,6 +43,7 @@ jobs:
           node tests/tasks/cover.test.js
           node tests/tasks/relations.test.js
           node tests/tasks/votes.test.js
+          node tests/tasks/subtasks.test.js
           node tests/tasks/repeat.test.js
           node tests/tasks/archive.test.js
           node tests/tasks/duplicate.test.js

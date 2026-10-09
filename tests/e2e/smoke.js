@@ -246,8 +246,21 @@ async function newProject(page, name){
       await page.evaluate((id) => Workhub.app.controllers.tasks.moveWithActivity(id, 'todo'), todayId);
       await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.blocked-badge').waitFor();
       assert.equal(await page.locator('.card .blocked-badge').count(), 1);
+      /* Antes de recargar, el cambio tiene que estar guardado: la tarjeta ya se ve movida mientras
+         se escribe, y una recarga en ese instante se lo lleva por delante. La lectura va detrás
+         de la escritura en la base del navegador, así que cuando contesta ya está guardado. */
+      const saved = await page.evaluate((id) => Workhub.app.models.tasks.col.doc(id).get().then((d) => (d.data() || {}).status), todayId);
+      assert.equal(saved, 'todo', 'la tarea reabierta queda guardada');
       await page.reload();
-      await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.blocked-badge').waitFor();
+      await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).locator('.blocked-badge').waitFor().catch(async (error) => {
+        /* Qué había en pantalla, para no tener que adivinarlo desde el registro de la CI. */
+        console.error('Tras recargar:', JSON.stringify(await page.evaluate(() => ({
+          tareas: Workhub.app.models.tasks.items.map((t) => [t.title, t.status, t.blockedBy || null]),
+          tarjetas: Array.from(document.querySelectorAll('.card')).map((c) => c.innerText.replace(/\s+/g, ' ').slice(0, 60)),
+          proyecto: Workhub.app.projectId, cargadas: Workhub.app.models.tasks.loaded, dialogos: Array.from(document.querySelectorAll('dialog[open]')).map((d) => d.id)
+        }))));
+        throw error;
+      });
       await page.locator('.card').filter({hasText:'Vence dentro de un mes'}).click();
       await page.locator('#tvBlocked').waitFor({state:'visible'});
       assert.match(await page.locator('#tvBlocked').textContent(), /Vence hoy/);

@@ -108,46 +108,68 @@ jobs:
       - name: Instalar Chromium
         run: npx --prefix tests/e2e playwright install --with-deps chromium
       - name: Recorridos de navegador
+        if: ${{ !cancelled() }}
         run: npm test --prefix tests/e2e
       - name: Almacén de claves en el navegador
+        if: ${{ !cancelled() }}
         run: node tests/e2e/keystore-check.js
       - name: Contraseñas y portapapeles
+        if: ${{ !cancelled() }}
         run: node tests/e2e/vault-clipboard.js
       - name: Aviso antes de sincronizar con GitHub
+        if: ${{ !cancelled() }}
         run: node tests/e2e/github-consent.js
       - name: Smart GP, horas por subtarea
+        if: ${{ !cancelled() }}
         run: node tests/e2e/smartgp.js
       - name: Instalar emuladores de Firebase
+        if: ${{ !cancelled() }}
         run: npm ci --prefix tests/rules --no-audit --no-fund
       - name: Alta y cofre con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
       - name: Nombre, foto, contraseña y eliminación de la cuenta, con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/account.js"
       - name: Un invitado crea su cuenta y se lleva sus datos, con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/guest-migrate.js"
       - name: Proyecto con cifrado total en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-smoke.js"
       - name: Equipo con cifrado total en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-team.js"
       - name: Automatizaciones por fecha en el servidor con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/automation-cron.js"
       - name: Automatizaciones de un equipo (propietaria y editor) con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/automation-team.js"
       - name: Captura de tareas por correo con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mail-capture.js"
       - name: Importar una copia de seguridad en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/backup-import.js"
       - name: Servidor MCP con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mcp.js"
       - name: Tokens del servidor MCP en Ajustes con Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/mcp-settings.js"
       - name: Contraseñas compartidas de un equipo en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/team-vault.js"
       - name: Cambio de clave de un proyecto cifrado en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-rotate.js"
       - name: Convertir un proyecto a cifrado total en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-convert.js"
       - name: Proyecto gestionado por Kanlane en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-managed.js"
       - name: Asistente de cifrado total en Firebase emulado
+        if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/crypto-wizard.js"

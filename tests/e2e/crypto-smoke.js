@@ -28,7 +28,7 @@ const SECRETS = ['Tarea secreta', 'Descripción reservada', 'Nota confidencial',
 const PASSWORD = 'una contraseña de cifrado larga';
 
 async function ready(){
-  for(let i = 0; i < 100; i++){
+  for(let i = 0; i < 300; i++){
     try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) return; }catch(e){}
     await new Promise((resolve) => setTimeout(resolve, 100));
   }

@@ -1,14 +1,24 @@
 /* ---------- Ajustes ----------
-   Índice a la izquierda y grupos a la derecha; cada grupo es un panel con filas
-   «título + descripción + control». */
-.settings{display:grid;grid-template-columns:190px minmax(0,720px);gap:28px;padding-top:4px;}
-.settings-nav{position:sticky;top:92px;align-self:start;display:flex;flex-direction:column;gap:1px;}
+   Índice a la izquierda y, a la derecha, el apartado elegido (uno cada vez: SettingsView.showSection).
+   Cada apartado es una o varias tarjetas con filas «título + descripción + control».
+   Los controles de todas las filas acaban en la misma vertical y miden lo mismo de alto (32 px);
+   los botones, los desplegables y los selectores de dos opciones comparten además el ancho, para
+   que formen una columna y no una escalera. */
+.settings{
+  --set-ctl:32px;
+  --set-btn:200px;
+  display:grid;
+  grid-template-columns:200px minmax(0,700px);
+  gap:40px;
+  padding-top:8px;
+}
+.settings-nav{position:sticky;top:92px;align-self:start;display:flex;flex-direction:column;gap:2px;}
 .settings-nav button{
   display:flex;
   align-items:center;
-  gap:9px;
-  height:32px;
-  padding:0 10px;
+  gap:10px;
+  height:34px;
+  padding:0 11px;
   font-family:inherit;
   font-size:13px;
   color:var(--ink-soft);
@@ -23,47 +33,67 @@
 .settings-nav button[aria-current="true"]{background:var(--surface-2);color:var(--ink);font-weight:550;}
 .settings-nav button:focus-visible{outline:2px solid var(--accent-solid);outline-offset:2px;}
 .settings-body{min-width:0;}
-.settings-group{margin-bottom:34px;scroll-margin-top:92px;}
-.settings-group:last-child{margin-bottom:12px;}
-.settings-group h2{font-size:15px;font-weight:600;letter-spacing:-0.015em;margin:0;}
-.settings-lead{margin:3px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+.settings-group{margin-bottom:12px;}
+.settings-group[hidden]{display:none;}
+.settings-group:not([hidden]){animation:set-in .18s ease;}
+@keyframes set-in{from{opacity:0;transform:translateY(4px);}}
+@media (prefers-reduced-motion:reduce){.settings-group:not([hidden]){animation:none;}}
+.settings-group h2{font-size:20px;font-weight:650;letter-spacing:-0.022em;line-height:1.25;margin:0;}
+.settings-lead{margin:4px 0 20px;font-size:13px;line-height:1.5;color:var(--ink-soft);max-width:60ch;}
 .settings-card{
   background:var(--surface);
   border:1px solid var(--line);
   border-radius:var(--r-xl);
   box-shadow:var(--shadow-sm);
 }
+.settings-card + .settings-card{margin-top:14px;}
+.settings-card[hidden]{display:none;}
 .settings-row{
   display:flex;
   align-items:center;
-  gap:24px;
-  padding:16px 18px;
+  gap:28px;
+  min-height:68px;
+  padding:16px 20px;
   border-top:1px solid var(--line);
 }
 .settings-card > .settings-row:first-child{border-top:0;}
 .settings-row[hidden]{display:none;}
 .settings-row > div:first-child{flex:1;min-width:0;}
-.settings-row > div:last-child:not(:first-child){flex:none;max-width:60%;}
-.settings-row.is-stack{flex-direction:column;align-items:stretch;gap:12px;}
-.settings-row.is-stack > div:last-child:not(:first-child){max-width:none;}
-.settings-row h3{font-size:13px;font-weight:550;margin:0;letter-spacing:0;}
-.settings-row p{font-size:12.5px;color:var(--ink-soft);margin:1px 0 0;line-height:1.5;max-width:52ch;}
+.settings-row > div:last-child:not(:first-child){flex:none;max-width:60%;display:flex;justify-content:flex-end;}
+.settings-row.is-stack{flex-direction:column;align-items:stretch;gap:14px;}
+.settings-row.is-stack > div:last-child:not(:first-child){max-width:none;justify-content:flex-start;}
+.settings-row h3{font-size:13.5px;font-weight:550;margin:0;letter-spacing:0;line-height:1.35;}
+.settings-row p{font-size:12.5px;color:var(--ink-soft);margin:2px 0 0;line-height:1.5;max-width:52ch;}
 .settings-row p:empty{display:none;}
-.settings-ctl .dd{min-width:190px;}
-.settings-icon-row{display:flex;align-items:center;gap:12px;}
+/* Controles: mismo alto en todos, y los botones con el mismo ancho mínimo y a la derecha. */
+.settings-body .btn{height:var(--set-ctl);font-size:13px;padding:0 14px;border-radius:var(--r-md);}
+.settings-row > div:last-child:not(:first-child) > .btn,
+.settings-row .remind-notify > .btn,
+.account-line > .btn,
+.settings-account > .btn,
+.settings-body .gh-row-actions > .btn:only-child{min-width:var(--set-btn);}
+.settings-ctl .dd,.settings-ctl .dd-trigger{width:var(--set-btn);}
+.settings-body .segmented{display:flex;width:var(--set-btn);padding:2px;}
+.settings-body .segmented button{flex:1;height:calc(var(--set-ctl) - 4px);padding:0 8px;}
+.settings-icon-row{display:flex;align-items:center;gap:14px;}
 .settings-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:11px;background:var(--surface-2);color:var(--ink);}
 .settings-icon svg{width:19px;height:19px;}
+/* Integraciones: la cabecera de cada tarjeta se separa de su contenido con una línea, y el
+   contenido va con los mismos márgenes que las filas. */
+.settings-body .gh-card > .settings-row{min-height:0;}
+.settings-body .gh-card > .gh-body{padding:18px 20px 20px;border-top:1px solid var(--line);}
+.settings-body .gh-card > .gh-body:empty{display:none;}
 
 /* Opciones con muestra (tema, navegación): un dibujo pequeño de cómo queda y el nombre
    debajo; la elegida, con borde completo. */
-.choice-cards{display:flex;gap:8px;}
+.choice-cards{display:flex;gap:10px;}
 .choice-cards button{
   display:flex;
   flex-direction:column;
   align-items:stretch;
   gap:7px;
-  width:92px;
-  padding:5px 5px 7px;
+  width:96px;
+  padding:5px 5px 8px;
   font-family:inherit;
   font-size:12.5px;
   line-height:1.2;
@@ -91,13 +121,13 @@
 .art-pane.is-nav-top::after{left:6px;top:18px;height:10px;box-shadow:0 14px 0 var(--art-card);}
 
 /* Muestras de acento: punto de color y nombre; la elegida, con borde completo. */
-.swatches{display:flex;flex-wrap:wrap;gap:6px;}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;}
 .swatch{
   display:inline-flex;
   align-items:center;
-  gap:7px;
-  height:30px;
-  padding:0 10px 0 7px;
+  gap:8px;
+  height:var(--set-ctl);
+  padding:0 12px 0 9px;
   font-family:inherit;
   font-size:13px;
   color:var(--ink);
@@ -114,24 +144,46 @@
 }
 .swatch[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:550;}
 
-.storage-line{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--ink);}
+/* Almacenamiento: el estado (punto, título y explicación) y, debajo, con quién se ha entrado
+   y el botón de salir, como una fila más de la tarjeta. */
+.settings-row.is-stack:has(> .storage-block){gap:10px;}
+.storage-line{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:550;color:var(--ink);}
 .storage-line .status-dot{width:8px;height:8px;}
-.storage-block{display:flex;flex-direction:column;gap:12px;}
-.storage-desc{margin:-8px 0 0 16px !important;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
-.settings-account{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-soft);}
+.storage-block{display:flex;flex-direction:column;gap:0;}
+.storage-desc{margin:3px 0 0 17px !important;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
+.settings-account,
+.account-line,
+.settings-upgrade{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:28px;
+  margin:16px -20px 0;
+  padding:16px 20px 0;
+  border-top:1px solid var(--line);
+}
+/* Dentro de una fila apilada ya hay separación entre bloques: no se suma a la de la línea. */
+.settings-row.is-stack > .account-line{margin-top:2px;}
+.settings-account{font-size:13px;color:var(--ink-soft);}
 .settings-account[hidden]{display:none;}
-/* «Tu cuenta»: nombre y foto, contraseña y eliminar la cuenta. */
-.account-profile{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:12px 14px;}
-.account-photo{width:56px;height:56px;font-size:18px;overflow:hidden;align-self:center;grid-row:span 2;}
+/* «Tu cuenta»: la foto a la izquierda; a su lado el nombre con su botón y, debajo, lo de la foto. */
+.account-profile{
+  display:grid;
+  grid-template-columns:auto minmax(0, 1fr) auto;
+  grid-template-areas:"photo name save" "photo actions actions";
+  align-items:end;
+  gap:10px 16px;
+}
+.account-photo{grid-area:photo;align-self:start;width:64px;height:64px;margin-top:4px;font-size:20px;overflow:hidden;}
 .account-photo img{width:100%;height:100%;object-fit:cover;display:block;}
-.account-photo-actions{display:flex;flex-wrap:wrap;gap:8px;grid-column:2 / -1;}
-.account-profile .account-name{margin:0;min-width:0;}
-.account-profile .account-name input{width:100%;}
-.account-profile #btnAccountName{height:36px;}
+.account-photo-actions{grid-area:actions;display:flex;flex-wrap:wrap;gap:8px;}
+.settings-body .account-photo-actions .btn{height:28px;padding:0 10px;font-size:12.5px;}
+.account-profile .account-name{grid-area:name;margin:0;min-width:0;}
+.account-profile .account-name input{width:100%;height:var(--set-ctl);}
+.account-profile #btnAccountName{grid-area:save;min-width:var(--set-btn);}
 .account-msg{grid-column:1 / -1;margin:0;font-size:12.5px;color:var(--st-done);}
 .account-msg.is-error{color:var(--danger);}
 .account-msg[hidden]{display:none;}
-.account-line{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;border-top:1px solid var(--line);}
 .account-line > div{flex:1;min-width:0;}
 .account-line .btn{flex:none;}
 .account-delete-list{margin:0 0 14px;padding-left:18px;display:grid;gap:6px;font-size:13px;line-height:1.5;color:var(--ink-soft);}
@@ -140,15 +192,15 @@
 .account-progress[hidden]{display:none;}
 #dlgAccountDelete.is-busy .field{opacity:.6;}
 @media (max-width:560px){
-  .account-profile{grid-template-columns:auto 1fr;}
-  .account-profile .account-name{grid-column:1 / -1;}
-  .account-profile #btnAccountName{grid-column:1 / -1;justify-self:start;}
-  .account-line{flex-direction:column;align-items:flex-start;gap:10px;}
+  .account-profile{grid-template-columns:auto minmax(0, 1fr);grid-template-areas:"photo name" "photo actions" "save save";}
+  .account-profile #btnAccountName{justify-self:stretch;}
+  .account-line,.settings-account,.settings-upgrade{flex-direction:column;align-items:stretch;gap:12px;}
 }
 /* Invitado: «Crear cuenta y llevarme mis datos». */
-.settings-upgrade{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:12px;font-size:13px;line-height:1.45;color:var(--ink-soft);}
+.settings-upgrade{font-size:13px;line-height:1.45;color:var(--ink-soft);}
 .settings-upgrade[hidden]{display:none;}
-.settings-upgrade p{flex:1 1 260px;margin:0;}
+.settings-upgrade p{flex:1;margin:0;}
+.settings-upgrade .btn{flex:none;}
 .settings-account-who{display:flex;flex-direction:column;min-width:0;line-height:1.35;}
 .settings-account-label{font-size:12px;color:var(--ink-faint);}
 .settings-account-mail{font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -157,6 +209,7 @@
 .remind-options{display:contents;}
 .remind-options[hidden]{display:none;}
 .remind-notify{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+.remind-notify:not(:has(> .btn:not([hidden]))){display:none;}
 
 .install-hint{margin:0;font-size:12.5px;color:var(--ink-soft);line-height:1.5;}
 
@@ -167,16 +220,25 @@
 .privacy-note a:hover{color:var(--ink);}
 
 @media (max-width:1000px){
-  .settings{grid-template-columns:minmax(0,1fr);gap:14px;}
-  /* El índice pasa a una fila que se desplaza. */
+  .settings{grid-template-columns:minmax(0,1fr);gap:18px;}
+  /* El índice pasa a una fila de pestañas que se desplaza. */
   .settings-nav{position:static;flex-direction:row;overflow-x:auto;scrollbar-width:none;gap:4px;padding:2px;margin:-2px;}
   .settings-nav::-webkit-scrollbar{display:none;}
   .settings-nav button{flex:none;}
 }
 @media (max-width:640px){
-  .settings-row{flex-direction:column;align-items:stretch;gap:10px;}
-  .settings-row > div:last-child:not(:first-child){max-width:none;}
+  .settings-row{flex-direction:column;align-items:stretch;gap:12px;min-height:0;padding:16px;}
+  .settings-row > div:last-child:not(:first-child){max-width:none;justify-content:flex-start;}
   .choice-cards button{flex:1;width:auto;}
-  .remind-notify{align-items:flex-start;}
-  .settings-ctl .dd{min-width:0;}
+  .remind-notify{align-items:stretch;}
+  /* En el móvil los controles ocupan el ancho: se pulsan mejor y quedan alineados por los dos lados. */
+  .settings-row > div:last-child:not(:first-child) > .btn,
+  .settings-row .remind-notify > .btn,
+  .account-line > .btn,
+  .settings-account > .btn,
+  .settings-upgrade > .btn{width:100%;}
+  .settings-ctl .dd,.settings-ctl .dd-trigger{width:100%;}
+  .settings-body .segmented{width:100%;}
+  .settings-account,.account-line,.settings-upgrade{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;}
+  .settings-body .gh-card > .gh-body{padding:16px;}
 }

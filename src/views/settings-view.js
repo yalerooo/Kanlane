@@ -17,27 +17,30 @@
       this.bindIndex();
     }
 
-    /* Índice de la izquierda: lleva a cada grupo y marca el que se está viendo. */
+    /* Índice de la izquierda: cada apartado es una página; se ve uno cada vez (antes iban todos
+       seguidos en una sola página muy larga). Se empieza por el primero. */
     bindIndex(){
       if(!this.nav) return;
-      const buttons = Array.from(this.nav.querySelectorAll('button[data-sec]'));
-      const mark = (id) => buttons.forEach((b) => {
-        if(b.getAttribute('data-sec') === id) b.setAttribute('aria-current', 'true');
-        else b.removeAttribute('aria-current');
-      });
+      this.sections = Array.from(this.nav.querySelectorAll('button[data-sec]'));
       this.nav.addEventListener('click', (ev) => {
         const b = closest(ev.target, 'button[data-sec]');
-        const target = b && $(b.getAttribute('data-sec'));
-        if(!target) return;
-        const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        target.scrollIntoView({behavior:calm ? 'auto' : 'smooth', block:'start'});
-        mark(b.getAttribute('data-sec'));
+        if(b) this.showSection(b.getAttribute('data-sec'));
       });
-      if(typeof IntersectionObserver !== 'function') return;
-      const seen = new IntersectionObserver((entries) => {
-        entries.forEach((e) => { if(e.isIntersecting) mark(e.target.id); });
-      }, {rootMargin:'-20% 0px -70% 0px'});
-      buttons.forEach((b) => { const el = $(b.getAttribute('data-sec')); if(el) seen.observe(el); });
+      if(this.sections.length) this.showSection(this.sections[0].getAttribute('data-sec'));
+    }
+
+    /* id: 'setLook' | 'setRemind' | 'setIntegr' | 'setAccount' | 'setPrivacy'. */
+    showSection(id){
+      if(!this.sections || !$(id)) return;
+      this.sections.forEach((b) => {
+        const on = b.getAttribute('data-sec') === id;
+        const group = $(b.getAttribute('data-sec'));
+        if(on) b.setAttribute('aria-current', 'true');
+        else b.removeAttribute('aria-current');
+        if(group) group.hidden = !on;
+        /* En pantallas estrechas el índice es una fila que se desplaza: el elegido, a la vista. */
+        if(on && b.scrollIntoView) b.scrollIntoView({block:'nearest', inline:'nearest'});
+      });
     }
 
     bindNav(handler){

@@ -222,6 +222,7 @@ const card = (page, text) => page.locator('.card').filter({hasText:text});
 
     /* ---------- GitHub: bloqueado en la interfaz y en el motor ---------- */
     await page.locator('#tabSettings').click();
+    await page.locator('#settingsNav [data-sec="setIntegr"]').click();
     await page.locator('#ghEncrypted').waitFor({state:'visible'});
     const gh = await page.evaluate(async () => {
       const g = Workhub.app.controllers.github;

@@ -41,7 +41,7 @@
         this.card.hidden = state === 'unavailable';
         this.text.textContent = STATES[state] || '';
         this.btn.hidden = state === 'denied';
-        this.btn.textContent = state === 'on' ? 'Desactivar en este navegador' : 'Activar en este navegador';
+        this.btn.textContent = state === 'on' ? 'Desactivar' : 'Activar';
       });
     }
 

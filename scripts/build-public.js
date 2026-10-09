@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const {pageDirs, buildSitemap} = require('./site-pages');
 const {bundle, DIR: BUNDLE_DIR} = require('./bundle');
+const {minify, minifyTree} = require('./minify');
 const {securityTxt, FILES: SECURITY_FILES} = require('./security-txt');
 
 /* KANLANE_ROOT solo lo usan las pruebas (tests/e2e/sitemap-check.js) para construir una copia. */
@@ -147,10 +148,13 @@ if(security){
 }
 
 /* Un archivo por grupo de scripts o de hojas de estilo. Los plugins no se tocan: cada uno es
-   una página aparte que se carga en su propio marco. Si algo no se puede unir, el build falla. */
-let packed;
+   una página aparte que se carga en su propio marco. Si algo no se puede unir, el build falla.
+   El JavaScript se publica minificado (scripts/minify.js): los paquetes al unirlos y, después,
+   los scripts que quedan sueltos. sw.js se minifica al final, ya con su lista de archivos. */
+let packed, loose;
 try{
-  packed = bundle(out, ['plugins']);
+  packed = bundle(out, ['plugins'], (ext, text) => (ext === 'js' ? minify(text, 'un paquete de scripts') : text));
+  loose = minifyTree(out, ['plugins', BUNDLE_DIR, 'sw.js']);
 }catch(e){
   console.error('✖ ' + e.message);
   process.exit(1);
@@ -190,7 +194,7 @@ let sw = fs.readFileSync(swPath, 'utf8');
 if(!/const BUILD = '[^']*';/.test(sw) || !/const FILES = \[\];/.test(sw)) throw new Error('sw.js: no encuentro BUILD y FILES');
 sw = sw.replace(/const BUILD = '[^']*';/, "const BUILD = '" + build + "';")
   .replace(/const FILES = \[\];/, () => 'const FILES = ' + JSON.stringify(['/'].concat(files)) + ';');
-fs.writeFileSync(swPath, sw);
+fs.writeFileSync(swPath, minify(sw, 'sw.js'));
 
 /* Aviso si faltan los datos del titular de las páginas legales (obligatorios: LSSI-CE art. 10 y RGPD art. 13). */
 const legal = fs.readFileSync(path.join(root, 'src/config/legal-config.js'), 'utf8');

@@ -66,8 +66,9 @@ function jsFrom(out, file){
 }
 
 /* out: la carpeta dist/. skip: carpetas de primer nivel cuyas páginas no se tocan.
-   Devuelve {bundles, removed, pages}. */
-function bundle(out, skip){
+   transform (opcional): (ext, texto) → el texto que se guarda en el paquete (p. ej. minificado);
+   el nombre lleva el resumen de lo que se guarda. Devuelve {bundles, removed, pages}. */
+function bundle(out, skip, transform){
   const pages = htmlFiles(out).filter((f) => (skip || []).indexOf(posix(path.relative(out, f)).split('/')[0]) === -1);
   const made = new Map();     /* resumen → ruta del paquete */
   const used = new Set();     /* archivos que han entrado en algún paquete */
@@ -86,7 +87,8 @@ function bundle(out, skip){
           if(!fs.existsSync(file)) throw new Error('bundle: ' + posix(path.relative(out, page)) + ' carga ' + u + ', que no existe');
           return file;
         });
-        const text = files.map((f) => (kind.ext === 'js' ? jsFrom(out, f) : cssFrom(out, f))).join(kind.ext === 'js' ? '' : '\n');
+        const joined = files.map((f) => (kind.ext === 'js' ? jsFrom(out, f) : cssFrom(out, f))).join(kind.ext === 'js' ? '' : '\n');
+        const text = transform ? transform(kind.ext, joined) : joined;
         const name = crypto.createHash('sha1').update(text).digest('hex').slice(0, 12) + '.' + kind.ext;
         const target = path.join(out, DIR, name);
         if(!made.has(name)){

@@ -1,0 +1,8 @@
+{
+  "name": "kanlane-build",
+  "private": true,
+  "description": "Lo único que necesita instalar scripts/build-public.js: el minificador (scripts/minify.js)",
+  "devDependencies": {
+    "terser": "5.51.2"
+  }
+}

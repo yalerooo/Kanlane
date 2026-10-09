@@ -111,7 +111,7 @@ const headers = readText(path.join(ROOT, 'dist/_headers'));
 assert.ok(!/llms\.txt/.test(headers), '_headers no trata llms.txt aparte (ni noindex)');
 const all = headers.split(/\n(?=\S)/).find(b => b.startsWith('/*'));
 assert.ok(all && !/X-Robots-Tag/i.test(all), 'la regla global de _headers no lleva noindex');
-assert.ok(JSON.parse(readText(path.join(ROOT, 'dist/sw.js')).match(/const FILES = (\[.*\]);/)[1]).includes('/llms.txt'), 'el service worker precachea /llms.txt');
+assert.ok(JSON.parse(readText(path.join(ROOT, 'dist/sw.js')).match(/\bFILES\s*=\s*(\[[^\]]*\])/)[1]).includes('/llms.txt'), 'el service worker precachea /llms.txt');
 ok('dist/llms.txt: ' + urls.length + ' enlaces, URLs propias = sitemap, sin noindex');
 
 /* ---------- Negativo: dateModified distinto de la meta hace fallar el build ---------- */

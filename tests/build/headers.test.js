@@ -129,7 +129,7 @@ test('security.txt: lo publicado coincide con el contacto configurado y no entra
       assert.match(text, /^Expires: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/m);
     }
   });
-  const cached = JSON.parse(fs.readFileSync(path.join(dist, 'sw.js'), 'utf8').match(/const FILES = (\[.*\]);/)[1]);
+  const cached = JSON.parse(fs.readFileSync(path.join(dist, 'sw.js'), 'utf8').match(/\bFILES\s*=\s*(\[[^\]]*\])/)[1]);
   FILES.forEach((f) => assert.ok(!cached.includes(f), f));
 });
 

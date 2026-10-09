@@ -43,6 +43,20 @@ Gratis a esta escala. El plan gratuito de Resend da 3.000 correos al mes con un 
 
 Para ver el diseño sin enviar nada: `node scripts/dev.js --emulador` con los emuladores en marcha; los mensajes quedan en `http://localhost:5500/__dev/mail`.
 
+## Si a alguien no le llega el correo
+
+1. Resend → **Emails** → busca la dirección. El estado dice dónde se quedó: *Delivered* (el servidor de destino lo aceptó: mirar spam o los filtros de ese buzón), *Bounced* (lo rechazó, con el motivo) o *Complained*. Si no aparece, lo envió Firebase como respaldo o no se llegó a pedir: mirar los registros del Worker (`correos: …`).
+2. La pantalla «Verifica tu correo» ofrece **Reenviar correo** y avisa de mirar en spam; la de cambio de contraseña, lo mismo.
+
+**Alias plus (`nombre+algo@dominio`)**, investigado el 9-oct-2026 a raíz de un aviso de QA del 6-oct («no llegó a `…+migra1@mail.instinct.com`»):
+
+- Kanlane no toca la dirección: va entera, con su `+`, a Firebase y a Resend, y el alta, los dos correos, el cambio de contraseña y el acceso funcionan con un alias (`tests/worker/account-mail.test.js`, `tests/e2e/email-links.js`). No se ha encontrado nada en la app que lo explique.
+- Aquel envío lo hizo Firebase con su plantilla y su remitente, antes de que existiera esta ruta: no quedó ningún registro que consultar, así que la causa de ese caso concreto no se puede confirmar.
+- El buzón de la prueba no es uno corriente: el MX de `mail.instinct.com` es la recepción de Amazon SES (`inbound-smtp.us-west-2.amazonaws.com`), donde qué direcciones se aceptan lo deciden las reglas de quien lo administra. Lo más probable es que el mensaje se perdiera ahí o en su filtro, pero es una hipótesis.
+- Para cerrarlo con evidencia: registrar una cuenta con un alias plus en un buzón normal (Gmail, Outlook) y otra con la dirección sin alias, y mirar el estado de los dos envíos en Resend.
+
+`kanlane.com` no tiene registro DMARC (`_dmarc`), comprobado el 9-oct-2026. No impide la entrega, pero algunos servidores puntúan peor el correo de un dominio sin él: conviene crear el TXT `_dmarc` con `v=DMARC1; p=none;`.
+
 ## Límites y seguridad
 
 | Qué | Tope | Dónde |

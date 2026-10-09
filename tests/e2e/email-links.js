@@ -101,7 +101,8 @@ const errors = [];
     console.log('OK   un enlace de verificación ya usado se avisa en el acceso');
 
     /* ---------- Verificar, abriendo el correo en otro dispositivo ---------- */
-    const email2 = 'enlace2-' + Date.now() + '@example.test';
+    /* Con un alias plus (QA del 6-oct-2026): alta, correos, cambio de contraseña y acceso van igual. */
+    const email2 = 'enlace2+alias' + Date.now() + '@example.test';
     const origin = await browser.newContext(options);
     await signUp(await open(origin, url), email2);
     const device = await browser.newContext(options);

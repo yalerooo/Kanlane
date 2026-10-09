@@ -38,6 +38,19 @@
       this.repeatError = $('fRepeatError');
       this.form.addEventListener('input', () => { this._clearErrors(); });
       this.form.addEventListener('change', () => { this._clearErrors(); });
+      this.fields.desc.addEventListener('input', () => this._fit());
+      /* El título es un campo de varias líneas solo para que uno largo se vea entero: sigue siendo
+         una línea de texto. Intro guarda, como en cualquier campo, y un salto pegado se queda en espacio. */
+      this.fields.title.addEventListener('keydown', (ev) => {
+        if(ev.key !== 'Enter' || ev.isComposing) return;
+        ev.preventDefault();
+        this.form.requestSubmit();
+      });
+      this.fields.title.addEventListener('input', () => {
+        const el = this.fields.title;
+        if(/[\r\n]/.test(el.value)) el.value = el.value.replace(/\s*[\r\n]+\s*/g, ' ');
+        this._fit();
+      });
       /* Subtareas: [{id, text, done}] y, en equipos, assignee, doneBy y doneAt (TaskModel.checkItem). */
       this.checklist = [];
       this.checkList = $('fChecklist');
@@ -559,6 +572,21 @@
       return values;
     }
 
+    /* El título y la descripción se escriben sin caja y crecen con el texto (task-form.css,
+       field-sizing). En los navegadores que aún no lo hacen solos, se les da aquí el alto de lo escrito. */
+    _fit(){
+      /* Recién abierto: cada zona empieza arriba, no donde se dejó la tarea anterior. */
+      if(!this.dlg.open || this._fitFor !== this.openCount){
+        this._fitFor = this.openCount;
+        this.dlg.querySelectorAll('.tf-scroll, .tf-main, .tf-side').forEach((el) => { el.scrollTop = 0; });
+      }
+      if(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content')) return;
+      [this.fields.title, this.fields.desc].forEach((el) => {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+      });
+    }
+
     /* El campo de la hora lo crea el selector de fecha (data-dp-time en #fFecha). */
     _hora(){ return $('fHora') || {value:''}; }
 
@@ -591,6 +619,8 @@
       this.btnDelete.hidden = true;
       this.btnArchive.hidden = true;
       this.dlg.showModal();
+      this.openCount = (this.openCount || 0) + 1;
+      this._fit();
     }
 
     openEdit(t, clientNames){
@@ -634,6 +664,8 @@
       this.relationKind.value = 'related';
       this.relationError.hidden = true;
       this.dlg.showModal();
+      this.openCount = (this.openCount || 0) + 1;
+      this._fit();
     }
 
     setDueDate(date){ this.fields.fecha.value = date; }

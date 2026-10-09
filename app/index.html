@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="../assets/css/views/board.css">
   <link rel="stylesheet" href="../assets/css/views/task-views.css">
   <link rel="stylesheet" href="../assets/css/views/task-detail.css">
+  <link rel="stylesheet" href="../assets/css/views/task-form.css">
   <link rel="stylesheet" href="../assets/css/components/rich.css">
   <link rel="stylesheet" href="../assets/css/views/automations.css">
   <link rel="stylesheet" href="../assets/css/views/calendar.css">
@@ -941,146 +942,148 @@
   </main>
 </div>
 
-<dialog id="dlg">
+<dialog id="dlg" class="task-form" aria-labelledby="dlgTitle">
   <form class="dlg-inner" id="form" method="dialog" novalidate>
     <h2 id="dlgTitle">Nueva tarea</h2>
     <input type="hidden" id="taskId">
-    <div class="field">
-      <label for="fTitle">Título</label>
-      <input id="fTitle" required maxlength="140" placeholder="p. ej. Preparar la presentación" aria-describedby="fTitleError">
-      <p class="lock-error" id="fTitleError" role="alert" hidden></p>
-    </div>
-    <div class="field">
-      <label for="fDesc">Descripción / notas</label>
-      <textarea id="fDesc" maxlength="16000" rows="5" placeholder="Detalles, próximos pasos…"></textarea>
-      <p class="field-help">Admite Markdown: **negrita**, listas, casillas con «- [ ]», enlaces y bloques de código.</p>
-    </div>
-    <div class="field team-only team-off" id="fAssigneesField">
-      <span class="field-label" id="fAssigneesLabel">Asignada a</span>
-      <div class="assignee-picker" id="fAssignees" role="group" aria-labelledby="fAssigneesLabel"></div>
-    </div>
-    <div class="field" id="fLabelsField">
-      <span class="field-label" id="fLabelsLabel">Etiquetas</span>
-      <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
-      <div class="label-new" id="fLabelNew" hidden>
-        <input id="fLabelName" maxlength="40" autocomplete="off" placeholder="Nombre de la etiqueta" aria-label="Nombre de la etiqueta">
-        <div class="label-colors" id="fLabelColors" role="radiogroup" aria-label="Color de la etiqueta"></div>
-        <button type="button" class="btn btn-ghost btn-sm" id="fLabelAdd">Crear</button>
-      </div>
-    </div>
-    <div class="field" id="fCoverField">
-      <span class="field-label" id="fCoverLabel">Portada</span>
-      <div class="cover-picker" id="fCover" role="radiogroup" aria-labelledby="fCoverLabel"></div>
-      <p class="field-help" id="fCoverHelp">Un color o una de las imágenes adjuntas en las notas de la tarea. Se ve en lo alto de la tarjeta.</p>
-    </div>
-    <div class="row2">
-      <div class="field needs-clients">
-        <label for="fCliente">Cliente / proyecto</label>
-        <select id="fCliente"></select>
-        <div class="new-client-inline" id="fClienteNewWrap" hidden>
-          <input id="fClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
-          <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
+    <div class="tf-scroll">
+      <div class="tf-main">
+        <div class="field tf-title">
+          <label class="sr-only" for="fTitle">Título</label>
+          <textarea id="fTitle" required maxlength="140" rows="1" autocomplete="off" placeholder="Título de la tarea" aria-describedby="fTitleError"></textarea>
+          <p class="lock-error" id="fTitleError" role="alert" hidden></p>
         </div>
-        <p class="lock-error" id="fClienteError" role="alert" hidden></p>
-      </div>
-      <div class="field">
-        <label for="fEstado">Estado</label>
-        <select id="fEstado" data-dots="status">
-          <option value="pendiente">Pendiente</option>
-          <option value="proceso">En proceso</option>
-          <option value="espera">Esperando al cliente</option>
-          <option value="completada">Completada</option>
-        </select>
-      </div>
-    </div>
-    <div class="field">
-      <label for="fContacto">Contacto (opcional)</label>
-      <input id="fContacto" maxlength="80" placeholder="Nombre / email">
-    </div>
-    <div class="field">
-      <label for="fUbicacion">Ubicación (opcional)</label>
-      <input id="fUbicacion" maxlength="200" autocomplete="off" placeholder="Dirección, lugar o enlace a un mapa">
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label for="fInicio">Fecha de inicio (opcional)</label>
-        <input id="fInicio" type="date" data-dp>
-      </div>
-      <div class="field">
-        <label for="fFecha">Fecha límite y hora (opcional)</label>
-        <input id="fFecha" type="date" data-dp data-dp-time="fHora">
-      </div>
-    </div>
-    <div class="field" id="fRepeatField">
-      <label for="fRepeat">Repetir</label>
-      <select id="fRepeat">
-        <option value="">No se repite</option>
-        <option value="daily">Cada día</option>
-        <option value="weekly">Cada semana</option>
-        <option value="biweekly">Cada 2 semanas</option>
-        <option value="monthly">Cada mes</option>
-        <option value="yearly">Cada año</option>
-      </select>
-      <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
-      <p class="lock-error" id="fRepeatError" role="alert" hidden></p>
-    </div>
-    <div class="field" id="fCustomField" hidden>
-      <span class="field-label" id="fCustomLabel">Campos personalizados</span>
-      <div class="cf-form" id="fCustom" role="group" aria-labelledby="fCustomLabel"></div>
-    </div>
-    <div class="field" id="fChecklistField">
-      <div class="check-heading"><span class="field-label" id="fChecklistLabel">Subtareas</span><span class="check-summary" id="fChecklistSummary" hidden></span></div>
-      <div class="check-progress-bar" id="fChecklistProgress" hidden role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="fChecklistProgressFill"></span></div>
-      <div class="check-edit" id="fChecklist" role="group" aria-labelledby="fChecklistLabel"></div>
-      <div class="check-add">
-        <input id="fCheckNew" maxlength="120" autocomplete="off" placeholder="Añadir una subtarea" aria-label="Nueva subtarea">
-        <button type="button" class="btn btn-ghost btn-sm" id="fCheckAdd">Añadir</button>
-      </div>
-    </div>
-    <div class="field" id="taskNotesSection" hidden>
-      <label>Notas</label>
-      <div class="notes-list" id="taskNotesList"></div>
-      <div class="note-add-box" id="noteAddBox">
-        <textarea id="noteText" rows="2" maxlength="16000" aria-label="Añade una nota…" placeholder="Añade una nota…"></textarea>
-        <div class="att-pending" id="noteFiles" hidden></div>
-        <div class="note-add-actions">
-          <input type="file" id="noteImageInput" multiple aria-label="Adjuntar archivos" hidden>
-          <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar archivos</button>
-          <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
+        <div class="field tf-desc">
+          <label class="sr-only" for="fDesc">Descripción</label>
+          <textarea id="fDesc" maxlength="16000" rows="3" placeholder="Añade una descripción…" aria-describedby="fDescHelp"></textarea>
+          <p class="field-help" id="fDescHelp">Admite Markdown: **negrita**, listas, casillas con «- [ ]», enlaces y bloques de código.</p>
         </div>
-        <p class="lock-error" id="noteError" hidden></p>
+        <div class="field tf-section" id="fChecklistField">
+          <div class="check-heading"><span class="field-label" id="fChecklistLabel">Subtareas</span><span class="check-summary" id="fChecklistSummary" hidden></span></div>
+          <div class="check-progress-bar" id="fChecklistProgress" hidden role="progressbar" aria-label="Progreso de las subtareas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="fChecklistProgressFill"></span></div>
+          <div class="check-edit" id="fChecklist" role="group" aria-labelledby="fChecklistLabel"></div>
+          <div class="check-add">
+            <input id="fCheckNew" maxlength="120" autocomplete="off" placeholder="Añadir una subtarea" aria-label="Nueva subtarea">
+            <button type="button" class="btn btn-ghost btn-sm" id="fCheckAdd">Añadir</button>
+          </div>
+        </div>
+        <div class="field tf-section" id="taskNotesSection" hidden>
+          <label>Notas</label>
+          <div class="notes-list" id="taskNotesList"></div>
+          <div class="note-add-box" id="noteAddBox">
+            <textarea id="noteText" rows="2" maxlength="16000" aria-label="Añade una nota…" placeholder="Añade una nota…"></textarea>
+            <div class="att-pending" id="noteFiles" hidden></div>
+            <div class="note-add-actions">
+              <input type="file" id="noteImageInput" multiple aria-label="Adjuntar archivos" hidden>
+              <button type="button" class="icon-btn" id="btnAttachImage">Adjuntar archivos</button>
+              <button type="button" class="btn btn-ghost" id="btnAddNote">Añadir nota</button>
+            </div>
+            <p class="lock-error" id="noteError" hidden></p>
+          </div>
+        </div>
+        <div class="field tf-section needs-clients" id="taskLinksSection" hidden>
+          <label>Contactos vinculados</label>
+          <div class="linked-list" id="linkedContactsList"></div>
+          <select id="linkContactPicker" data-placeholder aria-label="Vincular contacto">
+            <option value="">+ Vincular contacto existente…</option>
+          </select>
+        </div>
+        <div class="field tf-section" id="taskLinksSection2" hidden>
+          <label>Contraseñas vinculadas</label>
+          <div class="linked-list" id="linkedVaultList"></div>
+          <select id="linkVaultPicker" data-placeholder aria-label="Vincular contraseña">
+            <option value="">+ Vincular contraseña existente…</option>
+          </select>
+        </div>
+        <div class="field tf-section" id="taskRelationsSection" hidden>
+          <label for="relationTaskPicker">Tareas relacionadas</label>
+          <div class="linked-list" id="relatedTasksList"></div>
+          <div class="relation-add">
+            <select id="relationKind" data-transient aria-label="Tipo de relación">
+              <option value="related">Relacionada con</option>
+              <option value="blockedBy">Bloqueada por</option>
+              <option value="blocks">Bloquea a</option>
+            </select>
+            <select id="relationTaskPicker" data-placeholder aria-label="Tarea con la que se relaciona">
+              <option value="">+ Elegir tarea…</option>
+            </select>
+          </div>
+          <p class="lock-error" id="relationError" role="alert" hidden></p>
+        </div>
+        <p class="lock-error" id="fFormError" role="alert" hidden></p>
       </div>
+      <aside class="tf-side" aria-label="Propiedades de la tarea">
+        <div class="field">
+          <label for="fEstado">Estado</label>
+          <select id="fEstado" data-dots="status">
+            <option value="pendiente">Pendiente</option>
+            <option value="proceso">En proceso</option>
+            <option value="espera">Esperando al cliente</option>
+            <option value="completada">Completada</option>
+          </select>
+        </div>
+        <div class="field needs-clients">
+          <label for="fCliente">Cliente</label>
+          <select id="fCliente"></select>
+          <div class="new-client-inline" id="fClienteNewWrap" hidden>
+            <input id="fClienteNewInput" maxlength="60" aria-label="Nombre del cliente nuevo" placeholder="Nombre del cliente nuevo">
+            <button type="button" class="btn btn-ghost" id="fClienteNewBtn">Crear</button>
+          </div>
+          <p class="lock-error" id="fClienteError" role="alert" hidden></p>
+        </div>
+        <div class="field team-only team-off" id="fAssigneesField">
+          <span class="field-label" id="fAssigneesLabel">Asignada a</span>
+          <div class="assignee-picker" id="fAssignees" role="group" aria-labelledby="fAssigneesLabel"></div>
+        </div>
+        <div class="field">
+          <label for="fFecha">Fecha límite</label>
+          <input id="fFecha" type="date" data-dp data-dp-time="fHora">
+        </div>
+        <div class="field">
+          <label for="fInicio">Fecha de inicio</label>
+          <input id="fInicio" type="date" data-dp>
+        </div>
+        <div class="field" id="fRepeatField">
+          <label for="fRepeat">Repetir</label>
+          <select id="fRepeat">
+            <option value="">No se repite</option>
+            <option value="daily">Cada día</option>
+            <option value="weekly">Cada semana</option>
+            <option value="biweekly">Cada 2 semanas</option>
+            <option value="monthly">Cada mes</option>
+            <option value="yearly">Cada año</option>
+          </select>
+          <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
+          <p class="lock-error" id="fRepeatError" role="alert" hidden></p>
+        </div>
+        <div class="field" id="fLabelsField">
+          <span class="field-label" id="fLabelsLabel">Etiquetas</span>
+          <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
+          <div class="label-new" id="fLabelNew" hidden>
+            <input id="fLabelName" maxlength="40" autocomplete="off" placeholder="Nombre de la etiqueta" aria-label="Nombre de la etiqueta">
+            <div class="label-colors" id="fLabelColors" role="radiogroup" aria-label="Color de la etiqueta"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="fLabelAdd">Crear</button>
+          </div>
+        </div>
+        <div class="field" id="fCoverField">
+          <span class="field-label" id="fCoverLabel">Portada</span>
+          <div class="cover-picker" id="fCover" role="radiogroup" aria-labelledby="fCoverLabel"></div>
+          <p class="field-help" id="fCoverHelp">Un color o una de las imágenes adjuntas en las notas de la tarea. Se ve en lo alto de la tarjeta.</p>
+        </div>
+        <div class="field">
+          <label for="fContacto">Contacto</label>
+          <input id="fContacto" maxlength="80" placeholder="Nombre / email">
+        </div>
+        <div class="field">
+          <label for="fUbicacion">Ubicación</label>
+          <input id="fUbicacion" maxlength="200" autocomplete="off" placeholder="Dirección, lugar o enlace a un mapa">
+        </div>
+        <div class="field" id="fCustomField" hidden>
+          <span class="field-label" id="fCustomLabel">Campos personalizados</span>
+          <div class="cf-form" id="fCustom" role="group" aria-labelledby="fCustomLabel"></div>
+        </div>
+      </aside>
     </div>
-    <div class="field needs-clients" id="taskLinksSection" hidden>
-      <label>Contactos vinculados</label>
-      <div class="linked-list" id="linkedContactsList"></div>
-      <select id="linkContactPicker" data-placeholder aria-label="Vincular contacto">
-        <option value="">+ Vincular contacto existente…</option>
-      </select>
-    </div>
-    <div class="field" id="taskLinksSection2" hidden>
-      <label>Contraseñas vinculadas</label>
-      <div class="linked-list" id="linkedVaultList"></div>
-      <select id="linkVaultPicker" data-placeholder aria-label="Vincular contraseña">
-        <option value="">+ Vincular contraseña existente…</option>
-      </select>
-    </div>
-    <div class="field" id="taskRelationsSection" hidden>
-      <label for="relationTaskPicker">Tareas relacionadas</label>
-      <div class="linked-list" id="relatedTasksList"></div>
-      <div class="relation-add">
-        <select id="relationKind" data-transient aria-label="Tipo de relación">
-          <option value="related">Relacionada con</option>
-          <option value="blockedBy">Bloqueada por</option>
-          <option value="blocks">Bloquea a</option>
-        </select>
-        <select id="relationTaskPicker" data-placeholder aria-label="Tarea con la que se relaciona">
-          <option value="">+ Elegir tarea…</option>
-        </select>
-      </div>
-      <p class="lock-error" id="relationError" role="alert" hidden></p>
-    </div>
-    <p class="lock-error" id="fFormError" role="alert" hidden></p>
     <div class="dlg-actions">
       <button type="button" class="btn btn-danger" id="btnDelete" hidden>Eliminar</button>
       <button type="button" class="btn btn-ghost" id="btnArchiveTask" title="La tarea sale del tablero y se puede restaurar desde Archivados" hidden>Archivar</button>

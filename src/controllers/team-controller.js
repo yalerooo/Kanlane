@@ -83,6 +83,10 @@
       if(!this.enabled()) return;
       const p = this.projects.get(id || this.app.projectId);
       if(!p) return;
+      if(this.pendingOpen === p.id) this.pendingOpen = null;
+      /* Ya está abierto en este proyecto (p. ej. se abre solo al llegar el equipo recién creado, y la
+         persona ya lo había abierto): se repinta, sin borrar lo que esté escribiendo. */
+      if(this.shareId === p.id && this.view.isOpen() && p.team){ this.refresh(); return; }
       this.shareId = p.id;
       this.fps = null;
       this.hasVault = false;

@@ -60,7 +60,9 @@
         (on) => { if(this.convertStep === 'key') this.btnConvert.disabled = !on; });
       $('shCodeCopy').addEventListener('click', () => Workhub.utils.ui.copyWithFeedback($('shCodeCopy'), this.code.textContent));
       $('shCodeDone').addEventListener('click', () => this.handlers.codeDone && this.handlers.codeDone());
-      this.dlg.addEventListener('close', () => this._resetSecrets());
+      /* Solo si de verdad queda cerrado: el aviso de cierre llega un instante después, y si entretanto
+         se ha vuelto a abrir no debe llevarse lo que se esté escribiendo. */
+      this.dlg.addEventListener('close', () => { if(!this.dlg.open) this._resetSecrets(); });
 
       this.inviteForm.addEventListener('submit', (ev) => {
         ev.preventDefault();

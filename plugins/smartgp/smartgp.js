@@ -4,27 +4,30 @@
    Dos instancias de la misma página:
    - segundo plano (context.mode === 'background'): vigila las tareas; cuando una
      pasa a una etapa final, pide con wh.ui.form las horas, los días y el proyecto.
-     También añade «Registrar horas» en la ficha de cada tarea y una etiqueta con
-     las horas en las tarjetas.
+     Lo mismo al completar una subtarea (se puede apagar en el panel). También añade
+     «Registrar horas» en la ficha de cada tarea —para la tarea entera o una de sus
+     subtareas— y una etiqueta con las horas en las tarjetas.
    - panel (sección Plugins): el calendario, el detalle de cada día, los proyectos y
      las incidencias (vacaciones, bajas, permisos…).
 
    Datos del proyecto abierto de Kanlane (wh.storage):
      projects   [{id, name, color}]
-     log-AAAA-MM [{id, date, hours, project, task, title, absence?}]   (uno por día y tarea;
-                 con absence es una incidencia y lleva el id de su tipo)
+     log-AAAA-MM [{id, date, hours, project, task, title, sub?, absence?}]   (uno por día y tarea;
+                 con sub son las horas de esa subtarea; con absence es una incidencia y lleva
+                 el id de su tipo)
      absences   [{id, name, color}]   tipos de incidencia añadidos a mano (los fijos van en ABSENCES)
-     logged     {idTarea: true}    tareas ya registradas u omitidas
+     logged     {idTarea: true}    tareas ya registradas u omitidas (subtareas: «idTarea/idSubtarea»)
      taskhours  {idTarea: horas}   total por tarea (para la etiqueta de la tarjeta)
-     prefs      {project}          el último proyecto usado (las horas siempre empiezan en 0) */
+     prefs      {project, askSubs} el último proyecto usado (las horas siempre empiezan en 0) y
+                                   si se pregunta al completar una subtarea (false = no) */
 (function(){
   'use strict';
 
   var MANIFEST = {
     id: 'workhub.smartgp',
     name: 'Smart GP',
-    version: '1.2.0',
-    description: 'Al terminar una tarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
+    version: '1.3.0',
+    description: 'Al terminar una tarea o una subtarea, anota las horas, los días y el proyecto. Después míralo todo en un calendario por día y proyecto.',
     author: 'Kanlane',
     icon: 'clock',
     color: 172,
@@ -62,6 +65,10 @@
     'Las horas se reparten a partes iguales entre los días.':'Hours are split evenly across the days.',
     '+ Añadir proyecto…':'+ Add project…', 'Nombre del proyecto':'Project name',
     'Has terminado esta tarea. ¿Cuánto le has dedicado?':'You finished this task. How long did you spend on it?',
+    'Has completado esta subtarea. ¿Cuánto le has dedicado?':'You completed this subtask. How long did you spend on it?',
+    'Has terminado esta tarea. Ya lleva {h} h registradas: añade solo las que falten.':'You finished this task. It already has {h} h logged: add only what is missing.',
+    'Subtarea':'Subtask', 'La tarea entera':'The whole task',
+    'Preguntar las horas al completar una subtarea':'Ask for hours when a subtask is completed',
     'Añade horas a mano.':'Add hours by hand.', 'Registro manual':'Manual entry', 'Guardar':'Save', 'Omitir':'Skip', 'Cancelar':'Cancel',
     '{h} h registradas en {p}':'{h} h logged in {p}',
     'Editar registro':'Edit entry', 'Registro eliminado':'Entry deleted',
@@ -326,9 +333,18 @@
     };
   }
 
-  /* task: la tarea terminada; null para apuntar horas a mano. dates: días por defecto. */
+  /* Clave de una subtarea en `logged`. */
+  function subKey(taskId, subId){ return taskId + '/' + subId; }
+  function subsOf(task){ return task && Array.isArray(task.checklist) ? task.checklist : []; }
+  function subById(task, id){ return subsOf(task).filter(function(c){ return c.id === id; })[0] || null; }
+
+  /* task: la tarea terminada; null para apuntar horas a mano. dates: días por defecto.
+     state.sub: el id de la subtarea a la que van las horas ('_' o nada = la tarea entera);
+     state.asked: se abre porque se acaba de completar esa subtarea. */
   function logTask(task, dates, state, notice){
     state = state || {};
+    var subs = subsOf(task);
+    var logged = task ? (st.taskHours[task.id] || 0) : 0;
     /* Si el cliente de la tarea se llama igual que un proyecto, ese; si no, el último usado. */
     var byClient = task && task.cliente ? st.projects.filter(function(p){ return p.name.toLowerCase() === task.cliente.toLowerCase(); })[0] : null;
     var days = state.days || (dates && dates.length ? dates : [today()]);
@@ -340,11 +356,17 @@
         {key: 'days', type: 'dates', label: tr('Días trabajados'), value: days, hint: tr('Las horas se reparten a partes iguales entre los días.')},
         projectField(state.project !== undefined ? state.project : (byClient ? byClient.id : st.prefs.project))
       ];
+      /* Con subtareas, las horas pueden ir a una de ellas. */
+      if(subs.length) fields.unshift({key: 'sub', type: 'select', label: tr('Subtarea'), value: subById(task, state.sub) ? state.sub : '_',
+        options: [{value: '_', label: tr('La tarea entera')}].concat(subs.map(function(c){ return {value: c.id, label: c.text || tr('Subtarea')}; }))});
       if(!task) fields.push({key: 'title', type: 'text', label: tr('Descripción'), value: state.title || '', placeholder: tr('Ej.: Reunión con el cliente'), maxlength: 120});
       return wh.ui.form({
         title: tr('Registrar horas'),
         subtitle: task ? task.title : '',
-        intro: task ? tr('Has terminado esta tarea. ¿Cuánto le has dedicado?') : tr('Añade horas a mano.'),
+        intro: !task ? tr('Añade horas a mano.')
+          : state.asked ? tr('Has completado esta subtarea. ¿Cuánto le has dedicado?')
+          : logged > 0 ? tr('Has terminado esta tarea. Ya lleva {h} h registradas: añade solo las que falten.', {h: fmt(logged)})
+          : tr('Has terminado esta tarea. ¿Cuánto le has dedicado?'),
         notice: notice || '',
         submit: tr('Guardar'),
         cancel: task ? tr('Omitir') : tr('Cancelar'),
@@ -357,14 +379,17 @@
       return usedOn(v.days).then(function(used){
         /* Si algún día se pasa del máximo de la jornada, no se guarda: se avisa y se vuelve a abrir. */
         var bad = violations(perDay, used);
-        if(bad.length) return logTask(task, dates, {hours: v.hours, days: v.days, project: v.project, title: v.title}, bad.map(violationText).join(' '));
+        if(bad.length) return logTask(task, dates, {hours: v.hours, days: v.days, project: v.project, title: v.title, sub: v.sub, asked: state.asked}, bad.map(violationText).join(' '));
+        var sub = subById(task, v.sub);
         return resolveProject(v.project).then(function(pid){
           var entries = perDay.map(function(x){
-            return {id: newId(), date: x.date, hours: x.hours, project: pid, task: task ? task.id : '', title: task ? task.title : (v.title || tr('Registro manual'))};
+            var e = {id: newId(), date: x.date, hours: x.hours, project: pid, task: task ? task.id : '', title: task ? task.title + (sub ? ' · ' + sub.text : '') : (v.title || tr('Registro manual'))};
+            if(sub) e.sub = sub.id;
+            return e;
           });
           return addEntries(entries).then(function(){
-            if(task) st.logged[task.id] = true;
-            st.prefs = {project: pid};
+            if(task) st.logged[sub ? subKey(task.id, sub.id) : task.id] = true;
+            st.prefs = {project: pid, askSubs: st.prefs.askSubs !== false};
             return Promise.all([set('logged', st.logged), set('prefs', st.prefs)]);
           }).then(function(){
             wh.ui.toast(tr('{h} h registradas en {p}', {h: fmt(v.hours), p: projectName(pid)}));
@@ -620,7 +645,8 @@
       '<div class="sg-bar"><div class="sg-month"><button type="button" class="sg-icon" data-act="prev" aria-label="' + esc(tr('Mes anterior')) + '">' + L + '</button>' +
       '<h2>' + esc(title) + '</h2><button type="button" class="sg-icon" data-act="next" aria-label="' + esc(tr('Mes siguiente')) + '">' + R + '</button></div>' +
       '<button type="button" class="wh-btn" data-act="today">' + tr('Hoy') + '</button></div>' +
-      limitLine() + statsHtml() + legendHtml() + calendarHtml() + dayHtml();
+      limitLine() + statsHtml() + legendHtml() + calendarHtml() + dayHtml() +
+      '<label class="sg-opt"><input type="checkbox" data-act="ask-subs"' + (st.prefs.askSubs !== false ? ' checked' : '') + '> ' + tr('Preguntar las horas al completar una subtarea') + '</label>';
   }
 
   /* El máximo de horas que rige este mes (o que no hay). */
@@ -819,6 +845,11 @@
       else { st.newColor = t.value; render(); }
       return;
     }
+    if(t.getAttribute('data-act') === 'ask-subs'){
+      st.prefs = {project: st.prefs.project || '', askSubs: t.checked};
+      serial(function(){ return set('prefs', st.prefs); }).catch(function(){});
+      return;
+    }
     if(t.getAttribute('data-act') === 'rule-hours'){
       var rule = st.schedule.filter(function(r){ return r.id === t.getAttribute('data-rule'); })[0];
       if(!rule) return;
@@ -852,6 +883,7 @@
   /* ================= SEGUNDO PLANO ================= */
 
   var prevDone = null;      /* idTarea → ¿estaba terminada? Null hasta la primera lista. */
+  var prevSubs = null;      /* «idTarea/idSubtarea» → ¿estaba hecha? */
   var asking = Promise.resolve();
 
   function updateBadges(){
@@ -874,16 +906,33 @@
     }).catch(function(){});
   }
 
+  /* Una subtarea acaba de completarse: se preguntan sus horas (de una en una, como las tareas). */
+  function askSub(task, sub){
+    asking = asking.then(function(){
+      if(st.prefs.askSubs === false || st.logged[subKey(task.id, sub.id)]) return null;
+      return logTask(task, null, {sub: sub.id, asked: true}).then(function(saved){ return saved ? updateBadges() : null; });
+    }).catch(function(){});
+  }
+
   function onTasks(list){
     st.tasks = list;
     var next = {};
-    list.forEach(function(t){ next[t.id] = isDone(t); });
+    var nextSubs = {};
+    list.forEach(function(t){
+      next[t.id] = isDone(t);
+      subsOf(t).forEach(function(c){ nextSubs[subKey(t.id, c.id)] = !!c.done; });
+    });
     if(prevDone){
       list.forEach(function(t){
+        /* Solo las que completa quien usa el plugin: las de otra persona del equipo no son sus horas. */
+        subsOf(t).forEach(function(c){
+          if(c.done && c.mine !== false && prevSubs[subKey(t.id, c.id)] === false) askSub(t, c);
+        });
         if(next[t.id] && prevDone[t.id] === false) ask(t);
       });
     }
     prevDone = next;
+    prevSubs = nextSubs;
     updateBadges();
   }
 
@@ -907,7 +956,7 @@
     wh.on('tasks', onTasks);
     wh.on('storage', function(){ loadBase().then(updateBadges); });
     wh.on('project', function(){
-      prevDone = null;
+      prevDone = prevSubs = null;
       Promise.all([loadDone(), wh.tasks.list()]).then(function(r){ st.tasks = r[1]; onTasks(r[1]); });
     });
     onTasks(st.tasks);

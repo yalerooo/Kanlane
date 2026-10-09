@@ -42,6 +42,7 @@
       this.nameField = $('authNameField');
       this.name = $('authName');
       this.email = $('authEmail');
+      this.emailField = this.email.closest('.field');
       this.passField = $('authPassField');
       this.pass = $('authPass');
       this.forgot = $('authForgot');
@@ -1434,6 +1435,34 @@
       this.playDesk();
     }
 
+    /* ---------- Enlaces de los correos (AuthController.resolveAction) ---------- */
+
+    /* Enlace de cambio de contraseña válido: el formulario pide solo la contraseña nueva de esa cuenta. */
+    showNewPassword(email, providers, allowSignup){
+      this.showSignIn(providers, allowSignup);
+      this.resetEmail = email;
+      this.email.value = email;
+      this.setMode('newpass', true);
+    }
+
+    /* handler(): se ha salido del paso de la contraseña nueva sin guardarla. */
+    bindResetLeave(handler){
+      this.onResetLeave = handler;
+    }
+
+    /* Ya en la pantalla de acceso: cómo fue el enlace del correo, con el correo de la cuenta puesto. */
+    showLinkResult(text, isInfo, email){
+      if(email && !this.email.value) this.email.value = email;
+      this.showMessage(text, isInfo);
+      if(email) this.focusFirst();
+    }
+
+    /* El enlace de cambio de contraseña ya no vale: al paso de pedir otro, con el aviso. */
+    showResetExpired(text){
+      this.setMode('reset', true);
+      this.showMessage(text);
+    }
+
     paintProviders(){
       this.providersEl.innerHTML = EARLY.providersHtml(this.social || [], Workhub.t);
     }
@@ -1509,6 +1538,9 @@
         this.verifyWatch = () => { if(document.visibilityState === 'visible' && this.verifyRun) this.verifyRun(true); };
         document.addEventListener('visibilitychange', this.verifyWatch);
         window.addEventListener('focus', this.verifyWatch);
+        /* El enlace del correo se abrió en otra pestaña de este navegador (AuthController lo
+           apunta en 'workhub_verified'): esta, aunque siga a la vista, entra sola. */
+        window.addEventListener('storage', (ev) => { if(ev.key === 'workhub_verified' && this.verifyRun) this.verifyRun(true); });
       }
       this.verifyRun = run;
     }
@@ -1625,6 +1657,10 @@
     /* focus: el cambio lo ha pedido la persona; el cursor va al primer campo vacío. */
     setMode(mode, focus){
       const changed = this.mode !== mode;
+      /* Se deja el paso de la contraseña nueva (p. ej. «Volver a iniciar sesión»). */
+      const left = changed && this.mode === 'newpass';
+      /* Recuperar y contraseña nueva: solo el formulario, sin otros accesos. */
+      const bare = mode === 'reset' || mode === 'newpass';
       this.mode = mode;
       this.setPassVisible(false);
       this.stopTimers();
@@ -1633,6 +1669,9 @@
       this.title.textContent = t.title;
       this.sub.textContent = t.sub;
       this.sub.hidden = false;
+      if(mode === 'newpass'){
+        this.sub.innerHTML = Workhub.t('Para la cuenta de {email}.', {email:'<strong class="auth-mail" translate="no">' + esc(this.resetEmail || '') + '</strong>'});
+      }
       this.submitLabel.textContent = t.submit;
       /* La contraseña no pasa de un modo a otro; el correo, sí. */
       if(changed) this.pass.value = '';
@@ -1642,18 +1681,22 @@
       this.switchText.textContent = t.switchText;
       this.switchLink.textContent = t.switchLink;
       this.nameField.hidden = mode !== 'signup';
+      /* Con la contraseña nueva el correo no se pide, pero sigue en el formulario (con su valor)
+         para que el gestor de contraseñas del navegador sepa de qué cuenta es. */
+      this.emailField.hidden = mode === 'newpass';
       this.passField.hidden = mode === 'reset';
       this.pass.required = mode !== 'reset';
-      this.pass.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+      this.pass.autocomplete = mode === 'signup' || mode === 'newpass' ? 'new-password' : 'current-password';
       this.forgot.hidden = mode !== 'signin';
-      this.providersEl.hidden = mode === 'reset' || !this.providersEl.children.length;
+      this.providersEl.hidden = bare || !this.providersEl.children.length;
       /* Bajo el formulario: «o continúa con» y la fila de accesos (proveedores e invitado). */
-      this.divider.hidden = mode === 'reset' || !this.hasPassword;
-      this.alt.hidden = mode === 'reset';
-      this.switchWrap.hidden = !this.hasPassword || (mode !== 'reset' && !this.allowSignup);
-      this.guest.hidden = mode === 'reset';
+      this.divider.hidden = bare || !this.hasPassword;
+      this.alt.hidden = bare;
+      this.switchWrap.hidden = !this.hasPassword || (!bare && !this.allowSignup);
+      this.guest.hidden = bare;
       this.clearMessage();
       this.paintMeter();
+      if(left && this.onResetLeave) this.onResetLeave();
       if(changed){
         /* Vuelve a lanzar la entrada suave del contenido. */
         this.panel.classList.remove('is-swap');
@@ -1666,7 +1709,7 @@
     /* Cursor en el primer campo vacío. En pantallas táctiles no: abriría el teclado sin pedirlo. */
     focusFirst(){
       if(this.form.hidden || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-      const fields = [this.nameField.hidden ? null : this.name, this.email, this.passField.hidden ? null : this.pass].filter(Boolean);
+      const fields = [this.nameField.hidden ? null : this.name, this.emailField.hidden ? null : this.email, this.passField.hidden ? null : this.pass].filter(Boolean);
       (fields.find((el) => !el.value) || fields[fields.length - 1]).focus({preventScroll:true});
     }
 
@@ -1720,9 +1763,9 @@
       this.clearFieldError('password');
     }
 
-    /* Medidor de la contraseña: solo al crear la cuenta y con algo escrito. */
+    /* Medidor de la contraseña: solo al elegir una (crear la cuenta o cambiarla) y con algo escrito. */
     paintMeter(){
-      const on = this.mode === 'signup' && !!this.pass.value;
+      const on = (this.mode === 'signup' || this.mode === 'newpass') && !!this.pass.value;
       this.meter.hidden = !on;
       if(!on) return;
       const r = strength(this.pass.value);

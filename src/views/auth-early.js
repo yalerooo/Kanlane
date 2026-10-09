@@ -21,7 +21,9 @@
   var TEXT = {
     signin: {title:'Inicia sesión', sub:'Accede a tu espacio de trabajo.', submit:'Iniciar sesión', switchText:'¿No tienes cuenta?', switchLink:'Crear una'},
     signup: {title:'Crea tu cuenta', sub:'Empieza a organizar el trabajo de tus clientes.', submit:'Crear cuenta', switchText:'¿Ya tienes cuenta?', switchLink:'Iniciar sesión'},
-    reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
+    reset: {title:'Recupera tu contraseña', sub:'Te enviaremos un enlace para crear una nueva.', submit:'Enviar enlace', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'},
+    /* Se llega con el enlace del correo de cambio de contraseña; el subtítulo lleva la cuenta (AuthView.setMode). */
+    newpass: {title:'Elige una contraseña nueva', sub:'', submit:'Guardar y entrar', switchText:'¿La recuerdas?', switchLink:'Volver a iniciar sesión'}
   };
 
   var SPIN = '<span class="auth-spin rails is-run" aria-hidden="true"><i></i><i></i><i></i></span>';
@@ -166,7 +168,9 @@
   /* La pantalla de acceso aparece con el atributo hidden (aquí o desde AuthView). */
   new MutationObserver(function(){ place(); wantScene(); }).observe(screen, {attributes:true, attributeFilter:['hidden']});
 
-  if(!window.__authFirst) return;
+  /* Con el enlace de un correo (verificar, cambiar la contraseña) lo que se va a ver lo decide
+     AuthController.resolveAction: no se adelanta el formulario de entrar. */
+  if(!window.__authFirst || /[?&]oobCode=/.test(location.search)) return;
 
   var c = window.WORKHUB_FIREBASE || {};
   var list = (c.providers || ['google']).slice();

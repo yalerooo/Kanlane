@@ -94,6 +94,38 @@ const path = require('node:path');
   assert.ok(proxied, 'el acceso de Firebase se reenvía en el dominio antiguo');
   ok('el inicio de sesión en curso en un dominio antiguo no se rompe');
 
+  /* Los enlaces de los correos (verificar, cambiar la contraseña) no se reenvían a Firebase: van
+     a la app con `mode`, `oobCode` y `lang`, sin la clave de la API ni `continueUrl`. */
+  let upstream = [];
+  globalThis.fetch = async (u) => { upstream.push(String(u)); return new Response('firebase'); };
+  try{
+    for(const mode of ['verifyEmail', 'resetPassword']){
+      r = await get('https://kanlane.com/__/auth/action?mode=' + mode + '&oobCode=AbC_123-xyz&apiKey=clave&lang=es&continueUrl=https%3A%2F%2Fmalo.example%2F');
+      assert.equal(r.status, 302);
+      assert.equal(r.headers.get('Location'), 'https://kanlane.com/app/?mode=' + mode + '&oobCode=AbC_123-xyz&lang=es');
+      assert.equal(r.headers.get('Cache-Control'), 'no-store');
+    }
+    /* El espejo y las vistas previas se quedan en su dominio; un dominio antiguo va al canónico. */
+    r = await get('https://kanlane.yalero.net/__/auth/action?mode=verifyEmail&oobCode=AbC_123-xyz');
+    assert.equal(r.headers.get('Location'), 'https://kanlane.yalero.net/app/?mode=verifyEmail&oobCode=AbC_123-xyz');
+    r = await get('https://workhub.yalero.net/__/auth/action?mode=verifyEmail&oobCode=AbC_123-xyz');
+    assert.equal(r.headers.get('Location'), 'https://kanlane.com/app/?mode=verifyEmail&oobCode=AbC_123-xyz');
+    assert.deepEqual(upstream, [], 'nada de esto llega a Firebase');
+    ok('los enlaces de verificación y de cambio de contraseña abren la app');
+
+    /* Lo demás de /__/auth/* se sigue reenviando: los modos que la app no atiende, un código
+       con forma rara, y el acceso con Google y GitHub. */
+    for(const rest of ['auth/action?mode=recoverEmail&oobCode=AbC_123-xyz', 'auth/action?mode=verifyEmail&oobCode=a%20b', 'auth/action', 'auth/handler?x=1', 'firebase/init.json']){
+      upstream = [];
+      r = await get('https://kanlane.com/__/' + rest);
+      assert.equal(r.status, 200, rest);
+      assert.deepEqual(upstream, ['https://workhub-26f50.firebaseapp.com/__/' + rest], rest + ' se reenvía a Firebase');
+    }
+    ok('el resto de /__/auth/* y /__/firebase/* se sigue reenviando a Firebase');
+  }finally{
+    globalThis.fetch = prev;
+  }
+
   /* El service worker del dominio antiguo se desinstala solo. */
   r = await get('https://workhub.yalero.net/sw.js');
   assert.equal(r.status, 200);

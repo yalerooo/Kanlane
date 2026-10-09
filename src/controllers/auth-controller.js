@@ -70,6 +70,23 @@
      copia sigue por detrás. */
   const MIGRATE_WAIT = 15000;
 
+  /* Enlace de un correo de Kanlane (verificar la dirección, cambiar la contraseña): el Worker lo
+     trae a la app como /app/?mode=…&oobCode=… (worker/index.js, ACTION_PATH). */
+  const ACTION_MODES = ['verifyEmail', 'resetPassword'];
+  /* Códigos que ya no valen: caducados, usados o mal copiados. */
+  const DEAD_CODES = ['auth/expired-action-code', 'auth/invalid-action-code'];
+  /* Aquí se apunta que un correo se acaba de verificar, para que se entere la pestaña que se
+     quedó esperando en «Verifica tu correo» (AuthView.showVerify). */
+  const VERIFIED_KEY = 'workhub_verified';
+
+  /* {mode, code} si la dirección trae uno de esos enlaces, o null. */
+  function linkAction(){
+    let query;
+    try{ query = new URLSearchParams(location.search); }catch(e){ return null; }
+    const mode = query.get('mode'), code = query.get('oobCode');
+    return code && ACTION_MODES.indexOf(mode) !== -1 ? {mode:mode, code:code} : null;
+  }
+
   function newGuestId(){
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
@@ -131,6 +148,7 @@
       this.view.bindProvider((key) => this.signInWith(key));
       this.view.bindEmail((mode, values) => this.submitEmail(mode, values));
       this.view.bindSignOut(() => this.signOut());
+      this.view.bindResetLeave(() => this.endReset());
       /* Antes de entrar no hay cuenta: el tema se queda en este navegador. */
       this.view.bindTheme((theme) => this.app.controllers.settings.setTheme(theme));
     }
@@ -147,6 +165,15 @@
       }
       /* Invitado recordado: no se contacta con Firebase en ningún momento. */
       const guest = currentGuest();
+      if(guest && linkAction()){
+        /* Un invitado abre el enlace de un correo de su cuenta: sale del modo invitado (sus datos
+           se quedan en este navegador, como al salir a mano) y la página vuelve a cargar, ya sin
+           el almacén local, para atender el enlace. */
+        rememberGuest(guest);
+        try{ localStorage.removeItem(GUEST_KEY); }catch(e){}
+        location.reload();
+        return new Promise(() => {});
+      }
       if(guest){
         this.startGuest(guest);
         return Promise.resolve();
@@ -317,10 +344,110 @@
 
     boot(){
       this.view.showLoading();
-      firebase.init().then(() => {
+      const action = linkAction();
+      /* El código no se queda en la barra de direcciones ni en el historial. */
+      if(action){ try{ history.replaceState(null, '', location.pathname); }catch(e){} }
+      firebase.init().then(() => (action ? this.resolveAction(action) : null)).then(() => {
         firebase.redirectResult().catch((err) => this.showError(err));
         firebase.onAuthChange((user) => this.onUser(user));
       }).catch((err) => this.loadError(err));
+    }
+
+    /* ---------- Enlaces de los correos ----------
+       Se atienden antes de mirar si hay sesión, y nunca fallan hacia fuera: lo que haya pasado
+       queda en this.linked ({mode, ok | failed, offline, email}) y se cuenta donde se acabe, en
+       la pantalla de acceso (linkOnSignIn) o ya dentro de la app (reportLink).
+       - verifyEmail: se gasta el código. Si en este navegador está la sesión de esa cuenta, entra
+         sola (onUser); si no (el correo se abrió en otro dispositivo), queda el acceso con el
+         correo puesto: el enlace demuestra que el correo es suyo, pero no sirve para entrar.
+       - resetPassword: se pide la contraseña nueva y, al guardarla, se entra con ella. Mientras
+         tanto no se mira la sesión (la promesa no se cumple hasta endReset): con otra cuenta
+         abierta en este navegador se entraría en la app sin llegar a cambiarla. */
+    resolveAction(action){
+      const failed = (err) => {
+        this.linked = {mode:action.mode, failed:true, offline:!!err && DEAD_CODES.indexOf(err.code) === -1};
+      };
+      if(action.mode === 'verifyEmail'){
+        /* Primero de quién es (después de gastarlo ya no se puede preguntar). */
+        return firebase.checkAction(action.code).then((email) => firebase.applyAction(action.code).then(() => {
+          this.linked = {mode:action.mode, ok:true, email:email};
+          try{ localStorage.setItem(VERIFIED_KEY, String(Date.now())); }catch(e){}
+        })).catch(failed);
+      }
+      return firebase.checkResetCode(action.code).then((email) => new Promise((resolve) => {
+        this.reset = {code:action.code, email:email, done:resolve};
+        this.view.showNewPassword(email, firebase.providers(), firebase.allowSignup());
+      }), failed);
+    }
+
+    /* Se acaba el paso de la contraseña nueva (guardada, o abandonado): ya se mira la sesión. */
+    endReset(){
+      const reset = this.reset;
+      this.reset = null;
+      if(reset) reset.done();
+    }
+
+    saveNewPassword(password){
+      const reset = this.reset;
+      if(!reset) return;
+      if(!password){ this.view.showFieldError('password', ERRORS['auth/missing-password']); return; }
+      if(Array.from(password).length < MIN_PASSWORD){ this.view.showFieldError('password', ERRORS['auth/weak-password']); return; }
+      const turn = this.hold('submit');
+      firebase.confirmReset(reset.code, password).then(() => {
+        this.linked = {mode:'resetPassword', ok:true, email:reset.email};
+        /* Entra con la nueva. Si no se puede (p. ej. sin red justo ahora), la contraseña ya está
+           cambiada: queda el acceso, con el aviso. */
+        return firebase.signInWithEmail(reset.email, password).catch(() => null).then(() => this.endReset());
+      }, (err) => {
+        if(DEAD_CODES.indexOf(err && err.code) === -1){ this.showError(err); return; }
+        this.linked = {mode:'resetPassword', failed:true};
+        this.endReset();
+      }).finally(() => this.release(turn));
+    }
+
+    /* Sin sesión: el resultado del enlace se cuenta en la pantalla de acceso. */
+    linkOnSignIn(){
+      const link = this.linked;
+      if(!link) return;
+      this.linked = null;
+      const reset = link.mode === 'resetPassword';
+      if(link.ok){
+        this.view.showLinkResult(reset ? Workhub.t('Contraseña cambiada. Inicia sesión con la nueva.') : Workhub.t('Correo verificado. Inicia sesión para entrar.'), true, link.email);
+      } else if(link.offline){
+        this.view.showLinkResult(Workhub.t('No se pudo comprobar el enlace. Revisa tu conexión y vuelve a abrirlo desde el correo.'));
+      } else if(reset){
+        this.view.showResetExpired(Workhub.t('Ese enlace para cambiar la contraseña ha caducado o ya se ha usado. Pide otro.'));
+      } else {
+        this.view.showLinkResult(Workhub.t('Ese enlace de verificación ha caducado o ya se ha usado. Inicia sesión para pedir otro.'));
+      }
+    }
+
+    /* Ya dentro de la app: el resultado del enlace, en un aviso. Un enlace de verificación que
+       ya no vale no se menciona: si se ha llegado hasta aquí, el correo está verificado. */
+    reportLink(){
+      const link = this.linked;
+      if(!link) return;
+      this.linked = null;
+      const toast = Workhub.views.toast;
+      const reset = link.mode === 'resetPassword';
+      if(link.ok) toast.success(reset ? Workhub.t('Contraseña cambiada') : Workhub.t('Correo verificado.'), {important:true});
+      else if(link.offline) toast.error(Workhub.t('No se pudo comprobar el enlace. Revisa tu conexión y vuelve a abrirlo desde el correo.'));
+      else if(reset) toast.error(Workhub.t('Ese enlace para cambiar la contraseña ha caducado o ya se ha usado.'));
+    }
+
+    /* Cuenta sin verificar que llega con un enlace de verificación (válido, o que ya no vale
+       quizá porque se usó antes): el usuario guardado en este navegador aún no lo sabe, así que
+       se pregunta al servidor antes de decidir. */
+    verifyFromLink(user){
+      const link = this.linked;
+      firebase.refreshVerification().catch(() => false).then((ok) => {
+        if(ok){ this.enter(firebase.currentUser() || user); return; }
+        /* Sigue sin verificar: el enlace no valía, o era de otra cuenta. */
+        this.linked = null;
+        this.showVerify(user);
+        if(link.offline) this.view.showVerifyMessage(Workhub.t('No se pudo comprobar el enlace. Revisa tu conexión y vuelve a abrirlo desde el correo.'));
+        else if(link.failed) this.view.showVerifyMessage(Workhub.t('Ese enlace ha caducado o ya se ha usado. Pulsa «Reenviar correo» para recibir otro.'));
+      });
     }
 
     /* No se llegó al servicio de acceso: se distingue estar sin red de que el servicio no conteste. */
@@ -337,7 +464,8 @@
         }
         this.user = user;
         if(firebase.needsVerification(user)){
-          this.showVerify(user);
+          if(this.linked && this.linked.mode === 'verifyEmail') this.verifyFromLink(user);
+          else this.showVerify(user);
           return;
         }
         this.enter(user);
@@ -355,6 +483,7 @@
         /* Viene de «Crear cuenta y llevarme mis datos»: se avisa de que se copiarán al entrar. */
         const move = migration.pending();
         if(move) this.view.showMigrate(move.name);
+        this.linkOnSignIn();
       }
     }
 
@@ -381,6 +510,7 @@
           this.view.showAccount(user);
           if(this.resolveGate) this.resolveGate();
           this.reportMigration();
+          this.reportLink();
         });
         /* Firestore se carga aparte del acceso (firebase.init): si no llegó, se avisa. */
       }, (err) => this.loadError(err));
@@ -457,6 +587,8 @@
     }
 
     submitEmail(mode, v){
+      /* Contraseña nueva (enlace del correo): no hay correo que escribir. */
+      if(mode === 'newpass'){ this.saveNewPassword(v.password); return; }
       if(!v.email){ this.view.showFieldError('email', ERRORS['auth/missing-email']); return; }
       if(!EMAIL_RE.test(v.email)){ this.view.showFieldError('email', ERRORS['auth/invalid-email']); return; }
       let p;

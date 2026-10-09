@@ -299,6 +299,27 @@
     return auth.sendPasswordResetEmail(email);
   }
 
+  /* ---------- Enlaces de los correos (worker/index.js los manda a la app con su código) ---------- */
+
+  /* El correo al que pertenece un código de verificación, sin gastarlo. */
+  function checkAction(code){
+    return auth.checkActionCode(code).then((info) => (info && info.data && info.data.email) || '');
+  }
+
+  /* Gasta el código: el correo queda verificado. */
+  function applyAction(code){
+    return auth.applyActionCode(code);
+  }
+
+  /* El correo al que pertenece un código de cambio de contraseña, sin gastarlo. */
+  function checkResetCode(code){
+    return auth.verifyPasswordResetCode(code);
+  }
+
+  function confirmReset(code, password){
+    return auth.confirmPasswordReset(code, password);
+  }
+
   function signOut(){
     return auth.signOut();
   }
@@ -603,7 +624,7 @@
 
   Workhub.services.firebase = {
     isEnabled, init, githubToken, resolveAuthDomain, onAuthChange, redirectResult, signInWith, signInWithEmail, signUpWithEmail,
-    resetPassword, signOut, hasPassword, updateName, reauthenticate, changePassword, deleteUser, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
+    resetPassword, checkAction, applyAction, checkResetCode, confirmReset, signOut, hasPassword, updateName, reauthenticate, changePassword, deleteUser, install, clearLocalCache, startSession, needsVerification, sendVerification, refreshVerification,
     accessFailure, isOnline,
     currentUser: () => auth.currentUser,
     providers: () => (config().providers || ['google']).slice(),

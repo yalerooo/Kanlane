@@ -12,6 +12,8 @@
    en src/config/firebase-config.js). Es lo que antes hacía netlify.toml.
 
    Solo se reenvían las rutas de Firebase indicadas; no es un proxy abierto.
+   La excepción es /__/auth/action (los enlaces de los correos de verificación y de cambio de
+   contraseña): no se reenvía, se manda a la app (ver ACTION_PATH).
 
    Además atiende /__/kms/v1/kek: la clave de los proyectos «Gestionado por Kanlane», y
    /__/kms/v1/totp: la verificación en dos pasos del gestor de contraseñas.
@@ -36,6 +38,19 @@
 const FIREBASE_HOST = 'workhub-26f50.firebaseapp.com';
 const ALLOWED = /^(auth|firebase)(\/|$)/;
 const METHODS = ['GET', 'HEAD', 'POST', 'OPTIONS'];
+
+/* ---------- Enlaces de los correos de Firebase ----------
+   Los correos de «verifica tu correo» y «cambia tu contraseña» enlazan a /__/auth/action, que
+   reenviada a Firebase es una página gris suya. Esos dos casos se mandan a la app (/app/, con
+   `mode`, `oobCode` y `lang`), que valida el código y enseña su propia pantalla
+   (AuthController.resolveAction). La clave de la API y `continueUrl` no se pasan: no hacen falta.
+   Los demás modos (recoverEmail, verifyAndChangeEmail…) la app no los envía y se siguen
+   reenviando a Firebase, igual que el resto de /__/auth/* (el acceso con Google y GitHub
+   depende de /__/auth/handler). */
+const ACTION_PATH = 'auth/action';
+const ACTION_MODES = ['verifyEmail', 'resetPassword'];
+const ACTION_CODE = /^[A-Za-z0-9_-]{8,512}$/;
+const ACTION_LANG = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 
 /* ---------- Dominios ----------
    La misma web se sirve en varios dominios (todos apuntan a este Worker):
@@ -538,6 +553,24 @@ export default {
     /* Nada de «..» ni de rutas que no sean de Firebase Auth. */
     if (!ALLOWED.test(rest) || rest.split('/').some((p) => p === '..' || p === '.')) {
       return new Response('No encontrado', {status: 404});
+    }
+
+    /* Enlace de un correo de verificación o de cambio de contraseña: lo atiende la app. */
+    if (rest === ACTION_PATH && (request.method === 'GET' || request.method === 'HEAD')) {
+      const mode = url.searchParams.get('mode') || '';
+      const code = url.searchParams.get('oobCode') || '';
+      if (ACTION_MODES.indexOf(mode) !== -1 && ACTION_CODE.test(code)) {
+        /* En un dominio antiguo, directo al canónico (allí /app/ redirige de todos modos). */
+        const legacy = LEGACY_HOSTS.indexOf(host) !== -1 && host !== canonical.hostname;
+        const to = new URL('/app/', legacy ? canonical.origin : url.origin);
+        to.searchParams.set('mode', mode);
+        to.searchParams.set('oobCode', code);
+        const lang = url.searchParams.get('lang') || '';
+        if (ACTION_LANG.test(lang)) to.searchParams.set('lang', lang);
+        return new Response(null, {status: 302, headers: {
+          Location: to.href, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'
+        }});
+      }
     }
 
     /* Protección adicional del proxy OAuth. Un umbral alto evita penalizar

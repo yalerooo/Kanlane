@@ -128,6 +128,9 @@ jobs:
       - name: Alta y cofre con Firebase emulado
         if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/cloud-smoke.js"
+      - name: Enlaces de los correos (verificar y cambiar la contraseña), con Firebase emulado
+        if: ${{ !cancelled() }}
+        run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/email-links.js"
       - name: Nombre, foto, contraseña y eliminación de la cuenta, con Firebase emulado
         if: ${{ !cancelled() }}
         run: npx --prefix tests/rules firebase emulators:exec --only auth,firestore --project demo-workhub --config firebase.test.json "node tests/e2e/account.js"

@@ -1,14 +1,14 @@
 /* Mide cuánto tarda PBKDF2-SHA256 con las iteraciones del cifrado por proyecto (600 000, D15)
    usando el propio src/services/project-crypto.js con Web Crypto de Node.
-     node scripts/pbkdf2-bench.js          → 5 rondas
-     node scripts/pbkdf2-bench.js 10       → 10 rondas
+     node scripts/tools/pbkdf2-bench.js          → 5 rondas
+     node scripts/tools/pbkdf2-bench.js 10       → 10 rondas
    Esto mide ESTE ordenador. D15 pide medirlo en un móvil de gama baja: ver
    docs/CIFRADO-PROYECTOS.md, apartado 15.2 (PR1), con el fragmento para la consola del navegador. */
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const Workhub = {services:{}};
 for(const rel of ['src/services/crypto.js', 'src/services/project-crypto.js']){
   new Function('Workhub', 'window', 'crypto', fs.readFileSync(path.join(root, rel), 'utf8'))(Workhub, {crypto:globalThis.crypto}, globalThis.crypto);

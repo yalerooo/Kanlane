@@ -1,5 +1,5 @@
 /* Páginas públicas del sitio: qué carpetas son páginas indexables y cómo se genera
-   sitemap.xml. Lo usan scripts/build-public.js (build y cabeceras) y scripts/dev.js.
+   sitemap.xml. Lo usan scripts/build/build-public.js (build y cabeceras) y scripts/dev/dev.js.
    Para añadir una página o un idioma basta con crear su carpeta con un index.html
    que lleve <link rel="canonical"> y los <link rel="alternate" hreflang>. */
 'use strict';
@@ -9,14 +9,16 @@ const cp = require('child_process');
 
 const ORIGIN = 'https://kanlane.com/';
 
-/* Carpetas de primer nivel que NO son páginas de captación indexables: la app, la demo y las
-   páginas legales llevan noindex (y sus propias cabeceras); el resto son recursos o herramientas. */
-const NOT_PAGES = ['app', 'demo', 'legal', 'assets', 'src', 'plugins', 'dist', 'docs', 'scripts', 'tests', 'worker', 'node_modules'];
+/* Las páginas de captación viven en web/ (web/alternativa-a-trello/…) y el build las publica en la raíz.
+   Carpetas de web/ que NO son páginas de captación indexables: las páginas legales llevan noindex y sus propias cabeceras. */
+const WEB = 'web';
+const NOT_PAGES = ['legal'];
 
-/* Carpetas de primer nivel con index.html que son páginas públicas (es: alternativa-a-trello/…; idiomas: en/). */
+/* Carpetas de web/ con index.html que son páginas públicas (es: alternativa-a-trello/…; idiomas: en/). */
 function pageDirs(root){
-  return fs.readdirSync(root, {withFileTypes: true})
-    .filter((d) => d.isDirectory() && d.name[0] !== '.' && NOT_PAGES.indexOf(d.name) === -1 && fs.existsSync(path.join(root, d.name, 'index.html')))
+  const base = path.join(root, WEB);
+  return fs.readdirSync(base, {withFileTypes: true})
+    .filter((d) => d.isDirectory() && d.name[0] !== '.' && NOT_PAGES.indexOf(d.name) === -1 && fs.existsSync(path.join(base, d.name, 'index.html')))
     .map((d) => d.name)
     .sort();
 }
@@ -78,7 +80,7 @@ function pageFiles(root){
     if(!/noindex/i.test(metaContent(html, 'robots') || '')) files.push(rel);
   };
   add('index.html');
-  pageDirs(root).forEach((d) => indexRoutes(root, d + '/', []).forEach((r) => add(r + 'index.html')));
+  pageDirs(root).forEach((d) => indexRoutes(path.join(root, WEB), d + '/', []).forEach((r) => add(WEB + '/' + r + 'index.html')));
   return files.sort();
 }
 
@@ -129,12 +131,12 @@ function buildSitemap(dist, srcRoot, pages){
     if(meta !== null && !validDate(meta)) throw new Error('sitemap: <meta name="last-modified"> de ' + where + ' vale "' + meta + '" y debe ser una fecha YYYY-MM-DD válida');
     if(meta === null) missing.push(where);
     /* El JSON-LD debe ser válido y su dateModified (si lo hay) coincidir con la meta: si no, el dato
-       estructurado diría una fecha distinta a la del sitemap. node scripts/update-lastmod.js los sincroniza. */
+       estructurado diría una fecha distinta a la del sitemap. node scripts/build/update-lastmod.js los sincroniza. */
     jsonLdDates(html, where).forEach((d) => {
       if(meta === null) return; /* sin meta solo avisa (ver `missing`) */
-      if(d !== meta) throw new Error('sitemap: el "dateModified" del JSON-LD de ' + where + ' es "' + d + '" y <meta name="last-modified"> es "' + meta + '". Ejecuta: node scripts/update-lastmod.js');
+      if(d !== meta) throw new Error('sitemap: el "dateModified" del JSON-LD de ' + where + ' es "' + d + '" y <meta name="last-modified"> es "' + meta + '". Ejecuta: node scripts/build/update-lastmod.js');
     });
-    let lastmod = gitDate(srcRoot, route + 'index.html');
+    let lastmod = gitDate(srcRoot, (route === '' ? '' : WEB + '/') + route + 'index.html');
     let source = 'git';
     if(!lastmod){
       lastmod = meta;
@@ -165,4 +167,4 @@ function buildSitemap(dist, srcRoot, pages){
   return {xml: xml, count: entries.length, sources: sources, missing: missing};
 }
 
-module.exports = {ORIGIN, NOT_PAGES, pageDirs, pageFiles, buildSitemap, validDate, metaContent, jsonLd, jsonLdDates, gitDate, git};
+module.exports = {WEB, ORIGIN, NOT_PAGES, pageDirs, pageFiles, buildSitemap, validDate, metaContent, jsonLd, jsonLdDates, gitDate, git};

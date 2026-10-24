@@ -2,7 +2,7 @@
    datos y que se pueda instalar como aplicación.
 
    - Los archivos de la app (la lista FILES) se guardan todos juntos al instalar
-     una versión (scripts/build-public.js rellena BUILD y FILES al publicar).
+     una versión (scripts/build/build-public.js rellena BUILD y FILES al publicar).
      Así cada versión es coherente: nunca se mezclan scripts nuevos con viejos.
    - Se registra con alcance /app/, el mismo del manifiesto (src/services/pwa.js):
      solo controla la aplicación; la portada y el resto de páginas van sin él.

@@ -12,14 +12,14 @@
    se tomaban por nombres propios. Los que de verdad no se traducen van en IGNORE.
    Un texto cuenta como traducido si está en el diccionario o encaja con algún patrón.
 
-   Uso:  node scripts/check-i18n.js           lista lo que falta
-         node scripts/check-i18n.js --strict  termina con error si falta algo (para CI) */
+   Uso:  node scripts/checks/check-i18n.js           lista lo que falta
+         node scripts/checks/check-i18n.js --strict  termina con error si falta algo (para CI) */
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const strict = process.argv.includes('--strict');
 
 /* ---------- Diccionario ---------- */

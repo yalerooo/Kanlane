@@ -1,10 +1,10 @@
 /* Mantiene al día <meta name="last-modified" content="YYYY-MM-DD"> en las páginas indexables.
    Cloudflare clona sin historial de git, así que el sitemap saca `lastmod` de esa meta.
 
-     node scripts/update-lastmod.js          pone la fecha de hoy (meta, "dateModified" del JSON-LD y la fecha visible
+     node scripts/build/update-lastmod.js          pone la fecha de hoy (meta, "dateModified" del JSON-LD y la fecha visible
                                              <time datetime="…" data-lastmod>, si la hay) en las páginas con cambios
                                              (respecto a origin/main o sin confirmar)
-     node scripts/update-lastmod.js --check  no escribe; sale con código 1 si alguna meta falta,
+     node scripts/build/update-lastmod.js --check  no escribe; sale con código 1 si alguna meta falta,
                                              es más antigua que el último cambio en git o la
                                              página tiene cambios y la meta no es de hoy
    Sin git o con un clon superficial (sin historial) --check solo avisa y no falla. */
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const {pageFiles, validDate, metaContent, jsonLdDates, gitDate, git} = require('./site-pages');
 
-const ROOT = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..');
+const ROOT = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..', '..');
 const CHECK = process.argv.includes('--check');
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -94,7 +94,7 @@ files.forEach((f) => {
 });
 if(!hasHistory) console.warn('Aviso: sin git o sin historial (clon superficial); no se puede comparar con los cambios.');
 if(problems.length){
-  console.error('Fechas last-modified por actualizar (' + problems.length + '):\n  ' + problems.join('\n  ') + '\nEjecuta: node scripts/update-lastmod.js');
+  console.error('Fechas last-modified por actualizar (' + problems.length + '):\n  ' + problems.join('\n  ') + '\nEjecuta: node scripts/build/update-lastmod.js');
   process.exit(1);
 }
 console.log('last-modified correcta en ' + files.length + ' páginas.');

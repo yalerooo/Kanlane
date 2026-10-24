@@ -8,15 +8,15 @@
    y el pie del tronco en el centro. El cerezo de primavera (assets/img/sakura.webp) se hizo
    aparte con el mismo formato.
 
-   Uso:  node scripts/make-trees.js [verano] [otono] [invierno]     (sin nada, los tres)
-         KANLANE_TREES=C:\ruta\con\los\modelos node scripts/make-trees.js
+   Uso:  node scripts/assets/make-trees.js [verano] [otono] [invierno]     (sin nada, los tres)
+         KANLANE_TREES=C:\ruta\con\los\modelos node scripts/assets/make-trees.js
    Necesita Playwright (tests/e2e) y un Chrome o Edge con tarjeta gráfica. Los modelos se
    buscan en KANLANE_TREES o, si no, en la carpeta que contiene al repositorio. */
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', '..');
 const {chromium} = require(path.join(root, 'tests/e2e/node_modules/playwright'));
 
 /* La carpeta de los modelos: la que contiene al repositorio (o a su copia de trabajo). */

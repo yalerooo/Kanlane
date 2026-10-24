@@ -97,7 +97,7 @@ Al terminar verás la dirección, por ejemplo `https://workhub-1a2b3.web.app`. �
 
 Qué se publica:
 
-- **Hosting**: solo la app. Antes de subir, `firebase deploy` ejecuta `scripts/build-public.js`, que copia **únicamente** `index.html`, `assets/` y `src/` a la carpeta `dist/`, y se publica esa carpeta. Así `data-backup.json`, `docs/`, el `README` o el `.bat` **nunca se publican**, aunque estén en la carpeta. El script también avisa si la configuración sigue vacía o si `useEmulators` está en `true`.
+- **Hosting**: solo la app. Antes de subir, `firebase deploy` ejecuta `scripts/build/build-public.js`, que copia **únicamente** `index.html`, `assets/` y `src/` a la carpeta `dist/`, y se publica esa carpeta. Así `data-backup.json`, `docs/`, el `README` o los scripts **nunca se publican**, aunque estén en la carpeta. El script también avisa si la configuración sigue vacía o si `useEmulators` está en `true`.
 - **Firestore**: las reglas de `firestore.rules`. Cada usuario solo puede leer y escribir en `users/{su uid}/…`, en las colecciones de la app; las cuentas de correo y contraseña, además, tienen que haber verificado el correo. Todo lo demás está cerrado. Más detalles en [SEGURIDAD.md](SEGURIDAD.md).
 
 Para publicar cambios más adelante, repite solo `firebase deploy --only hosting`.
@@ -140,6 +140,6 @@ Para probar sin tocar el proyecto real:
 firebase emulators:start --only auth,firestore --project demo-workhub
 ```
 
-En otra terminal sirve la app (`python -m http.server 5500`; o `node scripts/build-public.js` y añade `hosting` a `--only` para usar el emulador de alojamiento en <http://localhost:5000>) y en `src/config/firebase-config.js` pon valores de prueba (`apiKey: 'demo'`, `projectId: 'demo-workhub'`) y `useEmulators: true`. La interfaz de los emuladores está en <http://localhost:4000>.
+En otra terminal sirve la app (`python -m http.server 5500`; o `node scripts/build/build-public.js` y añade `hosting` a `--only` para usar el emulador de alojamiento en <http://localhost:5000>) y en `src/config/firebase-config.js` pon valores de prueba (`apiKey: 'demo'`, `projectId: 'demo-workhub'`) y `useEmulators: true`. La interfaz de los emuladores está en <http://localhost:4000>.
 
 **No olvides volver a poner `useEmulators: false` antes de publicar.**

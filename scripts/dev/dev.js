@@ -2,18 +2,18 @@
    Sirve la carpeta del proyecto y recarga el navegador solo cuando guardas un
    archivo (index.html, assets/, src/ o plugins/). No tiene dependencias: solo Node.
 
-     node scripts/dev.js            → modo local: sin inicio de sesión, los datos se
+     node scripts/dev/dev.js            → modo local: sin inicio de sesión, los datos se
                                       guardan solo en este navegador. Es el seguro.
-     node scripts/dev.js --nube     → con Firebase real: pide iniciar sesión y usa
+     node scripts/dev/dev.js --nube     → con Firebase real: pide iniciar sesión y usa
                                       los datos de verdad (¡lo que cambies se guarda!).
-     node scripts/dev.js --puerto 8080
+     node scripts/dev/dev.js --puerto 8080
 
    Guía: README.md, apartado «Trabajar en local». */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const nodeCrypto = require('crypto');
-const {pageDirs} = require('./site-pages');
+const {pageDirs} = require('../build/site-pages');
 
 const args = process.argv.slice(2);
 const cloud = args.indexOf('--nube') !== -1;
@@ -31,11 +31,15 @@ const reload = args.indexOf('--sin-recarga') === -1;
 const pi = args.indexOf('--puerto');
 const PORT = pi !== -1 && +args[pi + 1] ? +args[pi + 1] : 5500;
 
-const ROOT = path.resolve(__dirname, '..');
-/* Lo mismo que publica scripts/build-public.js: nada de data-backup.json, docs, etc. */
-/* Las páginas de captación e idiomas se detectan igual que en el build (scripts/site-pages.js).
-   sitemap.xml no se sirve aquí: solo existe generado en dist/ (node scripts/build-public.js). */
-const SERVED = ['index.html', '404.html', 'app', 'demo'].concat(pageDirs(ROOT), ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
+const ROOT = path.resolve(__dirname, '..', '..');
+/* Lo mismo que publica scripts/build/build-public.js: nada de data-backup.json, docs, etc. */
+/* Las páginas de captación e idiomas se detectan igual que en el build (scripts/build/site-pages.js).
+   sitemap.xml no se sirve aquí: solo existe generado en dist/ (node scripts/build/build-public.js). */
+const WEB = path.join(ROOT, 'web');
+const WEB_DIRS = pageDirs(ROOT).concat('legal');
+const SERVED = ['index.html', '404.html', 'app', 'demo'].concat(WEB_DIRS, ['robots.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins']);
+/* Las páginas de web/ se sirven en la raíz (/alternativa-a-trello/…), como las publica el build. */
+const baseOf = (name) => (WEB_DIRS.indexOf(name) === -1 ? ROOT : WEB);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8', '.ico': 'image/x-icon',
@@ -55,7 +59,7 @@ function changed(file){
   }, 120);
 }
 if(reload) SERVED.forEach((item) => {
-  const p = path.join(ROOT, item);
+  const p = path.join(baseOf(item), item);
   if(!fs.existsSync(p)) return;
   try{
     fs.watch(p, {recursive: true}, (ev, name) => changed(item + (name ? '/' + String(name).replace(/\\/g, '/') : '')));
@@ -203,10 +207,10 @@ const server = http.createServer((req, res) => {
   }
 
   const first = url.split('/')[1];
-  const file = path.join(ROOT, url);
+  const file = path.join(baseOf(first), url);
   if(SERVED.indexOf(first) === -1 || !file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()){
     /* Como en producción: 404 con la página 404.html más cercana (en/404.html para /en/…). */
-    const page = path.join(ROOT, first === 'en' ? 'en/404.html' : '404.html');
+    const page = first === 'en' ? path.join(WEB, 'en/404.html') : path.join(ROOT, '404.html');
     res.writeHead(404, {'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store'});
     return res.end(fs.readFileSync(page, 'utf8'));
   }
@@ -221,7 +225,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.on('error', (err) => {
-  if(err.code === 'EADDRINUSE') console.error('El puerto ' + PORT + ' ya está en uso. Cierra el otro servidor o usa: node scripts/dev.js --puerto ' + (PORT + 1));
+  if(err.code === 'EADDRINUSE') console.error('El puerto ' + PORT + ' ya está en uso. Cierra el otro servidor o usa: node scripts/dev/dev.js --puerto ' + (PORT + 1));
   else console.error(err.message);
   process.exit(1);
 });

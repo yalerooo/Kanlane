@@ -5,14 +5,14 @@
    vista (solo las herramientas de Tareas), la sección Tareas y la ficha de tarea. Cuando
    cambie ese HTML:
 
-     node scripts/make-demo.js
+     node scripts/assets/make-demo.js
 
    y después `node tests/demo/demo.test.js`. No es un paso de publicación: el resultado se
-   guarda en el repositorio, como los iconos de scripts/make-icons.js. */
+   guarda en el repositorio, como los iconos de scripts/assets/make-icons.js. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const app = fs.readFileSync(path.join(root, 'app/index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function cut(open, close){
@@ -75,7 +75,7 @@ ${CSS.map((c) => '  <link rel="stylesheet" href="../assets/css/' + c + '.css">')
 </head>
 <body class="is-demo">
 
-<!-- Generado por scripts/make-demo.js a partir de app/index.html: no editar a mano. -->
+<!-- Generado por scripts/assets/make-demo.js a partir de app/index.html: no editar a mano. -->
 <div class="app">
 ${side}
 

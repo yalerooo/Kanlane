@@ -1,4 +1,4 @@
-/* Une los scripts y las hojas de estilo de cada página de dist/ (lo usa scripts/build-public.js).
+/* Une los scripts y las hojas de estilo de cada página de dist/ (lo usa scripts/build/build-public.js).
 
    En el repositorio cada página carga sus archivos sueltos (la app, más de cien scripts y casi
    treinta hojas): cómodo para desarrollar, lento de bajar. Al publicar, cada grupo de etiquetas

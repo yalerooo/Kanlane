@@ -2,17 +2,17 @@
 /* Genera la imagen para redes (assets/img/og-image.png, 1200 × 630) con Sumi y el nombre.
    Necesita un navegador: usa el Playwright de tests/e2e con Chrome o Edge instalados
    (CHROME_PATH para otro). No es un paso de publicación: el resultado se guarda en el
-   repositorio, como los iconos de scripts/make-icons.js.
+   repositorio, como los iconos de scripts/assets/make-icons.js.
 
      npm ci --prefix tests/e2e     (una vez)
-     node scripts/make-og.js */
+     node scripts/assets/make-og.js */
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const {pathToFileURL} = require('url');
-const sumi = require('../src/views/sumi.js');
+const sumi = require('../../src/views/sumi.js');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const {chromium} = require(path.join(root, 'tests/e2e/node_modules/playwright'));
 const chrome = process.env.CHROME_PATH || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',

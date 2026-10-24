@@ -41,7 +41,7 @@ Gratis a esta escala. El plan gratuito de Resend da 3.000 correos al mes con un 
 3. En las cabeceras del mensaje: `dkim=pass` con `d=kanlane.com` y `dmarc=pass`.
 4. En Resend → *Emails* aparecen los dos envíos. Si no aparecen y el correo que llega es el de texto de Firebase, mira los registros del Worker: una línea `correos: …` dice qué falló (`oob 403` = falta el rol del paso 5; `resend 403` = clave o dominio).
 
-Para ver el diseño sin enviar nada: `node scripts/dev.js --emulador` con los emuladores en marcha; los mensajes quedan en `http://localhost:5500/__dev/mail`.
+Para ver el diseño sin enviar nada: `node scripts/dev/dev.js --emulador` con los emuladores en marcha; los mensajes quedan en `http://localhost:5500/__dev/mail`.
 
 ## Si a alguien no le llega el correo
 

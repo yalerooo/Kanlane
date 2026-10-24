@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Genera los iconos de la aplicación instalable (PWA) con Sumi, la mascota de Kanlane,
    sin dependencias: lee la forma de src/views/sumi.js (la única definición), la dibuja
-   punto a punto y escribe los PNG. Uso: node scripts/make-icons.js
+   punto a punto y escribe los PNG. Uso: node scripts/assets/make-icons.js
 
    - icon-192.png / icon-512.png: Sumi sobre grafito con esquinas redondeadas.
    - favicon-32.png: la versión reducida, para la pestaña en navegadores sin SVG.
@@ -9,14 +9,14 @@
    - icon-maskable-512.png: a sangre, con el dibujo dentro de la zona segura
      (Android recorta el icono con la forma que elija el móvil).
 
-   El favicon.svg y los SVG de la marca salen de scripts/make-brand.js. */
+   El favicon.svg y los SVG de la marca salen de scripts/assets/make-brand.js. */
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const sumi = require('../src/views/sumi.js');
+const sumi = require('../../src/views/sumi.js');
 
-const OUT = path.join(__dirname, '..', 'assets', 'img');
+const OUT = path.join(__dirname, '..', '..', 'assets', 'img');
 const INK = [0x18, 0x18, 0x1B];
 const WHITE = [0xFF, 0xFF, 0xFF];
 const FIT = 0.76;   /* como en sumi.svg({bg}): Sumi ocupa el 62 % del ancho del cuadrado */

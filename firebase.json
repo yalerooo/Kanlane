@@ -2,7 +2,7 @@
   "hosting": {
     "public": "dist",
     "predeploy": [
-      "node scripts/build-public.js"
+      "node scripts/build/build-public.js"
     ],
     "ignore": [
       "**/.*"

@@ -5,7 +5,7 @@
   "main": "worker/index.js",
   "compatibility_date": "2025-09-01",
 
-  // La web: lo que genera "node scripts/build-public.js" (index.html, assets,
+  // La web: lo que genera "node scripts/build/build-public.js" (index.html, assets,
   // src, plugins y _headers). El Worker de "main" solo atiende /__/auth/* y
   // /__/firebase/* (login de Firebase) y /__/kms/* (clave de los proyectos
   // «Gestionado por Kanlane»; necesita el secreto KMS_MASTER_V1, que se pone con

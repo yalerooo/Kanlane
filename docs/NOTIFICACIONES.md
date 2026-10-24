@@ -70,7 +70,7 @@ Las menciones no se guardan aparte: se reconocen en el texto del comentario comp
 2. **Claves VAPID**, una sola vez:
 
    ```bash
-   node scripts/make-vapid.js
+   node scripts/tools/make-vapid.js
    ```
 
    y poner lo que imprime como secretos del Worker:

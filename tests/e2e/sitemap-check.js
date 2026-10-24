@@ -1,5 +1,5 @@
 /* Comprueba el sitemap.xml que genera el build (no hay copia manual en la raíz):
-   - construye dist/ con scripts/build-public.js;
+   - construye dist/ con scripts/build/build-public.js;
    - están las 18 URLs, todas con https://kanlane.com/ y barra final, sin app/demo/legal;
    - cada xhtml:link es recíproco y apunta a una URL del propio sitemap;
    - el XML está bien formado y las fechas, si las hay, son YYYY-MM-DD;
@@ -22,7 +22,7 @@ const EXPECTED = ['', 'alternativa-a-asana/', 'alternativa-a-notion/', 'alternat
   'en/', 'en/asana-alternative/', 'en/client-manager/', 'en/client-password-manager/', 'en/freelancer-crm/', 'en/mcp-server/', 'en/notion-alternative/', 'en/project-management/', 'en/trello-alternative/'].map(r => ORIGIN + r);
 
 const ok = (m) => console.log('OK   ' + m);
-const build = (root, env) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}, env), encoding: 'utf8'});
+const build = (root, env) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}, env), encoding: 'utf8'});
 
 /* ---------- Positivo: el repositorio actual ---------- */
 const run = build(ROOT);
@@ -83,7 +83,7 @@ const metaOf = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([
 const validDate = (v) => /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v || '') && new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
 const metas = {};
 for(const f of PAGE_FILES){
-  metas[f] = metaOf(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+  metas[f] = metaOf(fs.readFileSync(path.join(ROOT, f === 'index.html' ? '' : 'web', f), 'utf8'));
   assert.ok(validDate(metas[f]), f + ' tiene <meta name="last-modified"> con fecha válida (vale ' + metas[f] + ')');
 }
 ok('las ' + PAGE_FILES.length + ' páginas tienen <meta name="last-modified"> con fecha válida');
@@ -93,7 +93,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kanlane-sitemap-'));
 try{
   const fixture = path.join(tmp, 'site');
   fs.cpSync(ROOT, fixture, {recursive: true, filter: (src) => !/[\\/](\.git|dist|node_modules)([\\/]|$)/.test(src.slice(ROOT.length))});
-  const page = path.join(fixture, 'alternativa-a-trello/index.html');
+  const page = path.join(fixture, 'web/alternativa-a-trello/index.html');
   const original = fs.readFileSync(page, 'utf8');
   const cases = [
     ['sin canonical', (h) => h.replace(/<link\s+rel="canonical"[^>]*>/, ''), /es indexable pero no tiene <link rel="canonical">/],

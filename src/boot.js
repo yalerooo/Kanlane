@@ -4,7 +4,7 @@
    hasta que hay sesión (AuthController quita la clase). También se aplica ya
    el tema guardado, para no ver un parpadeo.
    Va en un archivo aparte, no en línea, para que la política de seguridad
-   (CSP de scripts/build-public.js) pueda prohibir cualquier script en línea. */
+   (CSP de scripts/build/build-public.js) pueda prohibir cualquier script en línea. */
 (function(){
   var root = document.documentElement;
   var c = window.WORKHUB_FIREBASE || {};
@@ -86,7 +86,7 @@
     try{ sceneOff = localStorage.getItem('workhub_scene') !== 'on'; }catch(e){}
     if(sceneOff) root.classList.add('scene-off');
     /* Las fotos de espera del paisaje de esa estación (assets/css/seasons/, las genera
-       scripts/make-auth-posters.js). Solo donde puede salir el acceso con paisaje: no en modo
+       scripts/assets/make-auth-posters.js). Solo donde puede salir el acceso con paisaje: no en modo
        local, ni en móviles y tabletas (la misma condición que auth.css y auth-early.js), ni con
        el paisaje quitado (si se vuelve a poner, las pide auth-early.js con esta función). */
     var photos = null;

@@ -17,7 +17,7 @@ const origin = 'http://localhost:' + port;
 const url = origin + '/app/';
 const authUrl = 'http://127.0.0.1:9197';
 const storeUrl = 'http://127.0.0.1:8187/v1/projects/demo-workhub/databases/(default)/documents/';
-const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
+const server = spawn(process.execPath, [path.join(root, 'scripts/dev/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
 const chrome = process.env.CHROME_PATH || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'

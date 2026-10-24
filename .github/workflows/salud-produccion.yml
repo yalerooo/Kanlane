@@ -17,4 +17,4 @@ jobs:
         with:
           node-version: '20'
       - name: Comprobar web publicada
-        run: node scripts/check-production.js
+        run: node scripts/checks/check-production.js

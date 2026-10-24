@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', '..');
 const dirs = ['src', 'plugins', 'tests/sw', 'tests/demo', 'tests/plugins', 'tests/consent', 'tests/vault', 'tests/crypto', 'tests/backup', 'tests/assets', 'tests/build', 'tests/season', 'tests/e2e', 'scripts', 'worker'];
 const files = ['sw.js'];
 function scan(dir){

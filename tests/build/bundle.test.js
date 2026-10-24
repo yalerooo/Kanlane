@@ -1,4 +1,4 @@
-/* scripts/bundle.js: al publicar, los scripts y las hojas de estilo de cada página se unen en
+/* scripts/build/bundle.js: al publicar, los scripts y las hojas de estilo de cada página se unen en
    unos pocos archivos. Se prueba con una dist/ de juguete y, al final, con la app de verdad. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

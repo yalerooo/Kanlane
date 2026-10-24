@@ -4,8 +4,8 @@
    de la forma, src/views/sumi.js, para que el símbolo, sus gestos y la aplicación no se
    desajusten.
 
-     node scripts/make-brand.js
-     node scripts/make-icons.js     (los PNG de la aplicación instalable)
+     node scripts/assets/make-brand.js
+     node scripts/assets/make-icons.js     (los PNG de la aplicación instalable)
 
    Lo generado se guarda en el repositorio. Para cambiar el dibujo se cambia sumi.js y se
    vuelven a ejecutar los dos; los SVG no se retocan a mano. Las normas de uso están en
@@ -13,9 +13,9 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const sumi = require('../src/views/sumi.js');
+const sumi = require('../../src/views/sumi.js');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const out = path.join(root, 'docs/marca/svg');
 
 const GRAFITO = '#18181B', BLANCO = '#FFFFFF', NIEBLA = '#F4F4F5';

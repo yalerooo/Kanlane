@@ -1953,7 +1953,7 @@
   /* ---------- Las flores (primavera) ----------
      Flores sueltas entre la hierba. Como el arbolado lejano, cada una es un rectángulo que mira
      a la cámara; lo que lleva pintado sale de una imagen (assets/img/flowers.webp, la hace
-     scripts/make-flowers.js de un modelo 3D): varias flores, una al lado de otra, cada una en
+     scripts/assets/make-flowers.js de un modelo 3D): varias flores, una al lado de otra, cada una en
      su casilla cuadrada con el pie del tallo abajo en el centro. Se pintan antes que la hierba
      y escriben la profundidad, así que las briznas de delante las tapan y ellas tapan a las de
      detrás. aInst: raíz (x, z), azar y cuál de las flores. uCells: cuántas trae la imagen. */

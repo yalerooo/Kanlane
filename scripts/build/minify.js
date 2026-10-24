@@ -1,4 +1,4 @@
-/* Minifica el JavaScript que se publica (lo usa scripts/build-public.js).
+/* Minifica el JavaScript que se publica (lo usa scripts/build/build-public.js).
 
    En el repositorio el código va comentado y con nombres largos; publicado, sin comentarios, sin
    espacios y con las variables internas de cada función renombradas: pesa menos y no se lee a
@@ -9,8 +9,8 @@
    - Los nombres de primer nivel de cada archivo no se tocan: los scripts son clásicos y comparten
      el ámbito global (window.Workhub…), así que renombrarlos rompería lo que otro archivo espera.
      Tampoco las propiedades de los objetos.
-   - Usa terser, la única dependencia del build (scripts/package.json, versión fijada). Si no
-     está instalada se instala sola con «npm ci» en scripts/; si no se puede, el build falla:
+   - Usa terser, la única dependencia del build (scripts/build/package.json, versión fijada). Si no
+     está instalada se instala sola con «npm ci» en scripts/build/; si no se puede, el build falla:
      nunca se publica sin minificar por un descuido. */
 'use strict';
 const fs = require('fs');
@@ -24,7 +24,7 @@ function terser(){
   if(lib) return lib;
   try{ lib = require('terser'); }
   catch(e){
-    console.log('minify: instalando terser (npm ci en scripts/)…');
+    console.log('minify: instalando terser (npm ci en scripts/build/)…');
     cp.execSync('npm ci --no-audit --no-fund', {cwd: __dirname, stdio: 'inherit'});
     lib = require('terser');
   }

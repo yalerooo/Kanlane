@@ -2,26 +2,28 @@
    Copia SOLO lo que forma la app (lista blanca), para que nunca se publiquen
    por error datos o archivos privados de la carpeta (data-backup.json, etc.).
    Los scripts y las hojas de estilo de cada página se unen en unos pocos archivos
-   (scripts/bundle.js): la app pasa de más de cien peticiones a un puñado.
+   (scripts/build/bundle.js): la app pasa de más de cien peticiones a un puñado.
    Además genera dist/_headers con las cabeceras de seguridad: es la ÚNICA
    fuente de la CSP y del resto de cabeceras (guía: docs/CLOUDFLARE.md).
    Cloudflare ejecuta este script en cada publicación (Build command:
-   node scripts/build-public.js; wrangler.jsonc publica la carpeta dist).
+   node scripts/build/build-public.js; wrangler.jsonc publica la carpeta dist).
    Firebase Hosting lo ejecuta antes de "firebase deploy" (predeploy). */
 const fs = require('fs');
 const path = require('path');
-const {pageDirs, buildSitemap} = require('./site-pages');
+const {WEB, pageDirs, buildSitemap} = require('./site-pages');
 const {bundle, DIR: BUNDLE_DIR} = require('./bundle');
 const {minify, minifyTree} = require('./minify');
 const {securityTxt, FILES: SECURITY_FILES} = require('./security-txt');
 
 /* KANLANE_ROOT solo lo usan las pruebas (tests/e2e/sitemap-check.js) para construir una copia. */
-const root = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..');
+const root = process.env.KANLANE_ROOT ? path.resolve(process.env.KANLANE_ROOT) : path.join(__dirname, '..', '..');
 const out = path.join(root, 'dist');
-/* Páginas de captación e idiomas: toda carpeta de primer nivel con index.html que no sea app, demo,
-   legal o un directorio de recursos (ver scripts/site-pages.js). Añadir una página = crear su carpeta. */
+/* Páginas de captación e idiomas: toda carpeta de web/ con index.html que no sea la de las páginas
+   legales (ver scripts/build/site-pages.js). Añadir una página = crear su carpeta dentro de web/. */
 const PAGES = pageDirs(root);
-const INCLUDE = ['index.html', '404.html', 'app', 'demo'].concat(PAGES, ['robots.txt', 'llms.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins', 'legal']);
+const INCLUDE = ['index.html', '404.html', 'app', 'demo'].concat(['robots.txt', 'llms.txt', 'manifest.webmanifest', 'sw.js', 'assets', 'src', 'plugins']);
+/* Lo de web/ (páginas de captación, idiomas y legales) se publica en la raíz de dist/. */
+const WEB_ITEMS = PAGES.concat('legal');
 
 /* ---------- Cabeceras de seguridad ---------- */
 
@@ -104,7 +106,7 @@ const DEMO = Object.assign({}, PAGE, {
   'X-Robots-Tag': 'noindex, follow'
 });
 
-/* ---------- security.txt (scripts/security-txt.js) ----------
+/* ---------- security.txt (scripts/build/security-txt.js) ----------
    «contact» lo tiene que poner el titular: una o varias direcciones «mailto:…» o «https://…»
    que de verdad se atiendan. Vacío, no se publica el archivo y el build avisa (no se inventa
    ningún contacto). */
@@ -132,6 +134,9 @@ function headersFile(){
 /* Se vacía el contenido en lugar de borrar la carpeta: en Windows falla (EPERM) si algún proceso la tiene abierta. */
 fs.mkdirSync(out, {recursive:true});
 fs.readdirSync(out).forEach((name) => fs.rmSync(path.join(out, name), {recursive:true, force:true}));
+for(const item of WEB_ITEMS){
+  fs.cpSync(path.join(root, WEB, item), path.join(out, item), {recursive:true});
+}
 for(const item of INCLUDE){
   fs.cpSync(path.join(root, item), path.join(out, item), {recursive:true});
 }
@@ -144,12 +149,12 @@ if(security){
     fs.writeFileSync(path.join(out, f), security);
   });
 }else{
-  console.warn('⚠  security.txt no se publica: falta un contacto válido (mailto: o https://) en SECURITY.contact de scripts/build-public.js.');
+  console.warn('⚠  security.txt no se publica: falta un contacto válido (mailto: o https://) en SECURITY.contact de scripts/build/build-public.js.');
 }
 
 /* Un archivo por grupo de scripts o de hojas de estilo. Los plugins no se tocan: cada uno es
    una página aparte que se carga en su propio marco. Si algo no se puede unir, el build falla.
-   El JavaScript se publica minificado (scripts/minify.js): los paquetes al unirlos y, después,
+   El JavaScript se publica minificado (scripts/build/minify.js): los paquetes al unirlos y, después,
    los scripts que quedan sueltos. sw.js se minifica al final, ya con su lista de archivos. */
 let packed, loose;
 try{
@@ -205,4 +210,4 @@ if(missingLegal.length) console.warn('⚠  src/config/legal-config.js: faltan da
 const cfg = fs.readFileSync(path.join(root, 'src/config/firebase-config.js'), 'utf8');
 if(/apiKey:\s*''/.test(cfg)) console.warn('⚠  src/config/firebase-config.js no tiene apiKey: la web funcionará en modo local, sin inicio de sesión.');
 if(/useEmulators:\s*true/.test(cfg)) console.warn('⚠  useEmulators está en true: ponlo en false antes de publicar.');
-console.log('dist/ listo: ' + INCLUDE.join(', ') + ' + _headers + sitemap.xml (' + files.length + ' archivos en el service worker, versión ' + build + ')');
+console.log('dist/ listo: ' + INCLUDE.concat(WEB_ITEMS).join(', ') + ' + _headers + sitemap.xml (' + files.length + ' archivos en el service worker, versión ' + build + ')');

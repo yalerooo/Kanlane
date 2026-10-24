@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: '20'
       - name: Revisar JavaScript
-        run: node scripts/check-js.js
+        run: node scripts/checks/check-js.js
       - name: Pruebas y traducciones
         run: |
           node tests/sw/sw.test.js
@@ -73,9 +73,9 @@ jobs:
           node tests/e2e/hreflang-check.js
           node tests/e2e/sitemap-check.js
           node tests/e2e/seo-check.js
-          node scripts/check-i18n.js --strict
+          node scripts/checks/check-i18n.js --strict
       - name: Compilar versión pública
-        run: node scripts/build-public.js
+        run: node scripts/build/build-public.js
 
   firestore-rules:
     runs-on: ubuntu-latest

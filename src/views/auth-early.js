@@ -75,7 +75,7 @@
 
   /* La foto de espera (auth.css, .auth-scene::before y ::after): el paisaje y, aparte, el
      cerezo, colocados y escalados como los pinta la escena. Las medidas van en altos de
-     ventana desde el punto de fuga y son las de scripts/make-auth-posters.js (POSTER), que
+     ventana desde el punto de fuga y son las de scripts/assets/make-auth-posters.js (POSTER), que
      genera las imágenes; treeBase es dónde pisa el tronco, bajo el punto de fuga. */
   var POSTER = {left:1.75, right:1.45, up:0.64, down:0.56, treeX:0.40, treeW:1.20, treeBase:0.126};
   var backdrop = screen.querySelector('.auth-scene');

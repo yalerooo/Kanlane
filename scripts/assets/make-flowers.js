@@ -7,15 +7,15 @@
    una en su casilla de CELL×CELL, con el pie del tallo abajo en el centro y fondo transparente.
    Luz neutra: la escena le da después el color de la hora.
 
-   Uso:  node scripts/make-flowers.js
-         KANLANE_FLOWERS=C:\ruta\con\el\modelo node scripts/make-flowers.js
+   Uso:  node scripts/assets/make-flowers.js
+         KANLANE_FLOWERS=C:\ruta\con\el\modelo node scripts/assets/make-flowers.js
    Necesita Playwright (tests/e2e) y un Chrome o Edge con tarjeta gráfica. El modelo se busca
    en KANLANE_FLOWERS o, si no, en una carpeta «flowers» junto al repositorio o por encima. */
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', '..');
 const {chromium} = require(path.join(root, 'tests/e2e/node_modules/playwright'));
 
 const OBJ = 'Coreopsis+Flower.obj', MTL = 'Coreopsis+Flower.mtl';

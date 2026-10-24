@@ -2,7 +2,7 @@
    carriles de un tablero. «Sumi» es tinta en japonés y, escrito de otra forma, «hecho».
 
    Aquí está la ÚNICA definición de su forma. La usan la aplicación (Workhub.views.sumi),
-   scripts/make-brand.js (los SVG de la marca) y scripts/make-icons.js (los iconos PNG).
+   scripts/assets/make-brand.js (los SVG de la marca) y scripts/assets/make-icons.js (los iconos PNG).
    Las normas de uso están en docs/marca/cuaderno-sumi.html; las que afectan al código:
    - una sola tinta (blanco o grafito) y los ojos son el fondo que asoma;
    - completo desde 32 px y, por debajo, la versión reducida (mini);

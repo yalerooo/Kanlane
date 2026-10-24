@@ -9,7 +9,7 @@ Kanlane trata datos personales de personas en España y la Unión Europea, así 
 Las tres páginas llevan el nombre, el NIF, el domicilio y el correo del titular, así que **no se indexan**:
 
 - cada página tiene `<meta name="robots" content="noindex, nofollow, noarchive">` (y la equivalente para `googlebot`);
-- el sitio las sirve con la cabecera HTTP `X-Robots-Tag: noindex, nofollow, noarchive` (`LEGAL` en `scripts/build-public.js`), que los buscadores obedecen aunque no lean el HTML.
+- el sitio las sirve con la cabecera HTTP `X-Robots-Tag: noindex, nofollow, noarchive` (`LEGAL` en `scripts/build/build-public.js`), que los buscadores obedecen aunque no lean el HTML.
 
 **No añadas un `robots.txt` que las bloquee** (`Disallow: /legal/`): si el robot no puede leer la página, no llega a ver el `noindex` y Google puede seguir listando la dirección. Lo correcto es dejar que las lea y obedezca el `noindex`.
 
@@ -30,7 +30,7 @@ Enlaces desde la app: pantalla de acceso («Al continuar aceptas los Términos y
 
 ## Lo que tienes que hacer tú (antes de publicar)
 
-1. **Rellena `src/config/legal-config.js`**: `titular` (nombre y apellidos o razón social), `nif`, `domicilio` y `email`. Son obligatorios por ley y serán públicos. Mientras estén vacíos, las páginas los muestran en amarillo como «[completar: …]» y `node scripts/build-public.js` avisa en cada publicación.
+1. **Rellena `src/config/legal-config.js`**: `titular` (nombre y apellidos o razón social), `nif`, `domicilio` y `email`. Son obligatorios por ley y serán públicos. Mientras estén vacíos, las páginas los muestran en amarillo como «[completar: …]» y `node scripts/build/build-public.js` avisa en cada publicación.
 2. **Comprueba `ubicacionDatos`**: dónde está la base de datos de Firestore (consola de Firebase → Firestore). La política dice por defecto «la Unión Europea (región eur3)». Si la creaste en otra región, cámbialo: lo que dice la política debe ser verdad.
 3. **Revisa que hay un correo que lees** en `email`: es donde la gente ejercerá sus derechos. Tienes **un mes** para responder.
 4. Sube `actualizado` y `version` cuando cambies algo de fondo en los textos.
@@ -76,13 +76,13 @@ if(WorkhubConsent.has('analytics')) loadAnalytics();
 WorkhubConsent.onChange(function(c){ if(c.analytics) loadAnalytics(); else location.reload(); });
 ```
 
-Además: añade el dominio a `CSP` en `scripts/build-public.js`, apúntalo en la tabla de `legal/cookies/index.html` y en el apartado de proveedores de `legal/privacidad/index.html`, y súbele `VERSION` a `consent.js` para que todos vuelvan a decidir.
+Además: añade el dominio a `CSP` en `scripts/build/build-public.js`, apúntalo en la tabla de `legal/cookies/index.html` y en el apartado de proveedores de `legal/privacidad/index.html`, y súbele `VERSION` a `consent.js` para que todos vuelvan a decidir.
 
 ## Decisiones técnicas relacionadas
 
 - **Tipografías propias.** Antes se cargaban desde Google Fonts, lo que envía la IP de cada visitante a Google (y está sancionado en algunos países de la UE sin consentimiento). Ahora Geist se sirve desde `assets/fonts/` (licencia SIL OFL incluida) y la CSP ya no permite `fonts.googleapis.com` ni `fonts.gstatic.com`.
 - **Service worker.** Cada página guarda su propia copia sin conexión; antes todas se guardaban como `/index.html` y abrir una página legal pisaba la de la app. Las páginas legales también funcionan sin conexión.
-- **Cabeceras.** Las páginas legales llevan la misma CSP y `X-Frame-Options` que la app (`/legal/*` en `scripts/build-public.js`).
+- **Cabeceras.** Las páginas legales llevan la misma CSP y `X-Frame-Options` que la app (`/legal/*` en `scripts/build/build-public.js`).
 
 ## Limitaciones conocidas
 
@@ -95,5 +95,5 @@ Además: añade el dominio a `CSP` en `scripts/build-public.js`, apúntalo en la
 ```bash
 node tests/consent/consent.test.js   # caducidad, versión, retirar, almacenamiento bloqueado
 node tests/sw/sw.test.js             # incluye que una página legal no pisa la copia de la app
-node scripts/check-i18n.js --strict  # textos nuevos traducidos
+node scripts/checks/check-i18n.js --strict  # textos nuevos traducidos
 ```

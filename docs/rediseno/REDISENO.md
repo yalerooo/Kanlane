@@ -309,4 +309,4 @@ El propietario quiere **un PR**. Para que sea revisable, commits ordenados así 
 | `app-oscuro-1…8-*.png` | Las siete pantallas en oscuro y la navegación arriba |
 | `app-claro-1…7-*.png`, `app-claro-9-violeta.png` | Las mismas en claro, y el tablero con acento violeta |
 
-La maqueta carga Geist desde `../../assets/fonts/`, así que debe abrirse desde esta carpeta del repositorio. `docs/` no se publica (`scripts/build-public.js` no la copia), de modo que nada de esto llega a producción.
+La maqueta carga Geist desde `../../assets/fonts/`, así que debe abrirse desde esta carpeta del repositorio. `docs/` no se publica (`scripts/build/build-public.js` no la copia), de modo que nada de esto llega a producción.

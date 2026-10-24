@@ -5,7 +5,7 @@
    Son datos públicos: lo que pongas aquí lo verá cualquiera que abra las páginas.
    Obligación legal (LSSI-CE, art. 10 y RGPD, art. 13): hay que identificar al titular
    del servicio y dar una forma de contacto. Si dejas un campo vacío, la página lo
-   marca en amarillo como «[completar: …]» y `node scripts/build-public.js` avisa. */
+   marca en amarillo como «[completar: …]» y `node scripts/build/build-public.js` avisa. */
 window.WORKHUB_LEGAL = {
   /* Nombre y apellidos si eres persona física (autónomo o particular), o razón social. */
   titular: 'Kanlane',

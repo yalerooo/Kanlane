@@ -429,6 +429,6 @@ const VECTOR = {
   const order = ['crypto.js', 'project-crypto.js', 'keystore.js'].map((f) => html.indexOf('<script src="../src/services/' + f + '"></script>'));
   assert.ok(order.every((i) => i > 0) && order[0] < order[1] && order[1] < order[2], 'app/index.html carga crypto.js → project-crypto.js → keystore.js');
   assert.ok(html.indexOf('src/core/namespace.js') < order[0]);
-  assert.ok(read('scripts/check-js.js').includes("'tests/crypto'"), 'check-js revisa tests/crypto');
+  assert.ok(read('scripts/checks/check-js.js').includes("'tests/crypto'"), 'check-js revisa tests/crypto');
   ok('sin Math.random, sin localStorage ni DOM; scripts cargados en orden en app/index.html');
 })().catch((err) => { console.error(err); process.exitCode = 1; });

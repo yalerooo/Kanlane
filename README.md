@@ -115,7 +115,8 @@ Kanlane está hecho con **JavaScript sin frameworks ni paso de compilación**: s
 index.html            portada pública (con la demo del tablero)
 app/                  la aplicación (/app/)
 demo/                 demo interactiva que enseña la portada (/demo/)
-legal/                privacidad, términos y cookies
+web/                 páginas públicas que dan a conocer Kanlane: captación SEO, /en/ y legales
+scripts/              build/ (publicación), dev/ (servidor local), checks/, assets/ (imágenes) y tools/
 assets/               estilos (tokens, base, componentes, vistas), fuentes e imágenes
 src/
   core/ utils/        espacio de nombres, eventos, fechas, ayudas de interfaz
@@ -126,19 +127,19 @@ src/
   i18n/               motor de traducciones y diccionario inglés
 plugins/              SDK de plugins, plantilla y plugins oficiales
 worker/               Worker de Cloudflare (acceso con Firebase y dominios)
-tests/ scripts/       pruebas y herramientas
+tests/                pruebas
 docs/                 guías
 ```
 
 - **Modelos** extienden `CollectionModel` (sincronizado en memoria, emite `change`). **Vistas** exponen métodos `bind…(handler)`. **Controladores** los conectan.
 - **Diseño:** minimalista, plano (sin sombras ni degradados), sin emojis; todo responsive.
-- **Idiomas:** el código está escrito en español y `src/i18n/en.js` traduce por coincidencia exacta del texto. `node scripts/check-i18n.js` avisa de lo que falte.
+- **Idiomas:** el código está escrito en español y `src/i18n/en.js` traduce por coincidencia exacta del texto. `node scripts/checks/check-i18n.js` avisa de lo que falte.
 
 ### Marca
 
 El símbolo y la mascota de Kanlane es **Sumi**, un pulpo de tres brazos (corto, largo, medio) que son los carriles de un tablero. «Sumi» es tinta en japonés y, escrito de otra forma, «hecho».
 
-- La forma tiene una única definición, `src/views/sumi.js`. De ella salen los SVG de la marca y el favicon (`node scripts/make-brand.js`), los iconos de la aplicación instalable (`node scripts/make-icons.js`) y la imagen para redes (`node scripts/make-og.js`).
+- La forma tiene una única definición, `src/views/sumi.js`. De ella salen los SVG de la marca y el favicon (`node scripts/assets/make-brand.js`), los iconos de la aplicación instalable (`node scripts/assets/make-icons.js`) y la imagen para redes (`node scripts/assets/make-og.js`).
 - Las normas de uso (una sola tinta, tamaños, gestos, dónde va y dónde no) están en [`docs/marca/cuaderno-sumi.html`](docs/marca/cuaderno-sumi.html), y los archivos, en `docs/marca/svg/`.
 
 ### Ejecutarlo en local
@@ -146,16 +147,16 @@ El símbolo y la mascota de Kanlane es **Sumi**, un pulpo de tres brazos (corto,
 No necesitas instalar nada más que Node:
 
 ```bash
-node scripts/dev.js            # http://localhost:5500/app/  (la portada está en /)
+node scripts/dev/dev.js            # http://localhost:5500/app/  (la portada está en /)
 ```
 
-La página se recarga sola al guardar. Por defecto va en **modo local** (sin cuenta; los datos se quedan en el navegador). Con `node scripts/dev.js --nube` usa el Firebase real (¡los cambios se guardan de verdad!). Otro puerto: `--puerto 8080`. En Windows también vale `start-dev.bat`.
+La página se recarga sola al guardar. Por defecto va en **modo local** (sin cuenta; los datos se quedan en el navegador). Con `node scripts/dev/dev.js --nube` usa el Firebase real (¡los cambios se guardan de verdad!). Otro puerto: `--puerto 8080`.
 
 ### Pruebas
 
 ```bash
-node scripts/check-js.js             # sintaxis
-node scripts/check-i18n.js --strict  # traducciones
+node scripts/checks/check-js.js             # sintaxis
+node scripts/checks/check-i18n.js --strict  # traducciones
 node tests/sw/sw.test.js             # service worker
 node tests/demo/demo.test.js         # demo del tablero
 node tests/worker/domains.test.js    # dominios y redirecciones del Worker
@@ -168,7 +169,7 @@ Cada pull request ejecuta todo esto en GitHub Actions.
 
 ### Publicarlo
 
-`scripts/build-public.js` copia a `dist/` solo lo que forma la web, une los scripts y estilos de cada página en unos pocos archivos y genera las cabeceras de seguridad; Cloudflare lo publica solo al fusionar en `main`. Para montar tu propia instancia: crea un proyecto de Firebase, copia su configuración en `src/config/firebase-config.js`, publica `firestore.rules` y conecta el repositorio a Cloudflare.
+`scripts/build/build-public.js` copia a `dist/` solo lo que forma la web, une los scripts y estilos de cada página en unos pocos archivos y genera las cabeceras de seguridad; Cloudflare lo publica solo al fusionar en `main`. Para montar tu propia instancia: crea un proyecto de Firebase, copia su configuración en `src/config/firebase-config.js`, publica `firestore.rules` y conecta el repositorio a Cloudflare.
 
 - [docs/FIREBASE.md](docs/FIREBASE.md): proyecto de Firebase, acceso y reglas.
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): publicación, dominios y redirecciones.
@@ -274,7 +275,8 @@ Kanlane is built with **vanilla JavaScript, no frameworks and no build step**: c
 index.html            public home page (with the board demo)
 app/                  the application (/app/)
 demo/                 interactive demo shown on the home page (/demo/)
-legal/                privacy, terms and cookies
+web/                 public pages that introduce Kanlane: SEO landings, /en/ and legal pages
+scripts/              build/ (publishing), dev/ (local server), checks/, assets/ (images) and tools/
 assets/               styles (tokens, base, components, views), fonts and images
 src/
   core/ utils/        namespace, events, dates, UI helpers
@@ -285,19 +287,19 @@ src/
   i18n/               translation engine and English dictionary
 plugins/              plugin SDK, template and official plugins
 worker/               Cloudflare Worker (Firebase sign-in and domains)
-tests/ scripts/       tests and tooling
+tests/                tests
 docs/                 guides
 ```
 
 - **Models** extend `CollectionModel` (kept in sync in memory, emits `change`). **Views** expose `bind…(handler)` methods. **Controllers** wire them together.
 - **Design:** minimal and flat (no shadows or gradients), no emojis, fully responsive.
-- **Languages:** the code is written in Spanish and `src/i18n/en.js` translates by exact text match. `node scripts/check-i18n.js` reports anything missing.
+- **Languages:** the code is written in Spanish and `src/i18n/en.js` translates by exact text match. `node scripts/checks/check-i18n.js` reports anything missing.
 
 ### Brand
 
 Kanlane's symbol and mascot is **Sumi**, a three-armed octopus (short, long, medium) whose arms are the lanes of a board. "Sumi" is Japanese for ink and, written differently, for "done".
 
-- The shape has a single definition, `src/views/sumi.js`. The brand SVGs and the favicon (`node scripts/make-brand.js`), the installable app icons (`node scripts/make-icons.js`) and the social image (`node scripts/make-og.js`) are generated from it.
+- The shape has a single definition, `src/views/sumi.js`. The brand SVGs and the favicon (`node scripts/assets/make-brand.js`), the installable app icons (`node scripts/assets/make-icons.js`) and the social image (`node scripts/assets/make-og.js`) are generated from it.
 - The usage rules (single ink, sizes, expressions, where it goes and where it does not) are in [`docs/marca/cuaderno-sumi.html`](docs/marca/cuaderno-sumi.html), in Spanish, and the files are in `docs/marca/svg/`.
 
 ### Run it locally
@@ -305,16 +307,16 @@ Kanlane's symbol and mascot is **Sumi**, a three-armed octopus (short, long, med
 You only need Node:
 
 ```bash
-node scripts/dev.js            # http://localhost:5500/app/  (the home page is at /)
+node scripts/dev/dev.js            # http://localhost:5500/app/  (the home page is at /)
 ```
 
-The page reloads on save. It runs in **local mode** by default (no account; data stays in the browser). `node scripts/dev.js --nube` uses the real Firebase (changes are saved for real!). Another port: `--puerto 8080`. On Windows `start-dev.bat` also works.
+The page reloads on save. It runs in **local mode** by default (no account; data stays in the browser). `node scripts/dev/dev.js --nube` uses the real Firebase (changes are saved for real!). Another port: `--puerto 8080`.
 
 ### Tests
 
 ```bash
-node scripts/check-js.js             # syntax
-node scripts/check-i18n.js --strict  # translations
+node scripts/checks/check-js.js             # syntax
+node scripts/checks/check-i18n.js --strict  # translations
 node tests/sw/sw.test.js             # service worker
 node tests/demo/demo.test.js         # board demo
 node tests/worker/domains.test.js    # Worker domains and redirects
@@ -327,7 +329,7 @@ Every pull request runs all of this in GitHub Actions.
 
 ### Deploying
 
-`scripts/build-public.js` copies only what makes up the site into `dist/`, joins each page's scripts and stylesheets into a few files and generates the security headers; Cloudflare publishes it automatically when something is merged into `main`. To run your own instance: create a Firebase project, put its config in `src/config/firebase-config.js`, publish `firestore.rules` and connect the repository to Cloudflare.
+`scripts/build/build-public.js` copies only what makes up the site into `dist/`, joins each page's scripts and stylesheets into a few files and generates the security headers; Cloudflare publishes it automatically when something is merged into `main`. To run your own instance: create a Firebase project, put its config in `src/config/firebase-config.js`, publish `firestore.rules` and connect the repository to Cloudflare.
 
 - [docs/FIREBASE.md](docs/FIREBASE.md): Firebase project, sign-in and rules.
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md): publishing, domains and redirects.

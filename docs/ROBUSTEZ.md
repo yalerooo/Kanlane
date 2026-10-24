@@ -18,7 +18,7 @@ No es un límite de uso ni tiene que ver con cuántas subidas o escrituras se ha
 3. Activar la aplicación obligatoria para **Authentication** y **Cloud Firestore**, una API cada vez, y vigilar errores de acceso. Firebase puede tardar hasta 15 minutos en aplicar el cambio. Si hay un problema, volver al modo de monitorización desde la misma pantalla.
 4. Vigilar el consumo mensual de evaluaciones reCAPTCHA. En el plan sin facturación las primeras 10 000 evaluaciones mensuales son gratuitas y, al agotarlas, las nuevas evaluaciones pueden recibir un error de cuota. Mantener la renovación de tokens y ajustar su duración solo tras medir el tráfico.
 
-`node scripts/security-status.js` consulta el estado real sin imprimir claves. Requiere `npm ci --prefix tests/rules` y una sesión `firebase login` local.
+`node scripts/tools/security-status.js` consulta el estado real sin imprimir claves. Requiere `npm ci --prefix tests/rules` y una sesión `firebase login` local.
 
 ## Límites y señales de abuso
 

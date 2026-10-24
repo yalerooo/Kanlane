@@ -1,4 +1,4 @@
-/* scripts/minify.js: el JavaScript se publica minificado, sin comentarios y con las variables
+/* scripts/build/minify.js: el JavaScript se publica minificado, sin comentarios y con las variables
    internas renombradas, pero sin tocar los nombres que comparten los scripts ni lo que hacen.
    Al final se construye dist/ y se comprueba lo publicado: node tests/build/minify.test.js */
 const assert = require('node:assert/strict');
@@ -62,7 +62,7 @@ const ok = (name) => console.log('ok   ' + name);
 /* Lo publicado de verdad: ningún .js de dist/ (salvo los plugins, que son páginas aparte) lleva
    comentarios de bloque ni los nombres de los archivos de origen, y todos se pueden leer. */
 {
-  cp.execFileSync(process.execPath, [path.join(repo, 'scripts/build-public.js')], {cwd: repo, stdio: 'pipe'});
+  cp.execFileSync(process.execPath, [path.join(repo, 'scripts/build/build-public.js')], {cwd: repo, stdio: 'pipe'});
   const dist = path.join(repo, 'dist');
   const list = (dir) => fs.readdirSync(dir, {withFileTypes:true}).flatMap((d) => {
     const full = path.join(dir, d.name);

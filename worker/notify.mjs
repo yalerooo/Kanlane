@@ -19,7 +19,7 @@
    por navegador que activó los avisos) y notify_rate/{uid}~{día} (contador). Las dos colecciones
    están cerradas a los clientes: solo entra la cuenta de servicio del Worker.
 
-   Secretos: VAPID_PUBLIC, VAPID_PRIVATE y VAPID_SUBJECT (scripts/make-vapid.js los genera) y
+   Secretos: VAPID_PUBLIC, VAPID_PRIVATE y VAPID_SUBJECT (scripts/tools/make-vapid.js los genera) y
    FIREBASE_SERVICE_ACCOUNT. Sin ellos, la ruta responde «not-configured» y la app no ofrece nada. */
 import {restStore} from './automations.mjs';
 import {loadProject, roleIn} from './capture.mjs';

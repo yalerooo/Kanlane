@@ -1,7 +1,7 @@
 /* Lectura del estado real de Firebase. Requiere las dependencias de tests/rules
    y una sesión previa de `firebase login`; no imprime credenciales ni claves. */
-const auth = require('../tests/rules/node_modules/firebase-tools/lib/auth');
-const scopes = require('../tests/rules/node_modules/firebase-tools/lib/scopes');
+const auth = require('../../tests/rules/node_modules/firebase-tools/lib/auth');
+const scopes = require('../../tests/rules/node_modules/firebase-tools/lib/scopes');
 
 const project = 'workhub-26f50';
 const number = '1056897810807';

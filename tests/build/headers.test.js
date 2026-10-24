@@ -1,4 +1,4 @@
-/* Cabeceras de seguridad que genera scripts/build-public.js (dist/_headers) y security.txt.
+/* Cabeceras de seguridad que genera scripts/build/build-public.js (dist/_headers) y security.txt.
    Construye dist/ y comprueba la CSP de cada tipo de página: node tests/build/headers.test.js */
 const assert = require('node:assert/strict');
 const cp = require('node:child_process');
@@ -14,7 +14,7 @@ function test(name, fn){
   console.log('ok   ' + name);
 }
 
-cp.execFileSync(process.execPath, [path.join(repo, 'scripts/build-public.js')], {cwd: repo, stdio: 'pipe'});
+cp.execFileSync(process.execPath, [path.join(repo, 'scripts/build/build-public.js')], {cwd: repo, stdio: 'pipe'});
 const dist = path.join(repo, 'dist');
 
 /* dist/_headers → {ruta: {cabecera: valor}} */
@@ -119,7 +119,7 @@ test('security.txt: con contacto lleva los campos obligatorios y caduca en menos
 });
 
 test('security.txt: lo publicado coincide con el contacto configurado y no entra en el service worker', () => {
-  const configured = /contact:\s*\[\s*\]/.test(fs.readFileSync(path.join(repo, 'scripts/build-public.js'), 'utf8')) === false;
+  const configured = /contact:\s*\[\s*\]/.test(fs.readFileSync(path.join(repo, 'scripts/build/build-public.js'), 'utf8')) === false;
   FILES.forEach((f) => {
     const file = path.join(dist, f);
     assert.equal(fs.existsSync(file), configured, f);

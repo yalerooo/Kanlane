@@ -26,7 +26,7 @@ const PAIRS = {
 };
 
 const ok = (m) => console.log('OK   ' + m);
-const read = (route) => fs.readFileSync(path.join(ROOT, route, 'index.html'), 'utf8');
+const read = (route) => fs.readFileSync(path.join(ROOT, route === '' ? '' : 'web', route, 'index.html'), 'utf8');
 const canonicalOf = (html, route) => {
   const found = [...html.matchAll(/<link\s+rel="canonical"\s+href="([^"]+)"/g)].map(m => m[1]);
   assert.equal(found.length, 1, 'un único canonical en /' + route);

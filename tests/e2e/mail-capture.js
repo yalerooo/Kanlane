@@ -2,7 +2,7 @@
    reales. Todo ocurre en cuentas y proyectos creados para la prueba.
 
    Qué es real aquí: la pantalla, la ruta de gestión (el mismo worker/capture.mjs, servido por
-   scripts/dev.js), la escritura en Firestore por su API REST y la lectura desde la app.
+   scripts/dev/dev.js), la escritura en Firestore por su API REST y la lectura desde la app.
    Qué no: la entrega. Los correos no pasan por Cloudflare Email Routing; la prueba llama al
    mismo `receive` que llama el Worker, con mensajes montados y firmados con una clave DKIM de
    prueba cuyo registro DNS se sirve desde aquí. La entrega real se comprueba aparte
@@ -22,7 +22,7 @@ const url = 'http://localhost:' + port + '/app/';
 const authUrl = 'http://127.0.0.1:9197';
 const storeHost = '127.0.0.1:8187';
 const storeUrl = 'http://' + storeHost + '/v1/projects/demo-workhub/databases/(default)/documents/';
-const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
+const server = spawn(process.execPath, [path.join(root, 'scripts/dev/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
 const chrome = process.env.CHROME_PATH || [
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
@@ -30,7 +30,7 @@ const chrome = process.env.CHROME_PATH || [
 const PASSWORD = 'contraseña-prueba-123';
 const stamp = Date.now();
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-/* El mismo entorno que scripts/dev.js da a la ruta de gestión. */
+/* El mismo entorno que scripts/dev/dev.js da a la ruta de gestión. */
 const ENV = {FIRESTORE_EMULATOR_HOST:storeHost, FIREBASE_PROJECT:'demo-workhub', CAPTURE_SECRET:Buffer.alloc(32, 9).toString('base64'),
   CAPTURE_DOMAINS:'in.kanlane.test,respaldo.kanlane.test', CAPTURE_PLAN:'paid'};
 const keys = {'ejemplo.test':dkimKey(), 'otra.test':dkimKey()};

@@ -1,5 +1,5 @@
 /* Comprueba el SEO estructurado de las 18 páginas indexables y llms.txt, sin navegador:
-   - construye dist/ con scripts/build-public.js;
+   - construye dist/ con scripts/build/build-public.js;
    - cada página lleva JSON-LD válido y un WebPage cuyo `about` es una referencia por @id
      (https://kanlane.com/#aplicacion), que declara la portada en su SoftwareApplication;
    - las páginas con <details> visibles tienen un FAQPage con EXACTAMENTE las mismas preguntas y
@@ -28,7 +28,7 @@ const PAGES = ['index.html', 'en/index.html'].concat(ES.map(s => s + '/index.htm
 const ok = (m) => console.log('OK   ' + m);
 /* En Windows los archivos se descargan con CRLF (core.autocrlf): se comparan siempre con LF. */
 const readText = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
-const build = (root) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}), encoding: 'utf8'});
+const build = (root) => cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts/build/build-public.js')], {env: Object.assign({}, process.env, {KANLANE_ROOT: root}), encoding: 'utf8'});
 
 const run = build(ROOT);
 assert.equal(run.status, 0, 'el build termina bien:\n' + run.stdout + run.stderr);
@@ -44,7 +44,7 @@ const meta = (html) => (html.match(/<meta\s+name="last-modified"\s+content="([^"
 
 /* ---------- JSON-LD ---------- */
 for(const f of PAGES){
-  const html = readText(path.join(ROOT, f));
+  const html = readText(path.join(ROOT, f === 'index.html' ? '' : 'web', f));
   const blocks = jsonLd(html, f);
   assert.ok(blocks.length >= 1, f + ' lleva JSON-LD');
   const nodes = blocks.flatMap(b => b['@graph'] || [b]);
@@ -85,7 +85,7 @@ ok('JSON-LD válido en las 18 páginas: about por @id, FAQPage = <details> visib
 
 /* ---------- Pie de la portada ---------- */
 for(const [file, lang, expected] of [['index.html', 'es', ES.map(s => '/' + s + '/')], ['en/index.html', 'en', EN.map(s => '/en/' + s + '/')]]){
-  const html = readText(path.join(ROOT, file));
+  const html = readText(path.join(ROOT, file === 'index.html' ? '' : 'web', file));
   const foot = html.match(/<footer class="foot">[\s\S]*?<\/footer>/)[0];
   const links = [...foot.matchAll(/<a\s+[^>]*href="([^"#]+)"/g)].map(m => m[1]);
   const guides = links.filter(h => /^\/(en\/)?[a-z-]+\/$/.test(h) && h !== '/' && h !== '/en/');
@@ -119,7 +119,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kanlane-seo-'));
 try{
   const fixture = path.join(tmp, 'site');
   fs.cpSync(ROOT, fixture, {recursive: true, filter: (src) => !/[\\/](\.git|dist|node_modules)([\\/]|$)/.test(src.slice(ROOT.length))});
-  const page = path.join(fixture, 'gestor-de-clientes/index.html');
+  const page = path.join(fixture, 'web/gestor-de-clientes/index.html');
   const original = fs.readFileSync(page, 'utf8');
   const broken = original.replace(/"dateModified":"[^"]*"/, '"dateModified":"2020-01-01"');
   assert.notEqual(broken, original, 'el caso modifica dateModified');

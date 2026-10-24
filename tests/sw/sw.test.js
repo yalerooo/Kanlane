@@ -57,7 +57,7 @@ const fire = async (type, extra) => {
 const ok = (c, m) => { console.log((c ? 'OK   ' : 'FALLO ') + m); if(!c) process.exitCode = 1; };
 const req = (url, o) => Object.assign(new Request(url), {}, o);
 
-/* El build copia src/ entero, une los scripts de cada página (scripts/bundle.js) y mete en FILES
+/* El build copia src/ entero, une los scripts de cada página (scripts/build/bundle.js) y mete en FILES
    todo lo que queda en dist/: cualquier script que cargue app/index.html se precachea, suelto o
    dentro de un paquete, si existe. Se comprueba que existen (incluidos los del cifrado). */
 const repo = path.join(__dirname, '..', '..');

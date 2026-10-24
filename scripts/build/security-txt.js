@@ -1,4 +1,4 @@
-/* security.txt (RFC 9116): dónde avisar de un fallo de seguridad. Lo usa scripts/build-public.js.
+/* security.txt (RFC 9116): dónde avisar de un fallo de seguridad. Lo usa scripts/build/build-public.js.
    Se publica en /.well-known/security.txt (la dirección de la norma) y en /security.txt (la
    antigua, por si un alojamiento no sirve carpetas que empiezan por punto). */
 const FILES = ['/.well-known/security.txt', '/security.txt'];

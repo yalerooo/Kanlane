@@ -146,7 +146,7 @@ if(process.argv[3]){
 }
 
 const {chromium} = require('playwright');
-const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
+const server = spawn(process.execPath, [path.join(root, 'scripts/dev/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
 
 (async () => {
   for(let i = 0; i < 100; i++){ try{ if((await fetch(url)).ok && (await fetch(authUrl)).status < 500) break; }catch(e){} await new Promise((r) => setTimeout(r, 100)); }

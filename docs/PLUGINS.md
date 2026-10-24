@@ -443,7 +443,7 @@ Estás abriendo la página fuera de Kanlane, o el SDK no se cargó. Revisa la ru
 La página no llama a `WorkhubPlugin.connect()` en los primeros 10 segundos, o el enlace no es el de la página del plugin.
 
 **¿Funcionan los plugins si abro Kanlane con doble clic en `index.html`?**
-No. El navegador no deja que una página aislada cargue archivos del disco. Usa `start-workhub.bat` o la web publicada.
+No. El navegador no deja que una página aislada cargue archivos del disco. Usa `node scripts/dev/dev.js` o la web publicada.
 
 **¿Cómo actualizo mi plugin?**
 Publica los cambios en la misma dirección: se cargan la próxima vez que se abra. Si pides permisos nuevos, el usuario tendrá que aprobarlos.

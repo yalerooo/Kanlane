@@ -15,16 +15,16 @@
    otra con él bajo. Las medidas (POSTER, más abajo) están repetidas en auth-early.js.
 
    Hay que volver a generarlas si cambia el aspecto de la escena (src/views/auth-scene.js) o
-   la imagen de un árbol (scripts/make-trees.js):
+   la imagen de un árbol (scripts/assets/make-trees.js):
 
-     node scripts/make-auth-posters.js
+     node scripts/assets/make-auth-posters.js
 
    Necesita Playwright (npm ci --prefix tests/e2e) y Chrome o Edge con tarjeta gráfica. */
 const fs = require('node:fs');
 const path = require('node:path');
 const {spawn} = require('node:child_process');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '..', '..');
 const {chromium} = require(path.join(root, 'tests/e2e/node_modules/playwright'));
 const port = 58671;
 const chrome = process.env.CHROME_PATH || [
@@ -106,7 +106,7 @@ async function shot(browser, theme, up, tree, season){
 
 (async () => {
   /* Modo local: sin Firebase; la pantalla de acceso se enseña a mano. */
-  const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
+  const server = spawn(process.execPath, [path.join(root, 'scripts/dev/dev.js'), '--sin-recarga', '--puerto', String(port)], {cwd:root, stdio:'ignore'});
   const browser = await chromium.launch({headless:true, args:['--use-angle=d3d11', '--enable-gpu'], ...(chrome ? {executablePath:chrome} : {})});
   try{
     /* Un juego de fotos por estación (boot.js pone html[data-season]; ?estacion= la fuerza). */
@@ -146,7 +146,7 @@ async function shot(browser, theme, up, tree, season){
     }
     /* Una hoja pequeña por estación: boot.js enlaza solo la que toca. */
     const dir = path.join(root, 'assets/css/seasons');
-    const NOTE = '/* Fotos de espera de la pantalla de acceso (las escribe scripts/make-auth-posters.js; no tocar a mano). */\n';
+    const NOTE = '/* Fotos de espera de la pantalla de acceso (las escribe scripts/assets/make-auth-posters.js; no tocar a mano). */\n';
     fs.mkdirSync(dir, {recursive:true});
     rules.forEach(([name, rule]) => fs.writeFileSync(path.join(dir, name + '.css'), NOTE + rule + '\n'));
     console.log('OK   fotos de espera en assets/css/seasons/ (' + rules.map(([name, rule]) => name + ' ' + Math.round(rule.length / 1024 * 10) / 10 + ' KB').join(', ') + ')');

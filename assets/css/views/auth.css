@@ -371,7 +371,7 @@ html.auth-gate body:not(.is-authing) .consent{display:none;}
    y noche en oscuro. Aquí va el lienzo y, debajo, lo que se ve mientras la escena se prepara
    (o si el navegador no tiene WebGL): una foto pequeña de la propia escena, desenfocada, en
    dos piezas: el paisaje (--sc-poster) y el cerezo (--sc-tree). Las genera
-   scripts/make-auth-posters.js, que las deja en assets/css/seasons/ (una hoja por estación), y auth-early.js las coloca
+   scripts/assets/make-auth-posters.js, que las deja en assets/css/seasons/ (una hoja por estación), y auth-early.js las coloca
    (--pl, --pt… y --tl, --tt…) con la misma cuenta que la escena, para que coincidan con ella
    en cualquier tamaño de ventana: el fondo está desde el primer fotograma y la escena de
    verdad aparece encima como si enfocara. Bajo la foto, un degradado de cielo por si tarda. El panel derecho de la

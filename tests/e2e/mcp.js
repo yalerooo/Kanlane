@@ -1,7 +1,7 @@
 /* Servidor MCP contra el Firestore emulado, por HTTP y sin navegador: lo que la prueba en memoria
    (tests/worker/mcp.test.js) no ve, que es la capa REST de verdad. Las consultas (por columna, por
    exclusión, las notas ordenadas), las escrituras con condición y los contadores los resuelve el
-   emulador; las rutas son las de scripts/dev.js, que cargan el mismo worker/mcp.mjs.
+   emulador; las rutas son las de scripts/dev/dev.js, que cargan el mismo worker/mcp.mjs.
    Uso: dentro de «firebase emulators:exec» (ver .github/workflows/checks.yml). */
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -12,7 +12,7 @@ const root = path.resolve(__dirname, '../..');
 const port = 58661;
 const base = 'http://localhost:' + port;
 const env = {FIRESTORE_EMULATOR_HOST: '127.0.0.1:8187', FIREBASE_PROJECT: 'demo-workhub'};
-const server = spawn(process.execPath, [path.join(root, 'scripts/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd: root, stdio: 'ignore'});
+const server = spawn(process.execPath, [path.join(root, 'scripts/dev/dev.js'), '--emulador', '--sin-recarga', '--puerto', String(port)], {cwd: root, stdio: 'ignore'});
 const stamp = Date.now().toString(36);
 const uid = 'mcp-ana-' + stamp;
 const STAGES = [{key: 'todo', label: 'Por hacer'}, {key: 'doing', label: 'En curso'}, {key: 'done', label: 'Hecho', done: true}];

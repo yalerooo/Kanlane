@@ -4,8 +4,8 @@ Cloudflare publica la web **desde la nube, cada vez que se fusiona algo en `main
 
 Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare que pide *Build command*, *Deploy command* y *Preview command*). Qué está ya preparado en el repositorio:
 
-- `scripts/build-public.js` copia **solo** `index.html`, `assets/`, `src/` y `plugins/` a `dist/` (`data-backup.json` y el resto **nunca** se publican), une los scripts y estilos de cada página en `dist/assets/bundle/` (`scripts/bundle.js`) y genera `dist/_headers` con las cabeceras de seguridad (CSP, anti-marcos, HTTPS obligatorio…). Es la **única fuente** de esas cabeceras.
-- El JavaScript se publica **minificado** (`scripts/minify.js`, con terser). El *Build command* no cambia: si terser no está instalado, el propio script hace `npm ci` en `scripts/` antes de seguir, y si no puede, la publicación falla y se queda la versión anterior.
+- `scripts/build/build-public.js` copia **solo** `index.html`, `web/` (páginas públicas, que salen en la raíz), `assets/`, `src/` y `plugins/` a `dist/` (`data-backup.json` y el resto **nunca** se publican), une los scripts y estilos de cada página en `dist/assets/bundle/` (`scripts/build/bundle.js`) y genera `dist/_headers` con las cabeceras de seguridad (CSP, anti-marcos, HTTPS obligatorio…). Es la **única fuente** de esas cabeceras.
+- El JavaScript se publica **minificado** (`scripts/build/minify.js`, con terser). El *Build command* es `node scripts/build/build-public.js` (cambió de sitio al ordenar `scripts/` en carpetas): si terser no está instalado, el propio script hace `npm ci` en `scripts/build/` antes de seguir, y si no puede, la publicación falla y se queda la versión anterior.
 - `wrangler.jsonc` le dice a Cloudflare qué publicar (`dist/`), qué Worker ejecutar y a qué dominios conectarlo (ver «Dominios» más abajo).
 - `worker/index.js` es el Worker: reenvía `/__/auth/*` y `/__/firebase/*` a Firebase sin cambiar la dirección. Así el inicio de sesión (Google, GitHub) se completa en tu propio dominio y funciona también en Safari, Firefox estricto o Chrome con cookies de terceros bloqueadas. Solo reenvía esas rutas; no es un proxy abierto. Todo lo demás lo sirven los recursos estáticos. La excepción es `/__/auth/action`, adonde llevan los enlaces de los correos de verificación y de cambio de contraseña: en vez de reenviarla (saldría una página de Firebase), el Worker redirige a `/app/?mode=…&oobCode=…` y la app atiende el enlace con su propia pantalla. En las vistas previas de ramas funciona igual, porque la redirección se queda en el dominio desde el que se pide.
 - `src/config/firebase-config.js` lista los dominios en `hostingDomains`, para que la app use ese dominio como `authDomain`.
@@ -22,7 +22,7 @@ Se usa **Cloudflare Workers con recursos estáticos** (la pantalla de Cloudflare
 
    | Campo | Valor |
    |---|---|
-   | *Build command* (comando de compilación) | `node scripts/build-public.js` |
+   | *Build command* (comando de compilación) | `node scripts/build/build-public.js` |
    | *Deploy command* (comando de despliegue) | `npx wrangler deploy` |
    | *Preview command* / *Non-production branch deploy command* (comando de vista previa) | `npx wrangler versions upload` |
    | *Root directory* (directorio raíz) | `/` (vacío) |
@@ -87,7 +87,7 @@ Hazlo **todo antes** de probar el acceso; si falta algo, Google o GitHub darán 
 - **Vista previa de cada rama o PR**: el comando `npx wrangler versions upload` sube una versión con su propia dirección, sin cambiar producción. En ellas no se puede iniciar sesión (el dominio no está autorizado en Firebase); sirven para ver el diseño.
 - **Volver atrás**: en *Implementaciones*, elige una versión anterior → **Restaurar** (*Rollback*).
 - **Reglas de seguridad de Firestore**: siguen subiéndose con `firebase deploy --only firestore:rules` (o pegándolas en la consola), solo cuando cambia `firestore.rules`. Ver [SEGURIDAD.md](SEGURIDAD.md).
-- **Cabeceras de seguridad**: se cambian en `scripts/build-public.js` (constantes `ALL`, `PAGE` y `CSP`) y se aplican solas en la siguiente publicación. Si añades un servicio externo, añade su dominio a `CSP`.
+- **Cabeceras de seguridad**: se cambian en `scripts/build/build-public.js` (constantes `ALL`, `PAGE` y `CSP`) y se aplican solas en la siguiente publicación. Si añades un servicio externo, añade su dominio a `CSP`.
 
 ## Secreto del modo «Gestionado por Kanlane» (KMS_MASTER_V1)
 
@@ -132,7 +132,7 @@ Las peticiones a los ficheros de la web son **gratis e ilimitadas**. El código 
 - **La compilación dice que el Worker no coincide**: el nombre del proyecto en Cloudflare tiene que ser igual a `"name"` en `wrangler.jsonc` (`workhub`).
 - **El acceso da error de redirección**: falta alguno de los pasos del apartado 3, o los cambios de Google tardan unos minutos en aplicarse.
 - **`/__/auth/handler` da 404**: si sale la página 404 de Kanlane, falta `/__/auth/*` (o `/__/firebase/*`) en `run_worker_first` de `wrangler.jsonc`. Si no, el Worker no se desplegó o no se ejecuta. Mira el registro de la última compilación y que `wrangler.jsonc` esté en la raíz del repositorio.
-- **La web carga sin estilos o sin scripts**: casi siempre es la CSP. Abre la consola del navegador: el mensaje dice qué dominio se bloqueó; añádelo a `CSP` en `scripts/build-public.js`.
+- **La web carga sin estilos o sin scripts**: casi siempre es la CSP. Abre la consola del navegador: el mensaje dice qué dominio se bloqueó; añádelo a `CSP` en `scripts/build/build-public.js`.
 
 ## Tareas por correo
 

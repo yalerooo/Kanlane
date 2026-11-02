@@ -594,6 +594,7 @@
           else if(params.type === 'important') toast.success(name + ': ' + msg, {important:true});
           return true;
         }
+        case 'ui.notify': return this.notifyUser(who, frame, params);
         case 'ui.openTask': {
           if(!m.tasks.find(params.id)) throw fail('not-found', 'No existe esa tarea.');
           this.app.navigate('tasks');

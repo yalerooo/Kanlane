@@ -89,8 +89,10 @@ service cloud.firestore {
             'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels',
             'ghPrs', 'ghSyncedAt', 'ghRemoteAt', 'startDate', 'custom', 'repeatAnchor',
             'archivedAt', 'followers', 'cover', 'relatedTo', 'blockedBy',
-            'votes', 'location'
+            'votes', 'location', 'priority', 'statusAt'
           ]) && textWithin(data, 'title', 500)
+          && textWithin(data, 'priority', 10)
+          && data.get('statusAt', 0) is number
           && listWithin(data, 'votes', 200)
           && textWithin(data, 'location', 200)
           && listWithin(data, 'relatedTo', 50)
@@ -153,7 +155,7 @@ service cloud.firestore {
     // Campos permitidos en un documento sellado: los que necesitan las reglas,
     // las consultas del servidor y las actualizaciones parciales, más e/ev/kid.
     function encFields(col) {
-      return col == 'tasks' ? ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
+      return col == 'tasks' ? ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt', 'statusAt',
                                'assignees', 'linkedContacts', 'linkedVault', 'followers', 'e', 'ev', 'kid']
         : col == 'notes' ? ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'assetIds', 'e', 'ev', 'kid']
         : col == 'clients' ? ['color', 'createdAt', 'e', 'ev', 'kid']
@@ -182,6 +184,7 @@ service cloud.firestore {
         && d.kid is string && d.kid.size() > 0 && d.kid.size() <= 32
         && d.e is string && d.e.size() > 0 && d.e.size() <= encMax(col)
         && d.keys().hasOnly(encFields(col))
+        && d.get('statusAt', 0) is number
         && listWithin(d, 'assignees', 50)
         && listWithin(d, 'followers', 50)
         && listWithin(d, 'assetIds', 400)

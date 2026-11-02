@@ -13,7 +13,7 @@
   const stageView = (s) => {
     const c = Workhub.models.ProjectTemplates.colorOf(s.color);
     /* label: el nombre para enseñar (ver ProjectTemplates.stageText); raw: el guardado. */
-    return {key:s.key, label:Workhub.models.ProjectTemplates.stageText(s), raw:s.label, done:!!s.done, limit:s.limit || 0, color:c.key, dot:c.dot, bg:c.bg, fg:c.fg};
+    return {key:s.key, label:Workhub.models.ProjectTemplates.stageText(s), raw:s.label, done:!!s.done, limit:s.limit || 0, autoDelete:s.autoDelete || 0, color:c.key, dot:c.dot, bg:c.bg, fg:c.fg};
   };
 
   const ORDER_STEP = 1024;
@@ -22,8 +22,15 @@
   /* Votos que guarda una tarea, como mucho (el tope de firestore.rules). */
   const VOTES_MAX = 200;
   /* Campos de una tarea que no pasan a su copia (ver copyOf). */
-  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'order', 'archivedAt', 'followers', 'repeatSpawned', 'relatedTo', 'blockedBy', 'votes',
+  const NOT_COPIED = ['id', 'createdAt', 'updatedAt', 'statusAt', 'order', 'archivedAt', 'followers', 'repeatSpawned', 'relatedTo', 'blockedBy', 'votes',
     'ghItemId', 'ghContentId', 'ghType', 'ghUrl', 'ghNumber', 'ghRepo', 'ghLabels', 'ghPrs', 'ghSyncedAt', 'ghRemoteAt'];
+  /* Urgencia de una tarea, de más a menos; sin ella, la tarea no lleva el campo. */
+  const PRIORITIES = [
+    {key:'high', label:'Alta'},
+    {key:'medium', label:'Media'},
+    {key:'low', label:'Baja'}
+  ];
+  const DAY_MS = 86400000;
   /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
   const DUE_SPAN = {day:1, week:7, month:30};
 
@@ -155,7 +162,8 @@
     unarchive(id){
       const t = this.findAny(id);
       if(!t || !this.isReady()) return Promise.reject(new Error('not-found'));
-      const patch = {archivedAt:0};
+      /* Vuelve ahora: el tiempo en su columna empieza de nuevo. */
+      const patch = {archivedAt:0, statusAt:Date.now()};
       if(STATUS.length && !STATUS.some((s) => s.key === t.status)){
         const column = this.inStatus(STATUS[0].key);
         const last = column[column.length - 1];
@@ -183,6 +191,23 @@
 
     static isDone(t){
       return !!TaskModel.statusOf(t && t.status).done;
+    }
+
+    /* Urgencia de la tarea ({key, label}) o null si no tiene o no vale. */
+    static priorityOf(t){
+      return PRIORITIES.find((p) => p.key === (t && t.priority)) || null;
+    }
+
+    /* Posición de la urgencia para ordenar: la más urgente primero y sin urgencia al final. */
+    static priorityRank(t){
+      const i = PRIORITIES.indexOf(TaskModel.priorityOf(t));
+      return i === -1 ? PRIORITIES.length : i;
+    }
+
+    /* Cuándo llegó la tarea a su columna. Las que se movieron antes de existir statusAt usan su
+       última modificación o su creación. */
+    static arrivedAt(t){
+      return +(t && t.statusAt) || +(t && t.updatedAt) || +(t && t.createdAt) || 0;
     }
 
     /* '' (sin fecha) | 'done' | 'overdue' | 'today' | 'future' */
@@ -426,12 +451,18 @@
       const before = this.find(id);
       const wasDone = before ? TaskModel.isDone(before) : false;
       const from = before ? TaskModel.stageKey(before) : '';
+      this._stampMove(before, body);
       return this.update(id, body).then((res) => {
         const now = Object.assign({}, before, body, {id:id});
         if(!wasDone && TaskModel.isDone(now)) this.spawnNext(now);
         if(before && body.status && TaskModel.stageKey(now) !== from) this.emit('auto', {type:'moved', id:id, from:from, to:TaskModel.stageKey(now)});
         return res;
       });
+    }
+
+    /* Si la escritura la cambia de columna, apunta cuándo llegó. */
+    _stampMove(before, body){
+      if(before && body.status && body.status !== before.status) body.statusAt = Date.now();
     }
 
     /* Al terminar una tarea que se repite, crea la siguiente (sin subtareas marcadas, cada una con
@@ -450,6 +481,7 @@
         updatedAt:Date.now()
       };
       if(t.dueTime) copy.dueTime = t.dueTime;
+      if(TaskModel.priorityOf(t)) copy.priority = t.priority;
       /* La siguiente dura lo mismo y conserva los campos personalizados. */
       if(t.startDate && t.startDate <= t.dueDate) copy.startDate = shiftYmd(t.startDate, daysBetween(t.dueDate, next));
       if(t.custom && typeof t.custom === 'object') copy.custom = Object.assign({}, t.custom);
@@ -573,6 +605,7 @@
       /* Un proyecto con cifrado total no se sincroniza con GitHub (no hay campos gh*). */
       if(this.cipher) return Promise.reject(Workhub.models.ProjectCipher.error('encrypted'));
       body.updatedAt = body.ghSyncedAt = Date.now();
+      if(id) this._stampMove(this.find(id), body);
       if(id) return this.update(id, body);
       return this._create(body);
     }
@@ -612,6 +645,7 @@
 
       const wasDone = TaskModel.isDone(t);
       const from = TaskModel.stageKey(t);
+      const arrived = from !== status ? {statusAt:Date.now()} : {};
       const moved = () => { if(from !== status) this.emit('auto', {type:'moved', id:id, from:from, to:status}); };
       /* Vecinas con el mismo orden (o casi): no hay hueco, se renumera la columna. */
       if(prev && next && !(order > TaskModel.orderOf(prev) && order < TaskModel.orderOf(next))){
@@ -619,7 +653,7 @@
         list.splice(idx, 0, t);
         const now = Date.now();
         list.forEach((x, i) => {
-          const patch = x === t ? {status:status, order:(i + 1) * ORDER_STEP} : {order:(i + 1) * ORDER_STEP};
+          const patch = x === t ? Object.assign({status:status, order:(i + 1) * ORDER_STEP}, arrived) : {order:(i + 1) * ORDER_STEP};
           Object.assign(x, patch);
           this.update(x.id, Object.assign({updatedAt:now}, patch)).catch(() => {});
         });
@@ -629,14 +663,16 @@
         return;
       }
 
-      this.patchLocal(id, {status:status, order:order});
-      this.update(id, {status:status, order:order, updatedAt:Date.now()}).catch(() => {});
+      this.patchLocal(id, Object.assign({status:status, order:order}, arrived));
+      this.update(id, Object.assign({status:status, order:order, updatedAt:Date.now()}, arrived)).catch(() => {});
       if(!wasDone && TaskModel.isDone(t)) this.spawnNext(t);
       moved();
     }
 
     /* Ordena las tarjetas de una columna por 'due' (fecha y hora límite; sin fecha, al final),
-       'title' o 'created' (las más antiguas primero). Se ordena una vez: reescribe el orden
+       'title', 'created' (las más antiguas primero), 'priority' (la más urgente primero; sin
+       urgencia, al final), 'arrived-new' o 'arrived-old' (por cuándo llegaron a la columna, las
+       últimas o las primeras delante). Se ordena una vez: reescribe el orden
        manual y después se puede seguir arrastrando. En los empates manda el orden que había.
        Devuelve el orden anterior ([{id, order}], para setOrders) o null si ya estaba así. */
     sortColumn(status, by){
@@ -647,6 +683,9 @@
       const compare = by === 'due' ? (a, b) => (due(a) < due(b) ? -1 : due(a) > due(b) ? 1 : 0)
         : by === 'title' ? (a, b) => String(a.title || '').localeCompare(String(b.title || ''), locale, {numeric:true, sensitivity:'base'})
         : by === 'created' ? (a, b) => (a.createdAt || 0) - (b.createdAt || 0)
+        : by === 'priority' ? (a, b) => TaskModel.priorityRank(a) - TaskModel.priorityRank(b)
+        : by === 'arrived-new' ? (a, b) => TaskModel.arrivedAt(b) - TaskModel.arrivedAt(a)
+        : by === 'arrived-old' ? (a, b) => TaskModel.arrivedAt(a) - TaskModel.arrivedAt(b)
         : null;
       if(!compare) return null;
       const sorted = column.slice().sort((a, b) => compare(a, b) || column.indexOf(a) - column.indexOf(b));
@@ -666,6 +705,35 @@
         this.update(x.id, {order:x.order}).catch(() => {});
       });
       this.emit('change');
+    }
+
+    /* Lo que toca hacer en las columnas de terminadas que eliminan solas sus tarjetas (autoDelete,
+       en días): {remove, unstamped} con ids. Las que no saben cuándo llegaron no se eliminan: su
+       tiempo empieza a contar ahora (stampArrival). Un cambio reciente en la tarea también lo
+       reinicia, por si la movió algo que no apunta la llegada. */
+    expiredDone(now){
+      const remove = [], unstamped = [];
+      this.items.forEach((t) => {
+        const s = STATUS.find((x) => x.key === t.status);
+        if(!s || !s.done || !s.autoDelete || t._undecryptable) return;
+        if(!(+t.statusAt > 0)) unstamped.push(t.id);
+        else if(now - Math.max(+t.statusAt, +t.updatedAt || 0) >= s.autoDelete * DAY_MS) remove.push(t.id);
+      });
+      return {remove:remove, unstamped:unstamped};
+    }
+
+    /* Apunta la llegada a su columna sin tocar updatedAt: no es un cambio de contenido. */
+    stampArrival(ids, now){
+      ids.forEach((id) => {
+        this.patchLocal(id, {statusAt:now});
+        this.update(id, {statusAt:now}).catch(() => {});
+      });
+    }
+
+    /* Una tarea devuelta llega de nuevo a su columna: si no, se volvería a eliminar sola. */
+    restore(snap){
+      if(snap && Array.isArray(snap.items)) snap.items.forEach((t) => { if(+t.statusAt > 0) t.statusAt = Date.now(); });
+      return super.restore(snap);
     }
 
     reschedule(id, dueDate){
@@ -858,6 +926,7 @@
   TaskModel.STATUS = STATUS;
   TaskModel.ARCHIVED = ARCHIVED;
   TaskModel.REPEATS = REPEATS;
+  TaskModel.PRIORITIES = PRIORITIES;
   TaskModel.daysBetween = daysBetween;
   TaskModel.shiftYmd = shiftYmd;
   TaskModel.setStages(Workhub.models.ProjectTemplates.stagesOf(Workhub.models.ProjectTemplates.DEFAULT_TYPE));

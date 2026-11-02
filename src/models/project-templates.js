@@ -126,6 +126,9 @@
         /* Límite de tarjetas de la columna: entero de 1 a 999; sin él, sin límite. */
         const limit = Math.floor(+s.limit);
         if(limit >= 1 && limit <= 999) stage.limit = limit;
+        /* Días tras los que una columna de terminadas elimina sus tarjetas; sin él, nunca. */
+        const autoDelete = Math.floor(+s.autoDelete);
+        if(s.done && autoDelete >= 1 && autoDelete <= 3650) stage.autoDelete = autoDelete;
         if(s.archived) stage.archived = true;
         out.push(stage);
       });

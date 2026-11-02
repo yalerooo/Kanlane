@@ -26,7 +26,8 @@
         ubicacion: $('fUbicacion'),
         fecha: $('fFecha'),
         inicio: $('fInicio'),
-        repeat: $('fRepeat')
+        repeat: $('fRepeat'),
+        priority: $('fPriority')
       };
       /* Campos personalizados del proyecto (los pinta Workhub.views.fields). */
       this.customField = $('fCustomField');
@@ -565,6 +566,8 @@
       /* Lo mismo con el inicio y los campos personalizados: una tarea que no los usa no los lleva. */
       if(extra.startDate || this.hadStart) values.startDate = extra.startDate || '';
       if(extra.custom && (Object.keys(extra.custom).length || this.hadCustom)) values.custom = extra.custom;
+      /* Y con la urgencia. */
+      if(this.fields.priority.value || this.hadPriority) values.priority = this.fields.priority.value;
       const ubicacion = this.fields.ubicacion.value.trim();
       if(ubicacion || this.hadLocation) values.location = ubicacion;
       /* Y con la portada: {} quita la que tenía. */
@@ -595,7 +598,7 @@
       this.resetNoteForm();
       this.fields.id.value = '';
       this.hadTime = false;
-      this.hadStart = this.hadCustom = this.hadLocation = false;
+      this.hadStart = this.hadCustom = this.hadLocation = this.hadPriority = false;
       this.cover = null;
       this.hadCover = false;
       this.coverImages = [];
@@ -646,6 +649,9 @@
       this._clearErrors();
       this._renderCustom(t.custom || {});
       this.fields.repeat.value = t.repeat || '';
+      const priority = Workhub.models.TaskModel.priorityOf(t);
+      this.fields.priority.value = priority ? priority.key : '';
+      this.hadPriority = !!t.priority;
       this.checklist = (Array.isArray(t.checklist) ? t.checklist : []).map((c) => Object.assign(Workhub.models.TaskModel.checkItem(c), {text:c.text || ''}));
       this._renderChecklist();
       this.selected = Array.isArray(t.labels) ? t.labels.slice() : [];

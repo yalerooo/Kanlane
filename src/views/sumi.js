@@ -252,7 +252,7 @@
     host.innerHTML = svg({mini: true, eye: 'var(--accent-solid)', size: +(old && old.getAttribute('width')) || 19});
     const el = host._sumi = host.firstChild;
     marks.push(el);
-    (host.closest('a, .brand-row, .win-brand') || host).addEventListener('mouseenter', () => play(el, 'wink'));
+    (host.closest('.brand-row') || host.closest('a, .win-brand') || host).addEventListener('mouseenter', () => play(el, 'wink'));
   }
 
   function boot(){

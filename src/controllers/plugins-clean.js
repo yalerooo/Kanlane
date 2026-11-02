@@ -28,7 +28,7 @@
     }));
   };
   const cleanTask = (t) => ({id:t.id, title:t.title || '', desc:t.desc || '', cliente:t.cliente || '', status:TaskModel.stageKey(t),
-    dueDate:t.dueDate || '', contacto:t.contacto || '', checklist:cleanChecklist(t), createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
+    dueDate:t.dueDate || '', priority:(TaskModel.priorityOf(t) || {}).key || '', contacto:t.contacto || '', checklist:cleanChecklist(t), createdAt:t.createdAt || 0, updatedAt:t.updatedAt || 0});
   const cleanClient = (c) => ({id:c.id, nombre:c.nombre || '', color:typeof c.color === 'number' ? c.color : null});
   const cleanContact = (c) => ({id:c.id, cliente:c.cliente || '', nombre:c.nombre || '', email:c.email || '', telefono:c.telefono || '', notas:c.notas || ''});
   const cleanMeeting = (m) => ({id:m.id, title:m.title || '', cliente:m.cliente || '', date:m.date || '', start:m.start || '', end:m.end || '', link:m.link || '', notas:m.notas || ''});

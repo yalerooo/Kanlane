@@ -290,6 +290,7 @@
         const column = this.tasks.inStatus(patch.status).filter((x) => x.id !== id);
         const last = column[column.length - 1];
         patch.order = last ? TaskModel.orderOf(last) + ORDER_STEP : Date.now();
+        patch.statusAt = Date.now();
       }
       this.tasks.patchLocal(id, patch);
       return this.tasks.update(id, Object.assign({updatedAt:Date.now()}, patch)).then(() => {

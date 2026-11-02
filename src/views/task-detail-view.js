@@ -14,6 +14,7 @@
   const $ = (id) => document.getElementById(id);
 
   const FACT_ICONS = {
+    priority: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4c5-3 9 3 14 0v10c-5 3-9-3-14 0"/></svg>',
     location: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
     votes: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3Z"/><path d="M7 10l4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.6 21H7"/></svg>',
     repeat: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>',
@@ -354,6 +355,7 @@
       this.facts.innerHTML = [
         t.startDate ? fact('due', 'Fecha de inicio', '<span>' + esc(longDay(parseYmd(t.startDate), true)) + '</span>') : '',
         fact('due', 'Fecha límite', dueHtml(t)),
+        TaskModel.priorityOf(t) ? fact('priority', 'Urgencia', '<span>' + esc(Workhub.t(TaskModel.priorityOf(t).label)) + '</span>') : '',
         assigneesFact(t),
         t.contacto ? fact('contact', 'Contacto', '<span translate="no">' + esc(t.contacto) + '</span>') : '',
         locationFact(t),

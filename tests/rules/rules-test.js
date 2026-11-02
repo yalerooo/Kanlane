@@ -314,6 +314,10 @@ async function t(name, fn){
   await t('una hora que no es HH:MM se rechaza', () => assertFails(own.collection('tasks').doc('timed2').set({title:'a', dueDate:'2026-10-09', dueTime:'16:30:00'})));
   await t('una tarea demasiado grande se rechaza', () => assertFails(own.collection('tasks').doc('oversize').set({title:'a'.repeat(501)})));
   await t('una tarea admite fecha de inicio y campos personalizados', () => assertSucceeds(own.collection('tasks').doc('ranged').set({title:'a', startDate:'2026-10-06', dueDate:'2026-10-09', custom:{f1:10, f2:'texto', f3:true}})));
+  await t('una tarea admite urgencia y fecha de llegada a su columna', () => assertSucceeds(own.collection('tasks').doc('urgent').set({title:'a', priority:'high', statusAt:123})));
+  await t('una fecha de llegada que no es un número se rechaza también sellada', () => assertFails(own.collection('tasks').doc('urgent4').set({e:'x', ev:1, kid:'k', statusAt:'ayer'})));
+  await t('una urgencia demasiado larga se rechaza', () => assertFails(own.collection('tasks').doc('urgent2').set({title:'a', priority:'x'.repeat(11)})));
+  await t('una fecha de llegada que no es un número se rechaza', () => assertFails(own.collection('tasks').doc('urgent3').set({title:'a', statusAt:'ayer'})));
   await t('una fecha de inicio que no es AAAA-MM-DD se rechaza', () => assertFails(own.collection('tasks').doc('ranged2').set({title:'a', startDate:'2026-10-06T00:00:00Z'})));
   await t('una tarea admite portada de color', () => assertSucceeds(own.collection('tasks').doc('cover1').set({title:'a', cover:{color:'blue'}})));
   await t('una tarea admite portada de imagen', () => assertSucceeds(own.collection('tasks').doc('cover2').set({title:'a', cover:{asset:'abc123'}})));

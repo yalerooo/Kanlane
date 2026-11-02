@@ -40,6 +40,13 @@
       this.colors = $('colColors');
       this.limitInput = $('colLimit');
       this.doneChk = $('colDone');
+      this.autoDeleteField = $('colAutoDeleteField');
+      this.autoDeleteInput = $('colAutoDelete');
+      this.doneChk.addEventListener('change', () => {
+        this.autoDeleteField.hidden = !this.doneChk.checked;
+        /* Oculto y con un valor que no vale, impediría enviar el formulario. */
+        if(!this.doneChk.checked) this.autoDeleteInput.value = '';
+      });
       this.error = $('colError');
       this.color = 'gray';
       this.editing = null;
@@ -84,7 +91,7 @@
       });
     }
 
-    /* info: {index, count, visible, tasks, canRemove, canArchive, archiveWhy, canDuplicate}
+    /* info: {index, count, visible, tasks, done, canRemove, canArchive, archiveWhy, canDuplicate}
        archiveWhy: por qué no se puede archivar la columna (se enseña al pasar el ratón). */
     openMenu(btn, status, info){
       this.status = status;
@@ -106,6 +113,11 @@
         item('sort', ICONS.sort, 'Fecha límite', {by:'due', disabled: info.tasks < 2}) +
         item('sort', ICONS.sort, 'Título', {by:'title', disabled: info.tasks < 2}) +
         item('sort', ICONS.sort, 'Fecha de creación', {by:'created', disabled: info.tasks < 2}) +
+        item('sort', ICONS.sort, 'Urgencia', {by:'priority', disabled: info.tasks < 2}) +
+        (info.done
+          ? item('sort', ICONS.sort, 'Llegada a la columna: recientes primero', {by:'arrived-new', disabled: info.tasks < 2}) +
+            item('sort', ICONS.sort, 'Llegada a la columna: antiguas primero', {by:'arrived-old', disabled: info.tasks < 2})
+          : '') +
         '<div class="dd-sep"></div><p class="project-menu-label">Tarjetas</p>' +
         item('archiveAll', ICONS.archive, 'Archivar todas', {disabled: !info.tasks}) +
         item('removeAll', ICONS.trash, 'Eliminar todas', {danger:true, disabled: !info.tasks}) +
@@ -159,7 +171,7 @@
 
     /* ---------- Editar columna ---------- */
 
-    /* handler(status, {label, color, limit, done}) */
+    /* handler(status, {label, color, limit, done, autoDelete}) */
     bindSubmit(handler){
       this.form.addEventListener('submit', (ev) => {
         ev.preventDefault();
@@ -172,7 +184,14 @@
           this.limitInput.focus();
           return;
         }
-        handler(this.editing, {label:label, color:this.color, limit:limit, done:this.doneChk.checked});
+        const rawDays = this.autoDeleteInput.value.trim();
+        const days = rawDays === '' || !this.doneChk.checked ? 0 : Math.floor(+rawDays);
+        if(this.doneChk.checked && rawDays !== '' && !(days >= 1 && days <= 3650)){
+          this.showError('Los días tienen que estar entre 1 y 3650, o vacío si no quieres que se eliminen.');
+          this.autoDeleteInput.focus();
+          return;
+        }
+        handler(this.editing, {label:label, color:this.color, limit:limit, done:this.doneChk.checked, autoDelete:days});
       });
     }
 
@@ -182,6 +201,8 @@
       this.color = stage.color;
       this.limitInput.value = stage.limit ? String(stage.limit) : '';
       this.doneChk.checked = !!stage.done;
+      this.autoDeleteInput.value = stage.autoDelete ? String(stage.autoDelete) : '';
+      this.autoDeleteField.hidden = !stage.done;
       this.error.hidden = true;
       this._renderColors();
       this.dlg.showModal();

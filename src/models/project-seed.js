@@ -43,6 +43,7 @@
       if(dueDate && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '')) body.dueTime = t.dueTime;
       if(/^\d{4}-\d{2}-\d{2}$/.test(t.startDate || '') && (!dueDate || t.startDate <= dueDate)) body.startDate = t.startDate;
       if(typeof t.location === 'string' && t.location.trim()) body.location = cut(t.location.trim(), 200);
+      if(['high', 'medium', 'low'].indexOf(t.priority) !== -1) body.priority = t.priority;
       /* Portada: solo de color (una semilla no trae imágenes adjuntas). */
       const color = t.cover && typeof t.cover.color === 'string' ? t.cover.color : '';
       if(color && Workhub.models.ProjectTemplates.COLORS.some((c) => c.key === color)) body.cover = {color:color};

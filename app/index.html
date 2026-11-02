@@ -204,7 +204,7 @@
   <a class="skip-link" href="#contenido">Saltar al contenido</a>
   <aside class="sidebar glass">
     <div class="brand-row">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64" width="19" height="19" fill="currentColor"><path d="M10 37C5.5 34 4 29.5 4 26C4 15.5 18 8 32 8C46 8 60 15.5 60 26C60 29.5 58.5 34 54 37V40H42a2 2 0 0 0 -4 0H26a2 2 0 0 0 -4 0H10Z"/><rect x="10" y="34" width="12" height="15" rx="6"/><rect x="26" y="34" width="12" height="21" rx="6"/><rect x="42" y="34" width="12" height="17" rx="6"/><circle cx="24" cy="26" r="4.4" fill="var(--accent-solid)"/><circle cx="40" cy="26" r="4.4" fill="var(--accent-solid)"/></svg></span>
+      <a class="brand-mark" id="brandMark" href="./" draggable="false" tabindex="-1" aria-hidden="true" title="Clic con la rueda: abrir Kanlane en otra pestaña"><svg viewBox="0 0 64 64" width="19" height="19" fill="currentColor"><path d="M10 37C5.5 34 4 29.5 4 26C4 15.5 18 8 32 8C46 8 60 15.5 60 26C60 29.5 58.5 34 54 37V40H42a2 2 0 0 0 -4 0H26a2 2 0 0 0 -4 0H10Z"/><rect x="10" y="34" width="12" height="15" rx="6"/><rect x="26" y="34" width="12" height="21" rx="6"/><rect x="42" y="34" width="12" height="17" rx="6"/><circle cx="24" cy="26" r="4.4" fill="var(--accent-solid)"/><circle cx="40" cy="26" r="4.4" fill="var(--accent-solid)"/></svg></a>
       <span class="brand-name">Kanlane</span>
     </div>
     <div class="brand">
@@ -1056,6 +1056,15 @@
           <p class="field-help" id="fRepeatHelp">Al terminar la tarea se crea la siguiente con la próxima fecha. Necesita fecha límite.</p>
           <p class="lock-error" id="fRepeatError" role="alert" hidden></p>
         </div>
+        <div class="field">
+          <label for="fPriority">Urgencia</label>
+          <select id="fPriority">
+            <option value="">Sin urgencia</option>
+            <option value="high">Alta</option>
+            <option value="medium">Media</option>
+            <option value="low">Baja</option>
+          </select>
+        </div>
         <div class="field" id="fLabelsField">
           <span class="field-label" id="fLabelsLabel">Etiquetas</span>
           <div class="label-picker" id="fLabels" role="group" aria-labelledby="fLabelsLabel"></div>
@@ -1615,6 +1624,11 @@
       <p class="field-help">Déjalo vacío para no poner límite. La cuenta se marca en rojo al superarlo.</p>
     </div>
     <label class="check-row"><input type="checkbox" id="colDone"> Las tarjetas de esta columna cuentan como terminadas</label>
+    <div class="field" id="colAutoDeleteField" hidden>
+      <label for="colAutoDelete">Eliminar las tarjetas pasados estos días</label>
+      <input id="colAutoDelete" type="number" min="1" max="3650" inputmode="numeric" placeholder="No eliminar">
+      <p class="field-help">Cuenta desde que la tarjeta llega a esta columna; las que ya están empiezan a contar ahora. Se eliminan con sus notas la próxima vez que alguien tenga el proyecto abierto. Déjalo vacío para conservarlas.</p>
+    </div>
     <p class="lock-error" id="colError" hidden></p>
     <div class="dlg-actions">
       <div class="right">

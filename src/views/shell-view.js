@@ -43,6 +43,9 @@
 
   class ShellView {
     constructor(){
+      /* El logotipo es un enlace para abrir otra pestaña (rueda o Ctrl + clic); el clic normal no hace nada. */
+      const brand = document.getElementById('brandMark');
+      if(brand) brand.addEventListener('click', (ev) => { if(!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) ev.preventDefault(); });
       this.nav = document.querySelector('.tabs');
       this.tabs = Array.from(this.nav.querySelectorAll('.tab[data-view]'));
       this.pluginNav = document.getElementById('pluginNav');

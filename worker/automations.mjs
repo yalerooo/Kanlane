@@ -300,7 +300,7 @@ export async function runJob(id, job, store, nowMs) {
     update: (taskId, patch) => {
       const change = Object.assign({}, patch, {updatedAt: nowMs});
       /* Al final de su columna nueva (los órdenes del tablero son marcas de tiempo o mayores). */
-      if (patch.status) change.order = nowMs;
+      if (patch.status) { change.order = nowMs; change.statusAt = nowMs; }
       Object.assign(tasks.find((t) => t.id === taskId), change);
       patches[taskId] = Object.assign(patches[taskId] || {}, change);
       return Promise.resolve();

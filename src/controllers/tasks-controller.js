@@ -4,6 +4,9 @@
 (function(){
   const platform = Workhub.services.platform;
   const toast = Workhub.views.toast;
+  /* Limpieza de las columnas de terminadas: cada cuánto se mira y cuánto se espera al abrir un proyecto. */
+  const SWEEP_EVERY_MS = 60000;
+  const SWEEP_WAIT_MS = 30000;
 
   /* Nombre de una copia, «Nombre (copia)», sin pasar de max caracteres (se recorta el nombre). */
   function copyName(name, max){
@@ -54,6 +57,7 @@
         this.refreshDetail();
       });
 
+      setInterval(() => this.sweepExpired(), SWEEP_EVERY_MS);
       this.board.bindNew(() => this.openNew());
       this.board.bindFilters(() => this.render());
       this.board.bindOpen((id) => this.openDetail(id));
@@ -81,6 +85,7 @@
         status: (id, status) => this.moveWithActivity(id, status),
         labels: (id, labels) => this.patchTask(id, {labels:labels}),
         assignees: (id, uids) => this.patchTask(id, {assignees:uids}),
+        priority: (id, priority) => this.patchTask(id, {priority:priority}),
         due: (id, date) => this.setDue(id, date)
       });
       this.timeline = new Workhub.views.TaskTimelineView();
@@ -468,6 +473,7 @@
           count: stages.length,
           visible: stages.length - this.hiddenColumns().length,
           tasks: this.tasks.items.filter((t) => TaskModel.stageKey(t) === status).length,
+          done: !!TaskModel.statusOf(status).done,
           canRemove: stages.length > PT.MIN_STAGES,
           canDuplicate: stages.length + TaskModel.ARCHIVED.length < PT.MAX_STAGES,
           canArchive: !this.archiveBlock(status),
@@ -496,6 +502,7 @@
           s.color = v.color;
           s.limit = v.limit;
           s.done = v.done;
+          s.autoDelete = v.autoDelete;
           if(!stages.some((x) => x.done && !x.archived)){
             col.showError('Tiene que haber al menos una columna cuyas tarjetas cuenten como terminadas.');
             return false;
@@ -506,13 +513,37 @@
       this.board.bindColumnMove((status, before) => this.reorderColumn(status, before));
     }
 
-    /* Ordena las tarjetas de una columna una vez (by: 'due' | 'title' | 'created'); después se
-       puede seguir arrastrando. */
+    /* Ordena las tarjetas de una columna una vez (ver TaskModel.sortColumn); después se puede
+       seguir arrastrando. */
     sortColumn(status, by){
       if(!this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
       const before = this.tasks.sortColumn(status, by);
       if(!before){ toast.success('La columna ya estaba en ese orden', {important:true}); return; }
       toast.undoable('Columna ordenada', () => { this.tasks.setOrders(before); return Promise.resolve(); }, 'Orden anterior restaurado');
+    }
+
+    /* Elimina las tarjetas que llevan en su columna de terminadas más días de los que esta permite
+       (no hay servidor que lo haga: lo hace quien tiene el proyecto abierto). No actúa sin conexión
+       ni con la pestaña oculta, y al abrir un proyecto espera un poco: la primera lectura puede
+       venir de la caché y no saber aún que una tarea salió de la columna desde otro dispositivo. */
+    sweepExpired(){
+      const now = Date.now();
+      const project = this.app.projectId;
+      if(this.sweepProject !== project){
+        this.sweepProject = project;
+        this.sweepSince = now;
+        return;
+      }
+      if(now - this.sweepSince < SWEEP_WAIT_MS || !this.tasks.isReady() || !Workhub.views.team.canEdit()) return;
+      if(document.hidden || navigator.onLine === false) return;
+      const {remove, unstamped} = this.tasks.expiredDone(now);
+      if(unstamped.length) this.tasks.stampArrival(unstamped, now);
+      if(!remove.length) return;
+      const snap = this.tasks.snapshot(remove);
+      Promise.all(remove.map((id) => this.tasks.remove(id))).then(() => {
+        toast.undoable(remove.length === 1 ? Workhub.t('Se eliminó una tarea terminada hace tiempo') : Workhub.t('Se eliminaron {n} tareas terminadas hace tiempo', {n:remove.length}),
+          () => this.tasks.restore(snap), remove.length === 1 ? 'Tarea restaurada' : 'Tareas restauradas');
+      }, () => {});
     }
 
     moveColumn(status, dir){

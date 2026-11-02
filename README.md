@@ -103,9 +103,17 @@ Un plugin mínimo:
 2. Publícala en una web con **https** (por ejemplo, GitHub Pages).
 3. En Kanlane: **Plugins → pega el enlace → Añadir → revisa los permisos → Instalar**.
 
-Permisos disponibles: `tasks:read`, `tasks:write`, `clients:read`, `contacts:read`, `calendar:read`, `calendar:write`, `storage`, `ui:extend` y `appearance`.
+Permisos disponibles: `tasks:read`, `tasks:write`, `clients:read`, `contacts:read`, `calendar:read`, `calendar:write`, `storage`, `notifications`, `ui:extend` y `appearance`.
 
 **Guía completa** (API, eventos, formularios, estilos, publicación y límites): [docs/PLUGINS.md](docs/PLUGINS.md). Los plugins oficiales de [`plugins/`](plugins) sirven de ejemplo. Los identificadores internos del SDK conservan el nombre antiguo `Workhub` (`WorkhubPlugin`, `workhub-plugin.js`) para que los plugins existentes sigan funcionando.
+
+### Plugins de terceros
+
+Plugins publicados por otras personas. Se instalan con su enlace desde **Plugins → pega el enlace → Añadir**. Kanlane no los mantiene: revisa los permisos que piden antes de instalarlos.
+
+| Plugin | Qué hace | Enlace para instalarlo |
+|---|---|---|
+| **KanPad Pro** | Notas, documentos, Codepad, Markdown y hojas Grid organizados en carpetas del proyecto. | `https://jmscb24.github.io/kanpad-pro/index.html` |
 
 ## Para desarrolladores
 
@@ -263,9 +271,17 @@ A minimal plugin:
 2. Publish it on an **https** website (for example, GitHub Pages).
 3. In Kanlane: **Plugins → paste the link → Add → review the permissions → Install**.
 
-Available permissions: `tasks:read`, `tasks:write`, `clients:read`, `contacts:read`, `calendar:read`, `calendar:write`, `storage`, `ui:extend` and `appearance`.
+Available permissions: `tasks:read`, `tasks:write`, `clients:read`, `contacts:read`, `calendar:read`, `calendar:write`, `storage`, `notifications`, `ui:extend` and `appearance`.
 
 **Full guide** (API, events, forms, styling, publishing and limits): [docs/PLUGINS.md](docs/PLUGINS.md) *(in Spanish)*. The official plugins in [`plugins/`](plugins) are complete examples. The SDK's internal identifiers keep the old `Workhub` name (`WorkhubPlugin`, `workhub-plugin.js`) so existing plugins keep working.
+
+### Third-party plugins
+
+Plugins published by other people. Install them with their link from **Plugins → paste the link → Add**. Kanlane does not maintain them: review the permissions they ask for before installing.
+
+| Plugin | What it does | Link to install it |
+|---|---|---|
+| **KanPad Pro** | Notes, documents, Codepad, Markdown and Grid sheets organised in project folders. | `https://jmscb24.github.io/kanpad-pro/index.html` |
 
 ## For developers
 

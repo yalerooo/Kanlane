@@ -33,6 +33,7 @@
 .tt .tt-col-status{width:19%;}
 .tt .tt-col-labels{width:21%;}
 .tt .tt-col-assignee{width:16%;}
+.tt .tt-col-priority{width:120px;}
 .tt .tt-col-due{width:150px;}
 .tt .tt-col-open{width:44px;text-align:center;}
 

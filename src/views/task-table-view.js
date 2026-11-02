@@ -11,6 +11,7 @@
     {key:'status', label:'Estado'},
     {key:'labels', label:'Etiquetas'},
     {key:'assignee', label:'Responsable', team:true},
+    {key:'priority', label:'Urgencia'},
     {key:'due', label:'Fecha límite'}
   ];
 
@@ -38,7 +39,7 @@
     }
 
     /* handlers: {open(id), create(), title(id, text), status(id, key), labels(id, list),
-       assignees(id, uids), due(id, date) → false si la fecha no vale} */
+       assignees(id, uids), priority(id, key), due(id, date) → false si la fecha no vale} */
     bind(handlers){ this.handlers = handlers; }
 
     _bind(){
@@ -93,6 +94,8 @@
           if(text !== el.defaultValue) this.handlers.title(id, text);
         } else if(el.classList.contains('tt-status')){
           this.handlers.status(id, el.value);
+        } else if(el.classList.contains('tt-priority')){
+          this.handlers.priority(id, el.value);
         } else if(el.classList.contains('tt-due')){
           if(this.handlers.due(id, el.value) === false) el.value = el.defaultValue;
         }
@@ -183,6 +186,7 @@
         if(key === 'title') return t.title || '';
         if(key === 'labels') return labelsOf(t).join(' ');
         if(key === 'assignee') return T.assigned(t).map((u) => T.name(u)).join(' ');
+        if(key === 'priority') return TaskModel.priorityOf(t) ? String(TaskModel.priorityRank(t) + 1) : '';
         return t.dueDate ? t.dueDate + ' ' + (t.dueTime || '') : '';
       };
       const list = tasks.slice();
@@ -226,6 +230,8 @@
           '<span>' + esc(Workhub.t(c.label)) + '</span><i class="tt-arrow" aria-hidden="true">' + (on ? (this.sort.dir === 1 ? '↑' : '↓') : '') + '</i></button></th>';
       }).join('') + '<th scope="col" class="tt-col-open"><span class="sr-only">' + esc(Workhub.t('Abrir')) + '</span></th>';
 
+      const priorityOptions = (current) => '<option value="">' + esc(Workhub.t('Sin urgencia')) + '</option>' +
+        TaskModel.PRIORITIES.map((p) => '<option value="' + p.key + '"' + (p.key === current ? ' selected' : '') + '>' + esc(Workhub.t(p.label)) + '</option>').join('');
       const stageOptions = (current) => TaskModel.STATUS.map((s) => '<option value="' + esc(s.key) + '"' + (s.key === current ? ' selected' : '') + ' translate="no">' + esc(s.label) + '</option>').join('');
 
       const rows = this._sorted(tasks).map((t) => {
@@ -235,6 +241,7 @@
         const ds = TaskModel.dueState(t);
         const labels = labelsOf(t);
         const who = T.enabled() ? T.assigned(t) : [];
+        const priority = TaskModel.priorityOf(t);
         const chips = labels.length ? Workhub.views.labels.chips(labels, 3) : '<span class="tt-none">' + esc(Workhub.t('Sin etiquetas')) + '</span>';
         const people = who.length ? T.stack(who, 3) + '<span class="tt-who" translate="no">' + esc(who.length === 1 ? T.name(who[0]) : '') + '</span>' : '<span class="tt-none">' + esc(Workhub.t('Sin asignar')) + '</span>';
         const cell = {
@@ -248,6 +255,9 @@
             : '<button type="button" class="tt-cell-btn tt-chips" data-pop="labels" aria-haspopup="true" aria-expanded="false" aria-label="' + esc(Workhub.t('Etiquetas')) + (labels.length ? ': ' + esc(labels.join(', ')) : '') + '">' + chips + '</button>',
           assignee: locked ? '<span class="tt-people">' + people + '</span>'
             : '<button type="button" class="tt-cell-btn tt-people" data-pop="assignees" aria-haspopup="true" aria-expanded="false" aria-label="' + esc(Workhub.t('Responsable')) + '">' + people + '</button>',
+          priority: locked
+            ? (priority ? '<span>' + esc(Workhub.t(priority.label)) + '</span>' : '<span class="tt-none">' + esc(Workhub.t('Sin urgencia')) + '</span>')
+            : '<select class="tt-priority dd-plain" aria-label="' + esc(Workhub.t('Urgencia')) + '">' + priorityOptions(priority ? priority.key : '') + '</select>',
           due: locked
             ? (t.dueDate ? '<span class="tt-date-text' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : '') + '">' + esc(Workhub.utils.dates.fmtDate(t.dueDate)) + (t.dueTime ? ' · ' + esc(t.dueTime) : '') + '</span>' : '<span class="tt-none">' + esc(Workhub.t('Sin fecha')) + '</span>')
             : '<input type="date" class="tt-due' + (ds === 'overdue' ? ' is-overdue' : ds === 'today' ? ' is-today' : '') + (t.dueDate ? '' : ' is-empty') + '" value="' + esc(t.dueDate || '') + '" aria-label="' + esc(Workhub.t('Fecha límite')) + '"' + (ds === 'overdue' ? ' title="' + esc(Workhub.t('Vencida')) + '"' : '') + '>'

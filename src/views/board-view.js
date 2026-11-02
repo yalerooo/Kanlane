@@ -778,6 +778,7 @@
 
   /* Por id de tarea, los títulos de las tareas sin terminar que la bloquean (lo rellena render). */
   let blockedBy = {};
+  const FLAG_ICON = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4c5-3 9 3 14 0v10c-5 3-9-3-14 0"/></svg>';
 
   /* Aviso de que la tarea está bloqueada por otra; al pasar el ratón dice por cuáles. */
   function blockedHtml(t){
@@ -799,6 +800,14 @@
     const txt = ranged ? fmtDate(r.start) + ' – ' + end : end;
     const title = ds === 'overdue' ? ' title="' + esc(Workhub.t('Vencida')) + '"' : '';
     return '<span class="' + cls + '"' + title + '>' + iconSpan(ds === 'done' ? 'check' : 'calendar') + esc(txt) + (t.dueTime ? '<span class="due-time" translate="no">' + esc(t.dueTime) + '</span>' : '') + '</span>';
+  }
+
+  /* Urgencia de la tarea (solo si tiene). */
+  function priorityHtml(t){
+    const p = TaskModel.priorityOf(t);
+    if(!p) return '';
+    const text = Workhub.t(p.label);
+    return '<span class="priority-badge is-' + p.key + '" title="' + esc(Workhub.t('Urgencia: {nivel}', {nivel:text})) + '">' + FLAG_ICON + '<span class="priority-text">' + esc(text) + '</span></span>';
   }
 
   /* Progreso de las subtareas: anillo y «hechas/total». */
@@ -845,6 +854,7 @@
     const who = T.enabled() ? T.stack(T.assigned(t), 3) : '';
     const top = clientHtml(t) + tagsHtml(t);
     const foot = [
+      priorityHtml(t),
       blockedHtml(t),
       dueHtml(t),
       progressHtml(t),
@@ -878,7 +888,7 @@
       /* Cada dato en su columna (vacía si no lo hay), para que las filas queden alineadas. */
       (clientHtml(t) || '<span class="card-client"></span>') +
       (tagsHtml(t) || '<span class="card-tag"></span>') +
-      '<span class="tl-extra">' + blockedHtml(t) + progressHtml(t) + (t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '') + '</span>' +
+      '<span class="tl-extra">' + priorityHtml(t) + blockedHtml(t) + progressHtml(t) + (t.repeat ? '<span class="repeat-badge" title="Se repite">' + iconSpan('repeat') + '</span>' : '') + '</span>' +
       (who ? '<span class="card-assignees">' + who + '</span>' : '') +
       '<span class="tl-due">' + dueHtml(t) + '</span>' +
       '</div>';

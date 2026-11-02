@@ -192,6 +192,11 @@ a.tv-location{color:inherit;text-decoration:underline;text-underline-offset:2px;
 .blocked-badge{display:inline-flex;align-items:center;gap:5px;flex:none;height:22px;padding:0 8px;font-size:12px;border-radius:var(--r-sm);background:var(--late-bg);color:var(--late);white-space:nowrap;}
 .blocked-badge .icon{display:inline-flex;color:inherit !important;margin:0;}
 .tl-extra .blocked-badge{padding:0 6px;font-size:0;gap:0;}
+.priority-badge{display:inline-flex;align-items:center;gap:4px;flex:none;height:22px;padding:0 7px;font-size:12px;border-radius:var(--r-sm);white-space:nowrap;background:var(--surface-2);color:var(--ink-soft);}
+.priority-badge.is-high{background:var(--late-bg);color:var(--late);}
+.priority-badge.is-medium{background:var(--today-bg);color:var(--today);}
+.tl-extra .priority-badge{padding:0 6px;}
+.tl-extra .priority-text{display:none;}
 /* Relaciones entre tareas en el formulario: tipo y tarea, uno al lado del otro. */
 .relation-add{display:grid;grid-template-columns:minmax(0, 190px) minmax(0, 1fr);gap:8px;}
 .linked-row.is-blocking .linked-meta{color:var(--late);}

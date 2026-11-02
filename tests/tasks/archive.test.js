@@ -88,7 +88,7 @@ const SEED = [
     delete back.statusAt;
     assert.deepEqual(back, {archivedAt:0});
     assert.deepEqual(ids(m.inStatus('todo')), ['a'], 'vuelve a su columna y a su sitio');
-    assert.deepEqual(plain(Object.assign({}, docs.get('a'), {archivedAt:undefined})), before);
+    assert.deepEqual(plain(Object.assign({}, docs.get('a'), {archivedAt:undefined, statusAt:undefined})), before);
     assert.deepEqual(ids(m.archivedItems()), []);
     ok('tareas: archivar y restaurar conserva los datos');
   }

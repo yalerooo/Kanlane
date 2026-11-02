@@ -23,6 +23,7 @@
     'calendar:read': 'Ver las reuniones del calendario',
     'calendar:write': 'Crear reuniones en el calendario',
     'storage': 'Guardar sus propios datos en tu cuenta',
+    'notifications': 'Enviarte notificaciones del navegador mientras Kanlane está abierto',
     'ui:extend': 'Añadir botones y etiquetas en Tareas, Calendario, Clientes y la paleta de comandos',
     'appearance': 'Cambiar el tema, los colores, la tipografía, el tamaño del texto, las esquinas y el espaciado de Kanlane'
   };
@@ -36,6 +37,7 @@
     'calendar:read': {short:'Calendario', icon:'calendar'},
     'calendar:write': {short:'Crear reuniones', icon:'calendar'},
     'storage': {short:'Guardar datos', icon:'database'},
+    'notifications': {short:'Notificaciones', icon:'bell'},
     'ui:extend': {short:'Añadir botones', icon:'kanban'},
     'appearance': {short:'Apariencia', icon:'sparkles'}
   };
@@ -59,6 +61,7 @@
     'storage.remove': 'storage',
     'storage.keys': 'storage',
     'ui.toast': null,
+    'ui.notify': 'notifications',
     'ui.openTask': 'tasks:read',
     'ui.openPanel': null,
     'ui.addButton': 'ui:extend',

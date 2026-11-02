@@ -11,7 +11,7 @@
   /* En claro: lo que necesitan las reglas, una consulta del servidor o una actualización parcial
      frecuente (mover, reprogramar, reordenar), e identificadores opacos. */
   const CLEAR = {
-    tasks: ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt',
+    tasks: ['status', 'order', 'dueDate', 'repeat', 'repeatSpawned', 'createdAt', 'updatedAt', 'statusAt',
             'assignees', 'linkedContacts', 'linkedVault', 'followers'],
     notes: ['createdAt', 'kind', 'actorUid', 'imageAssetId', 'assetIds'],
     clients: ['color', 'createdAt'],
@@ -30,7 +30,7 @@
 
   /* El servidor ya no ve el contenido: los límites de validData() se aplican aquí antes de cifrar. */
   const TEXT_MAX = {
-    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10, repeatAnchor: 13, location: 200},
+    tasks: {title: 500, desc: 20000, cliente: 200, dueTime: 5, startDate: 10, repeatAnchor: 13, location: 200, priority: 10},
     notes: {text: 20000, actorName: 200},
     clients: {nombre: 200},
     contacts: {nombre: 200, email: 320, notas: 10000},

@@ -132,6 +132,8 @@
             isBackground: ((msg.context && msg.context.mode) || 'panel') === 'background',
             ui: {
               toast: function(message, opts){ return call('ui.toast', {message:message, type:(opts && opts.type) || 'success'}); },
+              /* Notificación del navegador (permiso notifications). opts: {body, tag, taskId}. */
+              notify: function(title, opts){ return call('ui.notify', {title:title, body:opts && opts.body, tag:opts && opts.tag, taskId:opts && opts.taskId}); },
               openTask: function(id){ return call('ui.openTask', {id:id}); },
               openPanel: function(){ return call('ui.openPanel'); },
               /* Cuadro de formulario que dibuja Kanlane (permiso ui:extend). Devuelve

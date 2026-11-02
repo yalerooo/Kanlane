@@ -147,6 +147,7 @@ Es el objeto que pasas a `WorkhubPlugin.connect(manifiesto)`. Kanlane lo muestra
 | `calendar:read` | Leer las reuniones del calendario. |
 | `calendar:write` | Crear reuniones. |
 | `storage` | Guardar datos propios del plugin, por proyecto (`wh.storage`) o comunes a todos (`wh.storage.user`). |
+| `notifications` | Enviar notificaciones del navegador con `wh.ui.notify`. |
 | `ui:extend` | Añadir botones en Tareas, en la ficha de tarea, en Calendario, en la ficha de cliente y en la paleta de comandos, y etiquetas en las tarjetas. El plugin se carga en segundo plano. |
 | `appearance` | Cambiar el tema, la paleta de interfaz, el color de acento, la tipografía, el tamaño del texto, las esquinas y la densidad de Kanlane. El plugin se carga en segundo plano. |
 
@@ -245,6 +246,18 @@ await wh.ui.toast('Algo falló', {type:'error'})
 await wh.ui.openTask(id)                       // abre la ficha de la tarea en Kanlane (tasks:read)
 await wh.ui.openPanel()                        // abre tu plugin en la sección Plugins
 ```
+
+#### Notificaciones (`wh.ui.notify`, permiso `notifications`)
+
+```js
+await wh.ui.notify('Temporizador terminado', {
+  body: 'Han pasado 25 minutos',  // opcional, hasta 200 caracteres
+  tag: 'pomodoro',                // opcional: sustituye a tu notificación anterior con ese tag
+  taskId: id                      // opcional: abre esa tarea al pulsarla (exige también tasks:read)
+})
+```
+
+El título (hasta 80 caracteres) se muestra precedido por el nombre del plugin. La primera vez, Kanlane pregunta a la persona y después lo hace el navegador; si no lo permite, la llamada falla con `notifications-denied`. Otros errores: `unsupported` (navegador sin notificaciones) y `rate-limited` (más de 6 por minuto). Solo funciona mientras Kanlane está abierto y tu plugin cargado: en su panel o, si pide `ui:extend` o `appearance`, en segundo plano. El texto puede verse en la pantalla de bloqueo, también en proyectos con cifrado total: no pongas datos delicados.
 
 #### Formularios (`wh.ui.form`, permiso `ui:extend`)
 

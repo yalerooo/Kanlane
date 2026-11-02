@@ -194,6 +194,7 @@
         if(+t.archivedAt > 0) extra.archivedAt = +t.archivedAt;
         /* La ubicación se conserva. Los votos no: son de las personas del proyecto del que salió la copia. */
         if(typeof t.location === 'string' && t.location.trim()) extra.location = t.location.trim().slice(0, 200);
+        if(['high', 'medium', 'low'].indexOf(t.priority) !== -1) extra.priority = t.priority;
         /* Portada: el color va con la tarea; la imagen es de una nota y se enlaza cuando esa nota
            ya está copiada (más abajo), con el id que tenga aquí. */
         const cover = coverOf(t);

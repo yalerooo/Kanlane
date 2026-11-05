@@ -69,7 +69,7 @@
     'Has terminado esta tarea. Ya lleva {h} h registradas: añade solo las que falten.':'You finished this task. It already has {h} h logged: add only what is missing.',
     'Subtarea':'Subtask', 'La tarea entera':'The whole task',
     'Preguntar las horas al completar una subtarea':'Ask for hours when a subtask is completed',
-    'Añade horas a mano.':'Add hours by hand.', 'Registro manual':'Manual entry', 'Guardar':'Save', 'Omitir':'Skip', 'Cancelar':'Cancel',
+    'Añade horas a mano.':'Add hours by hand.', 'Registro manual':'Manual entry', 'Guardar':'Save', 'Omitir':'Skip', 'Pon 0 si ya tienes sus horas registradas.':'Enter 0 if its hours are already logged.', 'Sin horas nuevas para «{t}»':'No new hours for “{t}”', 'Cancelar':'Cancel',
     '{h} h registradas en {p}':'{h} h logged in {p}',
     'Editar registro':'Edit entry', 'Registro eliminado':'Entry deleted',
     'Añade proyectos para agrupar tus horas (clientes, líneas de trabajo…).':'Add projects to group your hours (clients, lines of work…).',
@@ -319,8 +319,9 @@
 
   /* ---------- Formularios (los dibuja Kanlane) ---------- */
 
-  function hoursField(value){
-    return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: 0.25, max: 500, step: 0.25, value: value != null ? value : 0};
+  /* zero: se admite 0 (al terminar una tarea: ya tenía sus horas). */
+  function hoursField(value, zero){
+    return {key: 'hours', type: 'number', label: tr('Horas dedicadas'), unit: 'h', min: zero ? 0 : 0.25, max: 500, step: 0.25, value: value != null ? value : 0};
   }
   /* value: id de un proyecto, o {new, color} si se había escrito uno nuevo y se vuelve a abrir. */
   function projectField(value){
@@ -349,8 +350,9 @@
     var byClient = task && task.cliente ? st.projects.filter(function(p){ return p.name.toLowerCase() === task.cliente.toLowerCase(); })[0] : null;
     var days = state.days || (dates && dates.length ? dates : [today()]);
     return usedOn(days).then(function(used){
-      var hoursField_ = hoursField(state.hours != null ? state.hours : 0);   /* siempre empieza en 0: cada tarea tiene sus horas */
+      var hoursField_ = hoursField(state.hours != null ? state.hours : 0, !!task);   /* siempre empieza en 0: cada tarea tiene sus horas */
       if(days.length === 1) hoursField_.hint = limitHint(days[0], used);
+      if(task) hoursField_.hint = ((hoursField_.hint || '') + ' ' + tr('Pon 0 si ya tienes sus horas registradas.')).trim();
       var fields = [
         hoursField_,
         {key: 'days', type: 'dates', label: tr('Días trabajados'), value: days, hint: tr('Las horas se reparten a partes iguales entre los días.')},
@@ -374,6 +376,15 @@
       });
     }).then(function(v){
       if(!v) return false;
+      /* 0 horas: no se apunta nada y no se vuelve a preguntar por ella. */
+      if(task && !(v.hours > 0)){
+        var subZero = subById(task, v.sub);
+        st.logged[subZero ? subKey(task.id, subZero.id) : task.id] = true;
+        return set('logged', st.logged).then(function(){
+          wh.ui.toast(tr('Sin horas nuevas para «{t}»', {t: task.title}));
+          return false;
+        });
+      }
       var parts = splitHours(v.hours, v.days.length);
       var perDay = v.days.map(function(d, i){ return {date: d, hours: parts[i]}; });
       return usedOn(v.days).then(function(used){

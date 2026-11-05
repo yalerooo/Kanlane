@@ -151,5 +151,32 @@ const STAGES = [{key:'todo', label:'Por hacer'}, {key:'doing', label:'En curso'}
     ok('la opción de la columna se valida');
   }
 
+  {
+    /* Reglas publicadas anteriores a statusAt: rechazan la escritura entera. Mover tiene que seguir
+       funcionando (si no, la tarjeta vuelve a su columna). Va el último: el aviso dura la sesión. */
+    const docs = new Map([['a', {id:'a', title:'a', status:'todo', order:1}], ['b', {id:'b', title:'b', status:'todo', order:2}]]);
+    const sent = [];
+    const m = new TaskModel();
+    m.col = {doc:(id) => ({update:(patch) => {
+      sent.push(Object.keys(patch).sort().join());
+      if('statusAt' in patch) return Promise.reject(Object.assign(new Error('denied'), {code:'permission-denied'}));
+      Object.assign(docs.get(id), patch);
+      return Promise.resolve();
+    }})};
+    m.items = Array.from(docs.values()).map((d) => Object.assign({}, d));
+    const warn = console.warn;
+    console.warn = () => {};
+    await m.update('a', {status:'done', order:5, statusAt:7, updatedAt:8});
+    assert.equal(docs.get('a').status, 'done', 'se guarda el cambio de columna sin statusAt');
+    assert.equal(docs.get('a').statusAt, undefined);
+    await m.update('b', {status:'done', statusAt:9});
+    assert.equal(docs.get('b').status, 'done');
+    assert.deepEqual(sent, ['order,status,statusAt,updatedAt', 'order,status,updatedAt', 'status'], 'después ya no se manda statusAt');
+    await m.update('b', {statusAt:10});
+    assert.equal(sent.length, 3, 'una escritura que solo era statusAt no se manda');
+    console.warn = warn;
+    ok('con las reglas antiguas, mover sigue funcionando');
+  }
+
   console.log('Todo correcto.');
 })().catch((err) => { console.error(err); process.exit(1); });

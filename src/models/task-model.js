@@ -31,6 +31,8 @@
     {key:'low', label:'Baja'}
   ];
   const DAY_MS = 86400000;
+  /* true cuando las reglas publicadas aún no admiten statusAt (ver update). */
+  let rulesWithoutStatusAt = false;
   /* Filtro «vencen pronto»: cuántos días desde hoy abarca cada opción. */
   const DUE_SPAN = {day:1, week:7, month:30};
 
@@ -727,6 +729,25 @@
       ids.forEach((id) => {
         this.patchLocal(id, {statusAt:now});
         this.update(id, {statusAt:now}).catch(() => {});
+      });
+    }
+
+    /* Con unas firestore.rules anteriores a statusAt, Firestore rechaza la escritura entera y la
+       tarjeta vuelve a su columna. Se repite sin ese campo y, durante la sesión, ya no se manda:
+       mover sigue funcionando, solo que sin apuntar la llegada (no se ordena por llegada ni se
+       elimina nada sola) hasta que se publiquen las reglas nuevas. */
+    update(id, patch){
+      const has = !!patch && Object.prototype.hasOwnProperty.call(patch, 'statusAt');
+      if(has && rulesWithoutStatusAt){
+        patch = Object.assign({}, patch);
+        delete patch.statusAt;
+        if(!Object.keys(patch).length) return Promise.resolve();
+      }
+      return super.update(id, patch).catch((err) => {
+        if(!has || rulesWithoutStatusAt || !err || err.code !== 'permission-denied') throw err;
+        rulesWithoutStatusAt = true;
+        console.warn('Kanlane: las reglas de Firestore publicadas no admiten statusAt; publica las de firestore.rules.');
+        return this.update(id, patch);
       });
     }
 
